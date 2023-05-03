@@ -112,5 +112,6 @@ public:
             return fnGetState();
         return true;
     }
+    
     void render(NVGcontext* vg) override;
 };

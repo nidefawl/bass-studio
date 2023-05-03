@@ -1900,6 +1900,23 @@ void Host::processAudio(process_scratch_buf_t& tmp,
             int64_t timePassed = 0;
             if (effect) {
                 bool isBypass = effect->isBypass();
+                //TODO: this should be done in the vstplugin::process function
+                if (effect->pluginType == PLUGIN_TYPE_VST) {
+                    VstTimeInfo timeinfo{};
+                    PluginManager::UpdateVstTime(timeinfo, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
+                    auto* ptr = static_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
+                    if (ptr) {
+                        *ptr = timeinfo;
+                    }
+                }
+                if (effect->pluginType == PLUGIN_TYPE_CLAP) {
+                    clap_event_transport_t transport{};
+                    UpdateClapTime(transport, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
+                    auto& pluginLocalTransport = static_cast<clapplugin*>(effect)->getTransport();
+                    pluginLocalTransport = transport;
+                }
+                // resolve all inputs
+                effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);
                 if (isBypass || bypassEffectProcessing) {
                     auto delay = effect->getPluginLatency();
                     if (delay > 0) {
@@ -1917,23 +1934,6 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     }
                     blockPostProcess = effect->blockOutputs;
                 } else {
-                    //TODO: this should be done in the vstplugin::process function
-                    if (effect->pluginType == PLUGIN_TYPE_VST) {
-                        VstTimeInfo timeinfo{};
-                        PluginManager::UpdateVstTime(timeinfo, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
-                        auto* ptr = static_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
-                        if (ptr) {
-                            *ptr = timeinfo;
-                        }
-                    }
-                    if (effect->pluginType == PLUGIN_TYPE_CLAP) {
-                        clap_event_transport_t transport{};
-                        UpdateClapTime(transport, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
-                        auto& pluginLocalTransport = static_cast<clapplugin*>(effect)->getTransport();
-                        pluginLocalTransport = transport;
-                    }
-                    // resolve all inputs
-                    effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);
                     tmp.ctrlEventsTemp.clear();
                     tmp.noteEventsTemp.clear();
                     effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, audioProperties.ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true);

@@ -83,14 +83,17 @@ void guiplugin::render(NVGcontext* vg) {
 }
 void guiplugin::prerender(NVGcontext* vg) {
     guictr_base::prerender(vg);
+    int32_t automationFlags = FLG_IS_AUTOMATABLE;
     if (effect->getParamUnchecked(PARAM_ENABLE)) {
         auto at = effect->getRegisteredAutomation(PARAM_ENABLE);
         if (at && at->isAutomated()) {
-            buttonBypass.colorActive = GuiColor::COL_AUTOMATED;
-        } else {
-            buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
+            automationFlags |= FLG_IS_AUTOMATED;
+            if (!at->isActive()) {
+                automationFlags |= FLG_IS_AUTOMATION_INACTIVE;
+            }
         }
     }
+    this->buttonBypass.setFlags(0x00700000, automationFlags);
 }
 void guiplugin::determineSize(ivec2& prefSize) {
     if (layoutMode == 1) {

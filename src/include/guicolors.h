@@ -21,6 +21,7 @@ namespace GuiColor {
     inline bool operator<(const constant_t& lhs, const constant_t& rhs) { return lhs.idx < rhs.idx; }
 
     extern constant_t COL_AUTOMATED;
+    extern constant_t COL_AUTOMATED_INACTIVE;
     extern constant_t COL_KNOB_HIGHLIGHT;
     extern constant_t COL_KNOB_HIGHLIGHT_BACKGROUND;
     extern constant_t COL_KNOB_MODULATED;

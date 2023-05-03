@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include "grid.h"
+#include "host/automation/automation.h"
 #include "types.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
@@ -102,6 +103,9 @@ enum guiflag : int32_t {
     FLG_IMPL_SPEC2               = 0x00004000,
     FLG_NO_LAYOUT                = 0x00008000,
     FLG_RENDER_BUTTON_WITH_LED   = 0x00010000,
+    FLG_IS_AUTOMATABLE           = 0x00100000,
+    FLG_IS_AUTOMATED             = 0x00200000,
+    FLG_IS_AUTOMATION_INACTIVE   = 0x00400000,
 };
 enum guiflag_titlebar : int32_t {
     TITLEBAR_FLG_NONE = 0,
@@ -150,6 +154,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_TRACKS_EDITOR,
     CTR_TYPE_AUDIO_VISUALIZER
 };
+
 namespace DebugAlloc {
     template<typename T>
     class Tracker;
@@ -171,7 +176,7 @@ public:
     SafeRef<guibase> safeRef;
     String label;
     String tooltipText;
-
+    automatable_t* automatable = nullptr;
 public:
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     int64_t allocId = 0;
@@ -229,6 +234,15 @@ public:
         else
             flags |= flag;
         return (flags & flag) != 0;
+    }
+    virtual void setFlags(int32_t mask, int32_t flags) {
+        this->flags = (this->flags & ~mask) | flags;
+    }
+    virtual automatable_t* getAutomatable() const {
+        return automatable;
+    }
+    virtual void setAutomatable(automatable_t* automatable) {
+        this->automatable = automatable;
     }
     virtual bool isBackgroundRendered() const {
         return (flags & FLG_RENDER_BACKGROUND) != 0;

@@ -67,6 +67,7 @@ namespace GuiColor {
     }
 
     constant_t COL_AUTOMATED("COL_AUTOMATED", 0xffcc0056);
+    constant_t COL_AUTOMATED_INACTIVE("COL_AUTOMATED_INACTIVE", 0xffe89437);
     constant_t COL_BASE_BG("COL_BASE_BG", 0xe0101010);
     constant_t COL_BASE_BG_DISABLED("COL_BASE_BG_DISABLED", 0xff030303);
     constant_t COL_BASE_BG_FOCUSED("COL_BASE_BG_FOCUSED", 0xff343e52);
