@@ -1469,8 +1469,11 @@ public:
             if (cursor.inSubTrack(m_trackentry->idx, laneIdx)) {
                 cursor.fixCursorSubRange(m_trackentry->subtracks.size() - 1);
             }
+            auto daw = dawCtrl->getDaw();
             m_trackentry->parent->removeSubtrack(m_trackentry, subtrack);
-            dawCtrl->getDaw()->updateVisibleTrackContents();
+            // TODO: fix simliar segfaults: this instance of gui_track_subtrack_mixer is deleted here, but we still access its memberdawCtrl 
+            // dawCtrl->getDaw()->updateVisibleTrackContents();
+            daw->updateVisibleTrackContents();
         }
     }
     void render(NVGcontext* vg) override {
