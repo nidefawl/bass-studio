@@ -495,6 +495,8 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     for (const auto& entry : mapModulations) {
         int32_t paramIdx = entry.first;
         auto param = getParam(paramIdx);
+        if (!param)
+            continue;
         auto& modulations = entry.second;
         
         float val = param->getValue();

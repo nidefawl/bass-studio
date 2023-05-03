@@ -1915,7 +1915,6 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     auto& pluginLocalTransport = static_cast<clapplugin*>(effect)->getTransport();
                     pluginLocalTransport = transport;
                 }
-                // resolve all inputs
                 effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);
                 if (isBypass || bypassEffectProcessing) {
                     auto delay = effect->getPluginLatency();
