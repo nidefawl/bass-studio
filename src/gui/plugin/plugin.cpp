@@ -177,7 +177,7 @@ guiplugin::guiplugin(effectbase* _effect)
     buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
     buttonBypass.icon        = ICON_BYPASS;
     buttonBypass.fnGetState  = [_effect]() {
-        return _effect->getParam(PARAM_ENABLE)->getValue() > 0;
+        return _effect->getParam(PARAM_ENABLE)->getValueAutomated() > 0;
     };
     //buttonBypass.setTint(0x80c040);
     buttonDelete.setLabel("Remove");

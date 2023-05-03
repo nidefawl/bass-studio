@@ -606,7 +606,7 @@ void guibuttontoggle::render(NVGcontext* vg) {
     nvgStrokeColor(vg, theme->getBgStrokeColor(state));
     nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
     nvgStroke(vg);
-    auto automationState = getState() & 0x00700000;
+    auto automationState = getFlags() & 0x00700000;
     if (automationState & FLG_IS_AUTOMATED) {
         auto automationColor = GuiColor::COL_AUTOMATED;
         if (automationState & FLG_IS_AUTOMATION_INACTIVE) {
