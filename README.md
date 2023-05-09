@@ -1,4 +1,6 @@
 About
+=========
+- Bass Studio is a DAW which supports VST2 and CLAP plugins.
 - Releases are provided for Windows, MacOS and Linux for the x86_64 architecture.
 - The program requires Hardware OpenGL acceleration.
 - This Project is available under Open Source license since May 4th 2023. Previous releases have been published at https://github.com/nidefawl/bass/releases. The latest build can be found at https://github.com/nidefawl/bass-studio/actions
@@ -16,16 +18,24 @@ Video
 CLAP Demo (Diva)
 [![CLAP Demo (Diva)](https://img.youtube.com/vi/iW27lEGNil8/maxresdefault.jpg)](https://youtu.be/iW27lEGNil8)
 
+Community
+=========
+Feel free to join the Discord Server which I recently created. Hit me a message if you have questions. https://discord.gg/MxsgB7Ex
+
+Donations
+=========
+If you like the software please consider a donation https://ko-fi.com/nidefawl
+
 Runtime & Installation
 ======================
-- Read-Write resources are stored in "C:\Users\<user>\AppData\Roaming\daw\":
+- Read-Write resources are stored in "C:\Users\<user>\AppData\Roaming\bass\":
   - logfile, settings.json
   - plugin database (SQLite)
   - view-layout json files (F1-F10 keys)
   - theme presets (important)
 - Read-only resources are stored in "./res"
     - Fonts, Icons, GLSL shader code
-- Extract daw-userdata.zip to "C:\Users\<user>\AppData\Roaming\daw\"
+- Extract daw-userdata.zip to "C:\Users\<user>\AppData\Roaming\bass\"
 - Build scripts will generate the executable to "./run/" 
 - The program must be executed inside ./run/ to find the sibling ./res/ directory 
 
@@ -47,7 +57,7 @@ Clone both repositories:
 # create folder C:/dev or some other location (avoid spaces in path)
 cd C:/dev
 git clone --recurse-submodules 'https://github.com/nidefawl/daw-deps.git'
-git clone 'https://github.com/nidefawl/daw.git'
+git clone 'https://github.com/nidefawl/bass-studio.git'
 ```
 
 Windows + Visual Studio 2022
