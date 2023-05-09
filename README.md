@@ -1,7 +1,20 @@
 About
-=====
+- Releases are provided for Windows, MacOS and Linux for the x86_64 architecture.
+- The program requires Hardware OpenGL acceleration.
+- This Project is available under Open Source license since May 4th 2023. Previous releases have been published at https://github.com/nidefawl/bass/releases. The latest build can be found at https://github.com/nidefawl/bass-studio/actions
 - Only 64 bit builds are supported
 - All dependencies are built from source and have to be build with the same compiler version
+- I have been working on this solo since 2017.
+
+Screenshots
+=========
+[![Screenshot 1](https://i.imgur.com/gxTUcoa.jpeg)](https://i.imgur.com/gxTUcoa.jpeg)
+[![Screenshot 2](https://i.imgur.com/ezsmeET.jpeg)](https://i.imgur.com/ezsmeET.jpeg)
+
+Video
+=========
+CLAP Demo (Diva)
+[![CLAP Demo (Diva)](https://img.youtube.com/vi/iW27lEGNil8/maxresdefault.jpg)](https://youtu.be/iW27lEGNil8)
 
 Runtime & Installation
 ======================
