@@ -3,10 +3,15 @@ About
 - Bass Studio is a DAW which supports VST2 and CLAP plugins.
 - Releases are provided for Windows, MacOS and Linux for the x86_64 architecture.
 - The program requires Hardware OpenGL acceleration.
-- This Project is available under Open Source license since May 4th 2023. Previous releases have been published at https://github.com/nidefawl/bass/releases. The latest build can be found at https://github.com/nidefawl/bass-studio/actions
+- This Project is available under Open Source license since May 4th 2023
 - Only 64 bit builds are supported
 - All dependencies are built from source and have to be build with the same compiler version
 - I have been working on this solo since 2017.
+
+Download
+=========
+- Releases: https://github.com/nidefawl/bass-studio/releases
+- Latest build: https://github.com/nidefawl/bass-studio/actions
 
 Screenshots
 =========
@@ -26,18 +31,6 @@ Donations
 =========
 If you like the software please consider a donation https://ko-fi.com/nidefawl
 
-Runtime & Installation
-======================
-- Read-Write resources are stored in "C:\Users\<user>\AppData\Roaming\bass\":
-  - logfile, settings.json
-  - plugin database (SQLite)
-  - view-layout json files (F1-F10 keys)
-  - theme presets (important)
-- Read-only resources are stored in "./res"
-    - Fonts, Icons, GLSL shader code
-- Extract daw-userdata.zip to "C:\Users\<user>\AppData\Roaming\bass\"
-- Build scripts will generate the executable to "./run/" 
-- The program must be executed inside ./run/ to find the sibling ./res/ directory 
 
 Build requirements
 ==================
@@ -148,6 +141,20 @@ brew install cmake
 python ../daw-deps/build.py -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12
 ```
 - Build daw same way as on windows
+
+
+Manual Installation
+======================
+- Read-Write resources are stored in "C:\Users\<user>\AppData\Roaming\bass\":
+  - logfile, settings.json
+  - plugin database (SQLite)
+  - view-layout json files (F1-F10 keys)
+  - theme presets (important)
+- Read-only resources are stored in "./res"
+    - Fonts, Icons, GLSL shader code
+- Extract daw-userdata.zip to "C:\Users\<user>\AppData\Roaming\bass\"
+- Build scripts will generate the executable to "./run/" 
+- The program must be executed inside ./run/ to find the sibling ./res/ directory 
 
 Running tests
 =============
