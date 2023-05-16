@@ -860,7 +860,7 @@ public:
 
 void DawCtrl::setupView() {
     for (size_t i = 1; i < layouts.size(); i++) {
-        std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%zu.layout", i));
+        std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("view%zu.layout", i));
         if (viewLayout) {
             layouts[i] = *viewLayout.get();
         }
@@ -1582,7 +1582,6 @@ void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
 }
 
 bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
-    log_lf(Log::L_DEBUG, "filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
     daw.dragdropclip.reset();
     if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
         return false;
@@ -1634,7 +1633,6 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
                         daw.dragdropclip.reset();
                         daw.dragdropclip.clipboard = fileloadedClipboard;
                         daw.dragdropclip.isLoaded  = true;
-                        log_lf(Log::L_DEBUG, "drag-drop clipboard loaded\n");
                     } else {
                         log_lf(Log::L_WARN, "Failed loading drag-drop clipboard\n");
                     }
@@ -1794,7 +1792,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                     bool store    = (kevt.mods & KB_MOD_SHIFT);
                     if (store) {
                         view->storeLayout(layouts[index]);
-                        saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%d.layout", index));
+                        saveDawViewLayoutSnapshot(layouts[index], StringFormat("view%d.layout", index));
                     } else {
                         if (this->layoutIndex >= 0 && this->layoutIndex < CtrSize(layouts)) {
                             view->storeLayout(layouts[this->layoutIndex]);

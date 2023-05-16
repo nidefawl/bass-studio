@@ -10,8 +10,9 @@
 namespace App::Platform {
 
 namespace {
-String pathResources;// read only app resource directory: C:/program files/daw
-String pathUserdata; // writable app directory: C:/users/user/appdata/daw/
+String pathResources;               // read only app resource directory: C:/program files/daw/res/
+String pathUserdata;                // writable app directory: C:/users/user/appdata/daw/
+String pathDefaultSettingFiles;     // read only app default setting files directory: C:/program files/daw/defaults/
 }
 
 String toResourcePath(const String& relPath) {
@@ -26,12 +27,22 @@ String toUserdataPath(const String& relPath) {
     return path;
 }
 
+String toDefaultSettingFilesPath(const String& relPath) {
+    String path = App::Platform::pathDefaultSettingFiles + relPath;
+    sanitizePathToFile(path);
+    return path;
+}
+
 String GetResourcePath() {
     return App::Platform::pathResources;
 }
 
 String GetUserdataPath() {
     return App::Platform::pathUserdata;
+}
+
+String GetDefaultSettingFilesPath() {
+    return App::Platform::pathDefaultSettingFiles;
 }
 
 void setResourcePath(String cwd) {
@@ -41,13 +52,19 @@ void setResourcePath(String cwd) {
 
 void setUserdataPath(String cwd) {
     sanitizePathToDirectory(cwd);
-    pathUserdata = cwd;
+    App::Platform::pathUserdata = cwd;
+}
+
+void setDefaultSettingFilesPath(String cwd) {
+    sanitizePathToDirectory(cwd);
+    App::Platform::pathDefaultSettingFiles = cwd;
 }
 
 void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
     String cwdPath = !optionalCwd.empty() ? optionalCwd : getCurrentWorkingDirectory();
 #ifdef __APPLE__
     String resourcePath = cwdPath + "/res";
+    String defaultsPath = cwdPath + "/defaults";
     if (cwdPath.empty() || cwdPath == "/") {
         cwdPath = GetExecutablePath();
         auto p = cwdPath.find_last_of('/');
@@ -55,6 +72,7 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
             cwdPath = cwdPath.substr(0, p);
         }
         resourcePath = cwdPath + "/../Resources/res";
+        defaultsPath = cwdPath + "/../Resources/defaults";
     }
     if (!FileExists(resourcePath)) {
         resourcePath = cwdPath + "/res";
@@ -65,14 +83,28 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
     if (!FileExists(resourcePath)) {
         resourcePath = cwdPath + "/../res";
     }
+    if (!FileExists(defaultsPath)) {
+        defaultsPath = cwdPath + "/defaults";
+    }
+    if (!FileExists(defaultsPath)) {
+        defaultsPath = cwdPath + "/../Resources/defaults";
+    }
+    if (!FileExists(defaultsPath)) {
+        defaultsPath = cwdPath + "/../defaults";
+    }
 
 #else
     String resourcePath = cwdPath + FILE_PATHSEP_STR + "res";
     if (!FileExists(resourcePath)) {
         resourcePath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "res";
     }
+    String defaultsPath = cwdPath + FILE_PATHSEP_STR + "defaults";
+    if (!FileExists(defaultsPath)) {
+        defaultsPath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "defaults";
+    }
 #endif
     setResourcePath(resourcePath);
+    setDefaultSettingFilesPath(defaultsPath);
 
     String userDataPath = appname;
     if(determineUserdataPath(userDataPath)) {

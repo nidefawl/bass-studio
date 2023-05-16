@@ -1,4 +1,5 @@
 #include "projectfile.h"
+#include "platform.h"
 #include "shapefile.h"
 
 #include "snapshot/snapshot.h"
@@ -646,7 +647,7 @@ bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
             ar(make_nvp("layout", snapshot));
         }
         sstream.flush();
-        writeStringStream(App::Platform::toUserdataPath(path), sstream);
+        writeStringStream(App::Platform::toUserdataPath("data/" + path), sstream);
         return true;
     } catch (const FileIOException& e) {
         log_printf("savePluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
@@ -660,7 +661,13 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
     using namespace cereal;
     try {
         std::vector<uint8_t> vec;
-        ReadFileVector(App::Platform::toUserdataPath(path), vec);
+        String fileUserDataPath = App::Platform::toUserdataPath("data/" + path);
+        if (FileExists(fileUserDataPath)) {
+            ReadFileVector(fileUserDataPath, vec);
+        } else {
+            String fileTemplateProgramPath = App::Platform::toDefaultSettingFilesPath(path);
+            ReadFileVector(fileTemplateProgramPath, vec);
+        }
         Stringstream sstream(std::string(vec.cbegin(), vec.cend()));
         std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();
         dawview_layout_t& ref = *snapshot.get();

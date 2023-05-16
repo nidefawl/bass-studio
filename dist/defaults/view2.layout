@@ -1,0 +1,165 @@
+{
+    "layout": {
+        "value0": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483649,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": -1,
+                    "value3": 1,
+                    "value4": [
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483650,
+                                "data": {
+                                    "value0": "Theme",
+                                    "value1": 103,
+                                    "entryTag": -1
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483651,
+                                "data": {
+                                    "value0": "Debug 2",
+                                    "value1": 111,
+                                    "entryTag": -1
+                                }
+                            }
+                        }
+                    ],
+                    "value5": [
+                        0.6168327927589417
+                    ]
+                }
+            }
+        },
+        "value1": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483652,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": -1,
+                    "value3": 0,
+                    "value4": [
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483653,
+                                "data": {
+                                    "value0": "Performance",
+                                    "value1": 112,
+                                    "entryTag": -1
+                                }
+                            }
+                        }
+                    ],
+                    "value5": []
+                }
+            }
+        },
+        "value2": [
+            0.20468750596046449,
+            0.746874988079071
+        ],
+        "center": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483654,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": 0,
+                    "value3": 1,
+                    "value4": [
+                        {
+                            "polymorphic_id": 2147483649,
+                            "polymorphic_name": "guictrlayout_snapshot_t",
+                            "ptr_wrapper": {
+                                "id": 2147483655,
+                                "data": {
+                                    "value0": "Layout",
+                                    "value1": 101,
+                                    "value2": 0,
+                                    "value3": 3,
+                                    "value4": [
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483656,
+                                                "data": {
+                                                    "value0": "Tracks",
+                                                    "value1": 129,
+                                                    "entryTag": 105
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483657,
+                                                "data": {
+                                                    "value0": "Nodes",
+                                                    "value1": 130,
+                                                    "entryTag": 106
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "value5": []
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1,
+                            "ptr_wrapper": {
+                                "id": 2147483658,
+                                "data": {
+                                    "value0": "Layout",
+                                    "value1": 101,
+                                    "value2": 1,
+                                    "value3": 3,
+                                    "value4": [
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483659,
+                                                "data": {
+                                                    "value0": "Clip Editor",
+                                                    "value1": 114,
+                                                    "entryTag": 107
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483660,
+                                                "data": {
+                                                    "value0": "Plugins",
+                                                    "value1": 124,
+                                                    "entryTag": 108
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "value5": []
+                                }
+                            }
+                        }
+                    ],
+                    "value5": [
+                        0.5
+                    ]
+                }
+            }
+        }
+    }
+}

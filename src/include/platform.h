@@ -52,12 +52,18 @@ bool determineUserdataPath(String& path);
 String GetExecutablePath();
 String getCurrentWorkingDirectory();
 
-String toResourcePath(const String& relPath);
-String toUserdataPath(const String& relPath);
-void setResourcePath(String cwd);
 String GetResourcePath();
 String GetUserdataPath();
+String GetDefaultSettingFilesPath();
+
+String toResourcePath(const String& relPath);
+String toUserdataPath(const String& relPath);
+String toDefaultSettingFilesPath(const String& relPath);
+
+void setResourcePath(String cwd);
 void setUserdataPath(String pathHomeOrAppData);
+void setDefaultSettingFilesPath(String cwd);
+
 void initPlatformEnvironment(const String& appname, const String& optionalCwd = "");
 /**
  * @brief Appends final path seperator
