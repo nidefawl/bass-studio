@@ -94,16 +94,17 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                         break;
                     }
                     samplecount_t sampleIdx = math::rounddS64(sampleOffset);//TODO: std::round is slow
+                    samplecount_t sampleOffsetFade = math::rounddS64(math::max(0.0, (double) (samplePos - samplePosRender)));//TODO: std::round is slow
                     dbgassert(sampleIdx % stepSize == 0);
                     float fCurX = float((sampleOffset - renderOffset) * samplesToPx);
                     float fade = 1.0f;
                     for (auto* clipFade : { &clipFadeIn, &clipFadeOut }) {
-                        if (sampleIdx * downsampleScale >= clipFade->samplesFadePos && sampleIdx * downsampleScale < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
-                            float fadePos = (sampleIdx * downsampleScale - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
+                        if (sampleOffsetFade * downsampleScale >= clipFade->samplesFadePos && sampleOffsetFade * downsampleScale < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+                            float fadePos = (sampleOffsetFade * downsampleScale - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
                             fade *= clipFade->shape.sampleCurveOneShot(fadePos);
-                        } else if (clipFade == &clipFadeOut && clipFade->samplesFadeDuration && sampleIdx * downsampleScale >= clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+                        } else if (clipFade == &clipFadeOut && clipFade->samplesFadeDuration && sampleOffsetFade * downsampleScale >= clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
                             fade = 0.0f;
-                        } else if (clipFade == &clipFadeIn && clipFade->samplesFadeDuration && sampleIdx * downsampleScale < clipFade->samplesFadePos) {
+                        } else if (clipFade == &clipFadeIn && clipFade->samplesFadeDuration && sampleOffsetFade * downsampleScale < clipFade->samplesFadePos) {
                             fade = 0.0f;
                         }
                     }
