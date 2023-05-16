@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "exceptions.h"
+#include "fileio.h"
 #include "host/audio_config.h"
 #include "platform.h"
 #include "str_util.h"
@@ -221,6 +222,8 @@ CEREAL_CLASS_VERSION(appsettings, 3);
 void loadSettings(appsettings& settings) {
     Stringstream ss;
     String cwdPathSettings = App::Platform::toUserdataPath(SETTINGS_NAME);
+    if (!FileExists(cwdPathSettings))
+        return;
     std::ifstream file(cwdPathSettings, std::ifstream::in);
     if (file) {
         ss << file.rdbuf();
