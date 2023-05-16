@@ -572,7 +572,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
 
     set(PROJECT_INSTALLER_OUTPUT "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz")
     add_custom_command(
-      OUTPUT ${PROJECT_INSTALLER_OUTPUT}
+      OUTPUT ${PROJECT_INSTALLER_OUTPUT} CMakeStinks.txt
       VERBATIM
       DEPENDS dist-strip dist-copy-resources
       WORKING_DIRECTORY ${PATH_DIST}
@@ -591,7 +591,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         "${PATH_DIST}/lib/"
       COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
       COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND tar "--exclude=*.debug" "-czf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
+      COMMAND tar "--exclude=*.debug" "-vczf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
     )
     add_custom_target(dist-installer DEPENDS ${PROJECT_INSTALLER_OUTPUT})
   elseif(WIN32 AND CLANG AND MINGW)
