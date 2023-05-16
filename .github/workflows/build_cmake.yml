@@ -19,7 +19,7 @@ env:
 
 jobs:
   build-macos:
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master-apple-2-expensive'
     name: "Build MacOS"
     runs-on: macos-latest
     defaults:
