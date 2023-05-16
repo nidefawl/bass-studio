@@ -859,7 +859,7 @@ public:
 };
 
 void DawCtrl::setupView() {
-    for (size_t i = 1; i < layouts.size(); i++) {
+    for (size_t i = 0; i < layouts.size(); i++) {
         std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("view%zu.layout", i));
         if (viewLayout) {
             layouts[i] = *viewLayout.get();
