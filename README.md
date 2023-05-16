@@ -13,6 +13,12 @@ Download
 - Releases: https://github.com/nidefawl/bass-studio/releases
 - Latest build: https://github.com/nidefawl/bass-studio/actions
 
+Donations
+=========
+If you like the software please consider a donation
+- https://www.patreon.com/nidefawl
+- https://ko-fi.com/nidefawl
+
 Screenshots
 =========
 [![Screenshot 1](https://i.imgur.com/gxTUcoa.jpeg)](https://i.imgur.com/gxTUcoa.jpeg)
@@ -26,10 +32,6 @@ CLAP Demo (Diva)
 Community
 =========
 Feel free to join the Discord Server which I recently created. Hit me a message if you have questions. https://discord.gg/MxsgB7Ex
-
-Donations
-=========
-If you like the software please consider a donation https://ko-fi.com/nidefawl
 
 
 Build requirements
