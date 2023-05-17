@@ -64,8 +64,8 @@ The dependecies reside in a different repository: https://github.com/nidefawl/da
 Both GCC and Clang can be used to compile.
 
 ```bash
-export CC=clang++
-export CXX=clang
+export CC=clang
+export CXX=clang++
 git clone --recurse-submodules "https://github.com/nidefawl/daw-deps.git"
 git clone "https://github.com/nidefawl/bass-studio.git"
 mkdir build-deps
