@@ -46,7 +46,7 @@ Build requirements
 Build instructions Linux
 ==================
 
-Required system dependeciesn:  
+Required system dependencies:
 
 ```
 libx11-dev
