@@ -12,6 +12,7 @@ extern "C" {
 
 #ifdef __GNUC__
 #include <cstring>
+#include <cstdint>
 #ifndef _T
 #define _T
 #endif
