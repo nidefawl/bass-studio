@@ -46,17 +46,9 @@ Build requirements
 Build instructions Linux
 ==================
 
-Required system dependencies:
-
+Required system dependencies on Ubuntu:
 ```
-libx11-dev
-libxrandr-dev
-libxinerama-dev
-libxcursor-dev
-libxi-dev
-libasound2-dev
-python3-distutils
-libgtk-3-dev
+sudo apt install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libasound2-dev python3-distutils libgtk-3-dev 
 ```
 
 The dependecies reside in a different repository: https://github.com/nidefawl/daw-deps.git
