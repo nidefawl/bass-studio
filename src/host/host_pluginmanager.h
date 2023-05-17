@@ -29,6 +29,7 @@
 #include "daw_channel.h"
 #include "util/profiling.h"
 #include "host/host_pluginmanager.h"
+#include "host/plugin/base/base-plugin.h"
 
 
 #include <memory>

@@ -8,11 +8,13 @@
 #include "gl/gl_attr.h"
 #include "gl/gl_vbo.h"
 
+extern "C" {
 extern const char* const TEXTURED_GLSL_FRAG;
 extern const char* const TEXTURED_GLSL_VERT;
 extern const char* const TEST_GLSL_FRAG;
 extern const char* const TEST_GLSL_VERT;
 extern const char* const PERFGRAPH_GLSL_FRAG;
+}
 
 struct glshader_src {
     int32_t stage;
