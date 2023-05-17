@@ -34,6 +34,7 @@ protected:
     float lastVal                = 0.0f;
     bool bDoubleClickSetsDefault = true;
     bool bIsBipolar              = false;
+    bool bClampToZero            = true;
 
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
@@ -65,6 +66,15 @@ public:
     bool getIsBipolar() const {
         return bIsBipolar;
     }
+
+    void setClampToZero(bool bClampToZero) {
+        this->bClampToZero = bClampToZero;
+    }
+
+    bool getIsClampToZero() const {
+        return bClampToZero;
+    }
+
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
@@ -101,7 +111,7 @@ public:
     }
     void setValue(float newValue, int flags) {
         float curval = getValue();
-        newValue     = math::clamp(newValue, 0.0f, 1.0f);
+        newValue     = math::clamp(newValue, 0.0f - (!bClampToZero * 1.0f), 1.0f);
         value        = newValue;
         if (fnSetValue) {
             fnSetValue(newValue, flags);
@@ -114,7 +124,7 @@ public:
     }
 
     float getValueClamped() {
-        return math::clamp(getValue(), 0.0f, 1.0f);
+        return math::clamp(getValue(), 0.0f - (!bClampToZero * 1.0f), 1.0f);
     }
 
     virtual float getValue() {

@@ -3346,6 +3346,7 @@ class guicontainer_modulation_slot_destination final : public guictr_base {
                     parent->buttonClicked(this);
                 }
             };
+            knob.setClampToZero(false);
             add(&dropdown);
             add(&knob);
         }
