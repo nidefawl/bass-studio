@@ -962,7 +962,16 @@ int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t ab
     auto absMin = math::max(cutLeft, relStart);
     auto absMax = math::min(cutRight, relEnd);
     int count = 0;
-    for (tick_t t = absMin; t < absMax; t += 4) {
+
+    /**
+     * controlDataSampleRate
+     * 4 Ticks is quite high and causes a lot of events
+     * This should be configurable to allow higher resolution when
+     * rendering to audio. And lower resolution when CPU load is too high.
+     */
+    tick_t controlDataSampleRate = 4;
+
+    for (tick_t t = absMin; t < absMax; t += controlDataSampleRate) {
         tick_t tOffset = t;
         if (pitchBend.hasData()) {
             float f1 = pitchBend.sampleAtTick(clip, tOffset);

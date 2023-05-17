@@ -1116,10 +1116,7 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi
 } // namespace DAW::Host
 
 /**
- * track_impl_t::sendNotes
- * Right now there is no latency compensation applied.
- * TODO: First apply latency compensation per-track. Then implement per-plugin latency compensation
- * TODO: OPTIMIZE this function. I saw up to 400x speed up in release mode
+ * track_impl_t::processMidiInput
  */
 void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                              tick_t cursorPos,

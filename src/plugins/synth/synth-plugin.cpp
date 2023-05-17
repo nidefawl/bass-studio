@@ -2566,8 +2566,14 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size()*sizeof(double));
                 std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size()*sizeof(double));
             }
+            /**
+             * framesPerAutomationUpdate 
+             * 1 is highest precission, automation is updated every sample
+             * this can be lowered to lower CPU load
+             */
+            int framesPerAutomationUpdate = 1;
             for (int s = 0; s < nFrames; s++) {
-                if (host && moduleInstance) {
+                if (host && moduleInstance && s % framesPerAutomationUpdate == 0) {
                     ReadAutomation(host, tick, state, s, nFrames);
                 }
                 FlushMidi(s);
@@ -2594,6 +2600,9 @@ class SynthImpl final : public PluginLockable, public SynthState {
                     if (bIsGlideEnabled) {
                         v.frequency += (v.targetFrequency - v.frequency) * glideLength * dt;
                     }
+                            
+                    // TODO: executing a full modulation update each sample is really expensive
+                    // Make this adjustable
                     UpdateVoiceModulations(uv, v, modSrcData);
                     UpdateVoiceEnvelopeModulations(uv, v);
                     UpdateVoiceEnvelopes(dt, uv, v);
