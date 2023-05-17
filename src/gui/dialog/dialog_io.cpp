@@ -1115,6 +1115,7 @@ public:
 class guidialog_settings_other final : public setting_dialog {
     DawInstance* const daw;
     enum appsetting_type {
+        STARTUP_LOAD_DEFFERED,
         VM_MODE,
         SHADER_RENDER_RESPONSIVENESS,
     };
@@ -1139,6 +1140,8 @@ class gui_listentry_settings_other_bool final : public gui_list_entry {
         bool enabled() {
             auto& dawsettings = daw_tls::getSettings().dawsettings;
             switch (type) {
+                case STARTUP_LOAD_DEFFERED:
+                    return dawsettings.startupLoadDeffered;
                 case VM_MODE:
                     return dawsettings.vmmode;
                 case SHADER_RENDER_RESPONSIVENESS:
@@ -1151,6 +1154,9 @@ class gui_listentry_settings_other_bool final : public gui_list_entry {
         void toggle() {
             auto& dawsettings = daw_tls::getSettings().dawsettings;
             switch (type) {
+                case STARTUP_LOAD_DEFFERED:
+                    dawsettings.startupLoadDeffered = !dawsettings.startupLoadDeffered;
+                    break;
                 case VM_MODE:
                     dawsettings.vmmode = !dawsettings.vmmode;
                     break;
@@ -1262,6 +1268,7 @@ class gui_listentry_settings_other_bool final : public gui_list_entry {
             }
             return std::to_string(autosave.tmSaveDelayMinutes) + " Minutes";
         };
+        listOptions.add(new gui_listentry_settings_other_bool{STARTUP_LOAD_DEFFERED, "Deffer loading of plugins on startup"});
         listOptions.add(new gui_listentry_settings_other_bool{VM_MODE, "Knobs: Disable raw mouse input (for VMs)"});
         listOptions.add(new gui_listentry_settings_other_bool{SHADER_RENDER_RESPONSIVENESS, "Visual: Animate UI responsiveness"});
         listOptions.add(autosave);
