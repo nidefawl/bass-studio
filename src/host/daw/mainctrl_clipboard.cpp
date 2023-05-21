@@ -28,13 +28,13 @@ void copyClipsInRange(const trackdata_clips_t& in, track_clipboard_t& out, int32
     for (const auto* const c : in.clips) {
         if (c->end() > srcPos && c->time < srcPos + len) {
             clip_t clone(*c);
-            clone.audio.setEmptyFade(false);
-            clone.audio.setEmptyFade(true);
             if (c->time < srcPos && c->end() > srcPos) {
                 cutClipLeft(&clone, srcPos - c->time);
+                clone.audio.setEmptyFade(true);
             }
             if (c->time < srcPos + len && c->end() > srcPos + len) {
                 cutClipRight(&clone, (c->end()) - (srcPos + len));
+                clone.audio.setEmptyFade(false);
             }
             out.clips.push_back(std::make_shared<clip_t>(std::move(clone)));
         }
