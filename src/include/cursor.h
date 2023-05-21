@@ -86,7 +86,7 @@ namespace DAW {
         }
         void setTrackBegin(int32_t track) {
             auto diff = this->cursorTrack - track;
-            this->cursorTrack -= track;
+            this->cursorTrack -= diff;
             this->selTrackRange += diff;
         }
         void setTrackEnd(int32_t track) {

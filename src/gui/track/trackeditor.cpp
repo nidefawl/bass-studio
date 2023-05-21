@@ -87,7 +87,7 @@ void action_modify_track::undo(DawInstance* daw) {
     }
     trackallcontainer_t& trCtr = daw->getTracks();
     for (track_snapshot_t* trackStored : before.tracks) {
-        log_printf("Undo track %s %d\n", TrackTypeToName(trackStored->trackSettings.type), trackStored->localIdx);
+        log_printf("Undo #%d %s track '%s'\n", trackStored->localIdx, TrackTypeToName(trackStored->trackSettings.type), StringAsCStr(trackStored->trackSettings.name));
         if (trCtr.validTrackTypeIdx(trackStored->trackSettings.type, trackStored->localIdx)) {
             track_t* track = trCtr.getTrackTypeIdx(trackStored->trackSettings.type, trackStored->localIdx);
             if (initAfter) {
