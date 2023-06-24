@@ -870,6 +870,8 @@ static int runScannerClient() {
                     writeToIPC(client, response);
                 } else if (res.library.type == DAW::Host::SharedLibPluginType::VST2_SHELL) {
                     handles_t* handles     = res.shellPluginHandle;
+                    dbgassert(handles && handles->aeffect);
+                    dbgassert(handles->aeffect->dispatcher);
                     String nameShellPlugin = res.name;
                     log_printf("loading shell plugin: %s\n", StringAsCStr(nameShellPlugin));
 

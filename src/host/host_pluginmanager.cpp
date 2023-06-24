@@ -719,6 +719,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     
     if (libResult.state != SharedLibState::SUCCESS) {
+        moduleCloser.moduleToClose = nullptr;
         return LoadResultPlugin{libResult};
     }
     if (!aeffect || libResult.type != SharedLibPluginType::VST2) {
@@ -737,6 +738,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         auto pluginCategory = static_cast<VstPlugCategory>(vstIntPtr);
         if (pluginCategory == VstPlugCategory::kPlugCategShell) {
             libResult.type = SharedLibPluginType::VST2_SHELL;
+            moduleCloser.moduleToClose = nullptr;
             return {libResult, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt};
         }
     }
