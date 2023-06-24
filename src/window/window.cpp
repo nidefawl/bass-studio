@@ -1701,6 +1701,7 @@ void appwindow::createBaseWindow(int flags, const char* title, int w, int h, GLF
     glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
     glfwSetWindowSizeCallback(glfw, glfw_cb_windowwize);
     glfwSetWindowFocusCallback(glfw, glfw_cb_windowfocus);
+    glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
     glfwSetFramebufferSizeCallback(glfw, glfw_cb_framebuffersize);
     glfwSetCursorPosCallback(glfw, glfw_cb_mousepos);
     glfwSetMouseButtonCallback(glfw, glfw_cb_mousebutton);
