@@ -568,6 +568,7 @@ int guictr_plugins::slotFromCoord(ivec2 _pos) {
 effectbase* gui_vstpluginlist_entry::makeInstance() {
     auto res = dawCtrl->getDaw()->getPluginManager()->loadPlugin({entry.path, entry.uid, 0, entry.bugfixFlags, entry.moduleFormat});
     if (res.library.isSuccess()) {
+        res.plugin->setName(entry.name);
         res.plugin->localDbId = entry.localDbId;
         return res.plugin;
     }

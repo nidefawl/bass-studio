@@ -462,7 +462,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, data.szEffectName);  // effect
                     queryInsertPlugin.bind(bndIdx++, 0);
                     queryInsertPlugin.bind(bndIdx++, forcedisable ? 1 : 0);
-                    queryInsertPlugin.bind(bndIdx++, 0);
+                    queryInsertPlugin.bind(bndIdx++, 1);
                     /*int insertRowsAffected = */ queryInsertPlugin.exec();
                     nPluginsScanned++;
                 } catch (SQLite::Exception& e) {
@@ -482,10 +482,16 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     return -3;
                 }
                 log_lf(Log::L_INFO, "Shell plugin %s %s %s isSynth: %d, uid %08X\n", StringAsCStr(file.path), data.szName, "GOOD", data.isSynth, data.uniqueID);
+                String relPath = file.name;
+                if (file.path.length() > options.vstPlugPath.length()) {
+                    relPath = file.path.substr(options.vstPlugPath.length());
+                    replaceString(relPath, FILE_PATHSEP_STR, "/");
+                }
                 try {
                     queryInsertPlugin.reset();
                     int bndIdx = 1;
                     queryInsertPlugin.bind(bndIdx++, data.isSynth);
+                    queryInsertPlugin.bind(bndIdx++, 0); // vst plugin
                     queryInsertPlugin.bind(bndIdx++, data.uniqueID);
                     queryInsertPlugin.bind(bndIdx++, data.version);
                     queryInsertPlugin.bind(bndIdx++, data.vstVersion);
@@ -493,6 +499,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, file.path);
+                    queryInsertPlugin.bind(bndIdx++, relPath);
                     queryInsertPlugin.bind(bndIdx++, data.szName);
                     queryInsertPlugin.bind(bndIdx++, data.szVendorName);
                     queryInsertPlugin.bind(bndIdx++, data.szProductName);
@@ -887,7 +894,7 @@ static int runScannerClient() {
                     safe_strcpy(respShellPlugin.szName, res.name);
                     respShellPlugin.szName[255] = 0;
                     // loop over all shell plugin entries
-                    VstIntPtr dispatchRet;
+                    VstIntPtr dispatchRet = 0;
                     while ((dispatchRet = handles->aeffect->dispatcher(handles->aeffect, effShellGetNextPlugin, 0, 0, tempName, 0)) != 0) {
                         if (dispatchRet < 0)
                             log_printf("WARN: expected positive value for VST UID %zd\n", dispatchRet);
@@ -910,18 +917,18 @@ static int runScannerClient() {
                     for (auto& entry : entries) {
                         if (userSentQuitRequest) break;
                         log_message("load shell entry: %08X", entry.pluginUID);
-
                         auto resShellPluginEntry = pluginMgr->loadPlugin(req.szPath, entry.pluginUID);
                         if (resShellPluginEntry.library.state != DAW::Host::SharedLibState::SUCCESS) {
                             log_message("Failed loading shell plugin %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
                         } else {
                             dbgassert(resShellPluginEntry.plugin);
+                            dbgassert(resShellPluginEntry.vstPlugin);
                             response = CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN;
-                            writeToIPC(client, response);
                             response_type_vst24_t respShellPluginEntry;
-                            if (res.vstPlugin)
+                            if (resShellPluginEntry.vstPlugin)
                                 getVSTPluginData(resShellPluginEntry, &respShellPluginEntry);
                             safe_strcpy(respShellPluginEntry.szName, entry.name);
+                            writeToIPC(client, response);
                             writeToIPC(client, respShellPluginEntry);
                             log_message("unload shell entry: %08X", entry.pluginUID);
                             pluginMgr->unloadPlugin(resShellPluginEntry.plugin);

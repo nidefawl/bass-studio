@@ -122,6 +122,9 @@ public:
     void setProductName(String _name) {
         replaceString(_name, "[jBridge]", "");
         this->sProductName = std::move(_name);
+    }
+    void setName(String _name) {
+        this->sName = std::move(_name);
 #ifndef NDEBUG
         this->szName = this->sName.c_str();
 #endif

@@ -769,7 +769,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     dbgassert(plugin->handle && plugin->handle->aeffect);
     moduleCloser.moduleToClose = nullptr;
     return {libResult, plugin, plugin->handle, filepath, nameWithoutExt};
-};
+}
 
 void PluginManager::scanPlugins() {
     if (mgrImpl->scanningState == 0) {
