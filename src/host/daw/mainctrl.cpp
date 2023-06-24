@@ -1463,6 +1463,7 @@ void DawCtrl::layoutView(int32_t w, int32_t h) {
     }
     guiCtrProgress.pos = ivec2(w, h) / 2 - guiCtrProgress.size / 2;
     guiCtrProgress.layout();
+    updateVisibleTrackContents();
 }
 
 void DawCtrl::relayout(int32_t w, int32_t h) {
