@@ -778,32 +778,32 @@ void PluginManager::scanPlugins() {
             
             auto scannerNames = {
                 "daw-pluginscanner", 
-                "pluginscanner",
+                "pluginscanner", 
                 "pluginscanner-debug",
                 "pluginscanner-release",
                 "pluginscanner-clang-debug",
                 "pluginscanner-clang-release",
                 "pluginscanner-msvc-debug",
-                "pluginscanner-msvc-release"
+                "pluginscanner-msvc-release",
+                "daw-pluginscanner", 
             };
-            String filename = "daw-pluginscanner";
+            String filename = "";
             for (auto* name : scannerNames) {
-                String absPath = App::Platform::getCurrentWorkingDirectory();
-                absPath += FILE_PATHSEP_STR;
-                absPath += name;
-                if ( FileExists(absPath)) {
-                    filename = absPath;
+                filename = App::Platform::getCurrentWorkingDirectory();
+                filename += FILE_PATHSEP_STR;
+                filename += name;
+#ifdef _WIN32 
+                filename += ".exe";
+#endif //_WIN32
+                if (FileExists(filename)) {
                     break;
                 }
             }
-#ifdef _WIN32 
-            filename += ".exe";
-#endif //_WIN32
             mgrImpl->threadPluginScannerProcess->startProcess(filename, "-server -auto", "");
             seqthreads::threadSleep(200);
             if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
                 mgrImpl->threadPluginScannerProcess->checkException();
-                log_lf(Log::L_ERROR, "Failed starting daw-pluginscanner\n");
+                log_lf(Log::L_ERROR, "Failed starting pluginscanner\n");
             } else {
                 mgrImpl->scanningState = 1;
                 log_lf(Log::L_DEBUG, "daw-pluginscanner is running\n");

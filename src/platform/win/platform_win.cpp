@@ -278,15 +278,16 @@ namespace App::Platform {
     }
 
     String getCurrentWorkingDirectory() {
-        std::vector<TCHAR> pathBuf;
-        DWORD copied;
-        do {
-            pathBuf.resize(pathBuf.size() + MAX_PATH);
-            copied = GetCurrentDirectory(static_cast<DWORD>(pathBuf.size()), &pathBuf.at(0));
-        } while (copied >= pathBuf.size());
-        pathBuf.resize(copied);
-        String path(pathBuf.begin(), pathBuf.end());
-        return path;
+        static std::vector<TCHAR> pathBuf;
+        if (pathBuf.empty()) {
+            DWORD copied = 0;
+            do {
+                pathBuf.resize(pathBuf.size() + MAX_PATH);
+                copied = GetCurrentDirectory(static_cast<DWORD>(pathBuf.size()), &pathBuf.at(0));
+            } while (copied >= pathBuf.size());
+            pathBuf.resize(copied);
+        }
+        return {pathBuf.begin(), pathBuf.end()};
     }
 
     bool determineUserdataPath(String& path) {
