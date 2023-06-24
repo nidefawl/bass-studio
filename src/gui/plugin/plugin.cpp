@@ -5,6 +5,7 @@
 #include "host/automation/automation.h"
 #include "fileio.h"
 #include "guiglobals.h"
+#include "host/plugin/modules.h"
 #include "platform.h"
 #include "snapshot/snapshot.h"
 #include "str_util.h"
@@ -605,7 +606,7 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
 }
 guipluginview::guipluginview(effectbase* _effect)
     : guiplugin(_effect), effect(_effect), dropdownProgram(_effect) {
-    params.setVisible(_effect->getModuleType() == PLUGIN_TYPE_VST);
+    params.setVisible(_effect->getModuleType() == PLUGIN_TYPE_VST || _effect->getModuleType() == PLUGIN_TYPE_CLAP);
     // this->isHorizontalTitle = !params.isVisible();
     params.setRowHeight(48);
     params.margin = 2;
