@@ -593,10 +593,10 @@ public:
         removeGuis();
     }
     void buttonClicked(guibase* button) override {
+        guictr_base::buttonClicked(button);
         if (&buttonGrid == button) {
             buttonGrid.setText(axes[axis] + " Grid: " + String(buttonGrid.getState() ? "On" : "Off"));
         }
-        guictr_base::buttonClicked(button);
     }
 };
 class guictr_curve_controls final : public guictr_base {
