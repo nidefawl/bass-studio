@@ -61,6 +61,7 @@ struct gl_shader_program_base_t : public OpenGLResource {
     void destroy() override {
         if (program && makeContextCurrent()) {
             glDeleteProgram(program);
+            program = 0;
             checkGLError("glDeleteProgram");
         }
     }

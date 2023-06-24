@@ -1200,6 +1200,7 @@ public:
         appwindow::killTimer();
         glfwMakeContextCurrent(glfw);
         impl->destroy(nanovgCtxt);
+        impl.reset();
         appwindow::destroyGL();
     }
 
