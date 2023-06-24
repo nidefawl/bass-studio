@@ -317,6 +317,7 @@ void vstplugin::load(DAW::Host::PluginManager* mgr) {
         int32_t paramIdentifier    = PARAM_OFFSET_EXTERNAL + i;
         automatable_param_t* param = registerParam(paramIdentifier);
         param->internalIdx         = i;
+        param->paramNameState = PARAM_FLAG_DIRTY;
         param->paramDisplayValState = PARAM_FLAG_DIRTY;
         param->paramValueState = PARAM_FLAG_DIRTY;
         memset(buf, 0, sizeof(buf));
@@ -386,6 +387,7 @@ void vstplugin::postLoad() {
     this->recvProgramNameUpdate();
     visitParams([](auto& mapEntry) {
         automatable_param_t& param = mapEntry.second;
+        param.paramNameState |= PARAM_FLAG_DIRTY;
         param.paramValueState |= PARAM_FLAG_DIRTY;
         param.paramDisplayValState |= PARAM_FLAG_DIRTY;
     });
@@ -598,6 +600,7 @@ automatable_param_t* vstplugin::getParam(int32_t idx) {
 float vstplugin::getParamValue(int32_t idx) {
     return effectbase::getParamValue(idx);
 }
+
 param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
@@ -610,6 +613,20 @@ param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
         }
     }
     return effectbase::getParamValueDisplay(param->idx);
+}
+
+String vstplugin::getParamName(int32_t idx) {
+    auto param = getParam(idx);
+    dbgassert(param);
+    if (param->internalIdx >= 0) {
+        if (param->paramNameState & PARAM_FLAG_DIRTY) {
+            recvParamNameUpdate(param->internalIdx);
+        }
+        if (param->paramNameState & PARAM_FLAG_SET) {
+            return param->name;
+        }
+    }
+    return effectbase::getParamName(param->idx);
 }
 
 param_unit_t vstplugin::convertParamValueToDisplay(int32_t idx, float value) {
@@ -653,6 +670,7 @@ bool vstplugin::setCurrentProgram(uint32_t idx) {
         dispatch(effSetProgram, 0, idx, nullptr, 0);
         visitParams([](auto& mapEntry) {
             automatable_param_t& param = mapEntry.second;
+            param.paramNameState |= PARAM_FLAG_DIRTY;
             param.paramValueState |= PARAM_FLAG_DIRTY;
             param.paramDisplayValState |= PARAM_FLAG_DIRTY;
         });
@@ -678,8 +696,8 @@ bool vstplugin::getCurrentProgramName(String& out) {
     return this->currentProgramNameSet;
 }
 
-void vstplugin::recvParamDisplayValueUpdate(int32_t internalIdx) {
-    automatable_param_t* param = getEffectParam(internalIdx);
+void vstplugin::recvParamDisplayValueUpdate(int32_t idx) {
+    automatable_param_t* param = getEffectParam(idx);
     dbgassert(param && param->internalIdx >= 0);
     param->paramDisplayValState &= ~PARAM_FLAG_DIRTY;
     char buf[PLUGIN_PARAM_STR_MAX_LEN+1]{};
@@ -703,6 +721,20 @@ void vstplugin::recvProgramListUpdate() {
             this->programNames.emplace_back(buf);
         }
     }
+}
+
+void vstplugin::recvParamNameUpdate(int32_t idx) {
+    if (bIsLoadingProgram) {
+        return;
+    }
+    automatable_param_t* param = getEffectParam(idx);
+    dbgassert(param && param->internalIdx >= 0);
+    param->paramNameState &= ~PARAM_FLAG_DIRTY;
+    char buf[PLUGIN_PARAM_STR_MAX_LEN+1]{};
+    this->dispatch(effGetParamName, param->internalIdx, 0, buf);
+    String paramName = buf[0] ? buf : StringFormat("Parameter %d", param->internalIdx);
+    param->name = paramName;
+    param->paramNameState |= PARAM_FLAG_SET;
 }
 
 void vstplugin::recvProgramNameUpdate() {

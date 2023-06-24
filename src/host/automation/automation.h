@@ -236,6 +236,7 @@ struct automatable_param_properties_t {
     String unit;
     String shortLabel;
     String paramDisplayValStr;
+    uint8_t paramNameState = 0; 
     uint8_t paramDisplayValState = 0; 
     uint8_t paramValueState = 0; 
     bool inUse         = false;
@@ -458,7 +459,7 @@ public:
     size_t getNumParameters() const {
         return mapParams.size();
     }
-    String getParamName(int32_t paramIdx) {
+    virtual String getParamName(int32_t paramIdx) {
         auto it = mapParams.find(paramIdx);
         dbgassert(it != mapParams.end());
         return it->second.name;

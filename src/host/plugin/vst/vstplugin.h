@@ -101,12 +101,14 @@ public:
     void configureIOChannels();
     void postLoad();
     vst_param_category* getCategory(int idx);
-    void recvParamDisplayValueUpdate(int32_t internalIdx);
+    void recvParamNameUpdate(int32_t idx);
+    void recvParamDisplayValueUpdate(int32_t idx);
     void recvProgramNameUpdate();
     void recvProgramListUpdate();
 
     // automatable_t interface
     String getAutomatableName() override;
+    String getParamName(int32_t idx) override;
     float getParamValue(int32_t idx) override;
     automatable_param_t* getParam(int32_t idx) override;
     param_unit_t getParamValueDisplay(int32_t idx) override;

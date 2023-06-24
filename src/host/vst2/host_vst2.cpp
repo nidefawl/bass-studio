@@ -416,6 +416,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
             // NOTE: this loop might kill performance
             plugin->visitParams([](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
+                param.paramNameState |= PARAM_FLAG_DIRTY;
                 param.paramValueState |= PARAM_FLAG_DIRTY;
                 param.paramDisplayValState |= PARAM_FLAG_DIRTY;
             });

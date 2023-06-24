@@ -380,7 +380,7 @@ void effectbase::addPropertiesParameterList(Table::tbl& table) {
     rows.push_back({{tblString{"Name"}, tblString{"Unit"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"},  tblString{"Step"}}});
     for (automatable_param_t* param : sortedParams) {
         tbl_row_t row;
-        row.cols.push_back(tblString{param->name});
+        row.cols.push_back(tblString{getParamName(param->idx)});
         row.cols.push_back(tblString{param->unit});
         row.cols.push_back(tblString{StringFormat("%0.4f", param->getValue())});
         row.cols.push_back(tblint{param->idx});
@@ -462,7 +462,7 @@ public:
         dbgassert(knobTest.parent == this);
     }
     String getText() override {
-        return entry->name;
+        return effect->getParamName(entry->idx);
     }
     void layout() override {
         knobTest.pos  = pos + ivec2(spacing);
@@ -598,7 +598,7 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
     paramsAutomated.insert(paramsAutomated.end(), paramsRest.cbegin(), paramsRest.cend());
     listEntries.reserve(paramsAutomated.size());
     std::for_each(paramsAutomated.begin(), paramsAutomated.end(), [&listEntries, eff = this->effect, &strParamNameFilter](auto* param) {
-        if (strParamNameFilter.empty() || StringContainsCI(param->name, strParamNameFilter) >= 0) {
+        if (strParamNameFilter.empty() || StringContainsCI(eff->getParamName(param->idx), strParamNameFilter) >= 0) {
             listEntries.push_back(new gui_plugin_paramlist_entry(eff, param));
         }
     });
