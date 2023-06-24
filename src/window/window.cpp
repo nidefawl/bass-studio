@@ -1792,7 +1792,11 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
     bool openConsole      = false;
     int centerScreenIdx   = -1;
     String strLogFilename;
+#ifndef NDEBUG
     auto logLevel = Log::LEVEL_ALL;
+#else
+    auto logLevel = Log::L_WARN;
+#endif
     try {
         for (size_t i = 0; i < args.size(); ++i) {
             if (args[i] == "--center" && i + 1 < args.size()) {
