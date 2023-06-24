@@ -7,7 +7,7 @@
 
 namespace PluginSampleCrush {
 
-    static constexpr int32_t BITCRUSH_BITS_MIN = 0;
+    static constexpr int32_t BITCRUSH_BITS_MIN = 1;
     static constexpr int32_t BITCRUSH_BITS_MAX = 16;
     static constexpr int32_t BITCRUSH_MODE_MIN = 0;
     static constexpr int32_t BITCRUSH_MODE_MAX = 2;

@@ -56,20 +56,22 @@ namespace PluginSampleCrush {
         float* in2  = inputs[1];
         int steps   = 1 << (sampleCrushLevel);
         if (steps <= 1) {
-            for (int a = 0; a < sampleFrames; a++) {
+            for (int a = 0; a < sampleFrames; ++a) {
                 (*out1++) = (*in1++) < 0 ? -1 : 1;
                 (*out2++) = (*in2++) < 0 ? -1 : 1;
             }
         } else {
-            for (int a = 0; a < sampleFrames; a += steps) {
+            while (sampleFrames > 0) {
                 float accL = 0;
                 float accR = 0;
-
-                for (int b = 0; b < steps; b++) {
+                int num = 0;
+                while (num < steps && sampleFrames > 0) {
                     accL += (*in1++);
                     accR += (*in2++);
+                    ++num;
+                    --sampleFrames;
                 }
-                for (int b = 0; b < steps; b++) {
+                for (int b = 0; b < num; ++b) {
                     (*out1++) = (accL) < 0 ? -1 : 1;
                     (*out2++) = (accR) < 0 ? -1 : 1;
                 }
@@ -84,22 +86,26 @@ namespace PluginSampleCrush {
         float* in2  = inputs[1];
         int steps   = 1 << (sampleCrushLevel);
         if (steps <= 1) {
-            for (int a = 0; a < sampleFrames; a++) {
+            for (int a = 0; a < sampleFrames; ++a) {
                 (*out1++) = (*in1++);
                 (*out2++) = (*in2++);
             }
         } else {
-            for (int a = 0; a < sampleFrames; a += steps) {
+            while (sampleFrames > 0) {
                 float accL = 0;
                 float accR = 0;
-
-                for (int b = 0; b < steps; b++) {
+                int num = 0;
+                while (num < steps && sampleFrames > 0) {
                     accL += (*in1++);
                     accR += (*in2++);
+                    ++num;
+                    --sampleFrames;
                 }
-                for (int b = 0; b < steps; b++) {
-                    (*out1++) = (accL) / steps;
-                    (*out2++) = (accR) / steps;
+                accL /= num;
+                accR /= num;
+                for (int b = 0; b < num; ++b) {
+                    *out1++ = accL;
+                    *out2++ = accR;
                 }
             }
         }
@@ -111,7 +117,7 @@ namespace PluginSampleCrush {
         float* in1  = inputs[0];
         float* in2  = inputs[1];
         int bits = 1 << (sampleCrushLevel);
-        for (int a = 0; a < sampleFrames; a++) {
+        for (int a = 0; a < sampleFrames; ++a) {
             (*out1++) = (float)((int)((*in1++) * (float)(bits - 1)) / (float)(bits - 1));
             (*out2++) = (float)((int)((*in2++) * (float)(bits - 1)) / (float)(bits - 1));
         }
