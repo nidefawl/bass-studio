@@ -953,8 +953,8 @@ void main(void) {
                 spectrum = *audioAnalyzer->analyzerLf;
             }
             bool didSetPreset = false;
+            auto path = App::Platform::toUserdataPath("presets/Visualizer/presets.json");
             try {
-                auto path = App::Platform::toUserdataPath("presets/Visualizer/presets.json");
                 settings_t settings1 = loadSettings(path);
                 presets              = settings1.presets;
                 currentPresetIdx     = math::clamp<int32_t>(settings1.currentPresetIdx, 0, static_cast<int32_t>(presets.size()) - 1);
@@ -967,7 +967,8 @@ void main(void) {
                 log_lf(Log::L_ERROR, "Exception: %s\n", e.what());
                 try {
                     settings_t settings1{ this->currentPresetIdx, this->presets };
-                    saveSettings(settings1, FILENAME_PRESETS);
+                    CreateDirectoryIfNotExists(App::Platform::toUserdataPath("presets/Visualizer"));
+                    saveSettings(settings1, path);
                 } catch (std::exception& e2) {
                     log_lf(Log::L_ERROR, "Exception: %s\n", e2.what());
                 }
@@ -1699,7 +1700,7 @@ void main(void) {
             bakeOpt.antialias = curPreset.fAntialias * oversample;
             bakeOpt.scale     = 1;
 
-            auto stream    = optionalAudioHost ? optionalAudioHost->getStream(0) : nullptr;
+            DAW::AudioIO::AudioStream* stream    = optionalAudioHost ? optionalAudioHost->getStream(0) : nullptr;
             auto tNow      = getTimeMicros();
             if (timeLastBlock > 0 && stream) {
                 double timeSince = (tNow - timeLastBlock) / 1000000.0;
@@ -2237,7 +2238,9 @@ void main(void) {
                             }
                         }
                         settings_t settings1{ this->currentPresetIdx, this->presets };
-                        saveSettings(settings1, FILENAME_PRESETS);
+                        CreateDirectoryIfNotExists(App::Platform::toUserdataPath("presets/Visualizer"));
+                        auto path = App::Platform::toUserdataPath("presets/Visualizer/presets.json");
+                        saveSettings(settings1, path);
                     } catch (std::exception& e) {
                         log_lf(Log::L_ERROR, "Exception: %s\n", e.what());
                     }
