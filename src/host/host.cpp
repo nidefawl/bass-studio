@@ -1172,12 +1172,10 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             AudioBuffer** buffers = ringbuffer.buffers;
             AudioBuffer* const ptrExternalOutputs = buffers[writePos%RING_BUF_SIZE];
             dbgassert(!ptrExternalOutputs->inUse);
-            ptrExternalOutputs->submitted = false;
             ptrExternalOutputs->output->realloc(m_sampleFormatExternal.blockSize);
             ptrExternalOutputs->output->copyFrom(&impl->blockOutput);
             if (enableProfiling) time1 += timerBlock.getTimeReset();
             ptrExternalOutputs->inUse = true;
-            ptrExternalOutputs->submitted = true;
             ptrExternalOutputs->time = bufferTimeInfo;
             writePos = (writePos+1) & RING_BUF_MASK;
             stream->enqueue(ptrExternalOutputs);

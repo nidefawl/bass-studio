@@ -257,9 +257,8 @@ class audiohost_callback {
                 meterInput->update(bufferWrite->output, 1.0f);
                 meterInput->onTick(bufferWrite->output->samples / double(stream->getSampleRate()));
             }
-            bufferWrite->submitted      = true;
-            bufferWrite->inUse          = true;
-            bufferWrite->time = {};
+            bufferWrite->inUse = true;
+            bufferWrite->time  = {};
             bufferWrite->time.inputTimeSeconds = timeInfo->inputBufferAdcTime;
             timings.samplePosProcIn += bufferWrite->output->samples;
             writePos++;

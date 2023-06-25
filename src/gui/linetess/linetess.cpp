@@ -727,12 +727,10 @@ void main(void) {
             AudioBuffer** buffers = ringbuffer.buffers;
             AudioBuffer* const qBuf = buffers[writePos%RING_BUF_SIZE];
             dbgassert(!qBuf->inUse);
-            qBuf->submitted = false;
             qBuf->output->realloc(buf->samples);
             qBuf->output->copyFrom(buf);
             // if (enableProfiling) time1 += timerBlock.getTimeReset();
             qBuf->inUse = true;
-            qBuf->submitted = true;
             // qBuf->time = bufferTimeInfo;
             // writePos = (writePos+1) & RING_BUF_MASK;
             // stream->enqueue(qBuf);
