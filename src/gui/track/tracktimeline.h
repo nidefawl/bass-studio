@@ -3,6 +3,7 @@
 #include "grid.h"
 #include "event.h"
 #include "gui/container/container.h"
+#include "mouse.h"
 
 class guitrack_timeline final : public guictr_base, grid_changed_cb {
     scaled_grid& grid;
@@ -21,6 +22,7 @@ public:
         padding = 0;
     }
 
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;

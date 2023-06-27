@@ -9,6 +9,14 @@
 #include "gui/gui.h"
 #include "host/daw/mainctrl.h"
 
+
+bool guitrack_timeline::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (this->contains(mpos) && evt.type <= MouseHitType::MOUSE_RIGHT) {
+        evt.requestCursor(CURSOR_ZOOM);
+    }
+    return guictr_base::mouseHitTest(mpos, evt);
+}
+
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
     if (evt.guiDragged == this) {
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
@@ -22,6 +30,7 @@ void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
         dragPosObjSpace       = grid.toObjSpace(dragPosSS);
     }
 }
+
 void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
     if (evt.guiDragged == this) {
         bool lockGesture = true;
