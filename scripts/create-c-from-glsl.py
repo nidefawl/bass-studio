@@ -1,4 +1,5 @@
 # glsl_to_c_src.py
+import os
 import bin2c
 
 def main():
@@ -24,6 +25,42 @@ def main():
         "PATH": "perfgraph.fsh",
         "VAR_NAME": "PERFGRAPH_GLSL_FRAG"
       },
+      {
+        "PATH": "dash-lines-2D.fsh",
+        "VAR_NAME": "DASH_LINES_2D_GLSL_FRAG"
+      },
+      {
+        "PATH": "dash-lines-2D.vsh",
+        "VAR_NAME": "DASH_LINES_2D_GLSL_VERT"
+      },
+      {
+        "PATH": "blit_final.fsh",
+        "VAR_NAME": "BLIT_FINAL_GLSL_FRAG"
+      },
+      {
+        "PATH": "blit_texture.fsh",
+        "VAR_NAME": "BLIT_TEXTURE_GLSL_FRAG"
+      },
+      {
+        "PATH": "blur.fsh",
+        "VAR_NAME": "BLUR_GLSL_FRAG"
+      },
+      {
+        "PATH": "darken.fsh",
+        "VAR_NAME": "DARKEN_GLSL_FRAG"
+      },
+      {
+        "PATH": "polyline2d.fsh",
+        "VAR_NAME": "POLYLINE2D_GLSL_FRAG"
+      },
+      {
+        "PATH": "polyline2d.vsh",
+        "VAR_NAME": "POLYLINE2D_GLSL_VERT"
+      },
+      {
+        "PATH": "textured_fullscreen.vsh",
+        "VAR_NAME": "TEXTURED_FULLSCREEN_GLSL_VERT"
+      }
     ]
 
     cVarDefs = ['#include <stdint.h>\n']
@@ -51,8 +88,27 @@ def main():
     
     cVarDefs.append('\n')
     outputCSourceFile = '\n'.join(cVarDefs)
-    with open("nanovg_shaders.c", "wb") as ouput:
+    # check if src is subdirectory of current directory, if not look in parent directory
+    path = os.path.join(os.getcwd(), "src")
+    if not os.path.isdir(path):
+        path = os.path.join(os.path.dirname(os.getcwd()), "src")
+    # with open("src/gl/builtin_shaders.c", "wb") as ouput:
+    #     ouput.write(outputCSourceFile.encode("UTF-8"))
+    pathBuiltinShadersC = os.path.join(path, "gl", "builtin_shaders.c")
+    with open(pathBuiltinShadersC, "wb") as ouput:
         ouput.write(outputCSourceFile.encode("UTF-8"))
+
+    # create header file with declarations
+    cVarDecls = ['#pragma once\n\n']
+    cVarDecls.append('extern "C" {\n')
+    for shaderFileEntry in shaderFileList:
+        cVarDecls.append(f'extern const char* const {shaderFileEntry["VAR_NAME"]};')
+    cVarDecls.append('\n}\n')
+    outputCHeaderFile = '\n'.join(cVarDecls)
+    pathBuiltinShadersH = os.path.join(path, "gl", "builtin_shaders.h")
+    with open(pathBuiltinShadersH, "wb") as ouput:
+        ouput.write(outputCHeaderFile.encode("UTF-8"))
+
 
 if __name__ == "__main__":
     # execute only if run as a script

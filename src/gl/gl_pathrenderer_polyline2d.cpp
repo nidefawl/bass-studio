@@ -14,6 +14,8 @@
 #include "gl_attr.h"
 #include "gl_vbo.h"
 #include "gl_tess2d.h"
+#include "gl_tess2d.h"
+#include "builtin_shaders.h"
 #include "hires_timer.h"
 #include "assert_dbg.h"
 #include <polyline/Polyline2D.h>
@@ -25,19 +27,18 @@ int GLPathRendererPolyline2d::init() {
     String srcFragment;
     int64_t ret = ReadFileText("polyline2d.vsh", srcVertex);
     if (ret <= 0) {
-        return 1;
+        srcVertex = POLYLINE2D_GLSL_VERT;
     }
     ret = ReadFileText("polyline2d.fsh", srcFragment);
     if (ret <= 0) {
-        return 1;
+        srcFragment = POLYLINE2D_GLSL_FRAG;
     }
 
-    GLuint vertex_shader, fragment_shader;
-    vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
+    GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
     if (!vertex_shader) {
         return 1;
     }
-    fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
+    GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
     if (!fragment_shader) {
         return 1;
     }
@@ -63,8 +64,7 @@ int GLPathRendererPolyline2d::init() {
     //for (int i = 0; i < attributes.size(); i++) {
     //attributes[i].bindingPt = glGetAttribLocation(program, attributes[i].name);
     //}
-    for (int i = 0; i < (int) attributes.size(); i++) {
-        VertexAttr& attr = attributes[i];
+    for (auto& attr : attributes) {
         attr.bindingPt   = glGetAttribLocation(program, attr.name);
         checkGLError("glGetAttribLocation");
         //log_lf(Log::L_TRACE "%s %d\n", attributes[i].name, attr.bindingPt);

@@ -11,6 +11,7 @@
 #include "gl/gl_vbo.h"
 #include "gl/gl_tess2d.h"
 #include "gl/gl_shader.h"
+#include "gl/builtin_shaders.h"
 #include "wave/waveform_render_impl.h"
 #include "color_util.h"
 #include "window_impl.h"

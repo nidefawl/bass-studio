@@ -11,6 +11,7 @@
 #include "gl/gl_tess2d.h"
 #include "gl/gl_framebuffer.h"
 #include "gl/gl_shader.h"
+#include "gl/builtin_shaders.h"
 
 #include "math/vec.h"
 #include "math/mat.h"
@@ -76,7 +77,10 @@ public:
         const char* fnameFsh = "blur.fsh";
         int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
         if (newprogram < 0) {
-            log_printf("compileProgram failed\n");
+            newprogram = compileBuiltinShader(srcParser, TEXTURED_FULLSCREEN_GLSL_VERT, BLUR_GLSL_FRAG);
+        }
+        if (newprogram < 0) {
+            log_lf(Log::L_WARN, "failed loading shaders: %s %s\n", fnameVsh, fnameFsh);
             return -1;
         }
         program = newprogram;

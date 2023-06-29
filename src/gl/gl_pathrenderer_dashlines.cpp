@@ -18,6 +18,7 @@
 #include "gl_attr.h"
 #include "gl_vbo.h"
 #include "gl_tess2d.h"
+#include "builtin_shaders.h"
 #include "hires_timer.h"
 #include "logging.h"
 #include "assert_dbg.h"
@@ -39,7 +40,7 @@ static inline float fast_atan2(float y, float x) {
     if (y == 0 && x == 0)
         return 0;
     float abs_y = fabsf(y);
-    float angle;
+    float angle = 0.0f;
     if (x >= 0)
         angle = c1 - c1 * ((x - abs_y) / (x + abs_y));
     else
@@ -137,11 +138,11 @@ bool readShaderSrc(const String& filename, String& out) {
     out         = "";
     int64_t ret = ReadFileText(filename, out);
     if (ret <= 0) {
-        log_printf("%s: Failed reading file\n", StringAsCStr(filename));
+        // log_printf("%s: Failed reading file\n", StringAsCStr(filename));
         return false;
     }
     if (out.empty()) {
-        log_printf("%s: File is empty\n", StringAsCStr(filename));
+        // log_printf("%s: File is empty\n", StringAsCStr(filename));
         return false;
     }
     return true;
@@ -152,18 +153,17 @@ int GLPathRendererDashLines::init() {
     String srcFragment;
 
     if (!readShaderSrc("dash-lines-2D.vsh", srcVertex)) {
-        return 1;
+        srcVertex = DASH_LINES_2D_GLSL_VERT;
     }
     if (!readShaderSrc("dash-lines-2D.fsh", srcFragment)) {
-        return 1;
+        srcFragment = DASH_LINES_2D_GLSL_FRAG;
     }
 
-    GLuint vertex_shader, fragment_shader;
-    vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
+    GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
     if (!vertex_shader) {
         return 2;
     }
-    fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
+    GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
     if (!fragment_shader) {
         return 2;
     }

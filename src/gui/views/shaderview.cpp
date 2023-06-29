@@ -48,6 +48,7 @@ struct testshader final : gl_shader_pipeline {
         const char* fnameFsh = "test.fsh";
         int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
         if (newprogram < 0) {
+            log_lf(Log::L_WARN, "failed loading shaders: %s %s\n", fnameVsh, fnameFsh);
             return -1;
         }
         program = newprogram;

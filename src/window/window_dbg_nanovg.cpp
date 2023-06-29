@@ -13,6 +13,7 @@
 #include "gl/gl_vbo.h"
 #include "gl/gl_tess2d.h"
 #include "gl/gl_shader.h"
+#include "gl/builtin_shaders.h"
 #include "renderresources.h"
 #include "color_util.h"
 #include "rand.h"

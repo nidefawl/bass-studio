@@ -22,7 +22,6 @@ bool glshader_srcloader::addStageSrc(int32_t type, const char* fname) {
         sources.push_back({type, fname, strSrc});
         return true;
     }
-    log_printf("failed loading %s\n", fname);
     return false;
 }
 bool glshader_srcloader::setStageSrc(int32_t type, const String& fname, const String& strSrc) {
