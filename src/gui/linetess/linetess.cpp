@@ -1,4 +1,8 @@
 
+#include "gui/container/container_layout_types.h"
+#include "host/plugin/modules.h"
+#include "plugins/latency/latency-plugin.h"
+#include "plugins/visualizer/visualizer-plugin.h"
 #ifdef HAVE_PYTHON_INTERPRETER
 #include <pybind11/pybind11.h>
 #endif
@@ -2026,7 +2030,28 @@ void main(void) {
                         break;
                 }
             } else if (audioAnalyzer) {
-                //TODO: feed from pre resampler master output (how to handle thread saftey?!)
+                auto getFirstLatencyEffect = [&](DAW::Host::Host*) -> effectbase*
+                {
+                    std::vector<effectbase *> effects;
+                    daw->getHost()->getAllInstances(effects);
+                    for (auto e : effects) {
+                        if (e->getModuleType() == PLUGIN_TYPE_VISUALIZER) {
+                            return e;
+                        }
+                    }
+                    return nullptr;
+                };
+                effectbase* eff = getFirstLatencyEffect(daw->getHost());
+                if (eff) {
+                    auto* moduleAudioVisualizer = static_cast<PluginVisualizer::module_visualizer*>(eff);
+                    if (moduleAudioVisualizer->getOutputQueueSize() > 0) {
+                        auto lock = daw->lockPlayThread();
+                        while (moduleAudioVisualizer->try_dequeue(bufInput)) {
+                            processAudioBuffer(bufInput);
+                            bufInput->inUse = false;
+                        }
+                    }
+                }
             }
             // log_printf("processed %d blocks\n", nR);
             if (!renderAudio || !rendered) {
@@ -2454,6 +2479,13 @@ void main(void) {
         }
     };
 
+    void enqueueAudioFromPlugin(guictr_base* ctr, AudioBlock* out) {
+        auto ctrAudioVis = gui_cast<guictr_audiovis, gui_type::CTR_TYPE_AUDIO_VISUALIZER>(ctr);
+        if (!assert_expr(ctrAudioVis)) {
+            return;
+        }
+        ctrAudioVis->enqueue(out);
+    }
 }// namespace lineplot
 
 CEREAL_CLASS_VERSION(lineplot::settings_preset_t, 1);

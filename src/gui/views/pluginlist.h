@@ -202,6 +202,7 @@ public:
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_DELAY, 0, "Sample Delay", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_STEREO_WIDTH, 0, "Stereo Width", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SYNTH, 0, "Synth", true });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_VISUALIZER, 0, "Visualizer", false });
         auto daw = dawCtrl->getDaw();
         auto pluginMgr = daw->getPluginManager();
         std::vector<DAW::Host::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();

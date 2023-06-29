@@ -13,6 +13,7 @@
 #include "host/host_pluginmanager.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/modules.h"
+#include "plugins/visualizer/visualizer-plugin.h"
 
 extern template effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<module_group>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
@@ -68,6 +69,9 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
         case PLUGIN_TYPE_EQ:
             effect = makeInstance<PluginEQ::module_eq>(getNextGlobalModuleId(globalid), hostcallback);
             break;
+        case PLUGIN_TYPE_VISUALIZER:
+            effect = makeInstance<PluginVisualizer::module_visualizer>(getNextGlobalModuleId(globalid), hostcallback);
+            break;
         case PLUGIN_TYPE_INTERNAL_EFFECT: {
             LoadResultPlugin res = loadInternalPlugin(moduleId, globalid);
             if (res.library.isSuccess()) {
@@ -90,6 +94,7 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
         case PLUGIN_TYPE_MACROS:
         case PLUGIN_TYPE_LFO:
         case PLUGIN_TYPE_EQ:
+        case PLUGIN_TYPE_VISUALIZER:
             if (effect) {
                 effect->load(this);
                 pluginInstancesInternal.push_back(effect);
