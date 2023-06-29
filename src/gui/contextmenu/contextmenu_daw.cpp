@@ -1,3 +1,5 @@
+#include "assert_dbg.h"
+#include "basectrl.h"
 #include "host/automation/automation.h"
 #include "commands.h"
 #include "contextmenu_daw.h"
@@ -32,38 +34,52 @@ guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _at
     DAW::AddContextEntriesModulation(this, _atl, paramIdx);
 }
 bool guictxtmenu_at_param::clickedElement(ctxtmenu_entry* e, int _id) {
-    DAW::HandleAutomatableContextMenu(dawCtrl, atl, paramIdx, _id);
+    auto parent = parentCtrl && parentCtrl->getParentCtrl() ? parentCtrl->getParentCtrl() : parentCtrl;
+    DAW::HandleAutomatableContextMenu(parent, atl, paramIdx, _id);
     return true;
 }
 
 namespace DAW {
-static constexpr int32_t ID_DELETE = 1;
-static constexpr int32_t ID_REENABLE = 2;
-static constexpr int32_t ID_SHOW = 3;
-static constexpr int32_t ID_SHOW_NEW = 4;
-static constexpr int32_t ID_RESET_TO_DEFAULT = 5;
-static constexpr int32_t ID_REMOVE_PARAM_MODULATION = 6;
-static constexpr int32_t ID_EDIT_PARAM_MODULATION = 7;
+
+namespace AutomatableContextMenu {
+
+enum CommandType : int32_t { 
+    CMD_DELETE = 0,
+    CMD_REENABLE,
+    CMD_SHOW,
+    CMD_SHOW_NEW,
+    CMD_COPY,
+    CMD_PASTE,
+    CMD_RESET_TO_DEFAULT,
+    CMD_REMOVE_PARAM_MODULATION,
+    CMD_EDIT_PARAM_MODULATION,
+};
+
+};
+
 void AddContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
     const auto* at = atl->getRegisteredAutomation(paramIdx);
     if (at && at->isAutomated()) {
         if (!at->isActive()) {
-            ctxt->addEntry(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
+            ctxt->addEntry(new ctxtmenu_entry("Reenable Automation", AutomatableContextMenu::CMD_REENABLE));
         }
-        ctxt->addEntry(new ctxtmenu_entry("Delete Automation", ID_DELETE));
+        ctxt->addEntry(new ctxtmenu_entry("Delete Automation", AutomatableContextMenu::CMD_DELETE));
     }
-    ctxt->addEntry(new ctxtmenu_entry("Show Automation", ID_SHOW));
-    ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
-    ctxt->addEntry(new ctxtmenu_entry("Reset to default", ID_RESET_TO_DEFAULT));
+    ctxt->addEntry(new ctxtmenu_entry("Show Automation", AutomatableContextMenu::CMD_SHOW));
+    ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", AutomatableContextMenu::CMD_SHOW_NEW));
+    ctxt->addEntry(new ctxtmenu_entry("Copy Automation", AutomatableContextMenu::CMD_COPY));
+    ctxt->addEntry(new ctxtmenu_entry("Paste Automation", AutomatableContextMenu::CMD_PASTE));
+    ctxt->addEntry(new ctxtmenu_entry("Reset to default", AutomatableContextMenu::CMD_RESET_TO_DEFAULT));
     
 }
 void AddContextEntriesModulation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
     if (DAW::IsParamModulated(atl, paramIdx)) {
-        ctxt->addEntry(new ctxtmenu_entry("Remove Modulation", ID_REMOVE_PARAM_MODULATION));
+        ctxt->addEntry(new ctxtmenu_entry("Remove Modulation", AutomatableContextMenu::CMD_REMOVE_PARAM_MODULATION));
     }
-    ctxt->addEntry(new ctxtmenu_entry("Edit Modulation", ID_EDIT_PARAM_MODULATION));
+    ctxt->addEntry(new ctxtmenu_entry("Edit Modulation", AutomatableContextMenu::CMD_EDIT_PARAM_MODULATION));
 }
 }
+
 class guictxtmenu_select_modulation final : public guictxtmenu {
     automatable_t* const atl;
     int32_t const paramIdx;
@@ -115,23 +131,28 @@ public:
 
 guictxtmenu* guictxtmenu_at_param::createPopupForEntry(ctxtmenu_entry* e, int lvl) {
     guictxtmenu* popup = nullptr;
-    if (e->id == DAW::ID_REMOVE_PARAM_MODULATION) {
+    if (e->id == DAW::AutomatableContextMenu::CMD_REMOVE_PARAM_MODULATION) {
         popup = new guictxtmenu_select_modulation(dawCtrl, atl, paramIdx);
     }
     return popup;
 }
 namespace DAW {
-    bool HandleAutomatableContextMenu(DawCtrl* dawCtrl, automatable_t* atl, int paramIdx, int _id) {
+    bool HandleAutomatableContextMenu(BaseCtrl* parentCtrl, automatable_t* atl, int paramIdx, int _id) {
+        auto dawCtrl = parentCtrl->getDawCtrl();
+        if (!assert_expr(parentCtrl)) {
+            return false;
+        }
+        using namespace AutomatableContextMenu;
         switch (_id) {
-            case ID_EDIT_PARAM_MODULATION: {
-                dawCtrl->closeContextMenu();
-                DAW::OpenModulationEditor(dawCtrl, dawCtrl->lastMouseEvent.mousepos, atl, paramIdx);
+            case CMD_EDIT_PARAM_MODULATION: {
+                parentCtrl->closeContextMenu();
+                DAW::OpenModulationEditor(parentCtrl, dawCtrl->lastMouseEvent.mousepos, atl, paramIdx);
                 return true;
         
             }
-            case ID_REMOVE_PARAM_MODULATION: {
+            case CMD_REMOVE_PARAM_MODULATION: {
                 {
-                    dawCtrl->closeContextMenu();
+                    parentCtrl->closeContextMenu();
                     auto lock = dawCtrl->lockPlayThread();
                     DAW::DisonnectModulationForParam(atl, paramIdx);
                 }
@@ -148,21 +169,21 @@ namespace DAW {
         track_gui_entry_t* entry{};
         if(!guiTrackCtr->getPointerEntry(track, &entry))
             return false;
-        dawCtrl->closeContextMenu();
+        parentCtrl->closeContextMenu();
         switch (_id) {
-            case ID_SHOW_NEW: {
+            case CMD_SHOW_NEW: {
                 auto const lane = guiTrackCtr->addAutomationLane(entry, atl, paramIdx, true);
                 dawCtrl->updateVisibleTrackContents();
                 guiTrackCtr->scrollTo(lane);
                 return true;
             }
-            case ID_SHOW: {
+            case CMD_SHOW: {
                 guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
                 dawCtrl->updateVisibleTrackContents();
                 guiTrackCtr->scrollTo(entry->content);
                 return true;
             }
-            case ID_DELETE: {
+            case CMD_DELETE: {
                 auto* param = atl->getRegisteredAutomation(paramIdx);
                 if (param) {
                     trackstate_t trackSnapshot;
@@ -174,7 +195,7 @@ namespace DAW {
                 }
                 return true;
             }
-            case ID_REENABLE: {
+            case CMD_REENABLE: {
                 auto* param = atl->getRegisteredAutomation(paramIdx);
                 if (param && !param->isActive()) {
                     guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
@@ -183,8 +204,33 @@ namespace DAW {
                 }
                 return true;
             }
-            case ID_RESET_TO_DEFAULT: {
+            case CMD_RESET_TO_DEFAULT: {
                 atl->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+                return true;
+            }
+            case CMD_COPY: {
+                auto* param = atl->getRegisteredAutomation(paramIdx);
+                if (param) {
+                    auto clipboard = std::make_shared<automation_clipboard_t>();
+                    clipboard->dataPoints = param->src.points;
+                    dawCtrl->getDaw()->setAutomationClipboard(clipboard);
+                }
+                return true;
+            }
+            case CMD_PASTE: {
+                if (dawCtrl->getDaw()->getClipboardType() == CLIPBOARD_AUTOMATION_DATA) {
+                    auto lock = dawCtrl->lockPlayThread();
+                    auto clipboard = dawCtrl->getDaw()->getAutomationClipboard();
+                    auto* param = atl->getOrCreateAutomation(paramIdx);
+                    if (clipboard) {
+                        trackstate_t trackSnapshot;
+                        trackSnapshot.tracks.push_back(new track_snapshot_t(track, tracksnapshot_store_opts_t::AutomationOnly()));
+                        trackSnapshot.cursor = dawCtrl->getCursor();
+                        param->src.points = clipboard->dataPoints;
+                        dawCtrl->getDaw()->pushHist(new action_modify_track("Paste Automation", std::move(trackSnapshot)));
+                        dawCtrl->updateVisibleTrackContents();
+                    }
+                }
                 return true;
             }
             default:

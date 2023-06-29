@@ -44,3 +44,11 @@ struct plugin_clipboard_t {
     std::vector<plugin_snapshot_t> plugins;
     int32_t range = 0;
 };
+
+struct notes_clipboard {
+    clip_notes_t notes;
+    tick_t cursorRange = 0;
+    bool empty() const {
+        return notes.isEmpty();
+    }
+};

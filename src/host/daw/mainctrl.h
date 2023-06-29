@@ -134,13 +134,6 @@ inline bool operator==(const clip_cursor_t& lhs, const clip_cursor_t& rhs) {
     return lhs.start == rhs.start && lhs.end == rhs.end;
 }
 inline bool operator!=(const clip_cursor_t& lhs, const clip_cursor_t& rhs) { return !operator==(lhs, rhs); }
-struct notes_clipboard {
-    clip_notes_t notes;
-    tick_t cursorRange = 0;
-    bool empty() const {
-        return notes.isEmpty();
-    }
-};
 
 class clip_ref_t {
     project_t* m_project = nullptr; // Pointer must be null or valid!
@@ -238,6 +231,7 @@ enum ClipBoardType {
     CLIPBOARD_NOTES,
     CLIPBOARD_PLUGINS,
     CLIPBOARD_TRACKS,
+    CLIPBOARD_AUTOMATION_DATA,
 };
 
 class MainCtrl;
@@ -307,6 +301,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     std::shared_ptr<plugin_clipboard_t> clipboardPlugins;
     std::shared_ptr<clip_clipboard> clipboardClips;
     std::shared_ptr<notes_clipboard> clipboardNotes;
+    std::shared_ptr<automation_clipboard_t> clipboardAutomation;
 
     dragdrop_midifile dragdropclip;
     dragdrop_target_indicator_t dragdropTarget;
@@ -409,6 +404,13 @@ public:
     }
     std::shared_ptr<notes_clipboard>& getNotesClipboard() {
         return clipboardNotes;
+    }
+    void setAutomationClipboard(std::shared_ptr<automation_clipboard_t> clipboard) {
+        clipboardType = CLIPBOARD_AUTOMATION_DATA;
+        clipboardAutomation = std::move(clipboard);
+    }
+    std::shared_ptr<automation_clipboard_t>& getAutomationClipboard() {
+        return clipboardAutomation;
     }
     ClipBoardType getClipboardType() const {
         return clipboardType;

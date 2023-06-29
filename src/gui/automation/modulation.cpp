@@ -494,8 +494,12 @@ class guictxtmenu_modulation final : public guictxtmenu {
 }// namespace DAW::UI
 
 namespace DAW {
-    void OpenModulationEditor(DawCtrl* dawCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx) {
-        dawCtrl->closeAllContextMenus();
+    void OpenModulationEditor(BaseCtrl* parentCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx) {
+        parentCtrl->closeAllContextMenus();
+        auto dawCtrl = parentCtrl->getDawCtrl();
+        if (!assert_expr(dawCtrl)) {
+            return;
+        }
         auto ctxtMenu = new DAW::UI::Modulation::guictr_edit_modulation();
         ctxtMenu->size = {520, 420};
         ctxtMenu->pos = {0, 0};
