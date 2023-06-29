@@ -89,8 +89,10 @@ public:
     }
     void buttonClicked(guibase* button) override {
         if (button == &btnClose) {
+            auto parentCtrl = this->parentCtrl;
             parentCtr->removeEntryFromParent();
-            parentCtrl->relayout();
+            if (parentCtrl)
+                parentCtrl->relayout();
         }
     }
     void layout() override {
