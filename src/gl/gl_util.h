@@ -48,7 +48,7 @@ inline void glfOrtho(double* mat4x4, float left, float right, float bottom, floa
     memcpy(mat4x4, ortho, (4 * 4) * sizeof(double));
 }
 inline void downsampledResolution(int w, int h, int fac, int& wd, int& hd) {
-    if (fac != 1) {
+    if (fac > 1) {
         int ssrW = w / fac;
         int ssrH = h / fac;
         if (ssrW % 2 != 0)
