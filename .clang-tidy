@@ -25,6 +25,7 @@ Checks: >
     -misc-no-recursion,
     -readability-*,
     -google-readability-*,
+    -google-build-using-namespace,
     -cert-err33-c,
     -hicpp-*,
     -llvm-*,
