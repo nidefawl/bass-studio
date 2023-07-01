@@ -152,7 +152,7 @@ public:
 void loadContainerSnapshot(ContainerFactory& fac,
                             ContainerInstanceContext& ctxt,
                             guictr_layout* ctrlayout,
-                            guictrlayout_snapshot_t* snapshot);
-void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot);
+                            guictrlayout_entry_snapshot_t* snapshot);
+void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_entry_snapshot_t* snapshot);
 
 

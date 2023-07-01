@@ -1,0 +1,210 @@
+{
+    "layout": {
+        "value0": {
+            "ptr_wrapper": {
+                "id": 2147483649,
+                "data": {
+                    "cereal_class_version": 1,
+                    "type": 0,
+                    "label": "",
+                    "ctrLayout": 3,
+                    "activePosition": 0,
+                    "entries": [
+                        {
+                            "ptr_wrapper": {
+                                "id": 2147483650,
+                                "data": {
+                                    "type": 107,
+                                    "label": "Plugin Library",
+                                    "ctrLayout": 0,
+                                    "activePosition": -1,
+                                    "entries": [],
+                                    "splitterPositions": [],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        {
+                            "ptr_wrapper": {
+                                "id": 2147483651,
+                                "data": {
+                                    "type": 108,
+                                    "label": "Loaded Plugins",
+                                    "ctrLayout": 0,
+                                    "activePosition": -1,
+                                    "entries": [],
+                                    "splitterPositions": [],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        {
+                            "ptr_wrapper": {
+                                "id": 2147483652,
+                                "data": {
+                                    "type": 113,
+                                    "label": "Export Audio",
+                                    "ctrLayout": 0,
+                                    "activePosition": -1,
+                                    "entries": [],
+                                    "splitterPositions": [],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        {
+                            "ptr_wrapper": {
+                                "id": 2147483653,
+                                "data": {
+                                    "type": 112,
+                                    "label": "Performance",
+                                    "ctrLayout": 0,
+                                    "activePosition": -1,
+                                    "entries": [],
+                                    "splitterPositions": [],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        }
+                    ],
+                    "splitterPositions": [],
+                    "entryTag": -1,
+                    "data": ""
+                }
+            }
+        },
+        "value1": {
+            "ptr_wrapper": {
+                "id": 2147483654,
+                "data": {
+                    "type": 0,
+                    "label": "",
+                    "ctrLayout": 0,
+                    "activePosition": -1,
+                    "entries": [],
+                    "splitterPositions": [],
+                    "entryTag": -1,
+                    "data": ""
+                }
+            }
+        },
+        "value2": [
+            0.16484375298023225,
+            1.0
+        ],
+        "center": {
+            "ptr_wrapper": {
+                "id": 2147483655,
+                "data": {
+                    "type": 0,
+                    "label": "",
+                    "ctrLayout": 1,
+                    "activePosition": -1,
+                    "entries": [
+                        {
+                            "ptr_wrapper": {
+                                "id": 2147483656,
+                                "data": {
+                                    "type": 101,
+                                    "label": "Layout",
+                                    "ctrLayout": 3,
+                                    "activePosition": 0,
+                                    "entries": [
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483657,
+                                                "data": {
+                                                    "type": 129,
+                                                    "label": "Tracks",
+                                                    "ctrLayout": 0,
+                                                    "activePosition": -1,
+                                                    "entries": [],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 105,
+                                                    "data": ""
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483658,
+                                                "data": {
+                                                    "type": 130,
+                                                    "label": "Nodes",
+                                                    "ctrLayout": 0,
+                                                    "activePosition": -1,
+                                                    "entries": [],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 106,
+                                                    "data": ""
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "splitterPositions": [],
+                                    "entryTag": 103,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        {
+                            "ptr_wrapper": {
+                                "id": 2147483659,
+                                "data": {
+                                    "type": 101,
+                                    "label": "Layout",
+                                    "ctrLayout": 3,
+                                    "activePosition": 0,
+                                    "entries": [
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483660,
+                                                "data": {
+                                                    "type": 114,
+                                                    "label": "Clip Editor",
+                                                    "ctrLayout": 0,
+                                                    "activePosition": -1,
+                                                    "entries": [],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 107,
+                                                    "data": ""
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483661,
+                                                "data": {
+                                                    "type": 124,
+                                                    "label": "Plugins",
+                                                    "ctrLayout": 0,
+                                                    "activePosition": -1,
+                                                    "entries": [],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 108,
+                                                    "data": ""
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "splitterPositions": [],
+                                    "entryTag": 104,
+                                    "data": ""
+                                }
+                            }
+                        }
+                    ],
+                    "splitterPositions": [
+                        0.5
+                    ],
+                    "entryTag": -1,
+                    "data": ""
+                }
+            }
+        }
+    }
+}

@@ -335,6 +335,11 @@ public:
             parent->buttonClicked(button);
         }
     }
+    virtual String storeContainerData() {
+        return "";
+    }
+    virtual void loadContainerData(const String& data) {
+    }
 };
 
 class guictr_vert_layout : public guictr_base {

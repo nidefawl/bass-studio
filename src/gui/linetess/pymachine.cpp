@@ -1,23 +1,18 @@
-#ifdef HAVE_PYTHON_INTERPRETER
-#include <pybind11/embed.h>
-#include <pybind11/stl.h>
-#include <pybind11/stl_bind.h>
-#include <pybind11/complex.h>
-#include <pybind11/functional.h>
-#include <pybind11/chrono.h>
+#include "pymachine.h"
+#ifdef USE_PYTHON
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
-#include "pybindings.h"
-#include "pymachine.h"
-
-
 #include "platform.h"
 #include "str_util.h"
 #include "logging.h"
 #include <vector>
+
+#ifdef _WIN32
+#include "str_win32.h"
+#endif
+
 namespace py = pybind11;
 using namespace py::literals;
-const char* moduleName              = "user_pathgen_functions";
 const char* moduleNameEmbedBindings = "path_bindings";
 
 static void pybind11_init_path_bindings(pybind11::module& m) {
@@ -48,29 +43,6 @@ pybind11::detail::embedded_module module_path_bindings("path_bindings", pybind11
 
 namespace PyMachine {
 
-    template<typename TResult, typename... Args>
-    TResult callFunctionAttr(String fnName, Args&&... args) {
-        py::module moduleBindings = py::module::import(moduleNameEmbedBindings);
-        py::module moduleImpl     = py::module::import(moduleName);// load test.py file from working directory
-        py::object result         = moduleImpl.attr(StringAsCStr(fnName))(std::forward<Args>(args)...);
-        return result.cast<TResult>();
-    }
-
-    void testThings() {
-        try {
-            std::vector<glm::vec2> vecInput(3);
-            vecInput[0] = {0, 1};
-            vecInput[1] = {1, 1};
-            vecInput[2] = {2, 1};
-            callFunctionAttr<void>("pathGen_test", vecInput, 0.0f);
-            //	randomizePath();
-            log_printf("path size %zu\n", vecInput.size());
-        } catch (std::exception& e) {
-            log_printf("%s\n", e.what());
-            throw std::runtime_error("Python initialization failed");
-        }
-    }
-
     double pyEvalExpression(const char* expr, double x, double t) {
         auto locals     = py::dict("x"_a = x, "t"_a = t);
         String fullExpr = StringFormat("import random\nfrom math import *\nval = %s", expr);
@@ -78,7 +50,7 @@ namespace PyMachine {
         return locals["val"].cast<double>();
     }
 
-    void initPython() {
+    bool initPython() {
 #if 1
         PyPreConfig preconfig;
         PyPreConfig_InitIsolatedConfig(&preconfig);
@@ -88,9 +60,9 @@ namespace PyMachine {
 
         PyStatus status = Py_PreInitialize(&preconfig);
         if (PyStatus_Exception(status)) {
-            log_lf(Log::L_ERROR, "Exception while initializing python\n");
+            log_lf(Log::L_ERROR, "Py_PreInitialize: Exception. Failed to initialize python interpreter\n");
             Py_ExitStatusException(status);
-            return;
+            return false;
         }
 
         PyConfig config;
@@ -100,29 +72,62 @@ namespace PyMachine {
         config.install_signal_handlers = 0;
         // config.verbose = 2;
         // config.dev_mode = 1;
+        // config.pathconfig_warnings = 1;
 
         config.configure_c_stdio = 0;
-        
+
         status = Py_InitializeFromConfig(&config);
         if (PyStatus_Exception(status)) {
-            log_lf(Log::L_ERROR, "Exception while initializing python\n");
+            log_lf(Log::L_ERROR, "Py_InitializeFromConfig: Exception. Failed to initialize python interpreter\n");
             Py_ExitStatusException(status);
-            return;
+            return false;
         }
         PyConfig_Clear(&config);
         wchar_t* empty_argv[1]{pybind11::detail::widen_chars("\0")};
         PySys_SetArgvEx(1, empty_argv, 1);
         PyObject *sys = PyImport_ImportModule("sys");
         PyObject *path = PyObject_GetAttrString(sys, "path");
-        std::string resPath = App::Platform::GetResourcePath();
-        PyList_Append(path, PyUnicode_FromString(resPath.c_str()));
-
+        auto pathVisualizerPresets = App::Platform::toUserdataPath("presets/Visualizer");
+        PyList_Append(path, PyUnicode_FromString(pathVisualizerPresets.c_str()));
+        return true;
+#else
+        return false;
 #endif
-        testThings();
     }
+
     void deinitPython() {
         py::finalize_interpreter();
     }
 }// namespace PyMachine
 
 #endif
+
+namespace DAW {
+static bool gPythonInitialized = false;
+
+void InitPythonInterpreter() {
+#ifdef USE_PYTHON
+    if (!gPythonInitialized) {
+        gPythonInitialized = PyMachine::initPython();
+    }
+#endif
+}
+
+void DeinitPythonInterpreter() {
+#ifdef USE_PYTHON
+    if (gPythonInitialized) {
+        gPythonInitialized = false;
+        PyMachine::deinitPython();
+    }
+#endif
+}
+
+bool IsPythonInitialized() {
+#ifdef USE_PYTHON
+    return gPythonInitialized;
+#else
+    return false;
+#endif
+}
+
+}

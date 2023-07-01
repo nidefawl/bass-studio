@@ -25,7 +25,7 @@ protected:
     gui_textfield textField;
 public:
     
-    guitooltip(T* _ptr) : ref(_ptr->toRef()) {
+    explicit guitooltip(T* _ptr) : ref(_ptr->toRef()) {
         add(&textField);
         padding = 1;
         margin = padding;

@@ -1,4 +1,5 @@
 #include "appconfig.h"
+#include "gl/gl_util.h"
 #include "glheaders.h"
 #include <cstddef>
 #include <nanovg.h>
@@ -350,6 +351,7 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
     }
     return false;
 }
+
 void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
     auto& renderContainers = getRenderContainers();
     for (guictr_base* ctr : renderContainers) {
@@ -358,6 +360,7 @@ void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w
         }
     }
 }
+
 void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
     NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
     glClearColor(col.r, col.g, col.b, col.a);

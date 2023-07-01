@@ -4,6 +4,7 @@
 #include "host/automation/automation.h"
 #include "dsp_util.h"
 #include "event.h"
+#include "logging.h"
 #include "plugins/plugin-ui.h"
 #include "plugins/plugincontrol.h"
 #include "str_util.h"
@@ -22,10 +23,6 @@
 #include "host/meter/meter.h"
 #include "snapshot/snapshot.h"
 #include "window.h"
-
-namespace lineplot {
-    void enqueueAudioFromPlugin(guictr_base* ctr, AudioBlock* out);
-}// namespace lineplot
 
 namespace PluginVisualizer {
 
@@ -73,7 +70,12 @@ namespace PluginVisualizer {
         auto& writePos = ringbuffer.writePos;
         AudioBuffer** buffers = ringbuffer.buffers;
         AudioBuffer* const qBuf = buffers[writePos%RING_BUF_SIZE];
-        // dbgassert(!qBuf->inUse);
+        writePos = (writePos+1) & RING_BUF_MASK;
+        // if (qBuf->inUse) {
+        //     bufferOverruns++;
+        //     if (bufferOverruns % 100 == 0)
+        //         log_lf(Log::L_WARN, "%d buffer overruns\n", bufferOverruns);
+        // }
         qBuf->output->realloc(buf->samples);
         qBuf->output->copyFrom(buf);
         qBuf->inUse = true;

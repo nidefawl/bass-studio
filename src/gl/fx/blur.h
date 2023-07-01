@@ -73,6 +73,7 @@ public:
 public:
     template<typename T>
     int load(T* srcParser) {
+        storeGlContext();
         const char* fnameVsh = "textured_fullscreen.vsh";
         const char* fnameFsh = "blur.fsh";
         int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);

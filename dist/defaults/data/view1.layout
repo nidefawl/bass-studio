@@ -1,0 +1,86 @@
+{
+    "layout": {
+        "value0": {
+            "ptr_wrapper": {
+                "id": 2147483649,
+                "data": {
+                    "cereal_class_version": 1,
+                    "type": 0,
+                    "label": "",
+                    "ctrLayout": 0,
+                    "activePosition": -1,
+                    "entries": [],
+                    "splitterPositions": [],
+                    "entryTag": -1,
+                    "data": ""
+                }
+            }
+        },
+        "value1": {
+            "ptr_wrapper": {
+                "id": 2147483650,
+                "data": {
+                    "type": 0,
+                    "label": "",
+                    "ctrLayout": 0,
+                    "activePosition": -1,
+                    "entries": [],
+                    "splitterPositions": [],
+                    "entryTag": -1,
+                    "data": ""
+                }
+            }
+        },
+        "value2": [
+            0.0,
+            1.0
+        ],
+        "center": {
+            "ptr_wrapper": {
+                "id": 2147483651,
+                "data": {
+                    "type": 0,
+                    "label": "",
+                    "ctrLayout": 0,
+                    "activePosition": 0,
+                    "entries": [
+                        {
+                            "ptr_wrapper": {
+                                "id": 2147483652,
+                                "data": {
+                                    "type": 101,
+                                    "label": "Layout",
+                                    "ctrLayout": 3,
+                                    "activePosition": 0,
+                                    "entries": [
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483653,
+                                                "data": {
+                                                    "type": 130,
+                                                    "label": "Nodes",
+                                                    "ctrLayout": 0,
+                                                    "activePosition": -1,
+                                                    "entries": [],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 106,
+                                                    "data": ""
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "splitterPositions": [],
+                                    "entryTag": 103,
+                                    "data": ""
+                                }
+                            }
+                        }
+                    ],
+                    "splitterPositions": [],
+                    "entryTag": -1,
+                    "data": ""
+                }
+            }
+        }
+    }
+}

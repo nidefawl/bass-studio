@@ -96,6 +96,7 @@ public:
 
     void setup() {
         instanceCount++;
+        storeGlContext();
         GLint numTextures = 0;
         for (auto colorAttFormat : colorAttFormats) {
             if (colorAttFormat != 0) {

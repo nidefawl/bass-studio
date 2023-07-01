@@ -44,6 +44,7 @@ struct testshader final : gl_shader_pipeline {
     }
     template<typename T>
     int load(T* srcParser) {
+        storeGlContext();
         const char* fnameVsh = "test.vsh";
         const char* fnameFsh = "test.fsh";
         int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);

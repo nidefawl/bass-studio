@@ -1,11 +1,8 @@
-
+#include "pymachine.h"
 #include "gui/container/container_layout_types.h"
 #include "host/plugin/modules.h"
 #include "plugins/latency/latency-plugin.h"
 #include "plugins/visualizer/visualizer-plugin.h"
-#ifdef HAVE_PYTHON_INTERPRETER
-#include <pybind11/pybind11.h>
-#endif
 #include "host/daw/mainctrl.h"
 #include "host/host.h"
 #include <cmath>
@@ -22,11 +19,13 @@
 #include "guicolors.h"
 #include "math/simd_math.h"
 #include "seq_util.h"
+#include "samplerate.h"
 #include "types.h"
 #include "tls.h"
 #include "platform.h"
 #include "str_util.h"
 #include "logging.h"
+#include "fileio.h"
 #include "basectrl.h"
 #include "appsettings.h"
 #include "renderresources.h"
@@ -42,6 +41,7 @@
 #include "gl/gl_framebuffer.h"
 #include "gl/gl_shader.h"
 #include "gl/gl_util.h"
+#include "gl/builtin_shaders.h"
 #include "math/mat.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -49,6 +49,7 @@
 #include "host/audiohost/audio_host.h"
 #include "gl/fx/blur.h"
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include <array>
@@ -78,16 +79,12 @@
 #include <glm/gtx/fast_exponential.hpp>
 #include <glm/gtx/fast_trigonometry.hpp>
 
-#undef HAVE_PYTHON_INTERPRETER
-
 template<typename T>
 float lengthSquared(T a) { return glm::length2(a); }
 
-#ifdef HAVE_PYTHON_INTERPRETER
-#include "pybindings.h"
-#include "pymachine.h"
+#ifdef USE_PYTHON
 
-const char* moduleNamePathGen = "user_pathgen_functions";
+const char* moduleNamePathGen = "visualizer_pathgen";
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -128,9 +125,13 @@ struct tex_shader : gl_shader_pipeline {
     ivec2 lastBufSize = { -1, -1 };
     const char* fnameVsh;
     const char* fnameFsh;
-    tex_shader(const char* _fnameVsh, const char* _fnameFsh)
+    const char* builtinSrcVsh;
+    const char* builtinSrcFsh;
+    tex_shader(const char* _fnameVsh, const char* _fnameFsh, const char* _builtinSrcVsh, const char* _builtinSrcFsh)
         : fnameVsh(_fnameVsh),
-          fnameFsh(_fnameFsh) {
+          fnameFsh(_fnameFsh),
+          builtinSrcVsh(_builtinSrcVsh),
+          builtinSrcFsh(_builtinSrcFsh) {
         attributes = {
             { "a_position", 2, GL_FLOAT },
             { "a_texcoord", 2, GL_FLOAT }
@@ -147,10 +148,14 @@ struct tex_shader : gl_shader_pipeline {
     }
     template<typename T>
     int load(T* srcParser) {
-
+        storeGlContext();
         checkGLError("pre compileShaderCombo");
         int newprogram = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
         if (newprogram < 0) {
+            newprogram = compileBuiltinShader(srcParser, builtinSrcVsh, builtinSrcFsh);
+        }
+        if (newprogram < 0) {
+            log_lf(Log::L_WARN, "failed loading shaders: %s %s\n", fnameVsh, fnameFsh);
             dbgassert(newprogram != -2);
             return -1;
         }
@@ -216,19 +221,25 @@ namespace lineplot {
     struct settings_preset_t {
         String name;
         String expression;
+        String pythonFunc;
+        int32_t nRenderer           = 2;
+        PathMode mode               = FFT_SPECTRUM;
+        int32_t nSplineType         = 1;
+        int32_t degree              = 4;
+        int32_t blendMode           = 0;
+        int32_t nBlurDownsample     = 0;
+        int32_t nBlurPasses         = 0;
+        int32_t nOversample         = 1; // 1 or 2
         int32_t nSamples            = 300;
         int32_t lineWidth           = 38;
-        int32_t degree              = 4;
         int32_t randRange           = 100;
         float fFadeOutStrength      = 0.988905f;
         float fAntialias            = 1.0f;
         float fBloomStrength        = 1.162104f;
-        PathMode mode               = AUDIO_WAVEFORM;
         uint32_t rgba               = 0x6B26195A;
         float fGain                 = 1.0f;
         float fCycleColor           = 0.0f;
         int32_t nBands              = 32;
-        int32_t blendMode           = 0;
         int32_t freqMin             = 20;
         int32_t freqMax             = 22000;
         float fBlurFeedbackStrength = 0.1f;
@@ -263,7 +274,15 @@ namespace lineplot {
            make_nvp("freqMax", preset.freqMax),
            make_nvp("blurfeedback", preset.fBlurFeedbackStrength),
            make_nvp("blendmode", preset.blendMode),
-           make_nvp("expression", preset.expression));
+           make_nvp("expression", preset.expression),
+           make_nvp("nRenderer", preset.nRenderer),
+           make_nvp("nSplineType", preset.nSplineType),
+           make_nvp("nBlurDownsample", preset.nBlurDownsample),
+           make_nvp("nBlurPasses", preset.nBlurPasses),
+           make_nvp("nOversample", preset.nOversample),
+           make_nvp("pythonFunc", preset.pythonFunc) 
+        );
+
     }
 
     template<class Archive>
@@ -289,6 +308,16 @@ namespace lineplot {
            make_nvp("blendmode", preset.blendMode));
         if (version > 0) {
             ar(make_nvp("expression", preset.expression));
+        }
+        if (version > 1) {
+            ar(make_nvp("nRenderer", preset.nRenderer),
+               make_nvp("nSplineType", preset.nSplineType),
+               make_nvp("nBlurDownsample", preset.nBlurDownsample),
+               make_nvp("nBlurPasses", preset.nBlurPasses),
+               make_nvp("nOversample", preset.nOversample));
+        }
+        if (version > 2) {
+            ar(make_nvp("pythonFunc", preset.pythonFunc));
         }
     }
 
@@ -460,21 +489,23 @@ namespace lineplot {
         static constexpr int INSET_OUTER = 8;
         static constexpr int INSET_INNER = 24;
         DawInstance* daw;
-        audiothread_ringbuffer_t ringbuffer;
-        moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
-        samplecount_t audioQueueSamplePos = 0;
         std::unique_ptr<audioanaylzer> audioAnalyzer;
         audiohost* optionalAudioHost{}; // only set when running in standalone mode 
+        sampleformat_t curSampleFormat{0, 0, sampleformat_bits_t::FLOAT_32};
         audio_spectrum spectrum;
         overlap_buffer_t<WAVEFORM_BUFFER_SIZE, audio_spectrum::NUM_CHANNELS> buffer;
         std::array<std::array<float, WAVEFORM_BUFFER_SIZE>, audio_spectrum::NUM_CHANNELS> bufferProcessed{};
         int32_t waveformWindowOffset  = 0;
         int32_t waveformWindowOffset2 = 0;
 
+        settings_preset_t curPreset{};
+        bool bHasPresetToLoad = false;
+        settings_preset_t presetToLoad{};
+
         gui_color_pick colorPick;
         guidropdown_generic<String> dropdownRenderer;
         guidropdown_generic<String> dropdownMode;
-        guidropdown_generic<String> dropdownSplineMode;
+        guidropdown_generic<String> dropdownSplineType;
         guidropdown_generic<String> dropdownBlendMode;
         guidropdown_generic<String> dropdownEdit;
         guidropdown_generic<int32_t> dropdownBlurDownsample;
@@ -482,6 +513,7 @@ namespace lineplot {
         gui_textfield textFieldExpression;
         guictr_presets presetBrowser;
 
+        std::vector<String> fnList;
         guictr_functions functionBrowser;
 
         std::vector<gui_numberinput_field_base*> controlsParameters;
@@ -493,7 +525,7 @@ namespace lineplot {
         GLPathRendererPolyline2d rendererPolyline2d;
         GLPathRendererParAdvanced rendererParAdv;
         std::array<IPathRenderer*, 3> pathRenderers{ &rendererDashLines, &rendererPolyline2d, &rendererParAdv };
-        int curRendererType = 0;//2;
+        // int curRendererType = 0;//2;
         IPathRenderer* curRenderer;
         std::array<BakeGLPath, 32> bakedPaths;
         std::shared_ptr<tex_shader> pipeShaderDarken;
@@ -518,10 +550,9 @@ namespace lineplot {
         std::vector<std::vector<float>> vecVecCtrlPtsRaw;
 
 
-        //    PathMode curMode = PLOT_EXPRESSION;
         bool bIsIdle = true;
+        bool bEarlyInit = false;
         bool bInit = false;
-        int curSplineMode        = 1;
         uint32_t curPath         = 0;
         uint32_t nextPathIdx     = 0;
         int ptDraggedIdx         = -1;
@@ -536,14 +567,8 @@ namespace lineplot {
         float phaseCont          = 0.0f;
         int32_t tick             = 0;
         int64_t timeLastBlock    = 0;
-        // int32_t oversampleFactor = 2;
-        // blur_num_passes blurPasses  = blur_num_passes::PASSES_10;
-        // int32_t blurDownsample      = 1;
-        int32_t oversampleFactor = 1;
-        blur_num_passes blurPasses  = blur_num_passes::PASSES_2;
-        int32_t blurDownsample      = 1;
-        settings_preset_t curPreset;
-        String pythonFunction    = "pathGen_circleFFT1024StepsStereoBig";
+
+        // String pythonFunction    = "pathGen_circleFFT1024StepsStereoBig";
         int32_t currentPresetIdx = 2220;
         std::vector<settings_preset_t> presets;
         seq_rand rng;
@@ -551,8 +576,8 @@ namespace lineplot {
         ivec2 sizeView{ 0, 0 };
         ivec2 sizeViewInner{ 0, 0 };
         vec2 aspectView{ 0.0f, 0.0f };
-        void setSplineMode(int _splineMode) {
-            curSplineMode = _splineMode;
+        void setSplineType(int _splineType) {
+            curPreset.nSplineType = _splineType;
             onModeChanged();
         }
         void setMode(PathMode _mode) {
@@ -566,7 +591,7 @@ namespace lineplot {
             PathMode mode = curPreset.mode;
             textFieldExpression.setVisible(mode <= PLOT_PYTHON_EXPRESSION);
             // dropdownSplineMode.setVisible(mode == PATH_SCRIPT || mode == PATH_FREE || mode == FFT_SPECTRUM || mode == AUDIO_WAVEFORM);
-            dropdownSplineMode.setVisible(true);
+            dropdownSplineType.setVisible(true);
             dropdownEdit.setVisible(mode == PATH_FREE);
             functionBrowser.setVisible(mode == PATH_SCRIPT);
             initControls();
@@ -595,9 +620,8 @@ namespace lineplot {
     public:
         void reloadShaders() {
             src_parser parser;
-            pipeShaderDarken = std::make_shared<tex_shader>("textured_fullscreen.vsh", "darken.fsh");
-            int ret = pipeShaderDarken->load(&parser);
-            dbgassert(!ret);
+            pipeShaderDarken = std::make_shared<tex_shader>("textured_fullscreen.vsh", "darken.fsh", TEXTURED_FULLSCREEN_GLSL_VERT, DARKEN_GLSL_FRAG);
+            always_assert(!pipeShaderDarken->load(&parser));
             struct src_parser_blit_final {
                 void preprocessSources(std::vector<glshader_src>& srcList) {
                     for (glshader_src& src : srcList) {
@@ -633,9 +657,8 @@ void main(void) {
                 }
             };
             src_parser_blit_final parserBlitF;
-            pipeShaderBlitFinal = std::make_shared<tex_shader>("textured_fullscreen.vsh", "blit_final.fsh");
-            ret = pipeShaderBlitFinal->load(&parserBlitF);
-            dbgassert(!ret);
+            pipeShaderBlitFinal = std::make_shared<tex_shader>("textured_fullscreen.vsh", "blit_final.fsh", TEXTURED_FULLSCREEN_GLSL_VERT, BLIT_FINAL_GLSL_FRAG);
+            always_assert(!pipeShaderBlitFinal->load(&parserBlitF));
             struct src_parser_blit {
                 void preprocessSources(std::vector<glshader_src>& srcList) {
                     for (glshader_src& src : srcList) {
@@ -658,9 +681,8 @@ void main(void) {
                 }
             };
             src_parser_blit parserBlit;
-            pipeShaderBlit = std::make_shared<tex_shader>("textured_fullscreen.vsh", "blit_texture.fsh");
-            ret = pipeShaderBlit->load(&parserBlit);
-            dbgassert(!ret);
+            pipeShaderBlit = std::make_shared<tex_shader>("textured_fullscreen.vsh", "blit_texture.fsh", TEXTURED_FULLSCREEN_GLSL_VERT, BLIT_TEXTURE_GLSL_FRAG);
+            always_assert(!pipeShaderBlit->load(&parserBlit));
 
             struct src_parser_bloom {
                 void preprocessSources(std::vector<glshader_src>& srcList) {
@@ -686,17 +708,14 @@ void main(void) {
                 }
             };
             src_parser_bloom parserBloom;
-            pipeShaderBloom = std::make_shared<tex_shader>("textured_fullscreen.vsh", "blit_texture.fsh");
-            ret = pipeShaderBloom->load(&parserBloom);
-            dbgassert(!ret);
+            pipeShaderBloom = std::make_shared<tex_shader>("textured_fullscreen.vsh", "blit_texture.fsh", TEXTURED_FULLSCREEN_GLSL_VERT, BLIT_TEXTURE_GLSL_FRAG);
+            always_assert(!pipeShaderBloom->load(&parserBloom));
             src_parser parserFbBlur;
-            ret = pipeFbBlur->load(&parserFbBlur);
-            dbgassert(!ret);
+            always_assert(!pipeFbBlur->load(&parserFbBlur));
         }
         explicit guictr_audiovis(DawInstance* daw) 
-            : guictr_base(), daw(daw), curRenderer(pathRenderers[curRendererType])
+            : guictr_base(), daw(daw), curRenderer(pathRenderers[curPreset.nRenderer])
         {
-            allocRingBuffer(ringbuffer, 2);
             setGuiType(gui_type::CTR_TYPE_AUDIO_VISUALIZER);
             for (int32_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
                 auto& buf = bufferProcessed[i];
@@ -707,7 +726,7 @@ void main(void) {
             add(&colorPick);
             add(&dropdownMode);
             add(&dropdownRenderer);
-            add(&dropdownSplineMode);
+            add(&dropdownSplineType);
             add(&dropdownBlendMode);
             add(&dropdownEdit);
             add(&textFieldExpression);
@@ -716,6 +735,7 @@ void main(void) {
             add(&dropdownBlurDownsample);
             add(&dropdownBlurPasses);
         }
+
         ~guictr_audiovis() override {
             removeGuis();
             if (optionalAudioHost) {
@@ -726,29 +746,43 @@ void main(void) {
                 delete input;
             }
         }
-        void enqueue(AudioBlock* buf) {
-            auto& writePos = ringbuffer.writePos;
-            AudioBuffer** buffers = ringbuffer.buffers;
-            AudioBuffer* const qBuf = buffers[writePos%RING_BUF_SIZE];
-            dbgassert(!qBuf->inUse);
-            qBuf->output->realloc(buf->samples);
-            qBuf->output->copyFrom(buf);
-            // if (enableProfiling) time1 += timerBlock.getTimeReset();
-            qBuf->inUse = true;
-            // qBuf->time = bufferTimeInfo;
-            // writePos = (writePos+1) & RING_BUF_MASK;
-            // stream->enqueue(qBuf);
-            this->audioQueue.enqueue(qBuf);
+
+        String storeContainerData() override {
+            Stringstream sstream;
+            try {
+                std::vector<settings_preset_t> presets;
+                presets.emplace_back(this->curPreset);
+                settings_t settings1{ this->currentPresetIdx, presets };
+                cereal::JSONOutputArchive ar(sstream);
+                ar(cereal::make_nvp("visualizerPreset", settings1));
+                sstream.flush();
+            } catch (std::exception& e) {
+                log_lf(Log::L_ERROR, "Exception: %s\n", e.what());
+                return "";
+            }
+            return sstream.str();
         }
 
-        bool try_dequeue(AudioBuffer*& buf) {
-            auto success = this->audioQueue.try_dequeue(buf);
-            if (success) {
-                buf->time.samplePosOutput = audioQueueSamplePos;
-                audioQueueSamplePos += buf->output->samples;
+        void loadContainerData(const String& data) override {
+            try {
+                settings_t settings1;
+                Stringstream sstream(data);
+                cereal::JSONInputArchive ar(sstream);
+                ar(cereal::make_nvp("visualizerPreset", settings1));
+                if (settings1.currentPresetIdx >= 0 && settings1.presets.size() > 0) {
+                    this->bHasPresetToLoad = true;
+                    this->presetToLoad = settings1.presets[0];
+                }
+                return;
+            } catch (std::exception& e) {
+                log_lf(Log::L_ERROR, "Exception: %s\n", e.what());
             }
-            return success;
         }
+
+        guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
+            return nullptr;
+        }
+
         void onRemove() override {
             guictr_base::onRemove();
             if (optionalAudioHost) {
@@ -759,8 +793,44 @@ void main(void) {
             }
             bIsIdle = true;
         }
-        void init() {
+        void earlyInit() {
+            checkGLError("pre earlyInit");
+            auto pathVisualizerPresets = App::Platform::toUserdataPath("presets/Visualizer");
+            CreateDirectoryIfNotExists(pathVisualizerPresets);
+            auto pathPythonModule = App::Platform::toUserdataPath("presets/Visualizer/visualizer_pathgen.py");
+            if (!FileExists(pathPythonModule)) {
+                std::vector<uint8_t> out;
+                ReadFileVector(App::Platform::toDefaultSettingFilesPath("visualizer_pathgen.py"), out);
+                WriteFileVector(pathPythonModule, out);
+            }
+
+#ifdef USE_PYTHON
+            DAW::InitPythonInterpreter();
+#endif
             reloadPythonModule();
+            
+            auto path = App::Platform::toUserdataPath("presets/Visualizer/presets.json");
+            try {
+                settings_t settings1 = loadSettings(path);
+                presets              = settings1.presets;
+                currentPresetIdx     = math::clamp<int32_t>(settings1.currentPresetIdx, 0, static_cast<int32_t>(presets.size()) - 1);
+                presetBrowser.setPresets(presets);
+                if (!presets.empty() && currentPresetIdx >= 0 && !bHasPresetToLoad) {
+                    bHasPresetToLoad = true;
+                    presetToLoad     = presets.at(currentPresetIdx);
+                }
+            } catch (std::exception& e) {
+                try {
+                    settings_t settings1{ this->currentPresetIdx, this->presets };
+                    CreateDirectoryIfNotExists(App::Platform::toUserdataPath("presets/Visualizer"));
+                    saveSettings(settings1, path);
+                } catch (std::exception& e2) {
+                    log_lf(Log::L_ERROR, "Exception: %s\n", e2.what());
+                }
+            }
+        }
+
+        void init(const sampleformat_t& sampleFormat) {
             pipeFbBlur        = std::make_shared<blur_tex_shader>();
             vboFullscreenQuad = std::make_shared<DrawVBO>();
             vboFullscreenQuad->genBuffers();
@@ -785,8 +855,7 @@ void main(void) {
             textFieldExpression.setChangeCallback(fnValidateFunction);
             textFieldExpression.setEndEditCallback(fnValidateFunction);
             for (auto renderer : pathRenderers) {
-                int res = renderer->init();
-                dbgassert(res == 0);
+                always_assert(!renderer->init());
             }
             std::vector<String> strDropDownRenderer;
             strDropDownRenderer.emplace_back("ADV");
@@ -798,7 +867,7 @@ void main(void) {
                 return option;
             };
             dropdownRenderer.setLabel("Renderer");
-            dropdownRenderer.setSelectedIndex(iNextInitRenderer >= 0 ? iNextInitRenderer : curRendererType);
+            dropdownRenderer.setSelectedIndex(iNextInitRenderer >= 0 ? iNextInitRenderer : curPreset.nRenderer);
 
             std::vector<String> strDropDownOptions;
             strDropDownOptions.emplace_back("Math Expression");
@@ -827,13 +896,13 @@ void main(void) {
             strSplineOption.emplace_back("UniformCRSpline");
             strSplineOption.emplace_back("NaturalSpline");
             strSplineOption.emplace_back("B-Spline (tinyspline)");
-            dropdownSplineMode.setOptions(strSplineOption);
-            dropdownSplineMode.fnOptionSelected = [this](int n, const String& option) {
-                setSplineMode(n);
+            dropdownSplineType.setOptions(strSplineOption);
+            dropdownSplineType.fnOptionSelected = [this](int n, const String& option) {
+                setSplineType(n);
                 return option;
             };
-            dropdownSplineMode.setSelectedIndex(curSplineMode);
-            dropdownSplineMode.setLabel("Type");
+            dropdownSplineType.setSelectedIndex(curPreset.nSplineType);
+            dropdownSplineType.setLabel("Spline Type");
             std::vector<String> strDropDownOptions2;
             strDropDownOptions2.emplace_back("Clear");
             strDropDownOptions2.emplace_back("Generate Sine");
@@ -863,15 +932,15 @@ void main(void) {
             int selIdx = 0;
             for (int i = 0; i < 8; i++) {
                 vecBlurDownsampleOptions.emplace_back(1 << i);
-                if (blurDownsample == (1 << i)) {
+                if (curPreset.nBlurDownsample == (1 << i)) {
                     selIdx = i;
                 }
             }
             dropdownBlurDownsample.setOptions(vecBlurDownsampleOptions);
             dropdownBlurDownsample.fnOptionSelected = [this](int n, const int32_t& option) {
-                this->blurDownsample = option;
+                this->curPreset.nBlurDownsample = n;
                 this->bReinitBlurFB            = true;
-                return std::to_string(this->blurDownsample);
+                return std::to_string(option);
             };
             dropdownBlurDownsample.setLabel("Blur Downsample");
             dropdownBlurDownsample.setSelectedIndex(selIdx);
@@ -901,11 +970,11 @@ void main(void) {
             };
             dropdownBlurPasses.setOptions(vecBlurPassesOption);
             dropdownBlurPasses.fnOptionSelected = [this, blurPassesToString](int n, const int32_t& option) {
-                this->blurPasses = static_cast<blur_num_passes>(n);
-                return blurPassesToString(this->blurPasses);
+                this->curPreset.nBlurPasses = n;
+                return blurPassesToString(this->curPreset.nBlurPasses);
             };
             dropdownBlurPasses.setLabel("Blur #Passes");
-            dropdownBlurPasses.setSelectedIndex(static_cast<int32_t>(this->blurPasses));
+            dropdownBlurPasses.setSelectedIndex(this->curPreset.nBlurPasses);
 
             ctrlPts.emplace_back(0.1f, 0.1f);
             ctrlPts.emplace_back(0.3f, 0.8f);
@@ -948,32 +1017,19 @@ void main(void) {
                 audioAnalyzer = std::make_unique<audioanaylzer>();
                 audioAnalyzer->init(blockSize, sampleRate);
                 spectrum = *audioAnalyzer->analyzerLf;
+                this->curSampleFormat = {sampleRate, blockSize, sampleformat_bits_t::FLOAT_32};
             } else if (daw) {
                 auto sf = daw->getHost()->getSampleFormatInternal();
                 audioAnalyzer = std::make_unique<audioanaylzer>();
-                audioAnalyzer->init(sf.blockSize, sf.sampleRate);
+                audioAnalyzer->init(sampleFormat.blockSize, sampleFormat.sampleRate);
                 spectrum = *audioAnalyzer->analyzerLf;
+                this->curSampleFormat = sf;
             }
             bool didSetPreset = false;
-            auto path = App::Platform::toUserdataPath("presets/Visualizer/presets.json");
-            try {
-                settings_t settings1 = loadSettings(path);
-                presets              = settings1.presets;
-                currentPresetIdx     = math::clamp<int32_t>(settings1.currentPresetIdx, 0, static_cast<int32_t>(presets.size()) - 1);
-                presetBrowser.setPresets(presets);
-                if (!presets.empty()) {
-                    setPreset(presets.at(currentPresetIdx));
-                    didSetPreset = true;
-                }
-            } catch (std::exception& e) {
-                log_lf(Log::L_ERROR, "Exception: %s\n", e.what());
-                try {
-                    settings_t settings1{ this->currentPresetIdx, this->presets };
-                    CreateDirectoryIfNotExists(App::Platform::toUserdataPath("presets/Visualizer"));
-                    saveSettings(settings1, path);
-                } catch (std::exception& e2) {
-                    log_lf(Log::L_ERROR, "Exception: %s\n", e2.what());
-                }
+            if (bHasPresetToLoad) {
+                setPreset(presetToLoad);
+                bHasPresetToLoad = false;
+                didSetPreset     = true;
             }
             if (!didSetPreset) {
                 settings_preset_t pr{};
@@ -989,12 +1045,25 @@ void main(void) {
 
     private:
         void setPythonFunction(const String& fnName) {
-            this->pythonFunction = fnName;
+            this->curPreset.pythonFunc = fnName;
         }
         void setPreset(const settings_preset_t& preset) {
             log_printf("Preset color: %08x\n", preset.rgba);
             const settings_preset_t curPresetCopy = this->curPreset;
-            this->curPreset                       = preset;
+            if (preset.nRenderer != this->curPreset.nRenderer)
+                iNextInitRenderer = preset.nRenderer;
+            if (preset.nBlurDownsample != this->curPreset.nBlurDownsample)
+                bReinitBlurFB = true;
+            
+            this->curPreset = preset;
+            
+            if (fnList.empty() || std::find(fnList.begin(), fnList.end(), this->curPreset.pythonFunc) == fnList.end()) {
+                this->curPreset.pythonFunc = "pathGen_multiShapes";
+            }
+            if (!fnList.empty() && std::find(fnList.begin(), fnList.end(), this->curPreset.pythonFunc) == fnList.end()) {
+                this->curPreset.pythonFunc = fnList[0];
+            }
+            
             this->textFieldExpression.setValue(preset.expression);
             restoreRetainedParameters(curPresetCopy);
             onModeChanged();
@@ -1005,6 +1074,7 @@ void main(void) {
             audioAnalyzer->analyzerLf->setFreqRange(curPreset.freqMin, curPreset.freqMax);
             audioAnalyzer->analyzerHf->updateBands();
             audioAnalyzer->analyzerLf->updateBands();
+            spectrum = *audioAnalyzer->analyzerLf;
         }
         void restoreRetainedParameters(const settings_preset_t& preset) {
         }
@@ -1020,10 +1090,14 @@ void main(void) {
                 add(ptr);
                 return ptr;
             };
-            this->dropdownMode.setSelectedIndex(static_cast<int32_t>(this->curPreset.mode));
-            this->dropdownBlendMode.setSelectedIndex(this->curPreset.blendMode);
-            addInput(createParamInput<int32_t>("Oversample", ivec2(1, 2), &oversampleFactor));
-            if (this->curSplineMode > 0 && this->curSplineMode < 4) {
+            dropdownMode.setSelectedIndex(static_cast<int32_t>(curPreset.mode));
+            dropdownBlendMode.setSelectedIndex(curPreset.blendMode);
+            dropdownBlurPasses.setSelectedIndex(curPreset.nBlurPasses);
+            dropdownBlurDownsample.setSelectedIndex(curPreset.nBlurDownsample);
+            dropdownRenderer.setSelectedIndex(iNextInitRenderer >= 0 ? iNextInitRenderer : curPreset.nRenderer);
+            dropdownSplineType.setSelectedIndex(curPreset.nSplineType);
+            addInput(createParamInput<int32_t>("Oversample", ivec2(1, 2), &curPreset.nOversample));
+            if (curPreset.nSplineType > 0 && curPreset.nSplineType < 4) {
                 addInput(createParamInput<int32_t>("Degree", ivec2(1, 8), &curPreset.degree));
             }
             addInput(createParamInput<int32_t>("NSamples", ivec2(3, 1 << 16), &curPreset.nSamples));
@@ -1040,7 +1114,7 @@ void main(void) {
                 addInput(createParamInput<float>("Gain", vec2(0.0f, dsp_util::fromdBFS(24.0f)), &curPreset.fGain));
                 gui_numberinput_field_generic<int32_t>* ctrlFreqMin = addInput(createParamInput<int32_t>("Min Freq", ivec2(20, 100000), &curPreset.freqMin));
                 gui_numberinput_field_generic<int32_t>* ctrlFreqMax = addInput(createParamInput<int32_t>("Max Freq", ivec2(20, 100000), &curPreset.freqMax));
-                ctrlFreqMin->fnValueEditChanged = ctrlFreqMax->fnValueEditChanged = [&audio = this->audioAnalyzer, pCurPreset = &curPreset](gui_numberinput_field_base*, int32_t v) {
+                ctrlFreqMin->fnValueEditChanged = ctrlFreqMax->fnValueEditChanged = [&audio = audioAnalyzer, pCurPreset = &curPreset](gui_numberinput_field_base*, int32_t v) {
                     if (audio->analyzerLf) {
                         audio->analyzerLf->setFreqRange(pCurPreset->freqMin, pCurPreset->freqMax);
                         audio->analyzerHf->setFreqRange(pCurPreset->freqMin, pCurPreset->freqMax);
@@ -1051,12 +1125,13 @@ void main(void) {
             }
             if (mode == FFT_SPECTRUM || mode == PATH_SCRIPT) {
                 gui_numberinput_field_generic<int32_t>* ctrlNumBands = addInput(createParamInput<int32_t>("# Bands", ivec2(4, 1024), &curPreset.nBands));
-                ctrlNumBands->fnValueEditChanged                     = [&audio = this->audioAnalyzer](gui_numberinput_field_base*, int32_t v) {
-                    if (audio->analyzerLf) {
-                        audio->analyzerLf->setNumBands(v);
-                        audio->analyzerHf->setNumBands(v);
-                        audio->analyzerLf->updateBands();
-                        audio->analyzerHf->updateBands();
+                ctrlNumBands->fnValueEditChanged = [this](gui_numberinput_field_base*, int32_t v) {
+                    if (audioAnalyzer->analyzerLf) {
+                        audioAnalyzer->analyzerLf->setNumBands(v);
+                        audioAnalyzer->analyzerHf->setNumBands(v);
+                        audioAnalyzer->analyzerLf->updateBands();
+                        audioAnalyzer->analyzerHf->updateBands();
+                        spectrum = *audioAnalyzer->analyzerLf;
                     }
                 };
             }
@@ -1280,15 +1355,20 @@ void main(void) {
         }
         void evaluateExpression(const std::vector<vec2>& ctrlPts, std::vector<vec2>& v, const String& expression) {
             try {
+#ifdef USE_PYTHON
                 const char* szExpr = StringAsCStr(expression);
                 auto evalAt        = [szExpr, t = phaseCont](float f) {
-#ifdef HAVE_PYTHON_INTERPRETER
-                    double result = PyMachine::pyEvalExpression(szExpr, f, t);
-#else
                     double result = 0.0;
-#endif
+                    if (DAW::IsPythonInitialized()) {
+                        result = PyMachine::pyEvalExpression(szExpr, f, t);
+                    }
                     return vec2(f * 2.0f - 1.0f, result);
                 };
+#else
+                auto evalAt = [](float f) {
+                    return vec2(f * 2.0f - 1.0f, 0.0f);
+                };
+#endif
                 sampleFillVec(v, evalAt);
                 exprError = "";
             } catch (std::exception& e) {
@@ -1425,7 +1505,9 @@ void main(void) {
 
                             bakeOpt.color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
                             bakeOpt.color[1+isBlueActive*1] = 1.0f;
+#ifdef PROFILE_PATHGEN
                             hires_timer_t timer;
+#endif
                             switch (activeGraph) {
                                 default:
                                 case 0: {
@@ -1442,7 +1524,6 @@ void main(void) {
                                     static constexpr size_t SIMD_WIDTH = 8;
                                     for (size_t i = 0; i < steps; i+=SIMD_WIDTH) {
                                         FPType envParamVals[SIMD_WIDTH]{};
-                                        FPType envParamValsScaled[SIMD_WIDTH]{};
                                         for (size_t j = 0; j < SIMD_WIDTH; j++) {
                                             envParamVals[j] = math::clamp<FPType>(*pDataIn++, 1.0E-12f, 1.0f);
                                         }
@@ -1472,8 +1553,9 @@ void main(void) {
                                     break;
                                 }
                             }
+#ifdef PROFILE_PATHGEN
                             log_printf("%zd took %zd\n", activeGraph, timer.getTime());
-                            
+#endif
                             pDataOut -= steps;
                             vecSampled.resize(steps);
                             for (size_t i = 0; i < steps; i++) {
@@ -1569,14 +1651,14 @@ void main(void) {
                         case FFT_SPECTRUM:
                         case PATH_SCRIPT:
                         case PATH_FREE:
-                            switch (curSplineMode) {
+                            switch (curPreset.nSplineType) {
                                 case 0: {
-                                    if (pathIndex < 2) {
+                                    /* if (pathIndex < 2) {
                                         bakeOpt.color = vec4(1.0f, 1.0f, 1.0f, 0.5f);
                                     } else {
                                         auto color = dbgcolorsArray[pathIndex % dbgcolorsArraySize];
                                         bakeOpt.color = {color.r, color.g, color.b, 0.8f};
-                                    }
+                                    } */
                                     vecSampled = ctrlPts;
                                     break;
                                 }
@@ -1584,7 +1666,7 @@ void main(void) {
                                     makeVecTinySpline(ctrlPts, vecSampled);
                                     break;
                                 default:
-                                    makeVecSplineLib(ctrlPts, vecSampled, curSplineMode-1);
+                                    makeVecSplineLib(ctrlPts, vecSampled, curPreset.nSplineType-1);
                                     break;
                             }
                             break;
@@ -1615,7 +1697,15 @@ void main(void) {
     public:
         void onTick(AppCtrl* ctrl) override {
             guictr_base::onTick(ctrl);
-            fCtrAlpha = math::clamp(fCtrAlpha + (ctrl->mouseInside ? 0.1f : -0.02f), 0.0f, 1.0f);
+            bool bIsHovered = ctrl->mouseInside;
+            // also check if mouse is inside the rect
+            if (bIsHovered) {
+                ivec2 mPosRel = toControlsObjectSpace(ctrl->m_mousePos, this);
+                if (!(getStateFlags() & FLG_HVRD) && (mPosRel.x < 0 || mPosRel.y < 0 || mPosRel.x > size.x || mPosRel.y > size.y)) {
+                    bIsHovered = false;
+                }
+            }
+            fCtrAlpha = math::clamp(fCtrAlpha + (bIsHovered ? 0.1f : -0.02f), 0.0f, 1.0f);
             tick++;
             if (bInit) {
                 if (tick > 120) {
@@ -1627,12 +1717,14 @@ void main(void) {
             }
         }
         void reloadPythonModule() {
-#ifdef HAVE_PYTHON_INTERPRETER
-            std::vector<String> fnList;
+            fnList.clear();
+#ifdef USE_PYTHON
             try {
-                py::module moduleImpl = py::module::import(moduleNamePathGen);
-                moduleImpl.reload();
-                getPyFunctionList(moduleNamePathGen, fnList);
+                if (DAW::IsPythonInitialized()) {
+                    py::module moduleImpl = py::module::import(moduleNamePathGen);
+                    moduleImpl.reload();
+                    getPyFunctionList(moduleNamePathGen, fnList);
+                }
                 functionBrowser.setFunctions(fnList);
             } catch (std::exception& e) {
                 log_printf("%s\n", e.what());
@@ -1784,67 +1876,87 @@ void main(void) {
                 vecVecCtrlPtsRender[0] = flatCtrlPtsRender;
                 ptrBakedPath           = &getPath(vecVecCtrlPtsRender, bakeOpt, oversample);
             } else if (curPreset.mode == PATH_SCRIPT) {
-                static int a = 0;
                 vecVecCtrlPtsRender.clear();
+#ifdef PROFILE_PATHGEN
                 size_t numCtrlPts = 0;
+                static int a = 0;
                 hires_timer_t timer;
-#ifdef HAVE_PYTHON_INTERPRETER
-                if (StrStartsWith(this->pythonFunction, "pathgen_fl32_")) {
-                    try {
-                        timer.reset();
-                        vecVecCtrlPtsRaw = callPyFunction<decltype(vecVecCtrlPtsRaw)>(moduleNamePathGen, StringAsCStr(this->pythonFunction), spectrum.bands, phaseCont);
-                        auto tookB1 = timer.getTimeReset();
-                        vecVecCtrlPtsRender.resize(vecVecCtrlPtsRaw.size());
-                        auto itA = vecVecCtrlPtsRaw.cbegin();
-                        auto itB = vecVecCtrlPtsRender.begin();
-                        auto end = vecVecCtrlPtsRender.end();
-                        for (; itB != end;) {
-                            auto& vecIn = *itA++;
-                            auto& vecOut = *itB++;
-                            vecOut.resize(vecIn.size() / 2);
-                            auto itPt = vecIn.cbegin();
-                            for (auto& vec : vecOut) {
-                                vec[0] = *itPt++;
-                                vec[1] = *itPt++;
+#endif
+#ifdef USE_PYTHON
+                if (DAW::IsPythonInitialized()) {
+                    if (StrStartsWith(this->curPreset.pythonFunc, "pathgen_fl32_")) {
+                        try {
+#ifdef PROFILE_PATHGEN
+                            timer.reset();
+#endif
+                            vecVecCtrlPtsRaw = callPyFunction<decltype(vecVecCtrlPtsRaw)>(moduleNamePathGen, StringAsCStr(this->curPreset.pythonFunc), spectrum.bands, phaseCont);
+#ifdef PROFILE_PATHGEN
+                            auto tookB1      = timer.getTimeReset();
+#endif
+                            vecVecCtrlPtsRender.resize(vecVecCtrlPtsRaw.size());
+                            auto itA = vecVecCtrlPtsRaw.cbegin();
+                            auto itB = vecVecCtrlPtsRender.begin();
+                            auto end = vecVecCtrlPtsRender.end();
+                            for (; itB != end;) {
+                                auto& vecIn  = *itA++;
+                                auto& vecOut = *itB++;
+                                vecOut.resize(vecIn.size() / 2);
+                                auto itPt = vecIn.cbegin();
+                                for (auto& vec : vecOut) {
+                                    vec[0] = *itPt++;
+                                    vec[1] = *itPt++;
+                                }
                             }
-                        }
-                        // callPyFunction<void>(moduleNamePathGen, "testFastPath", spectrum.bands, phaseCont);
+                            // callPyFunction<void>(moduleNamePathGen, "testFastPath", spectrum.bands, phaseCont);
 
-                        auto tookB2 = timer.getTimeReset();
-                        if (a%100==0) {
-                            log_printf("tookC 1 %zd\n", tookB1);
-                            log_printf("tookC 2 %zd\n", tookB2);
+#ifdef PROFILE_PATHGEN
+                            auto tookB2 = timer.getTimeReset();
+                            if (a % 100 == 0) {
+                                log_printf("tookC 1 %zd\n", tookB1);
+                                log_printf("tookC 2 %zd\n", tookB2);
+                            }
+#endif
+                        } catch (std::exception& e) {
+                            vecVecCtrlPtsRender.resize(1);
+                            vecVecCtrlPtsRender[0] = ctrlPts;
+                            log_lf(Log::L_ERROR, "%s\n", e.what());
                         }
-                    } catch (std::exception& e) {
-                        vecVecCtrlPtsRender.resize(1);
-                        vecVecCtrlPtsRender[0] = ctrlPts;
-                        log_lf(Log::L_ERROR, "%s\n", e.what());
+                    } else {
+                        try {
+                            vecVecCtrlPtsRender = callPyFunction<decltype(vecVecCtrlPtsRender)>(moduleNamePathGen, StringAsCStr(this->curPreset.pythonFunc), spectrum.bands, phaseCont);
+#ifdef PROFILE_PATHGEN
+                            for (auto& v : vecVecCtrlPtsRender)
+                                numCtrlPts += v.size();
+                            auto tookB = timer.getTimeReset();
+                            if (a % 100 == 0) {
+                                log_printf("tookB %zd (%zu pts)\n", tookB, numCtrlPts);
+                            }
+#endif
+                        } catch (std::exception& e) {
+                            vecVecCtrlPtsRender.resize(1);
+                            vecVecCtrlPtsRender[0] = ctrlPts;
+                            log_lf(Log::L_ERROR, "%s\n", e.what());
+                        }
                     }
                 } else {
-                    try {
-                        vecVecCtrlPtsRender = callPyFunction<decltype(vecVecCtrlPtsRender)>(moduleNamePathGen, StringAsCStr(this->pythonFunction), spectrum.bands, phaseCont);
-                        for (auto& v : vecVecCtrlPtsRender)
-                            numCtrlPts += v.size();
-                        auto tookB = timer.getTimeReset();
-                        if (a%100==0) {
-                            log_printf("tookB %zd (%zu pts)\n", tookB, numCtrlPts);
-                        }
-                    } catch (std::exception& e) {
-                        vecVecCtrlPtsRender.resize(1);
-                        vecVecCtrlPtsRender[0] = ctrlPts;
-                        log_lf(Log::L_ERROR, "%s\n", e.what());
-                    }
+                    vecVecCtrlPtsRender.resize(1);
+                    vecVecCtrlPtsRender[0] = ctrlPts;
                 }
+#else
+                    vecVecCtrlPtsRender.resize(1);
+                    vecVecCtrlPtsRender[0] = ctrlPts;
 #endif
                 flatCtrlPtsRender.clear();
                 // for (auto& v : vecVecCtrlPtsRender)
                 //     addAll(flatCtrlPtsRender, v);
                 ptrBakedPath = &getPath(vecVecCtrlPtsRender, bakeOpt, oversample);
+#ifdef PROFILE_PATHGEN
                 auto tookC = timer.getTimeReset();
                 if (a%100==0) {
                   log_printf("tookD %zd\n", tookC);
                 }
                 a++;
+#endif
             } else if (curPreset.mode == SIMD_COS_TEST) {
                 vecVecCtrlPtsRender.resize(0);
                 flatCtrlPtsRender.clear();
@@ -1886,7 +1998,7 @@ void main(void) {
             blurCtxt.timeAbs      = millisCont;
             blurCtxt.inputTexture = fb0Texture;
             blurCtxt.outputTexture = fb0Texture;
-            pipeFbBlur->render(&blurCtxt, blurPasses, 1.0f);
+            pipeFbBlur->render(&blurCtxt, static_cast<blur_num_passes>(curPreset.nBlurPasses), 1.0f);
 
             glBindVertexArray(vbo.vaoId);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
@@ -1927,6 +2039,10 @@ void main(void) {
             }
         }
         void prerender(NVGcontext* vg) override {
+            if (!bEarlyInit) {
+                earlyInit();
+                bEarlyInit = true;
+            }
             if (bIsIdle && ((daw&&daw->getAudioHost()&&daw->getAudioHost()->isStreaming())||optionalAudioHost)) {
                 bIsIdle = false;
             }
@@ -1934,11 +2050,24 @@ void main(void) {
                 return;
             }
             if (!bInit) {
-                init();
+                init(daw->getHost()->getSampleFormatInternal());
                 bInit = true;
             }
+            if (bHasPresetToLoad) {
+                bHasPresetToLoad = false;
+                setPreset(this->presetToLoad);
+                auto it = std::find_if(this->presets.begin(), this->presets.end(), [&](const settings_preset_t& preset) {
+                    return preset.name == curPreset.name;
+                });
+                if (it != this->presets.end()) {
+                    this->currentPresetIdx = static_cast<int32_t>(std::distance(this->presets.begin(), it));
+                }
+                bHasPresetToLoad = false;
+            }
+#ifdef PROFILE_PATHGEN
             static int a = 0;
             hires_timer_t timer;
+#endif
 
             float fPhaseTick  = 0.0f;
             double tmSecondsD = getTimeSecondsD();
@@ -1951,8 +2080,8 @@ void main(void) {
             }
 
             ivec2 cs       = sizeView;
-            int w          = cs.x * oversampleFactor;
-            int h          = cs.y * oversampleFactor;
+            int w          = cs.x * curPreset.nOversample;
+            int h          = cs.y * curPreset.nOversample;
 
             dbgassert(vboFullscreenQuad.get());
             DrawVBO& vbo = *vboFullscreenQuad;
@@ -1986,13 +2115,13 @@ void main(void) {
                 vboSize = { w, h };
             }
             if (bReinitBlurFB) {
-                this->pipeFbBlur->setupFramebuffers(w, h, blurDownsample);
+                this->pipeFbBlur->setupFramebuffers(w, h, curPreset.nBlurDownsample);
                 bReinitBlurFB = false;
             }
             if (iNextInitRenderer != -1) {
-                curRendererType   = iNextInitRenderer;
-                curRenderer       = pathRenderers[iNextInitRenderer];
-                iNextInitRenderer = -1;
+                curPreset.nRenderer = iNextInitRenderer;
+                curRenderer         = pathRenderers[iNextInitRenderer];
+                iNextInitRenderer   = -1;
                 reinitPathRenderer();
             }
 
@@ -2004,6 +2133,7 @@ void main(void) {
             if (optionalAudioHost) {
                 stream = optionalAudioHost->getStream(0);
             }
+            constexpr static bool RENDER_ALL_FRAMES = false;
             auto processAudioBuffer = [&](AudioBuffer* bufInput) {
                 if (bufInput->output->channels) {
                     audioAnalyzer->processBlock(bufInput->output, curPreset.fGain);
@@ -2015,8 +2145,8 @@ void main(void) {
                         }
                     }
                 }
-                if (renderAudio) {
-                    renderPass(w, h, oversampleFactor);
+                if (renderAudio && (!rendered || RENDER_ALL_FRAMES)) {
+                    renderPass(w, h, curPreset.nOversample);
                     rendered = true;
                 }
                 nR++;
@@ -2045,17 +2175,19 @@ void main(void) {
                 if (eff) {
                     auto* moduleAudioVisualizer = static_cast<PluginVisualizer::module_visualizer*>(eff);
                     if (moduleAudioVisualizer->getOutputQueueSize() > 0) {
-                        auto lock = daw->lockPlayThread();
+                        // auto lock = daw->lockPlayThread();
                         while (moduleAudioVisualizer->try_dequeue(bufInput)) {
                             processAudioBuffer(bufInput);
                             bufInput->inUse = false;
+                            // if (nR >= 3) 
+                            //     break;
                         }
                     }
                 }
             }
             // log_printf("processed %d blocks\n", nR);
             if (!renderAudio || !rendered) {
-                renderPass(w, h, oversampleFactor);
+                renderPass(w, h, curPreset.nOversample);
                 rendered = true;
             }
             FrameBuffer::unbindFramebuffer();
@@ -2089,17 +2221,19 @@ void main(void) {
                     gui->prerender(vg);
                 }
             }
+#ifdef PROFILE_PATHGEN
             auto tprerender = timer.getTimeReset();
             if (a%100==0) {
                 log_printf("prerender %zd\n", tprerender);
             }
             a++;
+#endif
         }
         void render(NVGcontext* vg) override {
             if (!vg) {
                 const ivec2 cs = sizeView;
-                const int w    = cs.x * oversampleFactor;
-                const int h    = cs.y * oversampleFactor;
+                const int w    = cs.x * curPreset.nOversample;
+                const int h    = cs.y * curPreset.nOversample;
 
                 const float millisCont = phaseCont;
                 const DrawVBO& vbo   = *vboFullscreenQuad;
@@ -2298,6 +2432,9 @@ void main(void) {
                 if (curPreset.nBands != analyzerHf->numBands) {
                     analyzerHf->setNumBands(newNumBands);
                     analyzerLf->setNumBands(newNumBands);
+                    analyzerHf->updateBands();
+                    analyzerLf->updateBands();
+                    spectrum = *audioAnalyzer->analyzerLf;
                 }
             }
             if (kevt.type == K_PRESS) {
@@ -2378,7 +2515,7 @@ void main(void) {
             ivec2 sizeFields   = { h * 8, h };
             ivec2 sizeControls = { h * 8, h };
 
-            std::array<guibase*, 6> controlsMode = { &dropdownRenderer, &dropdownMode, &dropdownSplineMode, &dropdownBlendMode, &dropdownEdit, &textFieldExpression };
+            std::array<guibase*, 6> controlsMode = { &dropdownRenderer, &dropdownMode, &dropdownSplineType, &dropdownBlendMode, &dropdownEdit, &textFieldExpression };
             std::array<guibase*, 2> controlsBlur = { &dropdownBlurDownsample, &dropdownBlurPasses };
             std::vector<guibase*> allControls;
 
@@ -2405,16 +2542,16 @@ void main(void) {
             }
 
             ivec2 cs          = getSizeContent();
-            presetBrowser.pos = { cs.x - presetBrowser.size.x, 0 };
             if (functionBrowser.isVisible()) {
                 presetBrowser.size = { cs.x / 6, cs.y * 1 / 3 };
             } else {
                 presetBrowser.size = { cs.x / 6, cs.y * 2 / 3 };
             }
+            presetBrowser.pos = { cs.x - presetBrowser.size.x, 0 };
             functionBrowser.size = { cs.x / 6, cs.y * 1 / 3 };
             functionBrowser.pos  = { cs.x - presetBrowser.size.x, presetBrowser.bottom() + 5 };
 
-            colorPick.size = { presetBrowser.size.x * 2, presetBrowser.size.x };
+            colorPick.size = { presetBrowser.size.x, presetBrowser.size.x/2 };
             colorPick.pos  = { cs.x - colorPick.size.x, cs.y - colorPick.size.y };
             sizeView       = cs - INSET_OUTER * 2;
             sizeViewInner  = sizeView - INSET_INNER * 2;
@@ -2478,59 +2615,16 @@ void main(void) {
             return minIdx;
         }
     };
-
-    void enqueueAudioFromPlugin(guictr_base* ctr, AudioBlock* out) {
-        auto ctrAudioVis = gui_cast<guictr_audiovis, gui_type::CTR_TYPE_AUDIO_VISUALIZER>(ctr);
-        if (!assert_expr(ctrAudioVis)) {
-            return;
-        }
-        ctrAudioVis->enqueue(out);
-    }
 }// namespace lineplot
 
-CEREAL_CLASS_VERSION(lineplot::settings_preset_t, 1);
-
-
-// PFNGLBINDVERTEXARRAYPROC glad_PrevglBindVertexArray;
-// PFNGLDRAWELEMENTSPROC glad_PrevglDrawElements;
-// GLuint curArray = 0xF5FFFFFF;
-// void myDrawElem(GLenum mode, GLsizei count, GLenum type, const void *indices) {
-//     log_printf("draw %d elems with array %u\n", count, curArray);
-//     glad_PrevglDrawElements(mode, count, type, indices);
-// }
-// void myBindArr(GLuint array) {
-//     curArray = array;
-//     glad_PrevglBindVertexArray(array);
-// }
+CEREAL_CLASS_VERSION(lineplot::settings_preset_t, 3);
 
 namespace DAW::UI {
-static bool gPythonInitialized = false;
 
 guictr_base* MakeAudioVisualizer(DawInstance* daw) {
-    // glad_PrevglBindVertexArray = glad_glBindVertexArray;
-    // glad_PrevglDrawElements = glad_glDrawElements;
-    // glad_glDrawElements = myDrawElem;
-    // glad_glBindVertexArray = myBindArr;
     auto ctr = new lineplot::guictr_audiovis(daw);
     return ctr;
 }
 
-void InitPythonInterpreter() {
-#ifdef HAVE_PYTHON_INTERPRETER
-    if (!gPythonInitialized) {
-        gPythonInitialized = true;
-        PyMachine::initPython();
-    }
-#endif
-}
-
-void DeinitPythonInterpreter() {
-#ifdef HAVE_PYTHON_INTERPRETER
-    if (gPythonInitialized) {
-        gPythonInitialized = false;
-        PyMachine::deinitPython();
-    }
-#endif
-}
-
 } // namespace DAW::UI
+

@@ -1146,20 +1146,18 @@ void GuiCtrLayoutEntry::setEntryTag(int32_t tag) {
 
 void storeContainerEntrySnapshot(GuiCtrLayoutEntry* ctrlayoutEntry, std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot) {
     dbgassert(ctrlayoutEntry->getType() != gui_type::CTR_TYPE_UNKNOWN);
+    auto sharedSnapshot = std::make_shared<guictrlayout_entry_snapshot_t>();
     if (ctrlayoutEntry->getFrameType() == LayoutCtrType::GUICTR_LAYOUT) {
-        auto sharedSnapshot      = std::make_shared<guictrlayout_snapshot_t>();
         guictr_layout* ctrLayout = dynamic_cast<guictr_layout*>(ctrlayoutEntry->getGui());
         dbgassert(ctrLayout);
         storeContainerSnapshot(ctrLayout, sharedSnapshot.get());
-        snapshot = sharedSnapshot;
-    } else {
-        auto sharedSnapshot = std::make_shared<guictrlayout_entry_snapshot_t>();
-        snapshot            = sharedSnapshot;
     }
+    snapshot            = sharedSnapshot;
     snapshot->entryTag = ctrlayoutEntry->getEntryTag();
     snapshot->type  = ctrlayoutEntry->getType();
     dbgassert(snapshot->type == ctrlayoutEntry->getGui()->getGuiType());
     snapshot->label = ctrlayoutEntry->getLabel();
+    snapshot->data  = ctrlayoutEntry->getGui()->storeContainerData();
 }
 
 void loadContainerEntrySnapshot(ContainerFactory& fac,
@@ -1178,22 +1176,14 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
             out = spLayoutEntry;
             auto ctrLayout = out->getAsLayoutCtr();
             if (ctrLayout) {
-                auto* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
-                if (!assert_expr(ctrLayoutSnapshot)) {
-                    return;
-                }
-                loadContainerSnapshot(fac, ctxt, ctrLayout.get(), ctrLayoutSnapshot);
+                loadContainerSnapshot(fac, ctxt, ctrLayout.get(), snapshot.get());
             }
         }
     } else if (typeLoad == gui_type::CTR_TYPE_LAYOUT) {
         out = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
         out->setEntryTag(snapshot->entryTag);
         getContainerLabel(typeLoad, out->getAsLayoutCtr()->label);
-        auto* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
-        if (!assert_expr(ctrLayoutSnapshot)) {
-            return;
-        }
-        loadContainerSnapshot(fac, ctxt, out->getAsLayoutCtr().get(), ctrLayoutSnapshot);
+        loadContainerSnapshot(fac, ctxt, out->getAsLayoutCtr().get(), snapshot.get());
     } else {
         std::shared_ptr<guictr_base> sharedContainer;
         if (makeContainer(ctxt, typeLoad, sharedContainer)) {
@@ -1203,6 +1193,7 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
         }
     }
     if (out) {
+        out->getGui()->loadContainerData(snapshot->data);
         if (!ctxt.entriesConstructed.count(out->getType())) {
             ctxt.entriesConstructed[out->getType()] = { out };
         } else {
@@ -1213,7 +1204,7 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
     }
 }
 
-void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot) {
+void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_entry_snapshot_t* snapshot) {
     auto& entries               = ctrlayout->getEntries();
     snapshot->splitterPositions = ctrlayout->getSplitterPositions();
     snapshot->activePosition    = ctrlayout->getActivePosition();
@@ -1228,7 +1219,7 @@ void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* s
 void loadContainerSnapshot(ContainerFactory& fac,
                             ContainerInstanceContext& ctxt,
                             guictr_layout* ctrlayout,
-                            guictrlayout_snapshot_t* snapshot) {
+                            guictrlayout_entry_snapshot_t* snapshot) {
     ctrlayout->setLayout(snapshot->ctrLayout);
     for (auto& shrdEntrySnapshot: snapshot->entries) {
         SPLayoutEntry sharedEntry;

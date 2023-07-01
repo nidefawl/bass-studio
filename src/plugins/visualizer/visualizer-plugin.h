@@ -25,5 +25,6 @@ private:
     audiothread_ringbuffer_t ringbuffer;
     moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
     samplecount_t audioQueueSamplePos = 0;
+    int32_t bufferOverruns = 0;
 };
 }

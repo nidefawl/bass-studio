@@ -1,0 +1,374 @@
+{
+    "plugin": {
+        "cereal_class_version": 14,
+        "pluginType": 4,
+        "name": "Synth",
+        "uId": 1005,
+        "clapId": "",
+        "slot": 1,
+        "parameters": [
+            {
+                "idx": 65586,
+                "val": 0.8624999523162842,
+                "flags": 1
+            },
+            {
+                "idx": 65585,
+                "val": 0.032500382512807849,
+                "flags": 1
+            },
+            {
+                "idx": 65584,
+                "val": 0.2250005304813385,
+                "flags": 1
+            },
+            {
+                "idx": 65583,
+                "val": 0.8175001740455627,
+                "flags": 1
+            },
+            {
+                "idx": 65582,
+                "val": 0.845000147819519,
+                "flags": 1
+            },
+            {
+                "idx": 65581,
+                "val": 0.0950000062584877,
+                "flags": 1
+            },
+            {
+                "idx": 65580,
+                "val": 0.24000002443790437,
+                "flags": 1
+            },
+            {
+                "idx": 65579,
+                "val": 0.17000000178813935,
+                "flags": 1
+            },
+            {
+                "idx": 65578,
+                "val": 0.8774996399879456,
+                "flags": 1
+            },
+            {
+                "idx": 65577,
+                "val": 0.14749999344348908,
+                "flags": 1
+            },
+            {
+                "idx": 65557,
+                "val": 0.7502605319023132,
+                "flags": 1
+            },
+            {
+                "idx": 65555,
+                "val": 0.20000001788139344,
+                "flags": 1
+            },
+            {
+                "idx": 65554,
+                "val": 0.32925012707710268,
+                "flags": 1
+            },
+            {
+                "idx": 65546,
+                "val": 0.3099994957447052,
+                "flags": 1
+            },
+            {
+                "idx": 65545,
+                "val": -0.0,
+                "flags": 1
+            },
+            {
+                "idx": 65544,
+                "val": 0.510000467300415,
+                "flags": 1
+            },
+            {
+                "idx": 65543,
+                "val": 0.5249999761581421,
+                "flags": 1
+            },
+            {
+                "idx": 65542,
+                "val": 0.5,
+                "flags": 1
+            },
+            {
+                "idx": 65541,
+                "val": 0.022500507533550264,
+                "flags": 1
+            },
+            {
+                "idx": 65540,
+                "val": 0.5,
+                "flags": 1
+            },
+            {
+                "idx": 65539,
+                "val": 1.0,
+                "flags": 1
+            },
+            {
+                "idx": 65550,
+                "val": 0.2849998474121094,
+                "flags": 1
+            }
+        ],
+        "automatedParams": [
+            {
+                "param": 65554,
+                "data": [
+                    {
+                        "time": 1572864,
+                        "val": 0.5100001692771912
+                    },
+                    {
+                        "time": 2097152,
+                        "val": 0.5100001692771912
+                    },
+                    {
+                        "time": 2097152,
+                        "val": 0.19482558965682984
+                    },
+                    {
+                        "time": 2621440,
+                        "val": 0.09676377475261688
+                    },
+                    {
+                        "time": 2621440,
+                        "val": 0.20202693343162538
+                    },
+                    {
+                        "time": 3145728,
+                        "val": 0.5789474248886108
+                    },
+                    {
+                        "time": 3145728,
+                        "val": 0.050650786608457568
+                    },
+                    {
+                        "time": 3174845,
+                        "val": 0.26315784454345705
+                    },
+                    {
+                        "time": 6815744,
+                        "val": 0.5987853407859802
+                    },
+                    {
+                        "time": 6815744,
+                        "val": 0.21093475818634034
+                    },
+                    {
+                        "time": 7320148,
+                        "val": 0.7429908514022827
+                    },
+                    {
+                        "time": 8388608,
+                        "val": 0.1688787341117859
+                    },
+                    {
+                        "time": 8388608,
+                        "val": 0.5100001692771912
+                    }
+                ],
+                "active": false
+            },
+            {
+                "param": 65557,
+                "data": [
+                    {
+                        "time": 993405,
+                        "val": 0.5654206871986389
+                    },
+                    {
+                        "time": 1179648,
+                        "val": 0.8037382960319519
+                    },
+                    {
+                        "time": 1242266,
+                        "val": 1.0
+                    },
+                    {
+                        "time": 1572864,
+                        "val": 1.0
+                    },
+                    {
+                        "time": 1572864,
+                        "val": 0.6360177993774414
+                    },
+                    {
+                        "time": 1703936,
+                        "val": 0.8037382960319519
+                    },
+                    {
+                        "time": 1766554,
+                        "val": 1.0
+                    },
+                    {
+                        "time": 2088672,
+                        "val": 0.6635515093803406
+                    },
+                    {
+                        "time": 3151488,
+                        "val": 1.0
+                    }
+                ],
+                "active": false
+            },
+            {
+                "param": 65544,
+                "data": [
+                    {
+                        "time": 1179648,
+                        "val": 0.5
+                    },
+                    {
+                        "time": 1239785,
+                        "val": 0.6542056798934937
+                    },
+                    {
+                        "time": 1305994,
+                        "val": 1.0
+                    },
+                    {
+                        "time": 1572864,
+                        "val": 1.0
+                    },
+                    {
+                        "time": 1572864,
+                        "val": 0.5
+                    },
+                    {
+                        "time": 1703936,
+                        "val": 0.5
+                    },
+                    {
+                        "time": 1764073,
+                        "val": 0.6542056798934937
+                    },
+                    {
+                        "time": 1830282,
+                        "val": 1.0
+                    },
+                    {
+                        "time": 2097152,
+                        "val": 1.0
+                    },
+                    {
+                        "time": 2097152,
+                        "val": 0.5
+                    },
+                    {
+                        "time": 2616311,
+                        "val": 0.5526310801506043
+                    },
+                    {
+                        "time": 3219383,
+                        "val": 0.8421050310134888
+                    }
+                ],
+                "active": false
+            },
+            {
+                "param": 65556,
+                "data": [
+                    {
+                        "time": 2097152,
+                        "val": 0.44249963760375979
+                    },
+                    {
+                        "time": 2621440,
+                        "val": 0.10605108737945557
+                    }
+                ],
+                "active": false
+            },
+            {
+                "param": 65555,
+                "data": [
+                    {
+                        "time": 2089123,
+                        "val": 0.2504584491252899
+                    },
+                    {
+                        "time": 2576778,
+                        "val": 0.20093455910682679
+                    },
+                    {
+                        "time": 2770354,
+                        "val": 0.11027161777019501
+                    },
+                    {
+                        "time": 3056071,
+                        "val": 0.09345792979001999
+                    },
+                    {
+                        "time": 3145728,
+                        "val": 0.23176690936088563
+                    }
+                ],
+                "active": false
+            }
+        ],
+        "globalId": 66016,
+        "enabled": true,
+        "sizeprogramdata": 0,
+        "programdata": "",
+        "sizeplugindata": 2432,
+        "plugindata": "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",
+        "vendorVersion": 0,
+        "localDbId": 0,
+        "programIdx": -1,
+        "programName": "",
+        "ioChannels": {
+            "input": [
+                {
+                    "input": "Stereo Input",
+                    "count": 2,
+                    "offset": 0
+                }
+            ],
+            "output": [
+                {
+                    "input": "Stereo Output",
+                    "count": 2,
+                    "offset": 0
+                }
+            ]
+        },
+        "version": 14,
+        "stageIds": {
+            "stageId": -1,
+            "inputStageId": -1,
+            "outputStageId": -1,
+            "outputPostStageId": -1
+        },
+        "routing": {
+            "inputRoutingOutputStage": [],
+            "inputRoutingEffects": [],
+            "routingState": 0
+        },
+        "uisnapshot": [
+            {
+                "key": 1,
+                "value": {
+                    "windowPosSize": {
+                        "x": 710,
+                        "y": 283,
+                        "w": 1632,
+                        "h": 798
+                    },
+                    "windowPosValid": true,
+                    "windowOpen": false,
+                    "layoutMode": 0,
+                    "parameterListVisible": true
+                }
+            }
+        ],
+        "plugins": []
+    }
+}

@@ -134,6 +134,7 @@ struct gl_shader_perfgraph final : gl_shader_pipeline {
     }
     template<typename T>
     int load(T* srcParser) {
+        storeGlContext();
         int newprogram       = compileBuiltinShader(srcParser, TEXTURED_GLSL_VERT, PERFGRAPH_GLSL_FRAG);
         if (newprogram < 0) {
             dbgassert(newprogram != -2);

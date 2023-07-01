@@ -67,9 +67,10 @@ static const char* getGlErrorString(int error_code) {
 #endif // NDEBUG
 bool checkGLError(const char* s) {
 #ifndef NDEBUG
-    int i = glGetError();
+    auto i = isGLContextPresent() ? glGetError() : 0;
     if (i != 0) {
         log_lf(Log::L_ERROR, "%s: %s\n", s, getGlErrorString(i));
+        dbgassert(0);
         return true;
     }
 #endif
@@ -186,6 +187,7 @@ void DrawVBO::genBuffers() {
     ++instanceCount;
     dbgassert(!vboVertId);
     dbgassert(!vboIdxId);
+    storeGlContext();
     GLuint buffers[2]{};
     glGenBuffers(2, buffers);
     vboVertId = buffers[0];
@@ -252,7 +254,10 @@ bool isGLContextPresent() {
     return glfwIsContextPresent();
 }
 
-OpenGLResource::OpenGLResource() : glfwWindowHandle(glfwGetCurrentContext()) {}
+void OpenGLResource::storeGlContext() {
+    glfwWindowHandle = glfwGetCurrentContext();
+    dbgassert(glfwWindowHandle);
+}
 
 bool OpenGLResource::makeContextCurrent() {
     if (glfwWindowHandle) {

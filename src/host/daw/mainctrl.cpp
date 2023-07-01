@@ -845,9 +845,9 @@ public:
         dbgassert(ctrEntryNodes->getEntryTag() == GuiContainerTag::TAG_NODES);
         dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
         dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
-        layout.left  = std::make_shared<guictrlayout_snapshot_t>();
-        layout.right = std::make_shared<guictrlayout_snapshot_t>();
-        layout.center = std::make_shared<guictrlayout_snapshot_t>();
+        layout.left  = std::make_shared<guictrlayout_entry_snapshot_t>();
+        layout.right = std::make_shared<guictrlayout_entry_snapshot_t>();
+        layout.center = std::make_shared<guictrlayout_entry_snapshot_t>();
         storeContainerSnapshot(ctr_Center.get(), layout.center.get());
         storeContainerSnapshot(ctr_Right.get(), layout.right.get());
         storeContainerSnapshot(ctr_Left.get(), layout.left.get());

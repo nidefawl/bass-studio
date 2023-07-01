@@ -1,0 +1,174 @@
+{
+    "plugin": {
+        "cereal_class_version": 14,
+        "pluginType": 4,
+        "name": "Synth",
+        "uId": 1005,
+        "clapId": "",
+        "slot": 1,
+        "parameters": [
+            {
+                "idx": 65587,
+                "val": 0.5,
+                "flags": 1
+            },
+            {
+                "idx": 65585,
+                "val": 0.04999999701976776,
+                "flags": 1
+            },
+            {
+                "idx": 65583,
+                "val": -0.0,
+                "flags": 1
+            },
+            {
+                "idx": 65582,
+                "val": 0.5974999070167542,
+                "flags": 1
+            },
+            {
+                "idx": 65581,
+                "val": -0.0,
+                "flags": 1
+            },
+            {
+                "idx": 65580,
+                "val": 1.0,
+                "flags": 1
+            },
+            {
+                "idx": 65579,
+                "val": -0.0,
+                "flags": 1
+            },
+            {
+                "idx": 65578,
+                "val": 0.8000001907348633,
+                "flags": 1
+            },
+            {
+                "idx": 65577,
+                "val": 0.11500022560358048,
+                "flags": 1
+            },
+            {
+                "idx": 65572,
+                "val": 0.43387869000434878,
+                "flags": 1
+            },
+            {
+                "idx": 65570,
+                "val": 0.7174995541572571,
+                "flags": 1
+            },
+            {
+                "idx": 65569,
+                "val": 0.03500070795416832,
+                "flags": 1
+            },
+            {
+                "idx": 65567,
+                "val": 0.4075002670288086,
+                "flags": 1
+            },
+            {
+                "idx": 65566,
+                "val": -0.0,
+                "flags": 1
+            },
+            {
+                "idx": 65557,
+                "val": 0.559999942779541,
+                "flags": 1
+            },
+            {
+                "idx": 65556,
+                "val": 0.15499991178512574,
+                "flags": 1
+            },
+            {
+                "idx": 65555,
+                "val": 0.2774999737739563,
+                "flags": 1
+            },
+            {
+                "idx": 65541,
+                "val": 0.10250002890825272,
+                "flags": 1
+            },
+            {
+                "idx": 65540,
+                "val": 0.5429545044898987,
+                "flags": 1
+            },
+            {
+                "idx": 65550,
+                "val": -0.0,
+                "flags": 1
+            },
+            {
+                "idx": 65565,
+                "val": 0.7799995541572571,
+                "flags": 1
+            }
+        ],
+        "automatedParams": [],
+        "globalId": 66030,
+        "enabled": true,
+        "sizeprogramdata": 0,
+        "programdata": "",
+        "sizeplugindata": 2432,
+        "plugindata": "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",
+        "vendorVersion": 0,
+        "localDbId": 0,
+        "programIdx": -1,
+        "programName": "",
+        "ioChannels": {
+            "input": [
+                {
+                    "input": "Stereo Input",
+                    "count": 2,
+                    "offset": 0
+                }
+            ],
+            "output": [
+                {
+                    "input": "Stereo Output",
+                    "count": 2,
+                    "offset": 0
+                }
+            ]
+        },
+        "version": 14,
+        "stageIds": {
+            "stageId": -1,
+            "inputStageId": -1,
+            "outputStageId": -1,
+            "outputPostStageId": -1
+        },
+        "routing": {
+            "inputRoutingOutputStage": [],
+            "inputRoutingEffects": [],
+            "routingState": 0
+        },
+        "uisnapshot": [
+            {
+                "key": 1,
+                "value": {
+                    "windowPosSize": {
+                        "x": 0,
+                        "y": 0,
+                        "w": 0,
+                        "h": 0
+                    },
+                    "windowPosValid": false,
+                    "windowOpen": true,
+                    "layoutMode": 0,
+                    "parameterListVisible": true
+                }
+            }
+        ],
+        "plugins": []
+    }
+}

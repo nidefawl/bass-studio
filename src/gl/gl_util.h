@@ -11,11 +11,12 @@ int compileShader(int type, const String& src);
 bool isGLContextPresent();
 
 class OpenGLResource {
-    void *glfwWindowHandle;
+protected:
+    void *glfwWindowHandle = nullptr;
     // TODO: store previous context and restore it in destructor
 public:
-    OpenGLResource();
     virtual ~OpenGLResource() = default;
+    void storeGlContext();
     virtual void destroy() = 0;
     bool makeContextCurrent(); 
 };

@@ -1,3 +1,5 @@
+#include "archive.h"
+#include "archive_entry.h"
 #include "fileio.h"
 #include "exceptions.h"
 #include <cstdlib>
@@ -60,6 +62,61 @@ void setDefaultSettingFilesPath(String cwd) {
     App::Platform::pathDefaultSettingFiles = cwd;
 }
 
+void extractDefaultPresets() {
+    auto a = archive_read_new();
+	if (!a || 
+        archive_read_support_filter_all(a) != ARCHIVE_OK ||
+        archive_read_support_format_all(a) != ARCHIVE_OK) {
+        log_lf(Log::L_ERROR, "archive_read_new() failed\n");
+        return;
+    }
+	// TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_read_open_filename(a, outName.c_str(), 10240));
+    auto defaultsArchive = toDefaultSettingFilesPath("data.zip");
+    if (archive_read_open_filename(a, StringAsCStr(defaultsArchive), 10240) != ARCHIVE_OK) {
+        auto errorMsg = archive_error_string(a);
+        log_lf(Log::L_ERROR, "archive_read_open_filename() failed: %s\n", errorMsg);
+        archive_read_free(a);
+        return;
+    }
+    // iterate over all files in the archive
+    for (;;) {
+        // read the next archive entry
+        struct archive_entry* entry = nullptr;
+        int r = archive_read_next_header(a, &entry);
+        if (r == ARCHIVE_EOF) {
+            break;
+        }
+        if (r != ARCHIVE_OK) {
+            auto errorMsg = archive_error_string(a);
+            log_lf(Log::L_ERROR, "archive_read_next_header() failed: %s\n", errorMsg);
+            break;
+        }
+        auto pathName = archive_entry_pathname(entry);
+        if (archive_entry_filetype(entry) == AE_IFREG) {
+            String strPathUserdata = toUserdataPath(pathName);
+            if (!FileExists(strPathUserdata)) {
+                log_lf(Log::L_INFO, "extracting: %s to %s\n", pathName, StringAsCStr(strPathUserdata));
+                auto size = archive_entry_size(entry);
+                std::vector<uint8_t> buffer(size);
+                auto readsize = archive_read_data(a, buffer.data(), size);
+                if (readsize < ARCHIVE_OK) {
+                    auto errorMsg = archive_error_string(a);
+                    log_lf(Log::L_ERROR, "archive_read_data() failed: %s\n", errorMsg);
+                    break;
+                }
+                String path;
+                SplitPath(strPathUserdata, &path, nullptr, nullptr, nullptr);
+                CreateDirectoryIfNotExists(path);
+                WriteFileVector(strPathUserdata, buffer);
+            }
+        }
+    }
+    if (archive_read_free(a) != ARCHIVE_OK) {
+        auto errorMsg = archive_error_string(a);
+        log_lf(Log::L_ERROR, "archive_read_free() failed: %s\n", errorMsg);
+    }
+}
+
 void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
     String cwdPath = !optionalCwd.empty() ? optionalCwd : getCurrentWorkingDirectory();
 #ifdef __APPLE__
@@ -102,6 +159,9 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
     if (!FileExists(defaultsPath)) {
         defaultsPath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "defaults";
     }
+    if (!FileExists(defaultsPath)) {
+        defaultsPath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "dist" + FILE_PATHSEP_STR + "defaults";
+    }
 #endif
     setResourcePath(resourcePath);
     setDefaultSettingFilesPath(defaultsPath);
@@ -118,6 +178,7 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
     if (!App::Platform::pathUserdata.empty()) {
         CreateDirectoryIfNotExists(App::Platform::pathUserdata);
     }
+    extractDefaultPresets();
 }
 
 int32_t createUniqueFilename(String& pathString, const String& baseName) {

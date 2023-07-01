@@ -588,14 +588,34 @@ void serialize(Archive& archive, samplefile_entry_t& m) {
 };
 
 template<class Archive>
-void serialize(Archive& archive, guictrlayout_snapshot_t& m) {
-    archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries, m.splitterPositions);
+void load(Archive& archive, guictrlayout_entry_snapshot_t& m, const std::uint32_t version) {
+    if (version > 0) {
+        archive(
+            make_nvp("type", m.type),
+            make_nvp("label", m.label),
+            make_nvp("ctrLayout", m.ctrLayout),
+            make_nvp("activePosition", m.activePosition),
+            make_nvp("entries", m.entries),
+            make_nvp("splitterPositions", m.splitterPositions),
+            make_nvp("entryTag", m.entryTag),
+            make_nvp("data", m.data)
+        );
+    } else {
+    }
 }
 
 template<class Archive>
-void serialize(Archive& archive, guictrlayout_entry_snapshot_t& m) {
-    archive(m.label, m.type);
-    make_optional_nvp(archive, "entryTag", m.entryTag);
+void save(Archive& archive, const guictrlayout_entry_snapshot_t& m, const std::uint32_t version) {
+    archive(
+        make_nvp("type", m.type),
+        make_nvp("label", m.label),
+        make_nvp("ctrLayout", m.ctrLayout),
+        make_nvp("activePosition", m.activePosition),
+        make_nvp("entries", m.entries),
+        make_nvp("splitterPositions", m.splitterPositions),
+        make_nvp("entryTag", m.entryTag),
+        make_nvp("data", m.data)
+    );
 }
 
 template<class Archive>
@@ -629,8 +649,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
     );
 }
 
-CEREAL_REGISTER_TYPE(guictrlayout_snapshot_t);
-CEREAL_REGISTER_POLYMORPHIC_RELATION(guictrlayout_entry_snapshot_t, guictrlayout_snapshot_t)
+CEREAL_CLASS_VERSION(guictrlayout_entry_snapshot_t, 1);
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 14);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
@@ -666,7 +685,11 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
             ReadFileVector(fileUserDataPath, vec);
         } else {
             String fileTemplateProgramPath = App::Platform::toDefaultSettingFilesPath(path);
-            ReadFileVector(fileTemplateProgramPath, vec);
+            if (FileExists(fileTemplateProgramPath)) {
+                ReadFileVector(fileTemplateProgramPath, vec);
+            } else {
+                return nullptr;
+            }
         }
         Stringstream sstream(std::string(vec.cbegin(), vec.cend()));
         std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();

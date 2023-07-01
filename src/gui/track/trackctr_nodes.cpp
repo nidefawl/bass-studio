@@ -953,7 +953,8 @@ public:
                 if (portInput && portOutput) {
                     edgeList.emplace_back(portInput, portOutput);
                 } else {
-                    log_lf(Log::L_WARN, "Did not find UI graph entry for stage %d\n", static_cast<int32_t>(procNode->stageId));
+                    // to be expected when a node has no connections
+                    // log_lf(Log::L_WARN, "Did not find UI graph entry for stage %d\n", static_cast<int32_t>(procNode->stageId));
                 }
             }
         }

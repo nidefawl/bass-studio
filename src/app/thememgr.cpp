@@ -1,4 +1,5 @@
 #include <vector>
+#include "logging.h"
 #include "thememgr.h"
 
 #include "str_util.h"
@@ -71,7 +72,7 @@ void guitheme_mgr::loadThemes() {
     try {
         themeFile = loadThemeFile();
     } catch (std::exception& e) {
-        log_lf(Log::L_WARN, "Using internal theme: %s\n", e.what());
+        log_lf(Log::L_DEBUG, "Using internal theme: %s\n", e.what());
     }
     String selectedTheme   = themeFile.theme.name;
     auto it                = themeFile.themes.begin();

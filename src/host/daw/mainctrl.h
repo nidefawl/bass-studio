@@ -239,7 +239,7 @@ class CompanionCtrl;
 class DawCtrl;
 class guictr_menubar;
 struct track_gui_entry_t;
-struct guictrlayout_snapshot_t;
+struct guictrlayout_entry_snapshot_t;
 
 class DawViewContainers {
 protected:

@@ -1918,7 +1918,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
         glfwSetErrorCallback(glfw_runtime_error_callback);
 
+        checkGLError("startApp pre");
         appInstance.startApp(ctrl);
+        checkGLError("startApp post");
 
 #if BUILD_DAW_HOST
         daw_tls::tlsinstance& tls = daw_tls::getTls();
@@ -1942,6 +1944,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #else
         const double timeoutEvent = 0.001;
 #endif
+
+        checkGLError("mainloop pre");
         while (!fatalError) {
 #ifdef _WIN32
             hiresTimer1.reset();

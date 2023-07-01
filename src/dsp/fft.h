@@ -211,7 +211,9 @@ public:
         }
     }
 
-    void setNumBands(int32_t _numBands) { this->numBands = _numBands; }
+    void setNumBands(int32_t _numBands) { 
+        this->numBands = _numBands; 
+    }
     void setFreqRange(int32_t _minFreq, int32_t _maxFreq) {
         this->minFreq = _minFreq;
         this->maxFreq = _maxFreq;
