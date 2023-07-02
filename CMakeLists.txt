@@ -522,7 +522,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         "${PROJECT_SOURCE_DIR}/dist/docs"
         "${PATH_PACK_MACOS}/Contents/Resources/docs"
       COMMAND ${CMAKE_COMMAND} 
-        -E copy_file
+        -E copy
         "${PROJECT_SOURCE_DIR}/dist/defaults/data.zip"
         "${PATH_PACK_MACOS}/Contents/Resources/defaults/data.zip"
       COMMAND ${CMAKE_COMMAND} -E copy "${ICON_FILE}" "${PATH_PACK_MACOS}/Contents/Resources/${PROJECT_BINARY_NAME}.icns"
@@ -582,7 +582,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         "${PROJECT_SOURCE_DIR}/dist/docs"
         "${PATH_DIST}/docs"
       COMMAND ${CMAKE_COMMAND} 
-        -E copy_file
+        -E copy
         "${PROJECT_SOURCE_DIR}/dist/defaults/data.zip"
         "${PATH_DIST}/defaults/data.zip"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
