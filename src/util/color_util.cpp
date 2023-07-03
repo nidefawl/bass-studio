@@ -60,6 +60,24 @@ uint32_t nvgToRGB(NVGcolor c) {
     return rgb;
 }
 
+uint32_t vec3ToRgbU32(glm::vec3 i) {
+    uint32_t rgb = 0;
+    rgb |= (uint32_t) (i.z * 255.0f);
+    rgb |= (uint32_t) (i.y * 255.0f) << 8;
+    rgb |= (uint32_t) (i.x * 255.0f) << 16;
+    rgb |= 0xFF000000;
+    return rgb;
+}
+
+uint32_t vec4ToRgbU32(glm::vec4 i) {
+    uint32_t rgb = 0;
+    rgb |= (uint32_t) (i.z * 255.0f);
+    rgb |= (uint32_t) (i.y * 255.0f) << 8;
+    rgb |= (uint32_t) (i.x * 255.0f) << 16;
+    rgb |= (uint32_t) (i.w * 255.0f) << 24;
+    return rgb;
+}
+
 uint32_t nvgToRGBA(NVGcolor c) {
     int32_t r     = CLAMP_I((int32_t) (c.r * 255.0), 0, 255);
     int32_t g     = CLAMP_I((int32_t) (c.g * 255.0), 0, 255);
@@ -71,97 +89,6 @@ uint32_t nvgToRGBA(NVGcolor c) {
     rgba |= r << 16;
     rgba |= a << 24;
     return rgba;
-}
-
-NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt) {
-    NVGcolor hsl = nvgToHSL(rgb);
-    return nvgHSL(hsl.r, CLAMP_F(hsl.g * sat), CLAMP_F(hsl.b * brt));
-}
-
-NVGcolor HSVtoRGB(float h, float s, float v) {
-    struct rgbdouble {
-        double x, y, z;
-    };
-    double H = h, S = s, V = v,
-           P, Q, T,
-           fract;
-
-    (H == 360.) ? (H = 0.) : (H /= 60.);
-    fract = H - floor(H);
-
-    P = V * (1. - S);
-    Q = V * (1. - S * fract);
-    T = V * (1. - S * (1. - fract));
-
-    rgbdouble RGB{};
-    if (0. <= H && H < 1.)
-        RGB = { V, T, P };
-    else if (1. <= H && H < 2.)
-        RGB = { Q, T, P };
-    else if (2. <= H && H < 3.)
-        RGB = { P, V, T };
-    else if (3. <= H && H < 4.)
-        RGB = { P, Q, V };
-    else if (4. <= H && H < 5.)
-        RGB = { T, P, V };
-    else if (5. <= H && H < 6.)
-        RGB = { V, P, Q };
-    else
-        RGB = { 0.f, 0.f, 0.f };
-
-    return nvgRGBAf(RGB.x, RGB.y, RGB.z, 1.0);
-}
-
-NVGcolor HSLtoRGB(float h, float s, float l) {
-
-    if (h == 0) {
-        return { l, l, l, 1.0f };
-    }
-
-    int region = floor(h * 6);
-    float f    = h * 6 - region;
-
-    float p = l * (1 - s);
-    float q = l * (1 - s * f);
-    float t = l * (1 - s * (1 - f));
-    switch (region) {
-        case 0:
-            return { l, t, p, 1.0f };
-        case 1:
-            return { q, l, p, 1.0f };
-        case 2:
-            return { p, l, t, 1.0f };
-        case 3:
-            return { p, q, l, 1.0f };
-        case 4:
-            return { t, p, l, 1.0f };
-        default:
-            return { l, p, q, 1.0f };
-    }
-}
-
-NVGcolor nvgToHSL(NVGcolor rgb) {
-    double r, g, b;
-    r            = rgb.r;
-    g            = rgb.g;
-    b            = rgb.b;
-    double fCMax = math::max(math::max(r, g), b);
-    double fCMin = math::min(math::min(r, g), b);
-    double diff  = fCMax - fCMin;
-
-    double h = 0.0f, s = 0.0f, l = (fCMin + fCMax) / 2.0;
-
-    if (diff != 0) {
-        s = l < 0.5 ? diff / (fCMax + fCMin) : diff / (2.0 - fCMax - fCMin);
-        h = (r == fCMax ? (g - b) / diff : g == fCMax ? 2.0 + (b - r) / diff
-                                                      : 4.0 + (r - g) / diff) / 6.0;
-    }
-    NVGcolor hsv;
-    hsv.r = (float) h;
-    hsv.g = (float) s;
-    hsv.b = (float) l;
-    hsv.a = 1.0f;
-    return hsv;
 }
 
 NVGcolor getContrastFontColor(uint32_t color) {
@@ -209,68 +136,6 @@ glm::vec4 colorHex(uint32_t color) {
     nvgColor.z = b;
     nvgColor.w = a;
     return nvgColor;
-}
-
-vec4 rgbToHSL(float r, float g, float b) {
-    float minV = math::min(math::min(r, g), b);
-    float maxV = math::max(math::max(r, g), b);
-    float h, s, l = (maxV + minV) / 2;
-
-    if (maxV == minV) {
-        h = s = 0;// achromatic
-    } else {
-        auto greatest = [](auto x, auto y, auto z) {
-            return x > y ? (x > z ? 0 : 2) : (y > z ? 1 : 2);
-        };
-        float d = maxV - minV;
-        s       = l > 0.5 ? d / (2 - maxV - minV) : d / (maxV + minV);
-        int mx  = greatest(r, g, b);
-        if (mx == 0) {
-            h = (g - b) / d + (g < b ? 6 : 0);
-        } else if (mx == 1) {
-            h = (b - r) / d + 2;
-        } else {
-            h = (r - g) / d + 4;
-        }
-        h /= 6;
-    }
-
-    return glm::vec4{ h, s, l, 1.0f };
-}
-
-glm::vec4 RGBtoHSV(glm::vec4 rgb) {
-    double r, g, b;
-    r            = rgb.x;
-    g            = rgb.y;
-    b            = rgb.z;
-    double fCMax = math::max(math::max(r, g), b);
-    double fCMin = math::min(math::min(r, g), b);
-    double diff  = fCMax - fCMin;
-
-    double h = 0.0f, s = 0.0f, l = (fCMin + fCMax) / 2.0;
-
-    if (diff != 0) {
-        s = l < 0.5 ? diff / (fCMax + fCMin) : diff / (2.0 - fCMax - fCMin);
-        h = (r == fCMax ? (g - b) / diff : g == fCMax ? 2.0 + (b - r) / diff
-                                                      : 4.0 + (r - g) / diff) /
-            6.0;
-    }
-    glm::vec4 hsv;
-    hsv.x = (float) h;
-    hsv.y = (float) s;
-    hsv.z = (float) l;
-    hsv.w = 1.0f;
-    return hsv;
-}
-
-glm::vec4 hexToHSL(uint32_t color) {
-    glm::vec4 color4f = colorHex(color);
-    return RGBtoHSV(color4f);
-}
-
-NVGcolor hexToHSLNvg(uint32_t color) {
-    glm::vec4 color4f = RGBtoHSV(colorHex(color));
-    return { color4f.x, color4f.y, color4f.z, color4f.w };
 }
 
 glm::vec4 int32vec4(uint32_t i) {

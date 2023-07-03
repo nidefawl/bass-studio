@@ -7,6 +7,7 @@
 #include "host/host.h"
 #include <cmath>
 #include <cstddef>
+#include <glm/gtx/color_space.hpp>
 #include <glm/trigonometric.hpp>
 #include <memory>
 #include <muParser.h>
@@ -1784,9 +1785,9 @@ void main(void) {
             const auto col = rgbaToNvg(curPreset.rgba);
             bakeOpt.color  = { col.r, col.g, col.b, col.a };
             if (math::abs(curPreset.fCycleColor) > 0) {
-                auto hsl      = rgbToHSL(col.r, col.g, col.b);
-                float hue     = hsl.r + (sinf(phase01 * M_PI * 2.0)) * curPreset.fCycleColor;
-                auto newCol   = nvgHSL(hue, hsl.g, hsl.b);
+                auto hsl      = glm::hsvColor(vec3(col.r, col.g, col.b));
+                float hue     = fmod(hsl.r / 360.0f + (sinf(phase01 * M_PI * 2.0)) * curPreset.fCycleColor, 1.0f);
+                auto newCol   = glm::rgbColor(vec3(hue * 360.0f, hsl.g, hsl.b));
                 bakeOpt.color = { newCol.r, newCol.g, newCol.b, col.a };
             }
 
@@ -1866,9 +1867,9 @@ void main(void) {
 
                 bakeOpt.color  = { col.r, col.g, col.b, col.a };
                 if (math::abs(curPreset.fCycleColor) > 0 && audioAnalyzer) {
-                    auto hsl      = rgbToHSL(col.r, col.g, col.b);
-                    float hue     = hsl.r + (scaleTotal + sinf(audioAnalyzer->processedTime * 0.5f)) * curPreset.fCycleColor;
-                    auto newCol   = nvgHSL(hue, hsl.g, hsl.b);
+                    auto hsl      = glm::hsvColor(vec3(col.r, col.g, col.b));
+                    float hue     = fmod(hsl.r / 360.0f + (sinf(audioAnalyzer->processedTime * 0.5f)) * curPreset.fCycleColor, 1.0f);
+                    auto newCol   = glm::rgbColor(vec3(hue * 360.0f, hsl.g, hsl.b));
                     bakeOpt.color = { newCol.r, newCol.g, newCol.b, col.a };
                 }
                 bakeOpt.linewidth += scaleTotal * 8.0;

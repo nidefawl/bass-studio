@@ -170,7 +170,6 @@ namespace GuiColor {
 
 NVGcolor rgbaToNvg(uint32_t i);
 uint32_t nvgToRGBA(NVGcolor c);
-NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt);
 
 namespace UIFont {
     static std::vector<font_type_t*>& _getConstants() noexcept {

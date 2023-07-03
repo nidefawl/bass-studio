@@ -6,6 +6,8 @@
 #include "gui/contextmenu/contextmenu_color.h"
 #include "gui/gui.h"
 #include "math/seq_math.h"
+#include <glm/vec3.hpp>
+#include <glm/gtx/color_space.hpp>
 
 gui_color_pick::gui_color_pick()
     : guictr_base(),
@@ -114,12 +116,14 @@ void gui_color_pick::buttonClicked(guibase* button) {
     }
 }
 void gui_color_pick::setU32(uint32_t rgba) {
-    glm::vec4 color = colorHex(rgba);
-    glm::vec4 hsla  = rgbToHSL(color.x, color.y, color.z);
+    auto color4f = colorHex(rgba);
+    auto color3f = glm::vec3(color4f);
+    auto hsla  = glm::hsvColor(color3f);
+    hsla.x = fp_math::isNanOrInfd(hsla.x) ? 0.0f : hsla.x / 360.0f;
     this->knH.setValueInit(hsla.x);
     this->knS.setValueInit(hsla.y);
     this->knL.setValueInit(hsla.z);
-    this->knA.setValueInit(color.w);
+    this->knA.setValueInit(color4f.w);
     this->colorU32 = rgba;
     this->nvgColor = rgbaToNvg(rgba);
 
@@ -138,8 +142,8 @@ void gui_color_pick::setHSL(float h, float s, float l, float a) {
     this->knS.setValueInit(s);
     this->knL.setValueInit(l);
     this->knA.setValueInit(a);
-    auto col   = nvgHSL(h, s, l);
-    auto rgb   = nvgToRGB(col) & 0xFFFFFF;
+    auto col   = glm::rgbColor(glm::vec3(h * 360.0f, s, l));
+    auto rgb   = vec3ToRgbU32(col) & 0xFFFFFF;
     auto alpha = math::clamp(math::roundfU32(255.0f * a), 0U, 255U) << 24;
     auto rgba  = rgb | alpha;
 
@@ -156,8 +160,7 @@ void gui_color_pick::setHSL(float h, float s, float l, float a) {
     }
 }
 void gui_color_pick::setHSL_(float h, float s, float l, float a) {
-    auto col   = nvgHSL(h, s, l);
-    auto rgb   = nvgToRGB(col) & 0xFFFFFF;
+    auto rgb  = vec3ToRgbU32(glm::rgbColor(glm::vec3(h * 360.0f, s, l)));
     auto alpha = math::clamp(math::roundfU32(255.0f * a), 0U, 255U) << 24;
     auto rgba  = rgb | alpha;
 
