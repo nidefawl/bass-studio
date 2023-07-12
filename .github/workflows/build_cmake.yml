@@ -219,6 +219,8 @@ jobs:
     - name: Download ninja, cmake and clang mingw toolchain (linux crosscompile)
       if: steps.build-cache-linux-cross.outputs.cache-hit != 'true'
       run: |
+        wget --no-check-certificate -nv https://raw.githubusercontent.com/nidefawl/bass-studio/master/dist/python/python311-win32.zip -O python-win32.zip
+        unzip python-win32.zip -d ${{ env.BUILD_DIR }} && rm *.zip
         wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v16.0.0-3-linux/llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2 -O llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2
         tar -xjf llvm-clang-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_LINUX_PATH }}
@@ -234,6 +236,7 @@ jobs:
         wget --no-check-certificate -nv https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip
         mkdir -p ${{ env.BUILD_DIR }}/cmake/bin
         unzip ninja-linux.zip -d  ${{ env.BUILD_DIR }}/cmake/bin  && rm *.zip
+
     - name: git clone nidefawl/daw-deps 
       if: steps.build-cache-linux-cross.outputs.cache-hit != 'true'
       uses: actions/checkout@master
@@ -285,7 +288,7 @@ jobs:
         -DPROJECT_BUILD_TESTS_UI=OFF
         -DPROJECT_BUILD_BENCHMARKS=OFF
         -DPROJECT_BUILD_PLUGINS=OFF
-        -DPROJECT_ENABLE_PYTHON=OFF
+        -DPROJECT_ENABLE_PYTHON=ON
         -DPROJECT_PRODUCT_NAME:STRING="Bass Studio"
         -DPROJECT_BINARY_NAME:STRING="bass"
         -DPRODUCT_HOST_NAME:STRING="bass"
@@ -296,6 +299,10 @@ jobs:
         -DCMAKE_VERBOSE_MAKEFILE=OFF
         -DCMAKE_UNITY_BUILD=ON
         -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+        -DPython_ROOT_DIR=${{ env.BUILD_DIR }}/Python311
+        -DPython_INCLUDE_DIR=${{ env.BUILD_DIR }}/Python311/include
+        -DPython_LIBRARY=${{ env.BUILD_DIR }}/Python311/libs/python311.lib
+
     - name: Configure linux
       run: >
         LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} cmake
