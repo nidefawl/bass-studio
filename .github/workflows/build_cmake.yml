@@ -213,6 +213,7 @@ jobs:
         path: |
           ${{ env.LLVM_LINUX_PATH }}
           ${{ env.LLVM_MINGW_PATH }}
+          ${{ env.BUILD_DIR }}/Python311
           ${{ env.BUILD_DIR }}/cmake
           ${{ env.BUILD_DIR }}/daw-deps
           ${{ env.BUILD_DIR }}/daw
