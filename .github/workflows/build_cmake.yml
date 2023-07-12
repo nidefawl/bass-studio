@@ -169,6 +169,9 @@ jobs:
       fail-fast: false
 
     steps:
+    - uses: actions/setup-python@v4
+    with:
+        python-version: '3.11' 
     - name: apt update
       working-directory: /
       run: |
