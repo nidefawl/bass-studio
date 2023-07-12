@@ -507,7 +507,7 @@ void AppCtrl::onAppTick() {
                     newContextMenu->theme = getTheme();
                     lastTooltipSrc        = guiOver;
                     nextTooltipId++;
-                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), WINDOW_POS_RELATIVE | WINDOW_IS_TOOLTIP | WINDOW_IS_BORDERLESS);
+                    openOverlayGui(newContextMenu, m_mousePos + ivec2(16, 26), WINDOW_POS_RELATIVE | WINDOW_IS_TOOLTIP | WINDOW_IS_BORDERLESS);
                 }
                 hoverTime = 0;
             } else if (guiOver != lastHoveredTooltip) {
