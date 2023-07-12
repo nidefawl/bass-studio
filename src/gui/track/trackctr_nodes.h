@@ -137,6 +137,12 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     void handleRightClick(MouseEvent& evt) override;
+    const guictr_graph_impl* getImpl() const {
+        return impl;
+    }
+    guictr_graph_impl* getImpl() {
+        return impl;
+    }
 };
 
 class guictr_nodes_editor final : public guictr_base, te_constants, public gui_scrollcontainer {

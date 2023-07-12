@@ -30,6 +30,7 @@
 #include "logging.h"
 #include "math/seq_math.h"
 #include "renderresources.h"
+#include "saferef.h"
 #include "seq_util.h"
 #include "theme.h"
 #include "host/track/track_impl.h"
@@ -50,7 +51,7 @@ float lengthSquared(T a) { return glm::length2(a); }
 using floating_t = float;
 
 const float fLineWidth     = 4.0f;
-const float nodePortRadius = 6.0f;
+const float nodePortRadius = 8.0f;
 const auto colEdgeSignal   = NVGcolor{ 0.1f, 0.6f, 0.1f, 1.0f };
 const auto GRAPH_NODE_SIZE = vec2(260);
 const auto GRAPH_FONT_SIZE = 16;
@@ -251,6 +252,7 @@ class gui_graph_port final : public guibase {
     stage_bufferpoint stageBufferPoint;
     DAW::channel_desc channelDesc; 
     edge_spline spline;
+    SafeRef<guibase> lastSnapPort;
 public:
     gui_graph_port(gui_graph_n* _parentGraphNode, stage_bufferpoint _stageBufferPoint, DAW::channel_desc _channelDesc)
         : guibase(),
@@ -312,6 +314,7 @@ public:
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override;
     void dragReleaseOn(guibase* target, ivec2 mousepos) override;
+    gui_graph_port* findClosestPort(guibase* target, ivec2 mousepos);
 
     virtual String getText() {
         switch (stageBufferPoint) {
@@ -349,13 +352,22 @@ public:
             ivec2 posSS = parent->toParentSpace(getCenterPos2f());
             posSS       = parent->parent->toParentSpace(posSS);
 
-            ivec2 mouseposSS  = toControlsObjectSpace(mousepos, parent->parent->parent);
+            ivec2 destPos  = toControlsObjectSpace(mousepos, parent->parent->parent);
+
+
+            auto guiPortSnap = dynamic_cast<gui_graph_port*>(safeRefGet(lastSnapPort));
+            if (guiPortSnap && guiPortSnap->parent && guiPortSnap->parent->parent) {
+                ivec2 posPortSnap = guiPortSnap->parent->toParentSpace(guiPortSnap->getCenterPos2f());
+                posPortSnap       = guiPortSnap->parent->parent->toParentSpace(posPortSnap);
+                destPos     = posPortSnap;
+            }
+
             ivec2 editorPosSS = parent->parent->parent->toScreenSpace(ivec2(0));
 
             if (getBufferPoint() == stage_bufferpoint::INPUT) {
-                std::swap(mouseposSS, posSS);
+                std::swap(destPos, posSS);
             }
-            std::vector<vec2>& pts = spline.calculateSplineVectors(mouseposSS, posSS);
+            std::vector<vec2>& pts = spline.calculateSplineVectors(destPos, posSS);
             if (pts.empty())
                 return;
             nvgSave(vg);
@@ -811,6 +823,9 @@ public:
         auto nodeSrc = portSrc->getNode()->getProcessingNodePointer();
         auto nodeDest = portDst->getNode()->getProcessingNodePointer();
         if (nodeSrc->type == DAW::track_node_type_t::TRACK || nodeDest->type == DAW::track_node_type_t::TRACK) {
+            if (nodeSrc->type != nodeDest->type) {
+                return false;
+            }
             DAW::channel_ref_t refDst;
             if (getChannelRef(portDst, false, refDst)) {
                 track_io_configuration_snapshot_t snapshot;
@@ -899,10 +914,6 @@ public:
     }
 }
 
-void gui_graph_port::dragMoveOn(guibase* target, ivec2 mousepos) {
-    log_lf(Log::L_DEBUG, "dragMoveOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
-}
-
 class guictr_nodes_editor::guictr_nodes_editor_impl {
     friend class guictr_nodes_editor;
     int refreshQueued = 2;
@@ -962,12 +973,57 @@ public:
 
 };
 
+gui_graph_port* gui_graph_port::findClosestPort(guibase* target, ivec2 mousepos) {
+    gui_graph_port* portClosest = dynamic_cast<gui_graph_port*>(target);
+    if (portClosest == nullptr) {
+        auto* ptrGuiGraph = dynamic_cast<gui_graph*>(target);
+        while (ptrGuiGraph == nullptr && target->parent != nullptr) {
+            target = target->parent;
+            ptrGuiGraph = dynamic_cast<gui_graph*>(target);
+        }
+        // find closest port
+        if (ptrGuiGraph != nullptr) {
+            auto mousePosParent = vec2(toControlsObjectSpace(mousepos, ptrGuiGraph));
+            auto const& listNodes = ptrGuiGraph->getImpl()->listNodes;
+            float distanceClosest = 0.0f;
+            const float maxDistance = 64.0f;
+            for (auto const& node : listNodes) {
+                for (auto const& port : node->guiPorts) {
+                    auto distance = math::distvec2(port->getPortPos(), mousePosParent);
+                    if (distance < maxDistance && (portClosest == nullptr || distance < distanceClosest)) {
+                        portClosest = port;
+                        distanceClosest = distance;
+                    }
+                }
+            }
+        }
+    }
+    if (portClosest) {
+        auto nodeSrc = this->getNode()->getProcessingNode();
+        auto nodeDest = portClosest->getNode()->getProcessingNode();
+        if (nodeSrc->type == DAW::track_node_type_t::TRACK || nodeDest->type == DAW::track_node_type_t::TRACK) {
+            if (nodeSrc->type != nodeDest->type) {
+                return nullptr;
+            }
+        }
+    }
+    return portClosest;
+}
+
+void gui_graph_port::dragMoveOn(guibase* target, ivec2 mousepos) {
+    auto port = findClosestPort(target, mousepos);
+    lastSnapPort = {};
+    if (port) {
+        lastSnapPort = port->toRef();
+    }
+}
+
 void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
-    auto* ptr = dynamic_cast<gui_graph_port*>(target);
-    if (ptr != nullptr) {
+    gui_graph_port* port = findClosestPort(target, mousepos);
+    if (port) {
         auto const daw = dawCtrl->getDaw();
         ThreadLock lock = daw->lockPlayThread();
-        NodeGraph::connectPorts(daw, this, ptr);
+        NodeGraph::connectPorts(daw, this, port);
         daw->onPluginsChanged();
     }
 }
