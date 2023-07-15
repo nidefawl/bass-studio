@@ -235,6 +235,7 @@ ${INSTALL_TYPE}
 Delete "$INSTDIR\${MAIN_APP_EXE}"
 Delete "$INSTDIR\daw-pluginscanner.exe"
 Delete "$INSTDIR\libsoxr-clang-release.dll"
+Delete "$INSTDIR\soxr-msvc-release.dll"
 Delete "$INSTDIR\libc++.dll"
 Delete "$INSTDIR\python311.dll"
 Delete "$INSTDIR\python311.zip"
