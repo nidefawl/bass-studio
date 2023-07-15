@@ -65,7 +65,7 @@ cd build-deps
 python3 ../daw-deps/build.py
 cd ../bass-studio
 cmake -S. -Bbuild -G"Ninja Multi-Config" -DPROJECT_DEPS_PATH:PATH=../daw-deps -DPROJECT_DEPS_INSTALL_PATH=../build-deps/install
-cmake --build build --config RelWithDebInfo --target DAW
+cmake --build build --config RelWithDebInfo --target bass
 ```
 
 Build instructions Windows
@@ -89,9 +89,9 @@ cd ..\bass-studio
 cmake -S. -Bbuild -DPROJECT_DEPS_PATH:PATH=../daw-deps -DPROJECT_DEPS_INSTALL_PATH=../build-deps/install
 ```
 Now you either build on command line with 
-`cmake --build build --config RelWithDebInfo --target DAW`
+`cmake --build build --config RelWithDebInfo --target bass`
 or in Visual Studio with
-`start build\DAW.sln`
+`start build\bass.sln`
 
 Additional steps:
 
