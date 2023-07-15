@@ -110,8 +110,6 @@ SetOverwrite ifnewer
 SetOutPath "$INSTDIR"
 File /oname=${MAIN_APP_EXE} "${DIST_LOC}\${PROJECT_MAIN_BINARY}"
 File /oname=daw-pluginscanner.exe "${DIST_LOC}\daw-pluginscanner.exe"
-File "${DIST_LOC}\libsoxr-clang-release.dll"
-File "${DIST_LOC}\libc++.dll"
 File "${PROJ_LOC}\dist\python\python311.dll"
 File "${PROJ_LOC}\dist\python\python311.zip"
 SetOutPath "$INSTDIR\docs"
@@ -183,6 +181,21 @@ File "${PROJ_LOC}\res\cursors\cursor14.png"
 File "${PROJ_LOC}\res\cursors\cursor15.png"
 
 SectionEnd
+
+!if /FileExists "${DIST_LOC}\libsoxr-clang-release.dll"
+Section "Install C++ Runtimes"
+SetOutPath $InstDir
+File "${DIST_LOC}\libsoxr-clang-release.dll"
+File "${DIST_LOC}\libc++.dll"
+SectionEnd
+!endif
+
+!if /FileExists "${DIST_LOC}\soxr-msvc-release.dll"
+Section "Install MSVC C++ Runtimes"
+SetOutPath $InstDir
+File "${DIST_LOC}\soxr-msvc-release.dll"
+SectionEnd
+!endif
 
 ######################################################################
 

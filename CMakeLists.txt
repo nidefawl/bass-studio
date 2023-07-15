@@ -595,32 +595,63 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       COMMAND tar "--exclude=*.debug" "-vczf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
     )
     add_custom_target(dist-installer DEPENDS ${PROJECT_INSTALLER_OUTPUT})
-  elseif(WIN32 AND CLANG AND MINGW)
+  elseif(WIN32 AND ((CLANG AND MINGW) OR MSVC))
     find_program(NSIS_MAKE NAMES makensis PATH_SUFFIXES NSIS)
     if (NOT NSIS_MAKE)
       message(STATUS "Skip dist-installer: makensis not found")
     else()
-      execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
-      get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
-      get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
-      set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
-      add_custom_target(dist-copy-runtimes-clang-win32
-        VERBATIM
-        DEPENDS dist-strip
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} 
-          -E copy
-          "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
-          "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
-        COMMAND ${CMAKE_COMMAND} 
-          -E copy
-          "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
-          "${PATH_DIST}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
-        # COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
-      )
+      if (CLANG AND MINGW)
+        execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
+        get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
+        get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
+        set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
+        add_custom_target(dist-copy-runtimes
+          VERBATIM
+          DEPENDS dist-strip
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+          COMMAND ${CMAKE_COMMAND} 
+            -E copy
+            "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+            "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+          COMMAND ${CMAKE_COMMAND} 
+            -E copy
+            "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
+            "${PATH_DIST}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
+          # COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
+        )
+      else()
+      
+        add_custom_target(dist-strip-msvc
+          ALL
+          VERBATIM
+          BYPRODUCTS ${PATH_BINARY_MAIN_STRIPPED} ${PATH_BINARY_SCANNER_STRIPPED}
+          DEPENDS ${PROJECT_BINARY_NAME} pluginscanner
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}"
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_INSTALLER_OUTPUT_PATH}"
+          # just copy both files to dist
+          COMMAND ${CMAKE_COMMAND} 
+            -E copy
+            "$<TARGET_FILE:${PROJECT_BINARY_NAME}>"
+            "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+          COMMAND ${CMAKE_COMMAND}
+            -E copy
+            "$<TARGET_FILE:pluginscanner>"
+            "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+        )
+        add_custom_target(dist-copy-runtimes
+          VERBATIM
+          DEPENDS dist-strip-msvc
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+          COMMAND ${CMAKE_COMMAND} 
+            -E copy
+            "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+            "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+        )
+      endif()
       add_custom_target(dist-installer
         VERBATIM
-        DEPENDS dist-copy-runtimes-clang-win32
+        DEPENDS dist-copy-runtimes
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND ${NSIS_MAKE}
           "-V4"
