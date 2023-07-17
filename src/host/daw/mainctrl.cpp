@@ -209,7 +209,6 @@ public:
     guictr_pluginview ctr_pluginview;
     guictr_clipeditorview ctr_clipeditorview;
     std::vector<std::shared_ptr<Splitter>> splitters;
-    DAW::EditAreaLayout editAreaLayout = DAW::EditAreaLayout::EDIT_AREA_SINGLE;
     DAW::EditAreaType editAreaType = DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER;
 
 private:
@@ -450,7 +449,6 @@ public:
         ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryPlugins);
         ctr_Center->addEntry(ctrCtrTop);
         ctr_Center->addEntry(ctrCtrBottom);
-        editAreaLayout = DAW::EditAreaLayout::EDIT_AREA_SPLIT_HORIZONTAL;
         editAreaType = DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER;
         setEditAreaLayout(DAW::EditAreaLayout::EDIT_AREA_SINGLE);
         setEditAreaType(DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR);
@@ -539,9 +537,7 @@ public:
         }
     }
 
-    void setEditAreaLayout(DAW::EditAreaLayout layout) {
-        editAreaLayout = layout;
-
+    void setEditAreaLayout(DAW::EditAreaLayout editAreaLayout) {
         auto ctrTabBottom = findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
         switch (editAreaLayout) {
             case DAW::EDIT_AREA_SINGLE:
@@ -604,8 +600,6 @@ public:
                 ctrTabBottom = placeInCenterContainer(GuiContainerTag::TAG_TAB_BOTTOM);
                 bContentChanged = true;
             }
-            container_layout layouts[] = {container_layout::TABBED, container_layout::SPLIT_V, container_layout::SPLIT_H};
-            ctrTabBottom->getAsLayoutCtr()->setLayout(layouts[editAreaLayout]);
             if (ctrTabBottom) {
                 ctrTabBottom->getAsLayoutCtr()->addEntry(spShowEntry, insertPos);
                 bContentChanged = true;
@@ -909,7 +903,6 @@ void DawCtrl::showClipEditor() {
 
 void DawCtrl::setEditAreaType(DAW::EditAreaType editAreaType) {
     view->setEditAreaType(editAreaType);
-    setEditAreaLayout(view->editAreaLayout);
 }
 
 void DawCtrl::setEditAreaLayout(DAW::EditAreaLayout layout) {
@@ -918,16 +911,23 @@ void DawCtrl::setEditAreaLayout(DAW::EditAreaLayout layout) {
 }
 
 void DawCtrl::toggleViewModeEditArea() {
-    switch (view->editAreaLayout) {
-        case DAW::EDIT_AREA_SINGLE:
-            setEditAreaLayout(DAW::EDIT_AREA_SPLIT_HORIZONTAL);
-            break;
-        case DAW::EDIT_AREA_SPLIT_HORIZONTAL:
-            setEditAreaLayout(DAW::EDIT_AREA_SPLIT_VERTICAL);
-            break;
-        case DAW::EDIT_AREA_SPLIT_VERTICAL:
-            setEditAreaLayout(DAW::EDIT_AREA_SINGLE);
-            break;
+    auto ctrCtrBottom = view->findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
+    if (ctrCtrBottom) {
+        auto ctrBottomLayout = ctrCtrBottom->getAsLayoutCtr();
+        if (ctrBottomLayout) {
+            switch (ctrBottomLayout->getLayout()) {
+                default:
+                case container_layout::TABBED:
+                    setEditAreaLayout(DAW::EDIT_AREA_SPLIT_HORIZONTAL);
+                    break;
+                case container_layout::SPLIT_H:
+                    setEditAreaLayout(DAW::EDIT_AREA_SPLIT_VERTICAL);
+                    break;
+                case container_layout::SPLIT_V:
+                    setEditAreaLayout(DAW::EDIT_AREA_SINGLE);
+                    break;
+            }
+        }
     }
 }
 
