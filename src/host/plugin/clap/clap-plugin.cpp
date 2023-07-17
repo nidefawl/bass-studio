@@ -1552,7 +1552,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
 
     auto tempo100 = host->prjGlobals.tempo100;
     // auto samplesToTicks = sampleToTickConvert<double, roundmode::none>(1.0, tempo100, format.sampleRate);
-    auto ticksPerBlock = sampleToTickConvert<double, roundmode::none>(numSamples, tempo100, format.sampleRate);;
+    auto ticksPerBlock = sampleToTickConvert<double, roundmode::none>(numSamples, tempo100, format.sampleRate);
     auto dTickEnd = dTick + ticksPerBlock;
 
     size_t numMods = 0;

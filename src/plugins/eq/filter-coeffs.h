@@ -1,0 +1,396 @@
+#pragma once
+#include "assert_dbg.h"
+#include "host/audiobuffer/audioblock.h"
+#include "math/seq_math.h"
+#include "types.h"
+#include "samplerate.h"
+#include <array>
+#include <complex>
+
+namespace DAW {
+    struct FilterCoeffs {
+        std::array<double, 5> coefficients{};
+
+        const double* getCoefficients() const noexcept {
+            return coefficients.data();
+        }
+
+        size_t getOrder() const noexcept {
+            return (static_cast<size_t>(coefficients.size()) - 1) / 2;
+        }
+
+        void calculateMagnitudes(const std::vector<double>& vecFreqs, std::vector<double>& vecMagsOut, const double sampleRate) const noexcept {
+            using complex     = std::complex<double>;
+            const complex j   = complex(0, 1) / sampleRate;
+            const auto order  = getOrder();
+            const auto* coefs = coefficients.data();
+
+            for (size_t i = 0; i < vecFreqs.size(); ++i) {
+                dbgassert(vecFreqs[i] >= 0 && vecFreqs[i] <= sampleRate * 0.5);
+                const complex jw = std::exp(-M_PI * 2.0 * vecFreqs[i] * j);
+
+                complex numerator = 0.0;
+                complex factor    = 1.0;
+                for (size_t n = 0; n <= order; ++n) {
+                    numerator += coefs[n] * factor;
+                    factor *= jw;
+                }
+
+                complex denominator = 1.0;
+                factor              = jw;
+
+                for (size_t n = order + 1; n <= 2 * order; ++n) {
+                    denominator += coefs[n] * factor;
+                    factor *= jw;
+                }
+
+                vecMagsOut[i] = std::abs(numerator / denominator);
+            }
+        }
+
+        static FilterCoeffs CalculateLowPass(double sampleRate,
+                                             double frequency,
+                                             double Q) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(Q > 0.0);
+
+            auto n        = 1 / std::tan(M_PI * frequency / static_cast<double>(sampleRate));
+            auto nSquared = n * n;
+            auto invQ     = 1 / Q;
+            auto c1       = 1 / (1 + invQ * n + nSquared);
+
+            return { { c1, c1 * 2, c1,
+                       c1 * 2 * (1 - nSquared),
+                       c1 * (1 - invQ * n + nSquared) } };
+        }
+
+        static FilterCoeffs CalculateHighPass(double sampleRate,
+                                             double frequency,
+                                             double Q) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(Q > 0.0);
+
+            double omega, sin, cos, alpha;
+            double a0, a1, a2, b0, b1, b2;
+            omega = M_PI * 2.0 * frequency / sampleRate;
+            sin   = std::sin(omega);
+            cos   = std::cos(omega);
+            alpha = sin / (2.0 * Q);
+
+            b0 = (1.0 + cos) / 2.0;
+            b1 = -(1.0 + cos);
+            b2 = (1.0 + cos) / 2.0;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
+
+            return { { b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0 } };
+        }
+
+        static FilterCoeffs CalculateNotch(double sampleRate,
+                                             double frequency,
+                                             double Q) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(Q > 0.0);
+            auto n = 1 / std::tan (M_PI * frequency / sampleRate);
+            auto nSquared = n * n;
+            auto invQ = 1 / Q;
+            auto c1 = 1 / (1 + n * invQ + nSquared);
+            auto b0 = c1 * (1 + nSquared);
+            auto b1 = 2 * c1 * (1 - nSquared);
+
+            return { { b0, b1, b0, b1, c1 * (1 - n * invQ + nSquared) } };
+        }
+
+        static FilterCoeffs CalculateNotch2(double sampleRate,
+                                             double frequency,
+                                             double Q) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(Q > 0.0);
+
+            double omega, sin, cos, alpha;
+            double a0, a1, a2, b0, b1, b2;
+            omega = M_PI * 2.0 * frequency / sampleRate;
+            sin   = std::sin(omega);
+            cos   = std::cos(omega);
+            alpha = sin / (2.0 * Q);
+
+            b0 = 1.0;
+            b1 = -2.0 * cos;
+            b2 = 1.0;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
+
+            return { { b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0 } };
+        }
+
+        static FilterCoeffs CalculateBandPass(double sampleRate,
+                                              double frequency,
+                                              double BW) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(BW > 0.0);
+
+            double omega, sin, cos, alpha;
+            double a0, a1, a2, b0, b1, b2;
+            omega = M_PI * 2.0 * frequency / sampleRate;
+            sin   = std::sin(omega);
+            cos   = std::cos(omega);
+        
+            // alpha = sin / (2.0 * BW);
+            alpha = sin * std::sinh(std::log(2.0) / 2.0 * BW * omega / sin);
+
+            // constant skirt gain
+            // b0 = sin / 2.0;
+            // b1 = 0.0;
+            // b2 = -sin / 2;
+            // a0 = 1.0 + alpha;
+            // a1 = -2.0 * cos;
+            // a2 = 1.0 - alpha;
+
+            // Constant peak gain
+            b0 = alpha;
+            b1 = 0.0;
+            b2 = -alpha;
+            a0 = 1.0 + alpha;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha;
+
+            return { { b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0 } };
+        }
+
+        static FilterCoeffs CalculatePeak(double sampleRate,
+                                              double frequency,
+                                              double BW,
+                                              double dbGain) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(BW > 0.0);
+
+            double omega, sin, cos, alpha;
+            double a0, a1, a2, b0, b1, b2;
+            double a;
+            omega = M_PI * 2.0 * frequency / sampleRate;
+            sin   = std::sin(omega);
+            cos   = std::cos(omega);
+        
+            // alpha = sin / (2.0 * BW);
+            alpha = sin * std::sinh(std::log(2.0) / 2.0 * BW * omega / sin);
+            a = std::pow(10.0, dbGain / 40.0);
+
+            b0 = 1.0 + alpha * a;
+            b1 = -2.0 * cos;
+            b2 = 1.0 - alpha * a;
+            a0 = 1.0 + alpha / a;
+            a1 = -2.0 * cos;
+            a2 = 1.0 - alpha / a;
+
+            return { { b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0 } };
+        }
+
+        static FilterCoeffs CalculateLowShelfNoQ(double sampleRate,
+                                              double frequency,
+                                              double Q,
+                                              double dbGain) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(Q > 0.0);
+
+            double omega, sin, cos;
+            double a0, a1, a2, b0, b1, b2;
+            double a;
+            double beta;
+            omega = M_PI * 2.0 * frequency / sampleRate;
+            sin   = std::sin(omega);
+            cos   = std::cos(omega);
+        
+            // alpha = sin / (2.0 * Q);
+            // alpha = sin * std::sinh(std::log(2.0) / 2.0 * BW * omega / sin);
+            a = std::pow(10.0, dbGain / 40.0);
+            beta = std::sqrt(a + a);
+
+            b0 = a * ((a + 1.0) -(a - 1.0) * cos + beta * sin);
+            b1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * cos);
+            b2 = a * ((a + 1.0) - (a - 1.0) * cos - beta * sin);
+            a0 = (a + 1.0) + (a - 1.0) * cos + beta * sin;
+            a1 = -2.0 * ((a - 1.0) + (a + 1.0) * cos);
+            a2 = (a + 1.0) + (a - 1.0) * cos - beta * sin;
+
+            return { { b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0 } };
+        }
+
+        static FilterCoeffs CalculateLowShelf(double sampleRate,
+                                              double frequency,
+                                              double Q,
+                                              double dbGain) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(Q > 0.0);
+
+            auto gainFactor = std::pow(10.0, dbGain / 40.0);
+            auto A = math::max (0.0, std::sqrt (gainFactor));
+            auto aminus1 = A - 1;
+            auto aplus1 = A + 1;
+            auto omega = (2 * M_PI * math::max (frequency, 2.0)) / sampleRate;
+            auto coso = std::cos (omega);
+            auto beta = std::sin (omega) * std::sqrt (A) / Q;
+            auto aminus1TimesCoso = aminus1 * coso;
+            auto a0 = aplus1 + aminus1TimesCoso + beta;
+            if (a0 != 0.0) a0 = 1.0 / a0;
+            return { 
+                {   
+                    A * (aplus1 - aminus1TimesCoso + beta) * a0,
+                    A * 2 * (aminus1 - aplus1 * coso) * a0,
+                    A * (aplus1 - aminus1TimesCoso - beta) * a0,
+                    -2 * (aminus1 + aplus1 * coso) * a0,
+                    (aplus1 + aminus1TimesCoso - beta) * a0 
+                }
+            };
+        }
+
+        static FilterCoeffs CalculateHighShelf(double sampleRate,
+                                              double frequency,
+                                              double Q,
+                                              double dbGain) {
+            dbgassert(sampleRate > 0.0);
+            dbgassert(frequency > 0 && frequency <= static_cast<float>(sampleRate * 0.5));
+            dbgassert(Q > 0.0);
+
+            auto gainFactor = std::pow(10.0, dbGain / 40.0);
+            auto A = math::max (0.0, std::sqrt (gainFactor));
+            auto aminus1 = A - 1;
+            auto aplus1 = A + 1;
+            auto omega = (2 * M_PI * math::max (frequency, 2.0)) / sampleRate;
+            auto coso = std::cos (omega);
+            auto beta = std::sin (omega) * std::sqrt (A) / Q;
+            auto aminus1TimesCoso = aminus1 * coso;
+            auto a0 = aplus1 - aminus1TimesCoso + beta;
+            if (a0 != 0.0) a0 = 1.0 / a0;
+            return { 
+                {   
+                    A * (aplus1 + aminus1TimesCoso + beta) * a0,
+                    A * -2 * (aminus1 + aplus1 * coso) * a0,
+                    A * (aplus1 + aminus1TimesCoso - beta) * a0,
+                    2 * (aminus1 - aplus1 * coso) * a0,
+                    (aplus1 - aminus1TimesCoso - beta) * a0 
+                }
+            };
+        }
+    };
+
+    class Filter {
+        std::array<double, 8> state{};
+
+    public:
+        void reset() noexcept
+        {
+            state.fill(0);
+        }
+
+        void process (const FilterCoeffs& coefficients, AudioBlock& inputBlock, AudioBlock& outputBlock) noexcept
+        {
+            dbgassert(inputBlock.channels >= 1);
+            dbgassert(outputBlock.channels >= 1);
+            dbgassert(outputBlock.samples >= inputBlock.samples);
+
+            auto numSamples = inputBlock.samples;
+            auto* src       = inputBlock.buf[0];
+            auto* dst       = outputBlock.buf[0];
+            auto* coeffs    = coefficients.getCoefficients();
+            auto order      = coefficients.getOrder();
+            bool bypassed   = false;
+
+            switch (order) {
+                case 1: {
+                    auto b0 = coeffs[0];
+                    auto b1 = coeffs[1];
+                    auto a1 = coeffs[2];
+
+                    auto lv1 = state[0];
+
+                    for (samplecount_t i = 0; i < numSamples; ++i) {
+                        auto input  = src[i];
+                        auto output = input * b0 + lv1;
+
+                        dst[i] = bypassed ? input : float(output);
+
+                        lv1 = (input * b1) - (output * a1);
+                    }
+
+                    state[0] = lv1;
+                } break;
+
+                case 2: {
+                    auto b0 = coeffs[0];
+                    auto b1 = coeffs[1];
+                    auto b2 = coeffs[2];
+                    auto a1 = coeffs[3];
+                    auto a2 = coeffs[4];
+
+                    auto lv1 = state[0];
+                    auto lv2 = state[1];
+
+                    for (samplecount_t i = 0; i < numSamples; ++i) {
+                        auto input  = src[i];
+                        auto output = (input * b0) + lv1;
+                        // dbgassert(output > -2.0f && output < 2.0f);
+                        dst[i]      = bypassed ? input : float(output);
+
+                        lv1 = (input * b1) - (output * a1) + lv2;
+                        lv2 = (input * b2) - (output * a2);
+                    }
+
+                    state[0] = lv1;
+                    state[1] = lv2;
+                } break;
+
+                case 3: {
+                    auto b0 = coeffs[0];
+                    auto b1 = coeffs[1];
+                    auto b2 = coeffs[2];
+                    auto b3 = coeffs[3];
+                    auto a1 = coeffs[4];
+                    auto a2 = coeffs[5];
+                    auto a3 = coeffs[6];
+
+                    auto lv1 = state[0];
+                    auto lv2 = state[1];
+                    auto lv3 = state[2];
+
+                    for (samplecount_t i = 0; i < numSamples; ++i) {
+                        auto input  = src[i];
+                        auto output = (input * b0) + lv1;
+                        dst[i]      = bypassed ? input : float(output);
+
+                        lv1 = (input * b1) - (output * a1) + lv2;
+                        lv2 = (input * b2) - (output * a2) + lv3;
+                        lv3 = (input * b3) - (output * a3);
+                    }
+
+                    state[0] = lv1;
+                    state[1] = lv2;
+                    state[2] = lv3;
+                } break;
+
+                default: {
+                    for (samplecount_t i = 0; i < numSamples; ++i) {
+                        auto input  = src[i];
+                        auto output = (input * coeffs[0]) + state[0];
+                        dst[i]      = bypassed ? input : float(output);
+
+                        for (size_t j = 0; j < order - 1; ++j)
+                            state[j] = (input * coeffs[j + 1]) - (output * coeffs[order + j + 1]) + state[j + 1];
+
+                        state[order - 1] = (input * coeffs[order]) - (output * coeffs[order * 2]);
+                    }
+                }
+            }
+        }
+    };
+
+} // namespace DAW

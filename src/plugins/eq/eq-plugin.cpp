@@ -1,12 +1,19 @@
+#include "color_util.h"
+#include "guicolors.h"
+#include <glm/gtx/color_space.hpp>
+#include <math.h>
 #include "eq-plugin.h"
 #include "assert_dbg.h"
 #include "guiglobals.h"
 #include "host/automation/automation.h"
 #include "dsp_util.h"
 #include "event.h"
+#include "logging.h"
 #include "math/seq_math.h"
+#include "plugins/eq/filter-coeffs.h"
 #include "plugins/plugin-ui.h"
 #include "plugins/plugincontrol.h"
+#include "samplerate.h"
 #include "seq_time.h"
 #include "seq_util.h"
 #include "str_util.h"
@@ -30,80 +37,116 @@
 #include <algorithm>
 #include <memory>
 #include <nanovg.h>
+#include <pybind11/gil.h>
 #include <vector>
+#include "filter-coeffs.h"
 
 namespace PluginEQ {
 
-    std::array<String, 9> FILTER_TYPE_NAMES = {
-        "Lowpass (6dB/oct)",
-        "Highpass (6dB/oct)",
-        "Lowpass (12dB/oct)",
-        "Highpass (12dB/oct)",
-        "Bandpass",
-        "Notch",
-        "Peaking",
-        "Low shelf",
-        "High shelf"
-    };
+    constexpr float F_MIN = 10;
+    constexpr float F_MAX = 20000;
+    const     float F_SCALE_EXPO = math::calcExponentForScale(0.5f, 500.0f, F_MIN, F_MAX);
+
+    double GetScaledCutoffFrequency(float paramValue) {
+        auto valueMapped = math::calcMappedValueForScale(paramValue, F_SCALE_EXPO, F_MIN, F_MAX);
+        return math::clamp(valueMapped, F_MIN, F_MAX);
+    }
+
+    double GetParamValueForCutoffFrequency(double freq) {
+        auto valueMapped = float(freq - F_MIN) / (F_MAX - F_MIN);
+        return math::clamp<float>(math::powf(valueMapped, 1.0f/F_SCALE_EXPO), 0.0f, 1.0f);
+    }
+
+    constexpr float Q_MIN = 0.1;
+    constexpr float Q_MAX = 18;
+    const     float Q_SCALE_EXPO = math::calcExponentForScale(0.5f, 1.3f, Q_MIN, Q_MAX);
+
+    double GetScaledQ(float paramValue) {
+        auto valueMapped = math::calcMappedValueForScale(paramValue, Q_SCALE_EXPO, Q_MIN, Q_MAX);
+        return math::clamp(valueMapped, Q_MIN, Q_MAX);
+    }
+
+    double GetParamValueForQ(double q) {
+        auto valueMapped = float(q - Q_MIN) / (Q_MAX - Q_MIN);
+        return math::clamp<float>(math::powf(valueMapped, 1.0f/Q_SCALE_EXPO), 0.0f, 1.0f);
+    }
+
     enum BandType {
-        BandTypePeak,
-        BandTypeLowShelf,
-        BandTypeHighShelf,
         BandTypeLowPass,
         BandTypeHighPass,
         BandTypeBandPass,
+        BandTypePeak,
+        BandTypeLowShelf,
+        BandTypeHighShelf,
         BandTypeNotch,
-        BandTypeAllPass,
         NumBandTypes
     };
-    // enum BandType {
-    //     BandTypeLowpass6,
-    //     BandTypeHighpass6,
-    //     BandTypeLowpass12,
-    //     BandTypeHighpass12,
-    //     BandTypeBandpass,
-    //     BandTypeNotch,
-    //     BandTypeAllpass,
-    //     BandTypePeak,
-    //     BandTypeLowShelf,
-    //     BandTypeHighShelf,
-    //     NumBandTypes
-    // };
+
+    BandType GetScaledBandType(float paramValue) {
+        auto iNumBandTypes = static_cast<int>(NumBandTypes);
+        auto idxF          = iNumBandTypes * paramValue;
+        return static_cast<BandType>(math::clamp(math::floorfS32(idxF), 0, iNumBandTypes - 1));
+    }
+
+    float GetParamValueForBandType(BandType type) {
+        auto iNumBandTypes = static_cast<int>(NumBandTypes);
+        return float(type) / iNumBandTypes;
+    }
+
+    std::array<String, 7> FILTER_TYPE_NAMES = {
+        "Lowpass 12dB",
+        "Highpass 12dB",
+        "Bandpass",
+        "Peak",
+        "Lowshelf",
+        "Highshelf",
+        "Notch",
+    };
 
     struct band_t {
+        int32_t state = 0;
         float freq    = 1000.0;
         float gain    = 1.0;
         float q       = 1.0;
-        float bw      = 1.0;
-        BandType type = BandTypePeak;
+        BandType type = BandTypeLowPass;
     };
+
     constexpr static std::array<band_t, 10> defaultBands = {{
-        { 32.0, 0.0, 0.707, 1.0, BandTypeLowShelf },
-        { 64.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 125.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 250.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 500.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 1000.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 2000.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 4000.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 8000.0, 0.0, 0.707, 1.0, BandTypePeak },
-        { 16000.0, 0.0, 0.707, 1.0, BandTypeHighShelf },
+        { 1, 10.0, 1.0, 0.707, BandTypeHighPass },
+        { 0, 64.0, 1.0, 0.707, BandTypePeak },
+        { 0, 125.0, 1.0, 0.707, BandTypePeak },
+        { 0, 250.0, 1.0, 0.707, BandTypePeak },
+        { 0, 500.0, 1.0, 0.707, BandTypePeak },
+        { 0, 1000.0, 1.0, 0.707, BandTypePeak },
+        { 0, 2000.0, 1.0, 0.707, BandTypePeak },
+        { 0, 4000.0, 1.0, 0.707, BandTypePeak },
+        { 0, 8000.0, 1.0, 0.707, BandTypePeak },
+        { 1, 16000.0, 1.0, 0.707, BandTypeLowPass },
     }};
+
     constexpr static int PARAMID_FIRST_BAND = 16;
     constexpr static int PER_BAND_PARAMS = 16;
-    class EQFilter;
+    constexpr static int PARAM_OFFSET_ENABLE = 0;
+    constexpr static int PARAM_OFFSET_TYPE = 1;
+    constexpr static int PARAM_OFFSET_GAIN = 2;
+    constexpr static int PARAM_OFFSET_FREQ = 3;
+    constexpr static int PARAM_OFFSET_Q    = 4;
+
+    const double PLOT_DB_MAX = 24;
+    const double PLOT_DB_MIN = -48;
+    const double PLOT_DB_GRID_STEP = 6;
+    const double PLOT_DB_RANGE = PLOT_DB_MAX - PLOT_DB_MIN;
+    const double PLOT_HZ_MIN = 10;
+    const double PLOT_HZ_MAX = 22050;
+
     struct impl_data_t {
         DAW::Host::process_scratch_buf_t buf;
         std::array<band_t, defaultBands.size()> bands = defaultBands;
-        std::array<std::vector<std::shared_ptr<EQFilter>>, defaultBands.size()> filters;
+        std::array<std::vector<std::shared_ptr<DAW::Filter>>, defaultBands.size()> filters;
+        std::array<DAW::FilterCoeffs, defaultBands.size()> filterCoeffs;
         AudioBlock tmpBlock;
     };
-    float freqToParam(float f) {
-        return (f - 10.0f) / 40000.0f;
-    }
-    float paramToFreq(float p) {
-        return p * 40000.0f + 10.0f;
-    }
+
     module_eq::module_eq(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("EQ", getModuleType(), _projectGlobalId, _hostCallback),
         impl(new impl_data_t)
@@ -122,109 +165,85 @@ namespace PluginEQ {
             registerParam(paramEntry.id)->initValue(paramEntry);
         }
         getParam(PARAM_TRACK_PAN)->isBiPolar = true;
-        for (size_t i = 0; i < impl->bands.size(); ++i) {
+        for (int32_t i = 0; i < CtrSize(impl->bands); ++i) {
             const auto& band = impl->bands[i];
-            const int paramId = PARAMID_FIRST_BAND + i * PER_BAND_PARAMS;
-            auto paramGain = registerParam(paramId);
+            const int32_t paramId = PARAMID_FIRST_BAND + i * PER_BAND_PARAMS;
+            auto paramEnable = registerParam(paramId + PARAM_OFFSET_ENABLE);
+            paramEnable->initValue(effectgain_param_entry{
+                paramId + PARAM_OFFSET_TYPE,
+                String("Band ") + std::to_string(i + 1) + " Enabled",
+                "",
+                float(band.state)
+            });
+            paramEnable->quantizationSteps = 1;
+            auto paramType = registerParam(paramId + PARAM_OFFSET_TYPE);
+            paramType->initValue(effectgain_param_entry{
+                paramId + PARAM_OFFSET_TYPE,
+                String("Band ") + std::to_string(i + 1) + " Type",
+                "",
+                GetParamValueForBandType(band.type)
+            });
+            paramType->quantizationSteps = NumBandTypes - 1;
+            auto paramGain = registerParam(paramId + PARAM_OFFSET_GAIN);
             paramGain->initValue(effectgain_param_entry{
-                paramId,
-                String("Band ") + std::to_string(i + 1),
+                paramId + PARAM_OFFSET_GAIN,
+                String("Band ") + std::to_string(i + 1) + " Gain",
                 "dB",
                 dsp_util::gainToLinScaleWithRange(band.gain, MTR_CEIL, DBFS_MUTE_POS)
             });
-            paramGain->isBiPolar = true;
-            auto paramFreq = registerParam(paramId + 1);
+            auto paramFreq = registerParam(paramId + PARAM_OFFSET_FREQ);
             paramFreq->initValue(effectgain_param_entry{
-                paramId + 1,
+                paramId + PARAM_OFFSET_FREQ,
                 String("Band ") + std::to_string(i + 1) + " Freq",
                 "Hz",
-                freqToParam(band.freq)
+                float(GetParamValueForCutoffFrequency(band.freq))
             });
-            auto paramQ = registerParam(paramId + 2);
+            auto paramQ = registerParam(paramId + PARAM_OFFSET_Q);
             paramQ->initValue(effectgain_param_entry{
-                paramId + 2,
+                paramId + PARAM_OFFSET_Q,
                 String("Band ") + std::to_string(i + 1) + " Q",
-                "%",
-                band.q
-            });
-            auto paramBW = registerParam(paramId + 3);
-            paramBW->initValue(effectgain_param_entry{
-                paramId + 3,
-                String("Band ") + std::to_string(i + 1) + " BW",
-                "%",
-                band.bw
-            });
-            auto paramType = registerParam(paramId + 4);
-            paramType->initValue(effectgain_param_entry{
-                paramId + 4,
-                String("Band ") + std::to_string(i + 1) + " Type",
                 "",
-                static_cast<float>(band.type)
+                float(GetParamValueForQ(band.q))
             });
         }
     }
+
     module_eq::~module_eq() {
         delete impl;
     }
-    class EQFilter {
-        using FPType = float;
-        std::array<double,16> state{};
-    public:
-        void eq(BandType type, float* buf, samplecount_t len, double freq, double gain, double q, double bw, double sampleRate) {
-            switch (type) {
-                // case BandTypePeak:
-                //     peak(buf, len, freq, gain, q, sampleRate);
-                //     break;
-                // case BandTypeLowShelf:
-                //     lowShelf(buf, len, freq, gain, q, sampleRate);
-                //     break;
-                // case BandTypeHighShelf:
-                //     highShelf(buf, len, freq, gain, q, sampleRate);
-                //     break;
-                // case BandTypeLowPass:
-                //     lowPass(buf, len, freq, gain, bw, sampleRate);
-                //     break;
-                // case BandTypeHighPass:
-                //     highPass(buf, len, freq, gain, bw, sampleRate);
-                //     break;
-                // case BandTypeBandPass:
-                //     bandPass(buf, len, freq, gain, bw, sampleRate);
-                //     break;
-                // case BandTypeNotch:
-                //     notch(buf, len, freq, gain, bw, sampleRate);
-                //     break;
-                // case BandTypeAllPass:
-                //     allPass(buf, len, freq, gain, bw, sampleRate);
-                //     break;
-                default:
-                    lowPass(buf, len, freq, gain, bw, sampleRate);
-                    break;
-            }
-        }
-        // does not work, didnt debug yet
-        void lowPass(float* buf, samplecount_t len, double freq, double gain, double bw, double sampleRate) {
-            // Calculate the coefficients of the filter
-            const double w0 = 2.0 * M_PI * freq / sampleRate; // w0 is the angular frequency
-            const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0)); // alpha is the filter constant
-            const double a0 = 1.0 + alpha; // a0 is the filter constant
-            const double a1 = -2.0 * std::cos(w0); // a1 is the filter constant
-            const double a2 = 1.0 - alpha;
-            const double b0 = (1.0 - std::cos(w0)) / 2.0;
-            const double b1 = 1.0 - std::cos(w0);
-            const double b2 = (1.0 - std::cos(w0)) / 2.0;
-            // Apply the filter
-            for (samplecount_t i = 0; i < len; ++i) {
-                const double x = buf[i];
-                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
-                state[1] = state[0];
-                state[0] = x;
-                state[3] = state[2];
-                state[2] = y;
-                buf[i] = y;
-            }
-        }
 
-    };
+    DAW::FilterCoeffs module_eq::getFilterCoeffs(int32_t bandIdx) {
+        const auto bandParamBase = PARAMID_FIRST_BAND + bandIdx * PER_BAND_PARAMS;
+        double Q  = GetScaledQ(getParamValue(bandParamBase + PARAM_OFFSET_Q));
+        double Fc = GetScaledCutoffFrequency(getParamValue(bandParamBase + PARAM_OFFSET_FREQ));
+        int bandType = GetScaledBandType(getParamValue(bandParamBase + PARAM_OFFSET_TYPE));
+        float fGain = 1.0f;
+        if (dsp_util::getGainLvlWithRange(getParamValue(bandParamBase + PARAM_OFFSET_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+            fGain = dsp_util::dBFS(fGain);
+        }
+        switch (bandType) {
+            default:
+            case BandTypeLowPass:
+                return DAW::FilterCoeffs::CalculateLowPass(format.sampleRate, Fc, Q);
+            case BandTypeHighPass:
+                return DAW::FilterCoeffs::CalculateHighPass(format.sampleRate, Fc, Q);
+            case BandTypeBandPass:
+                return DAW::FilterCoeffs::CalculateBandPass(format.sampleRate, Fc, Q);
+            case BandTypePeak:
+                return DAW::FilterCoeffs::CalculatePeak(format.sampleRate, Fc, Q, fGain);
+            case BandTypeLowShelf:
+                return DAW::FilterCoeffs::CalculateLowShelf(format.sampleRate, Fc, Q, fGain);
+            case BandTypeHighShelf:
+                return DAW::FilterCoeffs::CalculateHighShelf(format.sampleRate, Fc, Q, fGain);
+            case BandTypeNotch:
+                return DAW::FilterCoeffs::CalculateNotch(format.sampleRate, Fc, Q);
+        }
+    }
+
+    bool module_eq::isBandEnabled(int32_t bandIdx) {
+        return getParamValue(PARAMID_FIRST_BAND + bandIdx * PER_BAND_PARAMS + PARAM_OFFSET_ENABLE) > 0.5f;
+    }
+
     void module_eq::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
                 && out->samples == format.blockSize
@@ -236,19 +255,31 @@ namespace PluginEQ {
 
         auto* bufEqd = &impl->tmpBlock;
         bufEqd->copyFrom(in);
-        auto channelCount = bufEqd->channels;
-        for (size_t bandIdx = 0; bandIdx < 1 && bandIdx < impl->bands.size(); ++bandIdx) {
-            const auto& band = impl->bands[bandIdx];
-            auto filters = impl->filters[bandIdx];
-            while (filters.size() < out->channels) {
-                filters.emplace_back(std::make_shared<EQFilter>());
+        const auto channelCount = bufEqd->channels;
+        for (int bandIdx = 0; bandIdx < int32_t(impl->bands.size()); ++bandIdx) {
+            if (!isBandEnabled(bandIdx)) {
+                continue;
             }
+            auto& filters = impl->filters[bandIdx];
+            while (filters.size() < out->channels) {
+                filters.emplace_back(std::make_shared<DAW::Filter>());
+            }
+            auto coefficients = getFilterCoeffs(bandIdx);
             for (channelnum_t ch = 0; ch < channelCount; ++ch) {
-                auto& filter = filters[ch];
-                auto* buf = bufEqd->buf[ch];
-                filter->eq(band.type, buf, bufEqd->samples, band.freq, band.gain, band.q, band.bw, format.sampleRate);
+                auto bufChannel = bufEqd->SubChannelsBlock(ch, 1);
+                filters[ch]->process(coefficients, bufChannel, bufChannel);
             }
         }
+
+        // verify that the output is sane
+        /* for (channelnum_t ch = 0; ch < channelCount; ++ch) {
+            for (samplecount_t s = 0; s < numSamples; ++s) {
+                auto sample = bufEqd->buf[ch][s];
+                dbgassert(!fp_math::isNanOrInfd(sample));
+                dbgassert(sample > -2.0f && sample < 2.0f);
+            }
+        } */
+
         const auto autParGain = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_GAIN));
         const auto autParPan = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_PAN));
         out->clear();
@@ -306,7 +337,13 @@ namespace PluginEQ {
             }
             return {"-INF", param->unit};
         }
-        if ((idx - PARAMID_FIRST_BAND) % PER_BAND_PARAMS == 4) {
+        if ((idx - PARAMID_FIRST_BAND) % PER_BAND_PARAMS == PARAM_OFFSET_FREQ) {
+            return {StringFormat("%.3f", GetScaledCutoffFrequency(value)), param->unit};
+        }
+        if ((idx - PARAMID_FIRST_BAND) % PER_BAND_PARAMS == PARAM_OFFSET_Q) {
+            return {StringFormat("%.3f", GetScaledQ(value)), param->unit};
+        }
+        if ((idx - PARAMID_FIRST_BAND) % PER_BAND_PARAMS == PARAM_OFFSET_TYPE) {
             auto idx = math::clamp(math::floorfS32(FILTER_TYPE_NAMES.size() * value), 0, CtrSize(FILTER_TYPE_NAMES) - 1);
             return {FILTER_TYPE_NAMES[idx], param->unit};
         }
@@ -338,10 +375,11 @@ namespace PluginEQ {
 
 namespace PluginEQ {
     class guicontainer_plugin_eq_header final : public guictr_base {
-        module_eq* const module;
+        module_eq* const moduleEq;
     public:
         explicit guicontainer_plugin_eq_header(module_eq* _synth)
-            : guictr_base(), module(_synth) {
+            : guictr_base(), moduleEq(_synth) {
+            (void)moduleEq;
             padding = 0;
             margin  = 0;
         }
@@ -369,283 +407,158 @@ namespace PluginEQ {
 
         void onGuiClose() {
         }
-        
-        struct FilterCoeffs {
-            int filterType;
-            double sampleRate;
-            double a0, a1, a2, b1, b2;
-        };
 
-        void plotCoeffs(NVGcontext* vg, vec2 graphPos, vec2 graphSize, int plotType, FilterCoeffs& coeffs) {
-            double ymin, ymax, minVal, maxVal;
-            
-            auto len = math::floorfS32(graphSize.x) / 2;
-            std::vector<vec2> magPlot;
-            
-            auto a0 = coeffs.a0;
-            auto a1 = coeffs.a1;
-            auto a2 = coeffs.a2;
-            auto b1 = coeffs.b1;
-            auto b2 = coeffs.b2;
+        void plotBand(NVGcontext* vg,
+                        vec2 graphPos,
+                        vec2 graphSize,
+                        const std::vector<double>& magnitudes,
+                        const uint32_t graphColor,
+                        const float lineWidth) {
+            const double pixelToDB = graphSize.y / PLOT_DB_RANGE;
+            const auto len = CtrSize(magnitudes);
 
-            for (int idx = 0; idx < len; idx++) {
-                double w;
-                if (plotType == 0/* "linear" */)
-                    w = idx / (len - 1) * M_PI;	// 0 to pi, linear scale
-                else
-                    w = exp(log(1 / 0.001) * idx / (len - 1)) * 0.001 * M_PI;	// 0.001 to 1, times pi, log scale
-
-                double phi = pow(sin(w/2), 2);
-                double y   =  log(
-                                pow(a0 + a1 + a2, 2) 
-                                - 4 * (a0 * a1 + 4 * a0 * a2 + a1 * a2) * phi
-                                + 16 * a0 * a2 * phi * phi)
-                            - log(
-                                pow(1 + b1 + b2, 2)
-                                - 4 * (b1 + 4 * b2 + b1 * b2) * phi
-                                + 16 * b2 * phi * phi);
-                // y = y * 10 / Math.LN10
-                y = y * 10 / log(10);
-                // if (y == -Infinity)
-                if (fp_math::isNanOrInfd(y))
-                    y = -200;
-
-                // if (plotType == "linear")
-                if (plotType == 0/* "linear" */)
-                    // magplotTypePlot.push([idx / (len - 1) * Fs / 2, y]);
-                    magPlot.emplace_back(idx / double(len - 1) * coeffs.sampleRate / 2., y);
-                else
-                    // magPlot.push([idx / (len - 1) / 2, y]);
-                    magPlot.emplace_back(vec2(idx / double(len - 1), y));    
-
-                if (idx == 0)
-                    minVal = maxVal = y;
-                else if (y < minVal)
-                    minVal = y;
-                else if (y > maxVal)
-                    maxVal = y;
-            }
-            // configure y-axis
-            switch (coeffs.filterType) {
-                default:
-                case 0:
-                case 1:
-                case 2:
-                case 3:
-                    ymin = -100;
-                    ymax = 0;
-                    if (maxVal > ymax)
-                        ymax = maxVal;
-                    break;
-                case 4:
-                case 5:
-                case 6:
-                	ymin = -10;
-                	ymax = 10;
-                	if (maxVal > ymax)
-                		ymax = maxVal;
-                	else if (minVal < ymin)
-                		ymin = minVal;
-                	break;
-                case 7:
-                case 8:
-                	ymin = -40;
-                	ymax = 0;
-                    break;
-            }
-            auto graphColor = (int32_t) 0xFFFFFFFF;
             nvgBeginPath(vg);
-            nvgMoveTo(vg, graphPos.x, graphPos.y + graphSize.y);
-            for (int idx = 0; idx < len; idx++) {
-                vec2 pos = graphPos
-                            + vec2( magPlot[idx].x * graphSize.x,
-                                    (1 - (magPlot[idx].y - ymin) / (ymax - ymin)) * graphSize.y);
-                nvgLineTo(vg, pos.x, pos.y);
+            for (int step = 0; step < len; step++) {
+                float fStep = step / (float) (len - 1);
+
+                float mag = float(magnitudes[step]);
+                double magDb = mag <= 0 ? PLOT_DB_MIN : 20.0 * log10(mag);
+                double posY = (magDb - PLOT_DB_MIN) * pixelToDB;
+
+                vec2 pos = graphPos + vec2( fStep * graphSize.x, graphSize.y - posY);
+                if (step == 0) {
+                    nvgMoveTo(vg, pos.x, pos.y);
+                } else {
+                    nvgLineTo(vg, pos.x, pos.y);
+                }
             }
             nvgStrokeColor(vg, rgbaToNvg(graphColor));
-            nvgStrokeWidth(vg, 2.f);
+            nvgStrokeWidth(vg, lineWidth);
             nvgStroke(vg);
         }
+
         void render(NVGcontext* vg) override {
             guictr_base::render(vg);
             vec2 inset(this->padding, this->padding);
             vec2 graphPos(inset);
             vec2 graphSize = getSizeContent() ;
-            auto graphFrameColor = (int32_t) 0xFF999999;
+            uint32_t BandColors[defaultBands.size()]{};
+            int32_t i = 0;
+            for (auto& col : BandColors) {
+                float hue = (float) i / float(defaultBands.size());
+                col = vec3ToRgbU32(glm::rgbColor(vec3(hue * 360.0f, 0.8f, 0.75f))) | 0xFF000000;
+                ++i;
+            }
+
+            drawGrid(vg, theme, graphPos, graphSize);
+
+            auto len = math::floorfS32(graphSize.x) / 2;
+            std::vector<double> magFrequencies(len);
+
+            // use log10 scale
+            for (int step = 0; step < len; ++step) {
+                double freq = PLOT_HZ_MIN * pow(10.0, step / (len - 1.0) * log10(PLOT_HZ_MAX / PLOT_HZ_MIN));
+                magFrequencies[step] = freq;
+            }
+
+            const auto format = moduleEq->getSampleFormat();
+            const auto& bands = moduleEq->getImpl()->bands;
+            std::vector<double> bandMagnitudes(len);
+            std::vector<double> eqMagnitudes(len);
+            std::fill(eqMagnitudes.begin(), eqMagnitudes.end(), 1.0);
+            for (int bandIdx = 0; bandIdx < CtrSize(bands); ++bandIdx) {
+                if (!moduleEq->isBandEnabled(bandIdx)) {
+                    continue;
+                }
+                auto coefficients = moduleEq->getFilterCoeffs(bandIdx);
+                coefficients.calculateMagnitudes(magFrequencies, bandMagnitudes, format.sampleRate);
+                plotBand(vg, graphPos, graphSize, bandMagnitudes, BandColors[bandIdx], 1.5);
+                std::transform( bandMagnitudes.begin(), bandMagnitudes.end(),
+                                eqMagnitudes.begin(), eqMagnitudes.begin(),
+                                std::multiplies() );
+
+            }
+            plotBand(vg, graphPos, graphSize, eqMagnitudes, 0xBBFFFFFF, 3.0);
+        }
+        void drawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size) {
+            const double pixelToDB = size.y / PLOT_DB_RANGE;
+            // 6db grid step
+            const float   gridStepY = float(PLOT_DB_GRID_STEP * size.y / PLOT_DB_RANGE);
+            const int32_t numStepsY = math::ceildS32(PLOT_DB_RANGE / PLOT_DB_GRID_STEP);
+
+            NVGpaint paint{};
+            paint.image = -1;
+
+            nvgGlobalAlpha(vg, 0.5f);
             nvgBeginPath(vg);
-            nvgMoveTo(vg, graphPos.x, graphPos.y);
-            nvgLineTo(vg, graphPos.x + graphSize.x, graphPos.y);
-            nvgLineTo(vg, graphPos.x + graphSize.x, graphPos.y + graphSize.y);
-            nvgLineTo(vg, graphPos.x, graphPos.y + graphSize.y);
-            nvgStrokeColor(vg, rgbToNvg(graphFrameColor));
-            nvgStrokeWidth(vg, 1.f);
-            nvgStroke(vg);
+            nvgRect(vg, -2, 0, size.x + 2, size.y);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
+            nvgFill(vg);
+            /* draw dark grid areas */
+            int32_t nRendered = 0;
 
-
-
-            double Fs             = moduleEq->getSampleFormat().sampleRate;
-            const double SQRT2    = 1.4142135623730950488016887242097;
-            const int BANDID      = 0;
-            const int paramIdGain = PARAMID_FIRST_BAND + BANDID * PER_BAND_PARAMS + 0;
-            const int paramIdFreq = PARAMID_FIRST_BAND + BANDID * PER_BAND_PARAMS + 1;
-            const int paramIdQ    = PARAMID_FIRST_BAND + BANDID * PER_BAND_PARAMS + 2;
-            const int paramIdBW   = PARAMID_FIRST_BAND + BANDID * PER_BAND_PARAMS + 3;
-            const int paramIdFilterType = PARAMID_FIRST_BAND + BANDID * PER_BAND_PARAMS + 4;
-            double paramValueFreq = moduleEq->getParamValue(paramIdFreq);
-            double Fc             = paramValueFreq * Fs;
-            double peakGain       = moduleEq->getParamValue(paramIdGain);// TODO: range/scale
-            double bw             = moduleEq->getParamValue(paramIdQ);
-            double Q              = moduleEq->getParamValue(paramIdQ);
-            auto filterType       = math::clamp(
-                                        math::floorfS32(moduleEq->getParamValue(paramIdFilterType) * FILTER_TYPE_NAMES.size()), 
-                                        0,
-                                        CtrSize(FILTER_TYPE_NAMES) - 1
-                                    );
-            double a0 = 0.0;
-            double a1 = 0.0;
-            double a2 = 0.0;
-            double b1 = 0.0;
-            double b2 = 0.0;
-            double norm = 0.0;
-
-            double V = peakGain;//std::pow(10.0, std::abs(peakGain) / 20.0);
-            double K = tan(M_PI * Fc / Fs);
-            switch (filterType) {
-                // case "one-pole lp":
-                case 0:
-                    b1 = exp(-2.0 * M_PI * (Fc / Fs));
-                    a0 = 1.0 - b1;
-                    b1 = -b1;
-                    a1 = a2 = b2 = 0;
-                    break;
-                    
-                // case "one-pole hp":
-                case 1:
-                    b1 = -exp(-2.0 * M_PI * (0.5 - Fc / Fs));
-                    a0 = 1.0 + b1;
-                    b1 = -b1;
-                    a1 = a2 = b2 = 0;
-                    break;
-                    
-                // case "lowpass":
-                case 2:
-                    norm = 1 / (1 + K / Q + K * K);
-                    a0 = K * K * norm;
-                    a1 = 2 * a0;
-                    a2 = a0;
-                    b1 = 2 * (K * K - 1) * norm;
-                    b2 = (1 - K / Q + K * K) * norm;
-                    break;
-                
-                // case "highpass":
-                case 3:
-                    norm = 1 / (1 + K / Q + K * K);
-                    a0 = 1 * norm;
-                    a1 = -2 * a0;
-                    a2 = a0;
-                    b1 = 2 * (K * K - 1) * norm;
-                    b2 = (1 - K / Q + K * K) * norm;
-                    break;
-                
-                // case "bandpass":
-                case 4:
-                    norm = 1 / (1 + K / Q + K * K);
-                    a0 = K / Q * norm;
-                    a1 = 0;
-                    a2 = -a0;
-                    b1 = 2 * (K * K - 1) * norm;
-                    b2 = (1 - K / Q + K * K) * norm;
-                    break;
-                
-                // case "notch":
-                case 5:
-                    norm = 1 / (1 + K / Q + K * K);
-                    a0 = (1 + K * K) * norm;
-                    a1 = 2 * (K * K - 1) * norm;
-                    a2 = a0;
-                    b1 = a1;
-                    b2 = (1 - K / Q + K * K) * norm;
-                    break;
-                
-                // case "peak":
-                case 6:
-                    if (peakGain >= 0) {
-                        norm = 1 / (1 + 1/Q * K + K * K);
-                        a0 = (1 + V/Q * K + K * K) * norm;
-                        a1 = 2 * (K * K - 1) * norm;
-                        a2 = (1 - V/Q * K + K * K) * norm;
-                        b1 = a1;
-                        b2 = (1 - 1/Q * K + K * K) * norm;
-                    }
-                    else {	
-                        norm = 1 / (1 + V/Q * K + K * K);
-                        a0 = (1 + 1/Q * K + K * K) * norm;
-                        a1 = 2 * (K * K - 1) * norm;
-                        a2 = (1 - 1/Q * K + K * K) * norm;
-                        b1 = a1;
-                        b2 = (1 - V/Q * K + K * K) * norm;
-                    }
-                    break;
-                // case "lowShelf":
-                case 7:
-                    if (peakGain >= 0) {
-                        norm = 1 / (1 + SQRT2 * K + K * K);
-                        a0 = (1 + sqrt(2*V) * K + V * K * K) * norm;
-                        a1 = 2 * (V * K * K - 1) * norm;
-                        a2 = (1 - sqrt(2*V) * K + V * K * K) * norm;
-                        b1 = 2 * (K * K - 1) * norm;
-                        b2 = (1 - SQRT2 * K + K * K) * norm;
-                    }
-                    else {	
-                        norm = 1 / (1 + sqrt(2*V) * K + V * K * K);
-                        a0 = (1 + SQRT2 * K + K * K) * norm;
-                        a1 = 2 * (K * K - 1) * norm;
-                        a2 = (1 - SQRT2 * K + K * K) * norm;
-                        b1 = 2 * (V * K * K - 1) * norm;
-                        b2 = (1 - sqrt(2*V) * K + V * K * K) * norm;
-                    }
-                    break;
-                // case "highShelf":
-                case 8:
-                    if (peakGain >= 0) {
-                        norm = 1 / (1 + SQRT2 * K + K * K);
-                        a0 = (V + sqrt(2*V) * K + K * K) * norm;
-                        a1 = 2 * (K * K - V) * norm;
-                        a2 = (V - sqrt(2*V) * K + K * K) * norm;
-                        b1 = 2 * (K * K - 1) * norm;
-                        b2 = (1 - SQRT2 * K + K * K) * norm;
-                    }
-                    else {	
-                        norm = 1 / (V + sqrt(2*V) * K + K * K);
-                        a0 = (1 + SQRT2 * K + K * K) * norm;
-                        a1 = 2 * (K * K - 1) * norm;
-                        a2 = (1 - SQRT2 * K + K * K) * norm;
-                        b1 = 2 * (K * K - V) * norm;
-                        b2 = (V - sqrt(2*V) * K + K * K) * norm;
-                    }
-                    break;
+            std::vector<float> stopPoints;
+            // calculate stop points on x axis in log10 scale for a graphic eq plot
+            // starting at PLOT_HZ_MIN (10Hz)
+            // and ending at PLOT_HZ_MAX (22000Hz)
+            // rendering 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, ... 10000, 20000
+            for (int32_t i = 0; i < 4; ++i) {
+                int32_t maxSteps = i < 3 ? 10 : 3;
+                for (int32_t step = 1; step < maxSteps; ++step) {
+                    float freq = math::powf(10.0f, i + 1) * math::powf(10.0f, log10f(step));
+                    float toPx = (log10(freq) - log10(PLOT_HZ_MIN)) / (log10(PLOT_HZ_MAX) - log10(PLOT_HZ_MIN)) * size.x;
+                    stopPoints.push_back(pos.x + toPx);
+                }
             }
-            int plotType=1;
-            FilterCoeffs coeffs = {
-                filterType, Fs,
-                a0, a1, a2, b1, b2
-            };
-            {
-                const double w0 = 2.0 * M_PI * Fc / Fs; // w0 is the angular frequency
-                const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0)); // alpha is the filter constant
-                const double a0 = 1.0 + alpha; // a0 is the filter constant
-                const double a1 = -2.0 * std::cos(w0); // a1 is the filter constant
-                const double a2 = 1.0 - alpha;
-                const double b0 = (1.0 - std::cos(w0)) / 2.0;
-                const double b1 = 1.0 - std::cos(w0);
-                const double b2 = (1.0 - std::cos(w0)) / 2.0;
-                coeffs = {
-                    filterType, Fs,
-                    a0, a1, a2, b1, b2
-                };
-
+            if (!stopPoints.empty() && stopPoints.back() < pos.x + size.x) {
+                stopPoints.push_back(pos.x + size.x);
             }
-            plotCoeffs(vg, graphPos, graphSize, plotType, coeffs);
+
+            for (int32_t i = 0; i < CtrSize(stopPoints) - 1; ++i) {
+                if (i % 2 == 0) {
+                    nvgBatchedRect(vg, stopPoints[i], pos.y, stopPoints[i + 1] - stopPoints[i], size.y);
+                    nRendered++;
+                }
+            }
+
+            if (nRendered) {
+                paint.innerColor = theme->getColor(GuiColor::COL_GRID_DRK);
+                paint.customPar  = 1;
+                nvgFillPaint(vg, paint);
+                nvgBatchedRender(vg);
+            }
+
+            nvgGlobalAlpha(vg, 1.0f);
+            nRendered = 0;
+            paint.customPar = 2;
+            const float lineThickness = 4.0f;
+            for (int32_t i = 0; i < CtrSize(stopPoints) - 1; ++i) {
+                nvgBatchedRect(vg, stopPoints[i] - lineThickness * 0.5f, pos.y, lineThickness, size.y);
+                paint.feather = 2.5f - (i%10==0?0:1) * 0.75f;
+                nRendered++;
+            }
+            if (nRendered) {
+                paint.innerColor = theme->getColor(GuiColor::COL_LINE_QRT);
+                nvgFillPaint(vg, paint);
+                nvgBatchedRender(vg);
+            }
+            nRendered = 0;
+            paint.customPar = 3;
+            for (int32_t i = 0; i < numStepsY; ++i) {
+                nvgBatchedRect(vg, pos.x, pos.y + gridStepY * i - lineThickness * 0.5f, size.x, lineThickness);
+                paint.feather = 2.5f - 1 * 0.75f;
+                nRendered++;
+            }
+            if (nRendered) {
+                paint.innerColor = theme->getColor(GuiColor::COL_LINE_QRT);
+                nvgFillPaint(vg, paint);
+                nvgBatchedRender(vg);
+            }
+            nvgBatchedRect(vg, pos.x, pos.y + float(pixelToDB * PLOT_DB_MAX) - lineThickness * 0.5f, size.x, lineThickness);
+            paint.feather = 2.5f;
+            paint.innerColor = theme->getColor(GuiColor::COL_LINE_BAR);
+            nvgFillPaint(vg, paint);
+            nvgBatchedRender(vg);
         }
     };
 
@@ -724,7 +637,7 @@ namespace PluginEQ {
     std::shared_ptr<PluginViewContainers> module_eq::createViewCtrInternal() {
         return std::make_shared<PluginViewContainerEQ>(this);
     }
-} // namespace PluginEQ
+}// namespace PluginEQ
 
 template<>
 effectbase* makeInstance<PluginEQ::module_eq>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {

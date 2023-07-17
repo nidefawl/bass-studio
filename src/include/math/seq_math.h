@@ -573,11 +573,11 @@ namespace math {
     }
     float distvec2(const vec2 a, const vec2 b);
     float distancePointLine(const vec2 pt, const vec2 a, const vec2 b);
-    inline float calcExponentForScale(float inValue, float outValue, float scaleMin = 0.0f, float scaleMax = 1.0f) {
+    inline float calcExponentForScale(float inValue, float outValue, float scaleMin = 0.0f, float scaleMax = 1.0f) noexcept {
         float scale = scaleMax - scaleMin;
         return std::log10((outValue - scaleMin) / scale) / std::log10(inValue);
     }
-    inline float calcMappedValueForScale(float inValue, float expo, float scaleMin = 0.0f, float scaleMax = 1.0f) {
+    inline float calcMappedValueForScale(float inValue, float expo, float scaleMin = 0.0f, float scaleMax = 1.0f) noexcept {
         return std::pow(inValue, expo) * (scaleMax - scaleMin) + scaleMin;
     }
     

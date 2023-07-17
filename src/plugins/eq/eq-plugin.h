@@ -2,6 +2,7 @@
 #include "str_util.h"
 #include "host/plugin/modules.h"
 #include "host/plugin/internal/internal-plugin.h"
+#include "plugins/eq/filter-coeffs.h"
 
 namespace PluginEQ {
 struct impl_data_t;
@@ -20,8 +21,9 @@ public:
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
-
     impl_data_t* getImpl() const { return impl; }
+    DAW::FilterCoeffs getFilterCoeffs(int32_t bandIdx);
+    bool isBandEnabled(int32_t bandIdx);
 };
 
 } // namespace PluginEQ
