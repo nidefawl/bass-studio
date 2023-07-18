@@ -9,8 +9,6 @@ struct impl_data_t;
 class module_eq final : public internalplugin {
     impl_data_t* impl;
 public:
-    const float DBFS_MUTE_POS = -101.0f;
-    const float MTR_CEIL      = 24.0f;
     explicit module_eq(int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~module_eq() override;
 
@@ -22,7 +20,6 @@ public:
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
     impl_data_t* getImpl() const { return impl; }
-    DAW::FilterCoeffs getFilterCoeffs(int32_t bandIdx);
     bool isBandEnabled(int32_t bandIdx);
 };
 

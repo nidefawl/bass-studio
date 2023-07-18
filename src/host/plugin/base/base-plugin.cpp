@@ -453,6 +453,7 @@ std::shared_ptr<guiplugin> effect_deferred::createGuiPlugin(int32_t uuid) {
 }
 
 void effectbase::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+    dbgassert(!fp_math::isNanOrInfd(val));
     if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
         if (idx == PARAM_ENABLE) {
             bool wasEnable = this->bIsEnabled;
@@ -464,7 +465,7 @@ void effectbase::postSetParameter(int32_t idx, float preVal, float val, int flag
         track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
         if (track) {
             automatable_param_ref_t ref = toRef();
-            parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
+            parameter_ref_t p           = { track->projectIdx, ref.type, this->projectGlobalId, idx };
             DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
         }
     }

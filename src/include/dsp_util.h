@@ -35,7 +35,7 @@ namespace dsp_util {
 
     float linScaleToGainWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS);
     float gainToLinScaleWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS);
-
+    float dbfsToLinScaleWithRange(float dbfs, float MTR_CEIL, float DBFS_MUTE_POS);
     /**
      * Calculate mixer gain level from parameter.
      * returns: false if gain == -inf db

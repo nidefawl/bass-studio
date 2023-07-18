@@ -204,11 +204,13 @@ namespace dsp_util {
         float f2 = (f1 * GAIN_SCALE_RANGE) + MTR_CEIL;
         return fromdBFS(f2);
     }
-    float gainToLinScaleWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS) {
+    float dbfsToLinScaleWithRange(float dbfs, float MTR_CEIL, float DBFS_MUTE_POS) {
         const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
-        float db = dBFS(f);
-        float f2 = ((math::max(DBFS_MUTE_POS, math::min(db, MTR_CEIL)) - MTR_CEIL) / GAIN_SCALE_RANGE);
+        float f2 = ((math::max(DBFS_MUTE_POS, math::min(dbfs, MTR_CEIL)) - MTR_CEIL) / GAIN_SCALE_RANGE);
         return 1.0f - math::powf(f2, 1.0f / GAIN_SCALE_EXP);
+    }
+    float gainToLinScaleWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS) {
+        return dbfsToLinScaleWithRange(dBFS(f), MTR_CEIL, DBFS_MUTE_POS);
     }
     float linScaleToGainWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS) {
         const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;

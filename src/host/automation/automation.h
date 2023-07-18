@@ -564,6 +564,7 @@ public:
         }
     }
     virtual void postSetParameter(int32_t idx, float preVal, float val, int flags) {
+        dbgassert(!fp_math::isNanOrInfd(val));
     }
     std::pair<float, float> getParamMinMaxAutomated(int32_t paramIdx) {
         auto it = std::find_if(automationLanes.begin(), automationLanes.end(), [paramIdx](automation_lane_t& ap) {
