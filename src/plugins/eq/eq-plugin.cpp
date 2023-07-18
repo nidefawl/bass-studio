@@ -160,7 +160,7 @@ namespace PluginEQ {
         for (int32_t i = 0; i < 4; ++i) {
             int32_t maxSteps = i < 3 ? 10 : 3;
             for (int32_t step = 1; step < maxSteps; ++step) {
-                *itBegin++ = math::powf(10.0f, i + 1) * math::powf(10.0f, log10f(step));
+                *itBegin++ = math::powf(10.0f, i + 1) * step;
             }
         }
         return freqStopPoints;
