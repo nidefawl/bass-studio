@@ -10,10 +10,6 @@ class track_t;
 class effectbase;
 struct audio_stage_t;
 namespace DAW {
-
-    /**
-     * track_node_t - represents a node in the audio chain dependency graph
-     */
     struct track_source_t {
         uint32_t trackEdgeId = 0;
         channel_ref_t channel{};
@@ -28,6 +24,10 @@ namespace DAW {
         AUDIOSTAGE,
         EFFECT
     };
+
+    /**
+     * track_node_t - represents a node in the audio chain dependency graph
+     */
     struct track_node_t {
         track_node_type_t type   = track_node_type_t::TRACK;
         audiostageid_i32 stageId = TRACKID_INVALID_I32;
