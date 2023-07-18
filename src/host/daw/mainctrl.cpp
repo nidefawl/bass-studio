@@ -92,6 +92,8 @@
 #include "window_impl.h"
 #include "window.h"
 
+constexpr int32_t GUITICKS_MOUSEHOVER_UNTIL_SELECT = 10;
+
 void dragdrop_midifile::reset() {
     auto dragTarget = safeRefGet(this->target);
     if (dragTarget) {
@@ -1378,13 +1380,13 @@ void MainCtrl::onTick() {
         });
         if (view->ctr_pluginview.isVisible() && view->ctr_pluginview.contains(m_mousePos)) {
             hoverTicks = lastHoveredTrackTicks + 1;
-            if (lastHoveredTrackTicks >= 6) {
+            if (lastHoveredTrackTicks >= GUITICKS_MOUSEHOVER_UNTIL_SELECT) {
                 showPluginView();
                 hoverTicks = 0;
             }
         } else if (view->ctr_clipeditorview.isVisible() && view->ctr_clipeditorview.contains(m_mousePos)) {
             hoverTicks = lastHoveredTrackTicks + 1;
-            if (lastHoveredTrackTicks >= 6) {
+            if (lastHoveredTrackTicks >= GUITICKS_MOUSEHOVER_UNTIL_SELECT) {
                 showClipEditor();
                 hoverTicks = 0;
             }

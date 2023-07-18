@@ -75,6 +75,9 @@
 void sendExposeEvent(GLFWwindow* glfw);
 #endif
 
+
+const int64_t GUI_TICK_DELAY_NS = 20000L; // GUI Tick Rate: 20ms
+
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
 static prof_stats_applicaton_t appStats;
@@ -1997,9 +2000,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             bool bForceRender = mainWindow->getRedrawRequest();
             int64_t tmHRNow = hiresRuntime.getTime();
             int64_t tmLRNow = tmHRNow/1000L;
-            const auto timerDelayTarget_us = 20000L;
-            if (tmHRNow - tmHRLastTick >= timerDelayTarget_us) {//TODO: figure out good tick rate
-                appStats.tickTimerDelay = tmHRNow - tmHRLastTick - timerDelayTarget_us;
+            if (tmHRNow - tmHRLastTick >= GUI_TICK_DELAY_NS) {//TODO: figure out good tick rate
+                appStats.tickTimerDelay = tmHRNow - tmHRLastTick - GUI_TICK_DELAY_NS;
                 tmHRLastTick            = tmHRNow;
                 hiresTimer1.reset();
                 windowTickTimerRun();
