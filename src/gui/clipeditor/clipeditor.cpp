@@ -241,9 +241,9 @@ void guictr_clipeditor::render(NVGcontext* vg) {
     if (isBackgroundRendered()) {
         renderBackground(vg);
     }
-    //guictr_base::setScissorTransform(vg);
-    ivec2 posInset = getPosContent();
-    nvgTranslate(vg, posInset.x, posInset.y);
+    auto posContent = vec2(getPosContent());
+    auto sizeContent = vec2(getSizeContent());
+    nvgTranslate(vg, posContent.x, posContent.y);
     auto clip = view.clip();
     if (clip) {
         if (settings.isVisible()) {
@@ -256,10 +256,8 @@ void guictr_clipeditor::render(NVGcontext* vg) {
             arp.render(vg);
             nvgRestore(vg);
         }
-    } else {
-        auto cs = vec2(getSizeContent());
-        renderText(vg, cs * 0.5f, size, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
+    nvgSave(vg);
     if (clip && clip->clipType == CLIP_AUDIO) {
         if (audioeditor.isVisible()) {
             audioeditor.render(vg);
@@ -269,6 +267,7 @@ void guictr_clipeditor::render(NVGcontext* vg) {
             noteeditor.render(vg);
         }
     }
+    nvgRestore(vg);
     for (guibase* gui : guis) {
         if (gui == &audioeditor)
             continue;
@@ -278,10 +277,13 @@ void guictr_clipeditor::render(NVGcontext* vg) {
             continue;
         if (gui == &arp)
             continue;
+        nvgSave(vg);
         gui->render(vg);
+        nvgRestore(vg);
     }
-    //nvgResetScissor(vg);
-    nvgResetTransform(vg);
+    if (!clip) {
+        renderText(vg, posContent + sizeContent * 0.5f, sizeContent * 0.5f, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    }
 }
 
 void guictr_clipeditor::layout() {
@@ -940,12 +942,12 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         return;
     }
     renderBackground(vg);
-    auto cs = getSizeContent();
-    float w = cs.x;
-    float h = cs.y;
-    bool fold           = layoutRoll.bFoldNotes;
-    float offset        = layoutRoll.offset();
-    float scale         = layoutRoll.scale();
+    const auto cs = getSizeContent();
+    const float w = cs.x;
+    const float h = cs.y;
+    const bool fold           = layoutRoll.bFoldNotes;
+    const float offset        = layoutRoll.offset();
+    const float scale         = layoutRoll.scale();
     int32_t firstKey    = math::max((int32_t) floorf(offset / scale), 0);
     //render one extra key on top and bottom to fix antialiasing on edge of container
     if (firstKey > 0) {
@@ -978,6 +980,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
         if (numRowsSharp) {
             nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
+            nvgSetShapeExtents(vg, 0, 0, cs.x, cs.y);
             nvgFill(vg);
         }
 
@@ -1029,8 +1032,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                     break;
                 }
             }
-            nvgSetShapeExtents(vg, 0, 0, cs.x, cs.y);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
+            nvgSetShapeExtents(vg, 0, 0, cs.x, cs.y);
             nvgFill(vg);
 
             y = yoct;
