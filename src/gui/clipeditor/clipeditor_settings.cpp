@@ -19,8 +19,7 @@
 
 
 gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_view_t& _view)
-    : guictr_base(),
-      parentClipEditor(parentClipEditor),
+    : parentClipEditor(parentClipEditor),
       view(_view),
       clipLoopStart(),
       clipLoopLen(true),
@@ -174,7 +173,7 @@ void gui_clipsettings::render(NVGcontext* vg) {
     }
     int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
     if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
-    renderTitleBar(vg, size, text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, 0, flags, true);
+    renderTitleBar(vg, size, text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
     renderFrameOutline(vg);
     ivec2 posInset  = getPosContent();
     nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
@@ -190,7 +189,7 @@ void gui_clipsettings::render(NVGcontext* vg) {
     nvgTranslate(vg, 0, 0);
     for (guibase* gui: guis) {
         if (gui == &clipTimeStartOffsedSamples) break;
-        renderText(vg, vec2(padding, gui->top() + gui->size.y * 0.5f), vec2(gui->left()-padding, size.y), gui->label, rowHeight);
+        renderText(vg, vec2(padding*2, gui->top() + gui->size.y * 0.5f), vec2(gui->left()-padding, size.y), gui->label, rowHeight - 2);
     }
     nvgRestore(vg);
 }
@@ -203,7 +202,7 @@ void gui_clipsettings::layout() {
     int32_t btnH = math::roundfS32(rowHeight);
     int32_t btnX = btnW + padding/2;
     btnLoop.size                    = ivec2(btnW, btnH);
-    btnLoop.pos                     = ivec2(btnX, padding + theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
+    btnLoop.pos                     = ivec2(btnX, padding + theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT));
     clipLoopStart.size              = ivec2(btnW, btnH);
     clipLoopStart.pos               = ivec2(btnLoop.left(), btnLoop.bottom() + padding);
     clipLoopLen.size                = ivec2(btnW, btnH);

@@ -121,10 +121,11 @@ guictr_clipeditor::guictr_clipeditor()
     : guictr_base(),
       noteeditor(*this, view),
       audioeditor(*this, view),
-      settings(*this, view),
+      settingsCtr(*this, view),
       arp(view) {
     padding = 0;
     margin = 0;
+    settingsScrollCtr.maxHeight = -1;
     noteeditor.padding = 2;
     audioeditor.padding = 2;
     arp.padding = 2;
@@ -137,11 +138,13 @@ guictr_clipeditor::guictr_clipeditor()
     add(&noteeditor);
     add(&audioeditor);
     add(&arp);
-    add(&settings);
+    add(&settingsScrollCtr);
+    settingsScrollCtr.add(&settingsCtr);
 }
 
 guictr_clipeditor::~guictr_clipeditor() {
-    remove(&settings);
+    settingsScrollCtr.remove(&settingsCtr);
+    remove(&settingsScrollCtr);
     remove(&arp);
     remove(&audioeditor);
     remove(&noteeditor);
@@ -159,7 +162,7 @@ void guictr_clipeditor::storeEditorLayout() {
 }
 
 void guictr_clipeditor::updateClipViewReferences() {
-    settings.updateClipViewReferences();
+    settingsCtr.updateClipViewReferences();
     arp.updateClipViewReferences();
     auto clip = view.clip();
     bool bIsMidi = !clip || clip->clipType == CLIP_MIDI;
@@ -246,9 +249,9 @@ void guictr_clipeditor::render(NVGcontext* vg) {
     nvgTranslate(vg, posContent.x, posContent.y);
     auto clip = view.clip();
     if (clip) {
-        if (settings.isVisible()) {
+        if (settingsScrollCtr.isVisible()) {
             nvgSave(vg);
-            settings.render(vg);
+            settingsScrollCtr.render(vg);
             nvgRestore(vg);
         }
         if (arp.isVisible()) {
@@ -273,7 +276,7 @@ void guictr_clipeditor::render(NVGcontext* vg) {
             continue;
         if (gui == &noteeditor)
             continue;
-        if (gui == &settings)
+        if (gui == &settingsScrollCtr)
             continue;
         if (gui == &arp)
             continue;
@@ -290,38 +293,41 @@ void guictr_clipeditor::layout() {
     const int32_t padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
 
     ivec2 cs      = getSizeContent();
-    settings.pos  = ivec2(0, 0);
-    settings.size = ivec2(240, cs.y);
-    settings.layout();
+    settingsCtr.pos = settingsScrollCtr.pos  = ivec2(0, 0);
+    settingsCtr.size = settingsScrollCtr.size = ivec2(240, cs.y);
+    settingsCtr.layout();
+    ivec2 sizeSettings = settingsScrollCtr.size;
+    if (settingsScrollCtr.isVisible()) {
+        settingsScrollCtr.determineSize(sizeSettings);
+        settingsScrollCtr.layout();
+    }
 
     guibase* leftContainer = nullptr;
     auto& dawSettings = daw_tls::getDawSettings();
     arp.setVisible(dawSettings.uiShowSettingsArp);
-    settings.setVisible(dawSettings.uiShowSettingsClip);
-    if (settings.isVisible()) {
-        leftContainer = &settings;
+    settingsScrollCtr.setVisible(dawSettings.uiShowSettingsClip);
+    if (settingsScrollCtr.isVisible()) {
+        leftContainer = &settingsScrollCtr;
     }
     if (arp.isVisible()) {
         leftContainer = &arp;
         arp.size      = ivec2(220, cs.y);
-        if (settings.isVisible()) {
-            arp.pos = ivec2(settings.right() + padding, 0);
+        if (settingsScrollCtr.isVisible()) {
+            arp.pos = ivec2(settingsScrollCtr.right() + padding, 0);
         } else {
             arp.pos = ivec2(0, 0);
         }
         arp.layout();
     }
-    if (settings.isVisible() && arp.isVisible()) {
-        ivec2 sizeSettings{};
+    if (settingsScrollCtr.isVisible() && arp.isVisible()) {
         ivec2 sizeArp{};
-        settings.determineSize(sizeSettings);
         arp.determineSize(sizeArp);
         if (cs.y - sizeSettings.y > sizeArp.y + padding) {
-            settings.size.y = sizeSettings.y;
+            settingsScrollCtr.size.y = sizeSettings.y;
             arp.size.y = math::min(cs.y - sizeSettings.y - padding, sizeArp.y);
-            arp.pos.y = settings.bottom() + padding;
-            arp.pos.x = settings.left();
-            arp.size.x = settings.size.x;
+            arp.pos.y = settingsScrollCtr.bottom() + padding;
+            arp.pos.x = settingsScrollCtr.left();
+            arp.size.x = settingsScrollCtr.size.x;
         }
     }
 
@@ -1895,7 +1901,6 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
             } else if (command == CMD_QUANTIZE && !notes.selection.empty()) {
                 auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
                 if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
-                    log_lf(Log::L_DEBUG, "quantize to %d %d\n", settings.quantizeStart, settings.quantizeEnd);
                     /* Quantize notes to grid 
                      * 1. cut notes from clip
                      * 2. quantize notes in isolation
@@ -2710,4 +2715,8 @@ bool gui_clipsettings::isVisible() const {
     auto clip = view.clip();
     if (!clip) return false;
     return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsClip;
+}
+void gui_clipsettings::determineSize(ivec2& prefSize) {
+    prefSize = ivec2(0, 0);
+    guictr_base::determineSize(prefSize);
 }

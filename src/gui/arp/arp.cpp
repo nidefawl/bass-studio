@@ -166,7 +166,7 @@ void gui_arp::render(NVGcontext* vg) {
     }
     int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : TITLEBAR_FLG_NONE;
     if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
-    renderTitleBar(vg, size, title, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, buttonBypass.right(), flags, true);
+    renderTitleBar(vg, size, title, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
     renderFrameOutline(vg);
     if (buttonBypass.isVisible())
         buttonBypass.render(vg);
@@ -208,7 +208,7 @@ void gui_arp::render(NVGcontext* vg) {
 
 void gui_arp::layout() {
     padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
-    const auto hpt       = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
+    const auto hpt       = static_cast<float>(theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT));
     const auto rowHeight = static_cast<float>(theme->get(GuiConstant::CONST_ROW_HEIGHT));
     
     auto buttonSize   = hpt * 0.8f;

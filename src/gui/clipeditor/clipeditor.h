@@ -32,6 +32,7 @@
 #include "host/daw/mainctrl.h"
 #include "gui/arp/arp.h"
 #include "gui/controls/inputfield.h"
+#include "gui/container/scrollcontainer.h"
 #include "theme.h"
 #include "types.h"
 
@@ -438,6 +439,7 @@ public:
     void buttonClicked(guibase* button) override;
     void updateClipViewReferences();
     bool isVisible() const override;
+    void determineSize(ivec2& prefSize) override;
 };
 class gui_clipcontent_base : public guictr_base {
 public:
@@ -923,7 +925,8 @@ class guictr_clipeditor final : public guictr_base {
 public:
     guictr_noteeditor noteeditor;
     guictr_audioeditor audioeditor;
-    gui_clipsettings settings;
+    gui_clipsettings settingsCtr;
+    guictr_scrollbar settingsScrollCtr;
     gui_arp arp;
     explicit guictr_clipeditor();
     ~guictr_clipeditor() override;
