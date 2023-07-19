@@ -142,16 +142,7 @@ void DawInstance::startExport() {
     tls.host->setOutput(nullptr);
     playThread.addRequestWithCallback(REQ_STATE, (int) playback_state::status_render, []() {
         auto& tls = daw_tls::getTls();
-        auto& settings = daw_tls::getSettings();
-        if (settings.dawsettings.audioEnabled) {
-            if (tls.audioHost->startAudio(settings.iosettings)) {
-                auto stream = tls.audioHost->getStreamSharedPtr(0);
-                tls.host->setOutput(stream);
-            }
-        }
-        if (tls.midiHost) {
-            tls.midiHost->startMidi();
-        }
+        tls.dawInstance->bExportFinished = true;
     }, true);
 }
 
@@ -250,6 +241,20 @@ void DawInstance::processTasksMainThread() {
 }
 
 void DawInstance::onTick() {
+    if (bExportFinished) {
+        bExportFinished = false;
+        auto& settings = daw_tls::getSettings();
+        if (settings.dawsettings.audioEnabled) {
+            if (tls.audioHost->startAudio(settings.iosettings)) {
+                auto stream = tls.audioHost->getStreamSharedPtr(0);
+                tls.host->setOutput(stream);
+            }
+        }
+        if (tls.midiHost) {
+            tls.midiHost->startMidi();
+        }
+    }
+
     const bool bWroteMidiData = tls.host->writeRecordedData(this);
 
     if (bWroteMidiData) {

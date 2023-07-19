@@ -307,6 +307,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     dragdrop_target_indicator_t dragdropTarget;
     autosave_state_t autosaveState;
     DAW::async_task_t* asyncTask = nullptr;
+    bool bExportFinished = false;
 public:
     std::function<void(DawInstance*, int)> cbProjectLoadCompleteCallback;
     tick_t tickJmpFrom = 0;
