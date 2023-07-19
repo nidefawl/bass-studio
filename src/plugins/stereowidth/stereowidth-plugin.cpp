@@ -25,6 +25,9 @@
 namespace PluginStereoWidth {
     static constexpr int32_t PARAM_WIDTH = 2;
 
+    const float DBFS_MUTE_POS = -101.0f;
+    const float MTR_CEIL      = 24.0f;
+
     template<typename T>
     inline void updateParam(T& cur, const T& next, const T filterCoeff) {
         T delta = next - cur;
@@ -44,7 +47,7 @@ namespace PluginStereoWidth {
             updateParam(params.gain, nextParams.gain, filterCoeff);
             updateParam(params.width, nextParams.width, filterCoeff);
             float fGain = 1.0f;
-            dsp_util::getGainLvl(params.gain, fGain);
+            dsp_util::getGainLvlWithRange(params.gain, MTR_CEIL, DBFS_MUTE_POS, fGain);
             float width       = params.width;
             float scaleMono   = 1.0f - math::max(0.0f, (width - 0.5f) * 2.0f);
             float scaleStereo = math::min(1.0f, width * 2.0f);
