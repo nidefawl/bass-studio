@@ -318,13 +318,16 @@ void gui_timeinput::buttonClicked(guibase* button) {
 void guictr_daw_controls::buttonClicked(guibase* button) {
     auto daw = dawCtrl->getDaw();
     if (button == &this->btnPlay) {
+        projectGlobals.recordArmed = false;
         daw->startPlaying();
     }
     if (button == &this->btnStop) {
         daw->stopPlaying();
+        projectGlobals.recordArmed = false;
     }
     if (button == &this->btnRecord) {
-        projectGlobals.recordArmed = !projectGlobals.recordArmed;
+        projectGlobals.recordArmed = true;
+        daw->startPlaying();
     }
     if (button == &this->btnLoop) {
         projectGlobals.loopEnabled = !projectGlobals.loopEnabled;

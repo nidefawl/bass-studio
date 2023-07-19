@@ -208,6 +208,7 @@ private:
                                     break;
                                 }
                                 case playback_state::status_stop: {
+                                    ctrl->getGlobals().recordArmed = false;
                                     host->onStopPlayback(this->m_prjCtrl);
                                     break;
                                 }
