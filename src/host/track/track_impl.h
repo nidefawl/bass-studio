@@ -124,7 +124,7 @@ struct audio_stage_t : public IDelayLineStorage {
     track_params_t mixer;
 
     const int type;
-    audio_stage_id_t stageId = {TRACKID_INVALID_I32, TRACKID_INVALID_I32, TRACKID_INVALID_I32};
+    audio_stage_id_t stageId{};
     audiostageflags_t flags = audiostageflags_t::NONE;
     audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
     sampleformat_t sampleFormat;

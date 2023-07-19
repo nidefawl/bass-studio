@@ -213,9 +213,6 @@ bool cutSelfIntersecting(std::vector<note_t>& m_list) {
                     it++;
                     continue;
                 }
-                if (c.start() == n.start()) {
-                    log_lf(Log::L_DEBUG, "notes have same start %d\n", c.start());
-                }
                 if (c == n) {
                     it = m_list.erase(it);
                     hasIntersections = true;
@@ -225,8 +222,6 @@ bool cutSelfIntersecting(std::vector<note_t>& m_list) {
                 } else if (c.start() >= n.end() || c.end() <= n.start()) {
                     it++;
                 } else if (c.start() < n.start()) {
-                    log_lf(Log::L_DEBUG, "cutting note right %d %d\n", c.start(), c.end());
-                    log_lf(Log::L_DEBUG, "because it intersects note %d %d\n", n.start(), n.end());
                     c.cutRight(n.start());
                     it++;
                     hasIntersections = true;
