@@ -74,17 +74,7 @@ public:
     void render(NVGcontext* vg) override {
         if (!isRenderableSizeAndContext(vg))
             return;
-        nvgBeginPath(vg);
-        NVGcolor c;
-        if (this == parentCtrl->getGuiOver()) {
-            c = theme->getFrameColorHighlight();
-        } else {
-            c = theme->getFrameColorOutline();
-        }
-        nvgFillColor(vg, theme->getFrameColorBase());
-        nvgFill(vg);
-        setFont(vg, 18, THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, StringAsCStr(message), NULL);
+        renderCenteredMultilineText(vg, theme, message, 18, getLabelColor(), pos, size);
     }
     void determineSize(ivec2& prefSize) override {
         size.x = math::max(100, size.y * 3 / 5);
