@@ -34,7 +34,7 @@ class generateRandomCoordProgression(note_processor):
         return 'Generate Random Coord Progression'
     def getParameters(self):
         return [
-            ('bars', PARAM_TYPE_INT, 4, 16, 4),
+            ('Bars', PARAM_TYPE_INT, 4, 16, 4),
         ]
     def process(self, ctxt):
         notes = []

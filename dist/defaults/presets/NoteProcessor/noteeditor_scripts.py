@@ -25,9 +25,9 @@ class generate4x4Pattern(note_processor):
         return 'Generate 4x4 Pattern'
     def getParameters(self):
         return [
-            ('noteLength', PARAM_TYPE_INT, TICKS_16TH/4, TICKS_BAR*4, TICKS_BAR),
-            ('gate', PARAM_TYPE_FLOAT, 0.0, 1.0, 0.8),
-            ('bars', PARAM_TYPE_INT, 1, 16, 4),
+            ('Note Length', PARAM_TYPE_INT, TICKS_16TH/4, TICKS_BAR*4, TICKS_BAR),
+            ('Gate %', PARAM_TYPE_FLOAT, 0.0, 1.0, 0.8),
+            ('Bars', PARAM_TYPE_INT, 1, 16, 4),
         ]
     def process(self, ctxt):
         notes = []
@@ -50,7 +50,7 @@ class randomizeNoteStartTime(note_processor):
         return 'Randomize Note Start Time'
     def getParameters(self):
         return [
-            ('tickDuration', PARAM_TYPE_INT, 0.0, 4096<<4, 42.0),
+            ('Tick Range', PARAM_TYPE_INT, 0.0, 4096<<4, 42.0),
         ]
     def process(self, ctxt):
         tickDuration = ctxt.params[0]
@@ -70,7 +70,7 @@ class randomizeNoteVelocity(note_processor):
         return 'Randomize Note Velocity'
     def getParameters(self):
         return [
-            ('velocityRange', PARAM_TYPE_INT, 0.0, 127.0, 5.0),
+            ('Velocity Range', PARAM_TYPE_INT, 0.0, 127.0, 5.0),
         ]
     def process(self, ctxt):
         velocityRange = ctxt.params[0]
