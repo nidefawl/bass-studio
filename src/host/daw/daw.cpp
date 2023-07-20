@@ -73,6 +73,7 @@
 #include "window.h"
 #include "sse.h"
 #include "platform.h"
+#include "gui/clipeditor/clipeditor_python_processor.h"
 
 
 std::shared_ptr<window_abstract_t> getWindowDebugWaveformCache();
@@ -1408,6 +1409,7 @@ void DawInstance::setTempo(int32_t _tempo100) {
 void DawInstance::initProcessingResources() {
     dbgassert(initState == 2);
     initState++;
+    DAW::PythonNoteProcessor::Init();
     tls.host->initThreads();
 }
 

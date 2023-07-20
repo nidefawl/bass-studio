@@ -762,6 +762,7 @@ void guictr_noteeditor::storeEditorLayout() {
 bool guictr_noteeditor::handleKeyInput(KeyEvent& kevt) {
     return content.handleKeyInput(kevt);
 }
+
 bool guictr_noteeditor::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
     if (isCtrl(evt.kbmods)) {
         float zomDelta   = 1.0f + yoffset * -0.2f;

@@ -37,6 +37,7 @@ struct CommandContext {
     int32_t argInt0 = -1;
     int32_t argInt1 = -1;
     String argStr0 = "";
+    std::vector<float> argFloats{};
 };
 struct Command {
     struct CmdCtxtMatcher {

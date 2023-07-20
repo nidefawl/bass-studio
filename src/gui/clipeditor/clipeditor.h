@@ -35,6 +35,7 @@
 #include "gui/container/scrollcontainer.h"
 #include "theme.h"
 #include "types.h"
+#include "gui/clipeditor/clipeditor_python_processor.h"
 
 class i_ctr_shape_editor;
 
@@ -369,7 +370,6 @@ public:
         removeGuis();
     }
     void layout() override {
-        padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
         const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
         int32_t w    = getSizeContent().x;
@@ -414,7 +414,6 @@ public:
     }
 };
 
-
 class gui_clipsettings final : public guictr_base {
     guictr_clipeditor& parentClipEditor;
 public:
@@ -425,15 +424,15 @@ public:
     gui_timeinput clipTimeStart;
     gui_timeinput clipTimeLen;
     gui_timeinput clipTimeStartOffsetTicks;
-    gui_numberinput_i32 clipTimeStartOffsedSamples;
+    gui_numberinput_i32 clipTimeStartOffsetSamples;
     gui_numberinput_i32 clipAudioId;
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_quantizationsettings quantization;
+    std::vector<guictr_base*> noteEditorScripts;
     explicit gui_clipsettings(guictr_clipeditor& parent, clip_view_t& _view);
     ~gui_clipsettings() override;
     void render(NVGcontext* vg) override;
-
     void layout() override;
     void renderBackground(NVGcontext* vg) override;
     void buttonClicked(guibase* button) override;

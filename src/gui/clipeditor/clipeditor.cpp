@@ -1,5 +1,6 @@
 
 
+#include "gui/linetess/pymachine.h"
 #include "appsettings.h"
 #include "assert_dbg.h"
 #include "color_util.h"
@@ -12,6 +13,8 @@
 #include "host/daw/mainctrl.h"
 #include "logging.h"
 #include "note.h"
+#include "platform.h"
+#include "rand.h"
 #include "seq_time.h"
 #include "math/seq_math.h"
 #include "cursor.h"
@@ -31,12 +34,15 @@
 #include "host/track/track_impl.h"
 #include "host/host_pluginmanager.h"
 #include "appconfig.h"
+#include "str_util.h"
 #include "types.h"
 #include <cstdint>
 #include <nanovg.h>
 
 #include <nanovg_min.h>
+#include <pybind11/pytypes.h>
 #include <utility>
+#include <vector>
 
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
 constexpr int32_t PIANOROLL_MIN_SCALE = 4;
@@ -1939,6 +1945,46 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     handled = true;
                     desc = "Quanitize notes";
                 }
+            } else if (command == CMD_APPLY_PYTHON_SCRIPT) {
+                if (notes.selection.empty()) {
+                    DAW::UI::CommandContext ctxtSelectAll = ctxt;
+                    ctxtSelectAll.type = GlobalCommandType::CMD_SELECT_ALL;
+                    handleEditorCommand(ctxtSelectAll);
+                }
+                clip_notes_t tmpClipboard;
+                tmpClipboard.setTo(notes.selection, 0);
+                notes.deleteSelectedNotes(notes);
+                notes.clearSelection();
+                view.copySelectedNoteList();
+                view.draggedSelection.clear();
+                try {
+                    DAW::PythonNoteProcessor::python_script_ctxt_t pyCtxt;
+                    pyCtxt.notes = tmpClipboard.m_list;
+                    seq_rand rnd;
+                    rnd.rng_seed(getTimeMillis());
+                    pyCtxt.seed = int32_t(rnd.rng_rand());
+                    pyCtxt.params = ctxt.argFloats;
+                    tmpClipboard.m_list = DAW::PythonNoteProcessor::RunPythonNoteProcessor(ctxt.argStr0, pyCtxt);
+                } catch (std::exception& e) {
+                    log_lf(Log::L_ERROR, "Python script failed: %s\n", e.what());
+                }
+                cutSelfIntersecting(tmpClipboard.m_list);
+                for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
+                    view.draggedSelection.push_back(note);
+                }
+                mergeDraggedNotes(dragmode::drag_notes_copy);
+#ifndef NDEBUG
+                for (note_t* selPtr: notes.selection) {
+                    dbgassert(notes.has(selPtr));
+                }
+#endif
+                auto pair = getMinMaxTime(notes.selection);
+                if (pair.second)
+                    grid.makeTickVisible(pair.second->end() + getTickOffset());
+                expandSelectionFrame(pair);
+                edit = true;
+                handled = true;
+                desc = "Apply python note processor";
             }
         }
         if (command == GlobalCommandType::CMD_MOVE_CURSOR) {
@@ -2716,6 +2762,7 @@ bool gui_clipsettings::isVisible() const {
     if (!clip) return false;
     return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsClip;
 }
+
 void gui_clipsettings::determineSize(ivec2& prefSize) {
     prefSize = ivec2(0, 0);
     guictr_base::determineSize(prefSize);

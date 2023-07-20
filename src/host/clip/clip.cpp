@@ -516,7 +516,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 }
 
 void clip_notes_t::selectLastN(size_t num) {
-    dbgassert(num > 0 && num <= m_list.size());
+    dbgassert(num >= 0 && num <= m_list.size());
     size_t pos = m_list.size() - num;
     size_t end = m_list.size();
     for (; pos < end; ++pos) {
@@ -597,7 +597,7 @@ note_t* getFirstBefore(std::vector<note_t>& v, int32_t pitch, tick_t time) {
 std::pair<note_t*, note_t*> getMinMaxSemitones(std::vector<note_t>& notes) {
     auto minmax = std::minmax_element(notes.begin(), notes.end(),
                                       [](note_t const& lhs, note_t const& rhs) { return lhs.pitch < rhs.pitch; });
-    std::pair<note_t*, note_t*> pairPtr;
+    std::pair<note_t*, note_t*> pairPtr{nullptr, nullptr};
     if (minmax.first != notes.end()) {
         pairPtr.first = &*minmax.first;
     }
@@ -608,16 +608,19 @@ std::pair<note_t*, note_t*> getMinMaxSemitones(std::vector<note_t>& notes) {
 }
 
 std::pair<note_t*, note_t*> getMinMaxTime(std::set<note_t*>& notePtrs) {
+    if (notePtrs.empty())
+        return std::make_pair(nullptr, nullptr);
     auto min = std::min_element(notePtrs.begin(), notePtrs.end(),
                                 [](note_t* const& lhs, note_t* const& rhs) { return lhs->time < rhs->time; });
     auto max = std::max_element(notePtrs.begin(), notePtrs.end(),
                                 [](note_t* const& lhs, note_t* const& rhs) { return (lhs->time + lhs->len) < (rhs->time + rhs->len); });
-
-
     return std::make_pair(*min, *max);
 }
 
 std::pair<tick_t, tick_t> getMinMaxTimeShape(std::vector<DAW::Shape::shape_pt_t>& shapePt) {
+    if (shapePt.empty()) {
+        return std::make_pair(0, 0);
+    }
     auto comp = [](DAW::Shape::shape_pt_t const& lhs, DAW::Shape::shape_pt_t const& rhs) { return lhs.pos.x < rhs.pos.x; };
     auto min = std::min_element(shapePt.begin(), shapePt.end(), comp);
     auto max = std::max_element(shapePt.begin(), shapePt.end(), comp);

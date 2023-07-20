@@ -29,6 +29,7 @@
 #include "glheaders.h"
 #include "grid.h"
 #include "gui/clipeditor/clipeditor.h"
+#include "gui/clipeditor/clipeditor_python_processor.h"
 #include "gui/container/container_builder.h"
 #include "gui/container/container_dnd_layout.h"
 #include "gui/container/container_layout_types.h"
@@ -1861,6 +1862,13 @@ bool DawCtrl::processGlobalKeyevent(const KeyEvent& kevt) {
                 lastKeyDebug = ca;
             }
         }
+    }
+    if (kevt.type == KeyboardState::K_PRESS) {
+        if ((kevt.mods & KeyboardMods::KB_MOD_CTRL) && kevt.keyCode == KeyboardKey::DAW_KB_P) {
+            DAW::PythonNoteProcessor::Init();
+            return true;
+        }
+        
     }
     return false;
 }

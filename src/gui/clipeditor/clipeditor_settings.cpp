@@ -1,10 +1,17 @@
 #include <algorithm>
+#include <utility>
+#include <vector>
 #include "clipeditor.h"
 
 #include "commands.h"
 #include "event.h"
+#include "gui/clipeditor/clipeditor_python_processor.h"
+#include "gui/container/container.h"
+#include "gui/controls/button.h"
+#include "gui/controls/inputfield.h"
 #include "guiconstant.h"
 #include "math/seq_math.h"
+#include "math/vec.h"
 #include "seq_time.h"
 #include "gui/gui.h"
 #include "guicolors.h"
@@ -26,7 +33,7 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
       clipTimeStart(),
       clipTimeLen(true),
       clipTimeStartOffsetTicks(true),
-      clipTimeStartOffsedSamples(nullptr),
+      clipTimeStartOffsetSamples(nullptr),
       clipAudioId(nullptr),
       quantization()
 {
@@ -40,7 +47,7 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     clipTimeStart.clearRef();
     clipTimeLen.clearRef();
     clipTimeStartOffsetTicks.clearRef();
-    clipTimeStartOffsedSamples.setRef(nullptr);
+    clipTimeStartOffsetSamples.setRef(nullptr);
     clipAudioId.setRef(nullptr);
     btnLoop.setLabel("Loop");
     clipLoopStart.setLabel("Loop Position");
@@ -48,7 +55,7 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     clipTimeStart.setLabel("Clip Position");
     clipTimeLen.setLabel("Clip Length");
     clipTimeStartOffsetTicks.setLabel("Tick offset");
-    clipTimeStartOffsedSamples.setLabel("Sample offset");
+    clipTimeStartOffsetSamples.setLabel("Sample offset");
     clipAudioId.setLabel("Sample ID");
     btnDuplicateLoop.setText("Duplicate Loop");
     btnSelectMuted.setText("Select all muted");
@@ -58,7 +65,7 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     add(&clipTimeStart);
     add(&clipTimeLen);
     add(&clipTimeStartOffsetTicks);
-    add(&clipTimeStartOffsedSamples);
+    add(&clipTimeStartOffsetSamples);
     add(&clipAudioId);
     add(&btnDuplicateLoop);
     add(&btnSelectMuted);
@@ -67,6 +74,9 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
 
 gui_clipsettings::~gui_clipsettings() {
     removeGuis();
+    for (auto& g : noteEditorScripts) {
+        delete g;
+    }
 }
 
 void gui_clipsettings::renderBackground(NVGcontext* vg) {
@@ -104,7 +114,7 @@ void gui_clipsettings::buttonClicked(guibase* button) {
     }
 
     if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button
-        || &clipTimeStartOffsedSamples == button || &clipTimeStartOffsetTicks == button || &clipLoopLen == button) {
+        || &clipTimeStartOffsetSamples == button || &clipTimeStartOffsetTicks == button || &clipLoopLen == button) {
         clip_t* clip = view.clip();
         if (clip) {
             clip->setDirty();
@@ -133,7 +143,7 @@ void gui_clipsettings::updateClipViewReferences() {
             clipLoopLen.setRef(ref, &clip->loopLen);
             clipTimeStart.setRef(ref, &clip->time);
             clipTimeLen.setRef(ref, &clip->getLenRef());
-            clipTimeStartOffsedSamples.setRef(nullptr);
+            clipTimeStartOffsetSamples.setRef(nullptr);
             clipTimeStartOffsetTicks.setRef(ref, &clip->offsetStart);
             clipAudioId.setRef(&clip->audio.id);
         }
@@ -144,7 +154,7 @@ void gui_clipsettings::updateClipViewReferences() {
         clipLoopLen.clearRef();
         clipTimeStart.clearRef();
         clipTimeLen.clearRef();
-        clipTimeStartOffsedSamples.setRef(nullptr);
+        clipTimeStartOffsetSamples.setRef(nullptr);
         clipTimeStartOffsetTicks.clearRef();
         clipAudioId.setRef(nullptr);
     }
@@ -188,13 +198,151 @@ void gui_clipsettings::render(NVGcontext* vg) {
     nvgSave(vg);
     nvgTranslate(vg, 0, 0);
     for (guibase* gui: guis) {
-        if (gui == &clipTimeStartOffsedSamples) break;
+        if (gui == &clipTimeStartOffsetSamples) break;
         renderText(vg, vec2(padding*2, gui->top() + gui->size.y * 0.5f), vec2(gui->left()-padding, size.y), gui->label, rowHeight - 2);
     }
     nvgRestore(vg);
 }
+using DAW::PythonNoteProcessor::python_note_processor_t;
+using DAW::PythonNoteProcessor::python_func_param_t;
+class gui_script_note_processor final : public guictr_base {
+    guictr_clipeditor& parentClipEditor;
+    guibutton btnExecute;
+    python_note_processor_t processor;
+    std::vector<guibase*> inputFields;
+    std::array<int32_t, 8> inputParamsInt32{};
+    std::array<float, 8> inputParamsFloat{};
+public:
+    explicit gui_script_note_processor(guictr_clipeditor& parent, python_note_processor_t _processor)
+        : parentClipEditor(parent), processor(std::move(_processor))
+    {
+        setBackgroundRendered(true);
+        setBackgroundRenderedInset(true);
+        setFlag(FLG_RENDER_LABEL, true);
+        setLabel(processor.descriptiveName);
+        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
+        int32_t numInputParamsInt32 = 0;
+        int32_t numInputParamsFloat = 0;
+        for (auto& parameter: processor.params) {
+            gui_numberinput_field_base* inputField = nullptr;
+            switch (parameter.type) {
+                case python_func_param_t::param_type_float: {
+                        inputParamsFloat[numInputParamsFloat] = parameter.defValue;
+                        auto inputFloat = new gui_numberinput_float(&inputParamsFloat[numInputParamsFloat]);
+                        inputFloat->fnClamp = [valMin = parameter.rangeMin, valMax = parameter.rangeMax](float v) -> float {
+                            return std::clamp(v, valMin, valMax);
+                        };
+                        inputField = inputFloat;
+                        numInputParamsFloat++;
+                    }
+                    break;
+                case python_func_param_t::param_type_int: {
+                        inputParamsInt32[numInputParamsInt32] = math::roundfS32(parameter.defValue);
+                        auto inputInt = new gui_numberinput_i32(&inputParamsInt32[numInputParamsInt32]);
+                        inputInt->fnClamp = [valMin = math::roundfS32(parameter.rangeMin), valMax = math::roundfS32(parameter.rangeMax)](int32_t v) -> int32_t {
+                            return std::clamp(v, valMin, valMax);
+                        };
+                        inputField = inputInt;
+                        numInputParamsInt32++;
+                    }
+                    break;
+            }
+            inputField->setLabel(parameter.name);
+            inputFields.push_back(inputField);
+        }
+        for (auto& inputField: inputFields) {
+            inputField->setLabel(inputField->label + ":");
+            add(inputField);
+        }
+        btnExecute.setText(processor.descriptiveName);
+        add(&btnExecute);
+    }
+    ~gui_script_note_processor() override {
+        removeGuis();
+        for (auto& inputField: inputFields) {
+            delete inputField;
+        }
+    }
+    void layout() override {
+        guictr_base::layout();
+    }
+    void render(NVGcontext* vg) override {
+        if (isBackgroundRendered()) {
+            renderBackground(vg);
+        }
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        for (guibase* gui: guis) {
+            nvgSave(vg);
+            gui->render(vg);
+            nvgRestore(vg);
+        }
+
+        const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+        nvgSave(vg);
+        nvgTranslate(vg, 0, 0);
+        for (guibase* gui: guis) {
+            renderText(vg, vec2(padding, gui->top() + gui->size.y * 0.5f), vec2(gui->left() - padding, size.y), gui->label, TRACK_HEIGHT_STEP);
+        }
+        nvgRestore(vg);
+    }
+
+    void determineSize(ivec2& prefSize) override {
+        // return current width and multiple current height by number of visible guis
+        prefSize.x = size.x;
+        prefSize.y = size.y * guis.size() + (padding * math::max<int32_t>(0, guis.size() - 1));
+    }
+    void buttonClicked(guibase* _button) override {
+        if (_button == &btnExecute) {
+            std::vector<float> scriptInputParams;
+            int32_t numInputParamsInt32 = 0;
+            int32_t numInputParamsFloat = 0;
+            for (auto& parameter: processor.params) {
+                switch (parameter.type) {
+                    case python_func_param_t::param_type_float:
+                        scriptInputParams.push_back(inputParamsFloat[numInputParamsFloat++]);
+                        break;
+                    case python_func_param_t::param_type_int:
+                        scriptInputParams.push_back(inputParamsInt32[numInputParamsInt32++]);
+                        break;
+                }
+            }
+            auto kEvt = KeyEvent{
+                .type = KeyboardState::K_PRESS,
+                .keyCode = KeyboardKey::DAW_KB_INVALID,
+                .scancode = 0,
+                .mods = KeyboardMods::KB_MODS_NONE,
+                .keyname = nullptr,
+                .cmd = nullptr,
+            };
+            DAW::UI::CommandContext ctxt {
+                .type = GlobalCommandType::CMD_APPLY_PYTHON_SCRIPT,
+                .kevt = kEvt,
+                .argInt0 = 0,
+                .argInt1 = 0,
+                .argStr0 = processor.processorName,
+                .argFloats = scriptInputParams,
+            };
+            parentClipEditor.handleEditorCommand(ctxt);
+            return;
+        }
+        guictr_base::buttonClicked(_button);
+    }
+};
 
 void gui_clipsettings::layout() {
+    for (auto gui : noteEditorScripts) {
+        remove(gui);
+        delete gui;
+    }
+    noteEditorScripts.clear();
+    auto list = DAW::PythonNoteProcessor::GetNoteProcessors();
+    for (auto& processor : list) {
+        auto gui = new gui_script_note_processor(parentClipEditor, processor);
+        add(gui);
+        noteEditorScripts.push_back(gui);
+    }
     padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
     const auto rowHeight = static_cast<float>(theme->get(GuiConstant::CONST_ROW_HEIGHT));
     int32_t w                       = getSizeContent().x;
@@ -213,17 +361,28 @@ void gui_clipsettings::layout() {
     clipTimeLen.pos                 = ivec2(clipTimeStart.left(), clipTimeStart.bottom() + padding);
     clipTimeStartOffsetTicks.size   = ivec2(btnW, btnH);
     clipTimeStartOffsetTicks.pos    = ivec2(clipTimeStart.left(), clipTimeLen.bottom() + padding);
-    clipTimeStartOffsedSamples.size = ivec2(btnW, btnH);
-    clipTimeStartOffsedSamples.pos  = ivec2(0, clipTimeStartOffsetTicks.bottom() + padding);
+    clipTimeStartOffsetSamples.size = ivec2(btnW, btnH);
+    clipTimeStartOffsetSamples.pos  = ivec2(0, clipTimeStartOffsetTicks.bottom() + padding);
     clipAudioId.size                = ivec2(btnW, btnH);
-    clipAudioId.pos                 = ivec2(clipTimeStartOffsedSamples.right() + padding, clipTimeStartOffsetTicks.bottom() + padding);
+    clipAudioId.pos                 = ivec2(clipTimeStartOffsetSamples.right() + padding, clipTimeStartOffsetTicks.bottom() + padding);
     btnDuplicateLoop.pos            = ivec2(0, clipAudioId.bottom() + padding);
     btnDuplicateLoop.size           = ivec2(w, btnH);
     btnSelectMuted.pos              = ivec2(0, btnDuplicateLoop.bottom() + padding);
     btnSelectMuted.size             = ivec2(w, btnH);
+    quantization.padding            = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
     quantization.pos                = ivec2(quantization.margin, btnSelectMuted.bottom()+quantization.margin*2);
     quantization.size               = ivec2(w - quantization.margin*2, (btnH*3+quantization.padding*5));
-    for (guibase* gui: guis) {
+    guibase* prevGui = &quantization;
+    for (auto* gui : noteEditorScripts) {
+        gui->padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+        gui->pos = ivec2(gui->margin, prevGui->bottom() + gui->margin*3);
+        gui->size = ivec2(w - gui->margin*2, btnH);
+        ivec2 size{};
+        gui->determineSize(size);
+        gui->size = size;
+        prevGui = gui;
+    }
+    for (guibase* gui : guis) {
         gui->layout();
     }
 }

@@ -12,6 +12,7 @@
 #include <glm/vec2.hpp>
 #include "math/vec.h"
 #include "str_util.h"
+#include "note.h"
 
 extern pybind11::detail::embedded_module module_path_bindings;
 
