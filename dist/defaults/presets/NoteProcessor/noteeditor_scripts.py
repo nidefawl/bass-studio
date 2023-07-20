@@ -81,7 +81,7 @@ class randomizeNoteVelocity(note_processor):
             if note.velocity < 0:
                 note.velocity = -note.velocity
             elif note.velocity > 127:
-                note.velocity = note.velocity - 127
+                note.velocity = note.velocity - (note.velocity - 127)
             if note.velocity < 0:
                 note.velocity = 0
             elif note.velocity > 127:
@@ -89,7 +89,7 @@ class randomizeNoteVelocity(note_processor):
         return ctxt.notes
 
 export_processors = [
-    generate4x4Pattern(),
-    randomizeNoteStartTime(),
     randomizeNoteVelocity(),
+    randomizeNoteStartTime(),
+    generate4x4Pattern(),
 ]
