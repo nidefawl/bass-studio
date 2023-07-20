@@ -4,7 +4,7 @@ set(PROJECT_NAME "bass" CACHE STRING "Project name")
 set(PROJECT_PRODUCT_NAME "Bass Studio" CACHE STRING "Product name")
 set(PROJECT_VENDOR_NAME "Michael Hept" CACHE STRING "Vendor name")
 set(CMAKE_USER_MAKE_RULES_OVERRIDE FixCMakeInitFlags)
-project(${PROJECT_NAME} LANGUAGES C CXX VERSION 0.5.18)
+project(${PROJECT_NAME} LANGUAGES C CXX VERSION 0.5.19)
 if (APPLE) 
   enable_language(OBJC)
   enable_language(OBJCXX)
@@ -111,7 +111,8 @@ foreach (f ${CPP_ALL_FILES})
     OR f MATCHES ".*/util/fp_math.cpp"
     OR f MATCHES ".*/gui/linetess/linetess.cpp"
     OR f MATCHES ".*/gui/linetess/pymachine.cpp"
-    OR f MATCHES ".*/plugins/eq/eq-plugin.cpp")
+    OR f MATCHES ".*/plugins/eq/eq-plugin.cpp"
+    OR f MATCHES ".*/gui/clipeditor/clipeditor.cpp")
     set_source_files_properties(${f} PROPERTIES 
         SKIP_UNITY_BUILD_INCLUSION ON
         SKIP_PRECOMPILE_HEADERS ON
@@ -451,6 +452,13 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     COMMAND ${CMAKE_OBJCOPY}
       "--add-gnu-debuglink=${PATH_DIST}/daw-pluginscanner.debug" "${PATH_BINARY_SCANNER_STRIPPED}"
   )
+  add_custom_target(dist-create-defaults-zip
+    VERBATIM
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/dist/defaults"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/defaults"
+    COMMAND ${CMAKE_COMMAND} -E tar "cfv" "${PATH_DIST}/defaults/data.zip" --format=zip .)
+
   # copy the following list
   # res/fonts -> dist/res/fonts
   # res/icons -> dist/res/icons
@@ -509,7 +517,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     set(PATH_PACK_MACOS "${CMAKE_BINARY_DIR}/pack/${PROJECT_INSTALLER_NAME_APPLE}.app")
     add_custom_target(dist-create-macos-bundle
       VERBATIM
-      DEPENDS dist-strip dist-copy-resources
+      DEPENDS dist-strip dist-copy-resources dist-create-defaults-zip
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMAND rm -Rf ${CMAKE_BINARY_DIR}/pack 
       COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/pack"
@@ -575,7 +583,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     add_custom_command(
       OUTPUT ${PROJECT_INSTALLER_OUTPUT} CMakeStinks.txt
       VERBATIM
-      DEPENDS dist-strip dist-copy-resources
+      DEPENDS dist-strip dist-copy-resources dist-create-defaults-zip
       WORKING_DIRECTORY ${PATH_DIST}
       COMMAND ${CMAKE_COMMAND} 
         -E copy_directory
@@ -651,7 +659,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       endif()
       add_custom_target(dist-installer
         VERBATIM
-        DEPENDS dist-copy-runtimes
+        DEPENDS dist-copy-runtimes dist-create-defaults-zip
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND ${NSIS_MAKE}
           "-V4"
