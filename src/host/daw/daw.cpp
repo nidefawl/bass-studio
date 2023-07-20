@@ -35,6 +35,7 @@
 #include "gui/dialog/about.h"
 #include "gui/dialog/dialog_io.h"
 #include "gui/dialog/dialogs.h"
+#include "gui/linetess/pymachine.h"
 #include "guicolors.h"
 #include "host/audiocache/audiocache.h"
 #include "host/audiohost/audio_host.h"
@@ -1512,6 +1513,10 @@ void DawInstance::onPreDestroy() {
     tls.host->unload();
     tls.audioCache->unloadAll();
     tls.host->destroy();
+
+    if (DAW::IsPythonInitialized()) {
+        DAW::DeinitPythonInterpreter();
+    }
 }
 
 void DawInstance::destroy() {
