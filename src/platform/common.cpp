@@ -63,6 +63,12 @@ void setDefaultSettingFilesPath(String cwd) {
 }
 
 void extractDefaultPresets() {
+	// TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_read_open_filename(a, outName.c_str(), 10240));
+    auto defaultsArchive = toDefaultSettingFilesPath("data.zip");
+    if (!FileExists(defaultsArchive)) {
+        log_lf(Log::L_ERROR, "data.zip not found in %s\n", StringAsCStr(defaultsArchive));
+        return;
+    }
     auto a = archive_read_new();
 	if (!a || 
         archive_read_support_filter_all(a) != ARCHIVE_OK ||
@@ -70,8 +76,6 @@ void extractDefaultPresets() {
         log_lf(Log::L_ERROR, "archive_read_new() failed\n");
         return;
     }
-	// TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_read_open_filename(a, outName.c_str(), 10240));
-    auto defaultsArchive = toDefaultSettingFilesPath("data.zip");
     if (archive_read_open_filename(a, StringAsCStr(defaultsArchive), 10240) != ARCHIVE_OK) {
         auto errorMsg = archive_error_string(a);
         log_lf(Log::L_ERROR, "archive_read_open_filename() failed: %s\n", errorMsg);
