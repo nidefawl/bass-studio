@@ -160,7 +160,7 @@ void gui_color_pick::setHSL(float h, float s, float l, float a) {
     }
 }
 void gui_color_pick::setHSL_(float h, float s, float l, float a) {
-    auto rgb  = vec3ToRgbU32(glm::rgbColor(glm::vec3(h * 360.0f, s, l)));
+    auto rgb  = vec3ToRgbU32(glm::rgbColor(glm::vec3(h * 360.0f, s, l))) & 0xFFFFFF;
     auto alpha = math::clamp(math::roundfU32(255.0f * a), 0U, 255U) << 24;
     auto rgba  = rgb | alpha;
 
