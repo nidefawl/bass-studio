@@ -34,27 +34,16 @@ namespace DAW::AudioIO {
     channel_pairing getTrackTypeFromNumChannels(channelnum_t t) {
         if (t < 2)
             return channel_pairing::MONO;
-
-        if (t < 3)
-            return channel_pairing::STEREO;
-
-        if (t < 5)
-            return channel_pairing::MULTI_CHANNEL_4;
-
-        return channel_pairing::MULTI_CHANNEL_6;
+        return channel_pairing::STEREO;
     }
 
     channelnum_t getNumChannelsFromTrackType(channel_pairing t) {
         switch (t) {
-            default:
             case channel_pairing::MONO:
                 return 1;
+            default:
             case channel_pairing::STEREO:
                 return 2;
-            case channel_pairing::MULTI_CHANNEL_4:
-                return 4;
-            case channel_pairing::MULTI_CHANNEL_6:
-                return 6;
         }
     }
 
@@ -66,7 +55,7 @@ namespace DAW::AudioIO {
     }
     //static_assert(getNumChannelsFromTrackType(tracktype::MULTI_CHANNEL_6) == 6);
 
-    String getTrackNameShort(channel_pairing type, channelnum_t index, stage_bufferpoint isInput) {
+    String getExternalIOName(channel_pairing type, channelnum_t index, stage_bufferpoint isInput) {
         String s = StringFormat("%u", index);
         if (isInput == stage_bufferpoint::INPUT) {
             s += " IN";
@@ -80,12 +69,6 @@ namespace DAW::AudioIO {
                 break;
             case channel_pairing::STEREO:
                 s = "St. " + s;
-                break;
-            case channel_pairing::MULTI_CHANNEL_4:
-                s = "4CH " + s;
-                break;
-            case channel_pairing::MULTI_CHANNEL_6:
-                s = "6CH " + s;
                 break;
         }
         return s;
@@ -106,12 +89,6 @@ namespace DAW::AudioIO {
             case channel_pairing::STEREO:
                 s = "Stereo " + s;
                 break;
-            case channel_pairing::MULTI_CHANNEL_4:
-                s = "4 Channel " + s;
-                break;
-            case channel_pairing::MULTI_CHANNEL_6:
-                s = "6 Channel " + s;
-                break;
         }
         return s;
     }
@@ -123,10 +100,6 @@ namespace DAW::AudioIO {
                 return channel_pairing::STEREO;
             case channel_pairing::STEREO:
                 return channel_pairing::MONO;
-        //    case channel_pairing::MULTI_CHANNEL_4:
-        //        return channel_pairing::MULTI_CHANNEL_6;
-        //    case channel_pairing::MULTI_CHANNEL_6:
-        //        return channel_pairing::MONO;
         }
     }
 
@@ -137,10 +110,6 @@ namespace DAW::AudioIO {
                 return "MONO";
             case channel_pairing::STEREO:
                 return "STEREO";
-            case channel_pairing::MULTI_CHANNEL_4:
-                return "4CH";
-            case channel_pairing::MULTI_CHANNEL_6:
-                return "6CH";
         }
     }
 }// namespace DAW::AudioIO

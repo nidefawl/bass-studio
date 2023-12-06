@@ -275,6 +275,7 @@ audio_stage_t* PluginManager::createAudioStage() {
     auto audio = new audio_stage_t(this,
                                    getNextGlobalAudioStageId(),
                                    pluginHostCallback->m_sampleFormatInternal,
+                                   DAW::Host::DEFAULT_CHANNEL_COUNT,
                                    DAW::Host::DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
     validateIds();

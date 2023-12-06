@@ -12,8 +12,6 @@ namespace DAW {
 enum class channel_pairing {
     MONO,
     STEREO,
-    MULTI_CHANNEL_4,
-    MULTI_CHANNEL_6
 };
 
 enum class stage_bufferpoint {
@@ -62,7 +60,7 @@ namespace AudioIO {
     channel_pairing getTrackTypeFromNumChannels(channelnum_t t);
     channelnum_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg);
 
-    String getTrackNameShort(channel_pairing type, channelnum_t index, stage_bufferpoint isInput);
+    String getExternalIOName(channel_pairing type, channelnum_t index, stage_bufferpoint isInput);
     String getTrackName(channel_pairing type, channelnum_t index, bool isInput);
     String getTrackTypeStr(channel_pairing type);
     channel_pairing getNextTrackType(channel_pairing type);

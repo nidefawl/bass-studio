@@ -22,6 +22,7 @@
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "host/daw/mainctrl.h"
+#include "host/graph/track_graph.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/group/group.h"
 #include "host/plugin/internal/internal-plugin.h"
@@ -206,8 +207,16 @@ namespace DAW {
                             && ref.externalInputIdx == existingRef.externalInputIdx
                             && ref.srcChannelOffset == existingRef.srcChannelOffset;
                 case stage_type::INPUT_AUDIOSTAGE:
-                    return ref.stage.buffer == existingRef.stage.buffer
-                           && ref.stage.stageRef.stageId == existingRef.stage.stageRef.stageId;
+                    if (ref.stage.buffer == existingRef.stage.buffer
+                           && ref.stage.stageRef.stageId == existingRef.stage.stageRef.stageId) {
+                        if (matchSrcDstAll == 0)
+                            return ref.srcChannelOffset == existingRef.srcChannelOffset;
+                        if (matchSrcDstAll == 1)
+                            return ref.dstChannelOffset == existingRef.dstChannelOffset;
+                        return ref.srcChannelOffset == existingRef.srcChannelOffset
+                                && ref.dstChannelOffset == existingRef.dstChannelOffset;
+                    }
+                    return false;
                 case stage_type::INPUT_AUDIOSTAGE_EFFECT:
                     if (ref.projectGlobalId == existingRef.projectGlobalId) {
                         if (matchSrcDstAll == 0)
@@ -480,9 +489,17 @@ private:
             for (auto& desc : node->effectOptional->outputChannelsDesc) {
                 portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT_POST, desc});
             }
-        } else {
-            portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Input"}});
-            portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT_POST, DAW::channel_desc{0, 2, "Stereo Output"} });
+        } else if (node->type == DAW::track_node_type_t::TRACK) {
+            portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Input 0"}});
+            portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{2, 2, "Stereo Input 1"}});
+            portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT_POST, DAW::channel_desc{0, 2, "Stereo Output 0"} });
+        } else if (node->type == DAW::track_node_type_t::AUDIOSTAGE) {
+            if (node->stageId == node->stage->stageId.inputStageId) {
+                portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT, DAW::channel_desc{0, 2, "Stereo Input 0"}});
+                portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT, DAW::channel_desc{2, 2, "Stereo Input 1"}});
+            } else {
+                portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Output 0"} });
+            }
         }
         addAll(guiPorts, portsInput);
         addAll(guiPorts, portsOutput);
@@ -692,7 +709,8 @@ namespace NodeGraph {
                 dbgassert(procNode->trackOptional);
                 if (procNode->trackOptional) {
                     dbgassert(procNode->trackOptional->audio);
-                    ref = DAW::ChannelStage(procNode->trackOptional->audio, stage_bufferpoint::OUTPUT_POST);
+                    DAW::channel_desc dstDesc = port->getChannelDesc();
+                    ref = DAW::ChannelStage(procNode->trackOptional->audio, stage_bufferpoint::OUTPUT_POST, 0, dstDesc.offset);
                     return true;
                 }
                 break;
@@ -700,7 +718,8 @@ namespace NodeGraph {
                 dbgassert(procNode->stage);
                 if (procNode->stage) {
                     if (procNode->stage->stageId.inputStageId == procNode->stageId) {
-                        ref = DAW::ChannelStage(procNode->stage, stage_bufferpoint::INPUT);
+                        DAW::channel_desc srcDesc = port->getChannelDesc();
+                        ref = DAW::ChannelStage(procNode->stage, stage_bufferpoint::INPUT, srcDesc.offset, 0);
                         return true;
                     }
                     if (procNode->stage->stageId.outputStageId == procNode->stageId) {
@@ -848,7 +867,7 @@ public:
                     dbgassert(nodeDest->stage);
                     nodeDest->stage->createRoutingSnapshot(snapshot);
                     stageRef = nodeDest->stage->toRef();
-                    removeRouting(nodeDest->stage->postEffectRouting, refSrc, false);
+                    removeRouting(nodeDest->stage->postEffectRouting, refSrc, true);
                     nodeDest->stage->postEffectRouting.push_back(refSrc);
                     nodeDest->stage->routingState = audiostagerouting_state_t::CUSTOM;
                     break;
@@ -857,7 +876,7 @@ public:
                     nodeDest->effectOptional->getTrackLink()->createRoutingSnapshot(snapshot);
                     stageRef = nodeDest->effectOptional->getTrackLink()->toRef();
                     refSrc.dstChannelOffset = portDst->getChannelDesc().offset;
-                    removeRouting(nodeDest->effectOptional->inputChannels, refSrc, false);
+                    removeRouting(nodeDest->effectOptional->inputChannels, refSrc, true);
                     nodeDest->effectOptional->inputChannels.push_back(refSrc);
                     nodeDest->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
                     break;
@@ -1109,8 +1128,12 @@ void gui_graph::render(NVGcontext* vg) {
         }
 
         int numPaths = 1;
-        if (ptrMeter && ptrMeter->getMaxRMS() > dsp_util::GAIN_DBFLOOR) {
-            numPaths++;
+        if (ptrMeter) {
+            auto channelDesc = edge.portSrc->getChannelDesc();
+            auto meter = ptrMeter->getSubChannelMeter(channelDesc.offset, channelDesc.count);
+            if (meter.getMaxRMS() > dsp_util::GAIN_DBFLOOR) {
+                numPaths++;
+            }
         }
 
         std::vector<vec2>& pts = edge.spline.calculateSplineVectors(edge.portDst->getPortPos(), edge.portSrc->getPortPos());

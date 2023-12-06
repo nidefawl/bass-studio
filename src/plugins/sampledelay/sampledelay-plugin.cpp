@@ -54,7 +54,7 @@ namespace PluginSampleDelay {
         float* out1 = outputBlock->buf[0];
         float* out2 = outputBlock->buf[1];
         constexpr auto DELAYLINE_SIZE = (MAX_DELAY - MIN_DELAY);
-        delayLine->write(inputBlock, DELAYLINE_SIZE * 2);
+        delayLine->write(inputBlock, DELAYLINE_SIZE * 2); // this probably shouldn't have to be twice the size
         auto& delayBlock = delayLine->getBlock();
         dbgassert(DELAYLINE_SIZE <= delayBlock.samples);
         const auto writeOffset = delayLine->getWriteOffset();

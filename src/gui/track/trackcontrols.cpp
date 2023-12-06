@@ -378,16 +378,17 @@ public:
     channel_ref_t getEndpoint() override {
         return DAW::ChannelAudioInput(channel.idx,
                                       channel.offset,
-                                      "External " + getTrackNameShort(channel.type, channel.idx, isInput),
+                                      "External " + getExternalIOName(channel.type, channel.idx, isInput),
                                       channel.type);
     }
 };
 class ctxtmenu_entry_stage_channel final : public ctxtmenu_entry_endpoint {
 public:
     const audio_channel_ref_t endpoint;
+    channelnum_t dstChannelOffset;
 
-    ctxtmenu_entry_stage_channel(int32_t _id, const String& name, audio_channel_ref_t _endpoint)
-        : ctxtmenu_entry_endpoint(_id, name), endpoint(_endpoint) {
+    ctxtmenu_entry_stage_channel(int32_t _id, const String& name, audio_channel_ref_t _endpoint, channelnum_t _dstChannelOffset = 0)
+        : ctxtmenu_entry_endpoint(_id, name), endpoint(_endpoint), dstChannelOffset(_dstChannelOffset) {
     }
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
         ctxtmenu_entry_track_io::render(ctxtSize, vg, idx, mouse);
@@ -409,7 +410,7 @@ public:
             track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
             dbgassert(trImpl);
             if (trImpl) {
-                return DAW::ChannelStage(trImpl, endpoint.buffer);
+                return DAW::ChannelStage(trImpl, endpoint.buffer, 0, dstChannelOffset);
             }
         }
         return DAW::ChannelNone();
@@ -443,9 +444,10 @@ public:
         this->dawCtrl = _dawCtrl;
         int32_t idx = 0;
         if (_dstStage.buffer != stage_bufferpoint::INPUT) {
-            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }));
+            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input 0", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }, 0));
+            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input 1", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }, 2));
         } else {
-            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
+            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }, 0));
         }
         auto host = _dawCtrl->getDaw()->getPluginManager();
         auto stage = host->getAudioStage(_busStage);
@@ -859,6 +861,7 @@ public:
 class gui_trackcontrols_mixer final : public guictr_base {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
+    DAW::rmsmeter m_subMeter;
     gui_trackmeter m_guiMeter;
 
 public:
@@ -874,7 +877,8 @@ public:
         : guictr_base(),
           m_track(_entry->track),
           m_trackentry(_entry),
-          m_guiMeter(&_entry->track->audio->meter),
+          m_subMeter(_entry->track->audio->meter.getSubChannelMeter(0, 2)),
+          m_guiMeter(&m_subMeter),
           btnBypass(_entry),
           btnSolo(_entry) ,
           btnRecord(_entry) {

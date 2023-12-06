@@ -20,14 +20,14 @@
 
 
 namespace DAW {
-    size_t validateEffectRouting(const Host::PluginManager* const host, const DAW::channel_desc& dstDesc, channel_ref_t& inputChannel) {
+    size_t validateEffectRouting(const Host::PluginManager* const host, const audio_stage_t* stage, const DAW::channel_desc& dstDesc, channel_ref_t& inputChannel) {
         size_t numRemoved = 0;
         if (inputChannel.getType() == stage_type::INPUT_DEFAULT) {
             inputChannel = ChannelDefaultNone();
         } else if (inputChannel.getType() == stage_type::INPUT_EMPTY) {
             inputChannel = ChannelDefaultNone();
         } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-            String name  = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, inputChannel.externalInputIdx, stage_bufferpoint::INPUT);
+            String name  = "External " + AudioIO::getExternalIOName(inputChannel.externalInputType, inputChannel.externalInputIdx, stage_bufferpoint::INPUT);
             inputChannel = ChannelAudioInput(inputChannel.externalInputIdx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
         } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
             auto* srcstage = host->getAudioStage(inputChannel.stage.stageRef);
@@ -35,13 +35,21 @@ namespace DAW {
                 log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", static_cast<int32_t>(inputChannel.stage.stageRef.stageId));
                 inputChannel = ChannelNone();
                 numRemoved++;
+            } else if (stage != srcstage) {
+                log_lf(Log::L_WARN, "Input audiostage with id %d not on same track\n", static_cast<int32_t>(inputChannel.stage.stageRef.stageId));
+                inputChannel = ChannelNone();
+                numRemoved++;
             } else {
-                inputChannel = ChannelStage(srcstage, inputChannel.stage.buffer);
+                inputChannel = ChannelStage(srcstage, inputChannel.stage.buffer, inputChannel.srcChannelOffset, inputChannel.dstChannelOffset);
             }
         } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
             auto* eff = host->getPluginById(inputChannel.projectGlobalId);
             if (!eff) {
                 log_lf(Log::L_WARN, "Input effect with id %d not found\n", inputChannel.projectGlobalId);
+                inputChannel = ChannelNone();
+                numRemoved++;
+            } else if (stage != eff->getTrackLink()) {
+                log_lf(Log::L_WARN, "Input effect with id %d not on same track\n", inputChannel.projectGlobalId);
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {
@@ -82,7 +90,7 @@ namespace DAW {
                     numRemoved++;
                     continue;
                 }
-                numRemoved += validateEffectRouting(host, *itOwnInput, inputChannel);
+                numRemoved += validateEffectRouting(host, stage, *itOwnInput, inputChannel);
             }
             auto it = std::remove_if(effect->inputChannels.begin(), effect->inputChannels.end(), [](auto& ch) {
                 return ch.type == stage_type::INPUT_EMPTY;
@@ -91,7 +99,7 @@ namespace DAW {
         }
         DAW::channel_desc defaultDesc{};
         for (auto& inputChannel : stage->postEffectRouting) {
-            numRemoved += validateEffectRouting(host, defaultDesc, inputChannel);
+            numRemoved += validateEffectRouting(host, stage, defaultDesc, inputChannel);
         }
         auto it = std::remove_if(stage->postEffectRouting.begin(), stage->postEffectRouting.end(), [](auto& ch) {
             return ch.type == stage_type::INPUT_EMPTY;
@@ -169,7 +177,9 @@ namespace DAW {
                 case track_node_type_t::AUDIOSTAGE:
                     procTrackNode->stage = host->getAudioStage(audio_stage_ref_t{ procTrackNode->stageId });
                     dbgassert(procTrackNode->stage);
-                    dbgassert(audioStageIdMatches(stage->stageId, procTrackNode->stageId));// for now
+                    // check if the input audio stage is on the same track
+                    // pulling from other tracks is not supported yet
+                    dbgassert(audioStageIdMatches(stage->stageId, procTrackNode->stageId));
                     break;
                 case track_node_type_t::EFFECT:
                     procTrackNode->effectOptional = host->getPluginById(static_cast<int32_t>(trackNode->stageId));

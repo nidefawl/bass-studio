@@ -733,6 +733,9 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                         }
                     }
                 }
+                if (node.type == DAW::track_node_type_t::TRACK) {
+                    dstChannelCount = AudioIO::getNumChannelsFromTrackType(AudioIO::getTrackTypeFromNumChannels(ptrBlockMixDst->channels));
+                }
                 auto blockMixToOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
                 if (autParGain.type <= automation_routing_type::ROUTING_CONSTANT 
                     && (autParPan.type == automation_routing_type::ROUTING_NONE 
@@ -863,7 +866,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
                 float fGainMaster;
                 if (dsp_util::getGainLvl(trackImpl->mixer.getParam(PARAM_TRACK_GAIN)->getValue(), fGainMaster)) {
                 }
-                int routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
+                auto routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                 auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
                 impl->blockOutput.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
                         .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
@@ -2146,7 +2149,7 @@ bool resolveDefaultConnection(const Host::PluginManager* const host, const proje
     if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
         int32_t idx = 0;
         auto type = AudioIO::getTrackTypeFromNumChannels(trImpl->outputPost.channels);
-        String name = "External "+AudioIO::getTrackNameShort(type, idx, stage_bufferpoint::OUTPUT_POST);
+        String name = "External "+AudioIO::getExternalIOName(type, idx, stage_bufferpoint::OUTPUT_POST);
         out = ChannelAudioInput(idx, 0, name, type);
         return true;
     }
@@ -2200,8 +2203,9 @@ bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsT
                 buff = &stage->outputPost;
                 break;
             }
-            for (uint32_t i = 0; i < buff->channels; ++i) {
-                out.channels.emplace_back(buff->buf[i]);
+            auto numChannels = DAW::AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType);
+            for (uint32_t i = 0; i < numChannels && i + inputChannel.srcChannelOffset < buff->channels; ++i) {
+                out.channels.emplace_back(buff->buf[i + inputChannel.srcChannelOffset]);
             }
             out.sampleFormat = stage->sampleFormat;
             out.samples = buff->samples;

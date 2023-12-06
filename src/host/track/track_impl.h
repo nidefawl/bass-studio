@@ -167,10 +167,10 @@ struct audio_stage_t : public IDelayLineStorage {
     clip_recorder recorder;
     std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
 
-    audio_stage_t(DAW::Host::PluginManager* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
-    : input(_numChannels, _sampleFormat.blockSize),
-      output(_numChannels, _sampleFormat.blockSize),
-      outputPost(_numChannels, _sampleFormat.blockSize),
+    audio_stage_t(DAW::Host::PluginManager* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numInputChannels,  const channelnum_t _numOutputChannels, int _type = 1)
+    : input(_numInputChannels, _sampleFormat.blockSize),
+      output(_numOutputChannels, _sampleFormat.blockSize),
+      outputPost(_numOutputChannels, _sampleFormat.blockSize),
       mixer(this),
       type(_type),
       stageId(_id),
@@ -330,7 +330,7 @@ inline channel_ref_t ChannelAudioInput(channelnum_t idx, channelnum_t channelOff
         std::move(name)
     };
 }
-inline channel_ref_t ChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput) {
+inline channel_ref_t ChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput, channelnum_t srcChannelOffset = 0, channelnum_t dstChannelOffset = 0) {
     dbgassert(stage);
     String str;
     auto track = stage->getTrack();
@@ -342,14 +342,16 @@ inline channel_ref_t ChannelStage(const audio_stage_t* stage, stage_bufferpoint 
     } else {
         str += " Out";
     }
+    auto numChannels = AudioIO::getNumChannelsFromTrackType(AudioIO::getTrackTypeFromNumChannels(stage->input.channels));
+    str += StringFormat(" %u", dstChannelOffset/numChannels);
     return channel_ref_t {
         stage_type::INPUT_AUDIOSTAGE,
         AudioIO::getTrackTypeFromNumChannels(stage->input.channels),
         { stage->toRef(), isInput },
         0,
         0,
-        0,
-        0,
+        srcChannelOffset,
+        dstChannelOffset,
         str
     };
 }
