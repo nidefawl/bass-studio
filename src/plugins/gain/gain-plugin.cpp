@@ -142,7 +142,7 @@ namespace PluginGain {
     }
 
     std::shared_ptr<PluginViewContainer> module_gain::createViewCtrInternal() {
-        return std::make_shared<PluginViewContainerBasic<guictr_vst2_simple, module_gain>>(this, 100, 150);
+        return std::make_shared<PluginViewContainerBasic<guictr_plugin_basic, module_gain>>(this, 100, 150);
     }
 } // namespace PluginGain
 

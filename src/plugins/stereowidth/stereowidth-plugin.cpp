@@ -142,7 +142,7 @@ namespace PluginStereoWidth {
     }
 
     std::shared_ptr<PluginViewContainer> module_stereowidth::createViewCtrInternal() {
-        return std::make_shared<PluginViewContainerBasic<guictr_vst2_simple, module_stereowidth>>(this, 100, 150);
+        return std::make_shared<PluginViewContainerBasic<guictr_plugin_basic, module_stereowidth>>(this, 100, 150);
     }
 }// namespace PluginStereoWidth
 

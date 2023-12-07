@@ -13,7 +13,7 @@
 #include "plugin.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
-class guictr_vst2_simple final : public guictr_base {
+class guictr_plugin_basic final : public guictr_base {
     effectbase* const module;
     std::vector<guiknob_pluginparam*> knobs;
     gui_textfield editfield;
@@ -29,7 +29,7 @@ class guictr_vst2_simple final : public guictr_base {
         editfield.setReturnCommits(true);
     }
 public:
-    explicit guictr_vst2_simple(internalplugin* module) : guictr_base(),
+    explicit guictr_plugin_basic(internalplugin* module) : guictr_base(),
         module(module)
     {
         init();
@@ -45,7 +45,7 @@ public:
         };
         add(&editfield);
     }
-    explicit guictr_vst2_simple(BasePluginVST2* plugin) : guictr_base(),
+    explicit guictr_plugin_basic(BasePluginVST2* plugin) : guictr_base(),
         module(plugin->getHostSideHandle())
     {
         init();
@@ -62,7 +62,7 @@ public:
     std::vector<guiknob_pluginparam*>& getKnobs() {
         return knobs;
     }
-    ~guictr_vst2_simple() override {
+    ~guictr_plugin_basic() override {
         removeGuis();
         for (guiknob_pluginparam* knob : knobs) {
             delete knob;

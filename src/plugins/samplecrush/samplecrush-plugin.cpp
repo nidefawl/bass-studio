@@ -219,7 +219,7 @@ namespace PluginSampleCrush {
     }
 
     std::shared_ptr<PluginViewContainer> module_samplecrush::createViewCtrInternal() {
-        return std::make_shared<PluginViewContainerBasic<guictr_vst2_simple, module_samplecrush>>(this, 100, 150);
+        return std::make_shared<PluginViewContainerBasic<guictr_plugin_basic, module_samplecrush>>(this, 100, 150);
     }
 } // namespace PluginSampleCrush
 

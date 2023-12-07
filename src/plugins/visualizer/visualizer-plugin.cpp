@@ -62,7 +62,7 @@ namespace PluginVisualizer {
     }
 
     std::shared_ptr<PluginViewContainer> module_visualizer::createViewCtrInternal() {
-        return std::make_shared<PluginViewContainerBasic<guictr_vst2_simple, module_visualizer>>(this, 100, 150);
+        return std::make_shared<PluginViewContainerBasic<guictr_plugin_basic, module_visualizer>>(this, 100, 150);
     }
 } // namespace PluginVisualizer
 
