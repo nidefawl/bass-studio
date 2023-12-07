@@ -1224,7 +1224,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         std::array<double, Parameters::kNumParams> modulationValuesMax{};
         std::array<VoiceUnison, NUM_POLY_VOICES> voices;
         std::array<float, Settings::NumSettings> settings{};
-        std::vector<std::shared_ptr<PluginViewContainers>> views;
+        std::vector<std::shared_ptr<PluginViewContainer>> views;
         Oscillator lfo;
         Oscillator lfo2;
         SmoothSwitch osc1Wave;
@@ -1875,7 +1875,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         }
 
         int32_t loadPreset(const String& presetPath);
-        std::shared_ptr<PluginViewContainers> createViewCtrImpl();
+        std::shared_ptr<PluginViewContainer> createViewCtrImpl();
     private:
 
         float synthRandom() {
@@ -2889,7 +2889,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         void getUiSnapshot(snapshot_t& snapshot);
         void setUiSnapshot(snapshot_t& snapshot);
 
-        std::shared_ptr<PluginViewContainers> createViewCtrInternal() override {
+        std::shared_ptr<PluginViewContainer> createViewCtrInternal() override {
             return this->impl->createViewCtrImpl();
         }
 
@@ -4944,20 +4944,20 @@ class guicontainer_plugin_synth final : public guictr_base {
         return new PluginVST2_Synth(audioMaster);
     }
 
-    std::shared_ptr<PluginViewContainers> PluginVST2_Synth::createViewCtrVst2() {
+    std::shared_ptr<PluginViewContainer> PluginVST2_Synth::createViewCtrVst2() {
         return this->impl->createViewCtrImpl();
     }
 
-    class SynthPluginViewCtr final : public PluginViewContainers {
+    class PluginViewContainerSynth final : public PluginViewContainer {
     public:
         guicontainer_plugin_synth ctr_main;
-        explicit SynthPluginViewCtr(module_synth* eff)
+        explicit PluginViewContainerSynth(module_synth* eff)
             : ctr_main(eff) {
         }
-        explicit SynthPluginViewCtr(PluginVST2_Synth* eff)
+        explicit PluginViewContainerSynth(PluginVST2_Synth* eff)
             : ctr_main(eff) {
         }
-        ~SynthPluginViewCtr() override = default;
+        ~PluginViewContainerSynth() override = default;
         guicontainer_plugin_synth& getPluginUI() {
             return ctr_main;
         }
@@ -4990,7 +4990,7 @@ class guicontainer_plugin_synth final : public guictr_base {
     void fml() {/*NO*/}
     void module_synth::getUiSnapshot(snapshot_t& snapshot) {
         for (auto& view : views) {
-            auto implCtrType = dynamic_cast<SynthPluginViewCtr*>(view.get());
+            auto implCtrType = dynamic_cast<PluginViewContainerSynth*>(view.get());
             ui_layout_t layout{};
             if (implCtrType && implCtrType->getPluginUI().getUiLayout(layout)) {
                 layout.uiId = view->getUiId();
@@ -5001,10 +5001,10 @@ class guicontainer_plugin_synth final : public guictr_base {
 
     void module_synth::setUiSnapshot(snapshot_t& snapshot) {
         for (auto& uis : snapshot.uiLayout) {
-            std::vector<std::shared_ptr<PluginViewContainers>> views;
+            std::vector<std::shared_ptr<PluginViewContainer>> views;
             getAllViewCtrs(uis.uiId, views);
             for (auto& view : views) {
-                auto implCtrType = dynamic_cast<SynthPluginViewCtr*>(view.get());
+                auto implCtrType = dynamic_cast<PluginViewContainerSynth*>(view.get());
                 if (implCtrType) {
                     implCtrType->getPluginUI().setUiLayout(uis);
                 }
@@ -5014,7 +5014,7 @@ class guicontainer_plugin_synth final : public guictr_base {
 
     void PluginVST2_Synth::getUiSnapshot(snapshot_t& snapshot) {
         for (auto& view : views) {
-            auto implCtrType = dynamic_cast<SynthPluginViewCtr*>(view.get());
+            auto implCtrType = dynamic_cast<PluginViewContainerSynth*>(view.get());
             ui_layout_t layout{};
             if (implCtrType && implCtrType->getPluginUI().getUiLayout(layout)) {
                 layout.uiId = view->getUiId();
@@ -5028,7 +5028,7 @@ class guicontainer_plugin_synth final : public guictr_base {
             auto view = getViewCtrVst2(uis.uiId);
             if (!view)
                 continue;
-            auto implCtrType = dynamic_cast<SynthPluginViewCtr*>(view.get());
+            auto implCtrType = dynamic_cast<PluginViewContainerSynth*>(view.get());
             if (!implCtrType)
                 continue;
             implCtrType->getPluginUI().setUiLayout(uis);
@@ -5072,13 +5072,13 @@ class guicontainer_plugin_synth final : public guictr_base {
         return -1;
     }
 
-    std::shared_ptr<PluginViewContainers> SynthImpl::createViewCtrImpl() {
+    std::shared_ptr<PluginViewContainer> SynthImpl::createViewCtrImpl() {
         if (this->moduleInstance) {
-            this->views.push_back(std::make_shared<SynthPluginViewCtr>(this->moduleInstance));
+            this->views.push_back(std::make_shared<PluginViewContainerSynth>(this->moduleInstance));
             return this->views.back();
         }
         if (this->instanceVst2) {
-            this->views.push_back(std::make_shared<SynthPluginViewCtr>(this->instanceVst2));
+            this->views.push_back(std::make_shared<PluginViewContainerSynth>(this->instanceVst2));
             return this->views.back();
         }
         return nullptr;

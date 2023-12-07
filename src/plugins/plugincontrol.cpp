@@ -63,7 +63,7 @@ bool PluginControl::menuCommand(const menucmd_t& command) {
 void PluginControl::initApp(const std::vector<String>& args) {
 }
 
-PluginControl::PluginControl(AppCtrl* parent, std::shared_ptr<PluginViewContainers> _view)
+PluginControl::PluginControl(AppCtrl* parent, std::shared_ptr<PluginViewContainer> _view)
 : AppCtrl(parent), view(std::move(_view))
 {
     if (!this->commands) {

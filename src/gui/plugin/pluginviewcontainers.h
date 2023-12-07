@@ -9,11 +9,11 @@
 #define UID_VIEW_CTR_PLUGIN_CTR 2
 #define UID_VIEW_CTR_NODES 3
 
-class PluginViewContainers {
+class PluginViewContainer {
     bool inUse = true;
     int32_t uiId = 0;
 public:
-    virtual ~PluginViewContainers() = default;
+    virtual ~PluginViewContainer() = default;
     virtual void addTo(std::vector<guictr_base*>& v)        = 0;
     virtual void layout(int32_t winW, int32_t winH)         = 0;
     virtual void onSetParameter(int32_t index, float value) = 0;
@@ -42,17 +42,17 @@ public:
     }
 };
 template<typename PluginGUI, typename Plugin>
-class SinglePluginViewContainers final : public PluginViewContainers {
+class PluginViewContainerBasic final : public PluginViewContainer {
 protected:
     uint32_t width;
     uint32_t height;
 
 public:
     PluginGUI ctr_main;
-    explicit SinglePluginViewContainers(Plugin* eff, uint32_t _width = 320, uint32_t _height = 320)
+    explicit PluginViewContainerBasic(Plugin* eff, uint32_t _width = 320, uint32_t _height = 320)
         : width(_width), height(_height), ctr_main(eff) {
     }
-    ~SinglePluginViewContainers() override = default;
+    ~PluginViewContainerBasic() override = default;
     PluginGUI& getPluginUI() {
         return ctr_main;
     }

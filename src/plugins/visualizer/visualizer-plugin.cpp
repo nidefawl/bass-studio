@@ -113,8 +113,8 @@ namespace PluginVisualizer {
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
-    std::shared_ptr<PluginViewContainers> module_visualizer::createViewCtrInternal() {
-        return std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_visualizer>>(this, 100, 150);
+    std::shared_ptr<PluginViewContainer> module_visualizer::createViewCtrInternal() {
+        return std::make_shared<PluginViewContainerBasic<guictr_vst2_simple, module_visualizer>>(this, 100, 150);
     }
 } // namespace PluginVisualizer
 

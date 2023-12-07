@@ -300,7 +300,7 @@ class PluginInternalVST2 final : public BasePluginVST2 {
             return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
         }
 
-        std::shared_ptr<PluginViewContainers> createViewCtrVst2() override;
+        std::shared_ptr<PluginViewContainer> createViewCtrVst2() override;
         
         void addPropertiesParameterTooltip(Table::tbl& table, int idx) override {
             effect->addPropertiesParameterTooltip(table, idx);
@@ -433,16 +433,16 @@ class guictr_effectbase_vst2 final : public guictr_base {
         }
     };
 
-    template<typename PluginGUI, typename Plugin>
-class VST2PluginViewContainer final : public PluginViewContainers {
+template<typename PluginGUI, typename Plugin>
+class PluginViewContainerVST2 final : public PluginViewContainer {
         PluginGUI ctr_main;
         uint32_t width;
         uint32_t height;
     public:
-        explicit VST2PluginViewContainer(PluginWrapper::PluginInternalVST2* _vstInstance, Plugin* _effectBaseInstance, uint32_t _width = 320, uint32_t _height = 320)
+        explicit PluginViewContainerVST2(PluginWrapper::PluginInternalVST2* _vstInstance, Plugin* _effectBaseInstance, uint32_t _width = 320, uint32_t _height = 320)
             : ctr_main(_vstInstance, _effectBaseInstance), width(_width), height(_height) {
         }
-        ~VST2PluginViewContainer() override = default;
+        ~PluginViewContainerVST2() override = default;
         PluginGUI& getPluginUI() {
             return ctr_main;
         }
@@ -470,8 +470,8 @@ class VST2PluginViewContainer final : public PluginViewContainers {
         }
     };
 
-    std::shared_ptr<PluginViewContainers> PluginInternalVST2::createViewCtrVst2() {
-        auto view = std::make_shared<VST2PluginViewContainer<guictr_effectbase_vst2, effectbase>>(this, effect, 50, 150);
+    std::shared_ptr<PluginViewContainer> PluginInternalVST2::createViewCtrVst2() {
+        auto view = std::make_shared<PluginViewContainerVST2<guictr_effectbase_vst2, effectbase>>(this, effect, 50, 150);
         this->effect->views.push_back(view);
         this->views.push_back(view);
         return view;

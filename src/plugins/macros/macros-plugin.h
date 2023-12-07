@@ -22,7 +22,7 @@ public:
     ~module_macros() override;
     void initModChannels() override;
     int getModuleType() override { return PLUGIN_TYPE_MACROS; };
-    std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
+    std::shared_ptr<PluginViewContainer> createViewCtrInternal() override;
     const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) override;
     std::shared_ptr<std::vector<std::byte>> storePresetData() override;
     bool loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) override;

@@ -471,7 +471,7 @@ class gui_graph_n final : public gui_graph_entry {
     std::vector<gui_graph_port*> guiPorts;
     std::vector<gui_graph_port*> portsInput;
     std::vector<gui_graph_port*> portsOutput;
-    std::shared_ptr<PluginViewContainers> viewCtr;
+    std::shared_ptr<PluginViewContainer> viewCtr;
     gui_trackmeter* meterIn = nullptr;
     gui_trackmeter* meterOut = nullptr;
     guinodeinfo_text guiText;

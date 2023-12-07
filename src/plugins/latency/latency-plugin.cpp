@@ -90,8 +90,8 @@ namespace PluginLatency {
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
-    std::shared_ptr<PluginViewContainers> module_latency::createViewCtrInternal() {
-        return std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_latency>>(this, 100, 150);
+    std::shared_ptr<PluginViewContainer> module_latency::createViewCtrInternal() {
+        return std::make_shared<PluginViewContainerBasic<guictr_vst2_simple, module_latency>>(this, 100, 150);
     }
 
     void module_latency::setNewLatency(int32_t nSamplesLatency) {

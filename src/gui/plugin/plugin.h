@@ -19,7 +19,7 @@ class clapplugin;
 class internalplugin;
 class BaseCtrl;
 class AppCtrl;
-class PluginViewContainers;
+class PluginViewContainer;
 class guictxtmenu_base;
 struct plugin_ui_snapshot_t;
 
@@ -126,7 +126,7 @@ public:
     int layoutWidthParams = 200;
 
     /* holds view controller for internal vstplugins with custom gui (non-steinberg api) */
-    std::shared_ptr<PluginViewContainers> viewCtr;
+    std::shared_ptr<PluginViewContainer> viewCtr;
     /* holds guictrs of internal vstplugins with custom gui (non-steinberg api) */
     std::vector<guictr_base*> viewCtrs;
     /* holds size for internal vstplugins with custom gui (non-steinberg api) */

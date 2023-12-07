@@ -191,7 +191,7 @@ bool internalplugin::onClose() {
     windowClient = {};
     return effectbase::onClose();
 }
-void internalplugin::getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainers>>& out) {
+void internalplugin::getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainer>>& out) {
     for (auto& existingView : views) {
         if (existingView->getUiId() == uiId) {
             out.push_back(existingView);
@@ -207,8 +207,8 @@ void internalplugin::getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<Pl
         }
     }
 }
-std::shared_ptr<PluginViewContainers> internalplugin::openViewCtr(int32_t uiId) {
-    std::shared_ptr<PluginViewContainers> ptr;
+std::shared_ptr<PluginViewContainer> internalplugin::openViewCtr(int32_t uiId) {
+    std::shared_ptr<PluginViewContainer> ptr;
     for (auto& existingView : views) {
         if (!existingView->isInUse() && existingView->getUiId() == uiId) {
             ptr = existingView;

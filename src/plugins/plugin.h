@@ -18,15 +18,3 @@
 /* We are building or calling GLFW as a static library */
 #define DAW_PLUGINAPI
 #endif
-
-class PluginViewContainersImpl : public PluginViewContainers {
-protected:
-    uint32_t width;
-    uint32_t height;
-
-public:
-    PluginViewContainersImpl(int _width, int _height) : width(_width), height(_height) {
-    }
-    ~PluginViewContainersImpl() override = default;
-};
-

@@ -86,7 +86,7 @@ String getModuleName(HMODULE module);//platform_win.cpp
 
 pluginwindow* createPluginClientVst2Window(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
 
-void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> view) {
+void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainer> view) {
     try {
         auto tls = daw_tls::getTls();
         auto mainCtrl = tls.mainCtrl;
@@ -192,7 +192,7 @@ bool BasePluginVST2::getVendorString(char* text) {
 }
 
 // internal API
-std::shared_ptr<PluginViewContainers> BasePluginVST2::openViewCtrVst2(int32_t uiId) {
+std::shared_ptr<PluginViewContainer> BasePluginVST2::openViewCtrVst2(int32_t uiId) {
     for (auto& existingView : views) {
         if (!existingView->isInUse() && existingView->getUiId() == uiId) {
             existingView->setUsed();
@@ -207,7 +207,7 @@ std::shared_ptr<PluginViewContainers> BasePluginVST2::openViewCtrVst2(int32_t ui
     }
     return newView;
 }
-std::shared_ptr<PluginViewContainers> BasePluginVST2::getViewCtrVst2(int32_t uiId) {
+std::shared_ptr<PluginViewContainer> BasePluginVST2::getViewCtrVst2(int32_t uiId) {
     for (auto& existingView : views) {
         if (existingView->getUiId() == uiId) {
             return existingView;

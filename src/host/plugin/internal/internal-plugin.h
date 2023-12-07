@@ -20,7 +20,7 @@
 #include "window.h"
 
 class guiplugin;
-class PluginViewContainers;
+class PluginViewContainer;
 class track_t;
 struct AudioBlock;
 struct handles_t;
@@ -33,14 +33,14 @@ public:
     };
 protected:
     struct internal_plugin_window_client {
-        std::shared_ptr<PluginViewContainers> view;
+        std::shared_ptr<PluginViewContainer> view;
         std::shared_ptr<PluginControl> ctrl;
         host_plugin_window* hostWindow = nullptr;
         window_main* clientWindow = nullptr;
         window_plugin* clientWindowInterface = nullptr;
     };
     internalplugin_handles_t* handlesIntPlugin;
-    virtual std::shared_ptr<PluginViewContainers> createViewCtrInternal() { return nullptr; };
+    virtual std::shared_ptr<PluginViewContainer> createViewCtrInternal() { return nullptr; };
 public:
     String sDir;
     int32_t pluginCategory = 0;
@@ -74,8 +74,8 @@ public:
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { out->copyFrom(in); };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     
-    void getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainers>>& vec);
-    std::shared_ptr<PluginViewContainers> openViewCtr(int32_t uiId);
+    void getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainer>>& vec);
+    std::shared_ptr<PluginViewContainer> openViewCtr(int32_t uiId);
 };
 
 class internal_modulator : public internalplugin {

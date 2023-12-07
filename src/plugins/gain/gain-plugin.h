@@ -19,7 +19,7 @@ public:
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
-    std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
+    std::shared_ptr<PluginViewContainer> createViewCtrInternal() override;
 };
 
 } // namespace PluginGain

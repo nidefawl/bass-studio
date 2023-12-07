@@ -16,7 +16,7 @@ public:
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
-    std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
+    std::shared_ptr<PluginViewContainer> createViewCtrInternal() override;
     void onEnable() override;
 private:
     void setNewLatency(int32_t nSamplesLatency);

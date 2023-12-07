@@ -414,8 +414,8 @@ struct macro_automation_src_param_t final : public automated_param_t {
     const automated_param_t* module_macros::getModulationOutputData(const DAW::modulation_channel_ref& channel) {
         return impl->getModulationOutputData(channel);
     }
-    using ViewCtrType = SinglePluginViewContainers<guictr_module_macros, module_macros>;
-    std::shared_ptr<PluginViewContainers> module_macros::createViewCtrInternal() {
+    using ViewCtrType = PluginViewContainerBasic<guictr_module_macros, module_macros>;
+    std::shared_ptr<PluginViewContainer> module_macros::createViewCtrInternal() {
         return std::make_shared<ViewCtrType>(this, 100, 150);
     }
 
@@ -504,7 +504,7 @@ struct macro_automation_src_param_t final : public automated_param_t {
 
     void module_macros::setUiSnapshot(snapshot_t& snapshot) {
         for (auto& uis : snapshot.uiLayout) {
-            std::vector<std::shared_ptr<PluginViewContainers>> views;
+            std::vector<std::shared_ptr<PluginViewContainer>> views;
             getAllViewCtrs(uis.uiId, views);
             for (auto& view : views) {
                 auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());

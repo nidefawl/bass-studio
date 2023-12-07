@@ -25,11 +25,11 @@ class guictr_base;
 class guictxtmenu_base;
 
 class PluginControl final : public AppCtrl {
-    std::shared_ptr<PluginViewContainers> view;
+    std::shared_ptr<PluginViewContainer> view;
     bool firstInit = true;
     DAW::UI::CommandManager commandMgr;
 public:
-    explicit PluginControl(AppCtrl* parent, std::shared_ptr<PluginViewContainers> view);
+    explicit PluginControl(AppCtrl* parent, std::shared_ptr<PluginViewContainer> view);
     ~PluginControl() override;
     static PluginControl* get();
 

@@ -30,7 +30,7 @@ public:
     void initModChannels() override;
     int getModuleType() override { return PLUGIN_TYPE_LFO; };
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
-    std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
+    std::shared_ptr<PluginViewContainer> createViewCtrInternal() override;
     const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) override;
     std::shared_ptr<std::vector<std::byte>> storePresetData() override;
     bool loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) override;

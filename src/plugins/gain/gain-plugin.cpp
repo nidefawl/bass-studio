@@ -141,8 +141,8 @@ namespace PluginGain {
         snapshot.vendorVersion = 1;
     }
 
-    std::shared_ptr<PluginViewContainers> module_gain::createViewCtrInternal() {
-        return std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_gain>>(this, 100, 150);
+    std::shared_ptr<PluginViewContainer> module_gain::createViewCtrInternal() {
+        return std::make_shared<PluginViewContainerBasic<guictr_vst2_simple, module_gain>>(this, 100, 150);
     }
 } // namespace PluginGain
 

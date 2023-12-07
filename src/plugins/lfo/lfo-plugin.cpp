@@ -752,8 +752,8 @@ class guictr_module_lfo_context_menu final : public guictxtmenu {
         }
     };
 
-    using ViewCtrType = SinglePluginViewContainers<guictr_module_lfo, module_lfo>;
-    std::shared_ptr<PluginViewContainers> module_lfo::createViewCtrInternal() {
+    using ViewCtrType = PluginViewContainerBasic<guictr_module_lfo, module_lfo>;
+    std::shared_ptr<PluginViewContainer> module_lfo::createViewCtrInternal() {
         return std::make_shared<ViewCtrType>(this, 100, 150);
     }
 
@@ -778,7 +778,7 @@ class guictr_module_lfo_context_menu final : public guictxtmenu {
 
     void module_lfo::setUiSnapshot(snapshot_t& snapshot) {
         for (auto& uis : snapshot.uiLayout) {
-            std::vector<std::shared_ptr<PluginViewContainers>> views;
+            std::vector<std::shared_ptr<PluginViewContainer>> views;
             getAllViewCtrs(uis.uiId, views);
             for (auto& view : views) {
                 auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());

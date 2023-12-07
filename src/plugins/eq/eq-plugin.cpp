@@ -810,7 +810,7 @@ namespace PluginEQ {
             editor.onGuiClose();
         }
     };
-    class PluginViewContainerEQ final : public PluginViewContainers {
+    class PluginViewContainerEQ final : public PluginViewContainer {
     public:
         guicontainer_plugin_eq ctr_main;
         explicit PluginViewContainerEQ(module_eq* eff)
@@ -846,7 +846,7 @@ namespace PluginEQ {
             return uiId != UID_VIEW_CTR_NODES;
         }
     };
-    std::shared_ptr<PluginViewContainers> module_eq::createViewCtrInternal() {
+    std::shared_ptr<PluginViewContainer> module_eq::createViewCtrInternal() {
         return std::make_shared<PluginViewContainerEQ>(this);
     }
 }// namespace PluginEQ

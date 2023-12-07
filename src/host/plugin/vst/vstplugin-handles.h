@@ -9,7 +9,7 @@ struct audio_stage_t;
 struct VstEvent_t;
 class guiplugin;
 class BasePluginVST2;
-class PluginViewContainers;
+class PluginViewContainer;
 struct handles_t {
     struct param_editing_t {
         int32_t paramIdx = -1;

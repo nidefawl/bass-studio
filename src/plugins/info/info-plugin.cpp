@@ -586,7 +586,7 @@ class guicontainer_plugin_HostInfo final : public guictr_base {
     AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
         return new PluginVST2_HostInfo(audioMaster);
     }
-    std::shared_ptr<PluginViewContainers> PluginVST2_HostInfo::createViewCtrVst2() {
-        return std::make_shared<SinglePluginViewContainers<guicontainer_plugin_HostInfo, PluginVST2_HostInfo>>(this, 280, 360);
+    std::shared_ptr<PluginViewContainer> PluginVST2_HostInfo::createViewCtrVst2() {
+        return std::make_shared<PluginViewContainerBasic<guicontainer_plugin_HostInfo, PluginVST2_HostInfo>>(this, 280, 360);
     }
 }// namespace PluginHostInfo

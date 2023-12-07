@@ -94,7 +94,7 @@ protected:
     DAW::Host::PluginManager* pluginMgr = nullptr;
     String currentProgramNameStr = "<no program>";
     bool currentProgramNameSet   = false;
-    std::vector<std::shared_ptr<PluginViewContainers>> views;
+    std::vector<std::shared_ptr<PluginViewContainer>> views;
 public:
     std::vector<String> programNames;
     std::vector<DAW::channel_desc> inputChannelsDesc;
@@ -133,8 +133,8 @@ public:
     void setVendorName(String _name) {
         this->sVendorName = std::move(_name);
     }
-    std::vector<std::shared_ptr<PluginViewContainers>>& getViewCtrs() { return views; }
-    const std::vector<std::shared_ptr<PluginViewContainers>>& getViewCtrs() const { return views; }
+    std::vector<std::shared_ptr<PluginViewContainer>>& getViewCtrs() { return views; }
+    const std::vector<std::shared_ptr<PluginViewContainer>>& getViewCtrs() const { return views; }
     virtual int32_t getEffectVersion() const { return 1; }
     virtual int32_t getUUID_U32() const { return 1; }
     IHostCallback* getHostCallback() const { return hostCallback; }
