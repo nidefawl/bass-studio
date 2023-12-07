@@ -2550,7 +2550,7 @@ public:
         glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
         glfwWindowHint(GLFW_DECORATED, GL_FALSE);
         // glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
-        appwindow::createBaseWindow(0, title, w, h, nullptr, parentWindowHandle);
+        appwindow::createBaseWindow(0, title, math::max(1, w), math::max(1, h), nullptr, parentWindowHandle);
         RenderResources::initResources(nanovgCtxt);
 
         if (!ctrlShared->initAppWindow(this, this->nanovgCtxt)) {

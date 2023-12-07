@@ -26,35 +26,10 @@
 
 namespace PluginVisualizer {
 
-    static constexpr int32_t PARAM_LATENCY = 1;
-
     module_visualizer::module_visualizer(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("Visualizer", getModuleType(), _projectGlobalId, _hostCallback)
     {
-        struct effectgain_param_entry {
-            int32_t id;
-            String name;
-            String unit;
-            float val;
-        };
-        const std::array<effectgain_param_entry, 1> parameterTypes{ {
-            { PARAM_LATENCY, "Visualizer", "samples",  0.5f }
-        } };
-        for (const auto& paramEntry : parameterTypes) {
-            registerParam(paramEntry.id)->initValue(paramEntry);
-        }
         allocRingBuffer(ringbuffer, 2);
-    }
-
-    void module_visualizer::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-        // switch (idx) {
-        //     case PARAM_LATENCY:
-        //         if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
-        //             // set(math::clamp(math::roundfS32(getParam(idx)->getValue() * MAX_LATENCY), 0, MAX_LATENCY));
-        //         }
-        //         break;
-        // }
-        internalplugin::postSetParameter(idx, preVal, val, flags);
     }
 
     void module_visualizer::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
@@ -71,11 +46,6 @@ namespace PluginVisualizer {
         AudioBuffer** buffers = ringbuffer.buffers;
         AudioBuffer* const qBuf = buffers[writePos%RING_BUF_SIZE];
         writePos = (writePos+1) & RING_BUF_MASK;
-        // if (qBuf->inUse) {
-        //     bufferOverruns++;
-        //     if (bufferOverruns % 100 == 0)
-        //         log_lf(Log::L_WARN, "%d buffer overruns\n", bufferOverruns);
-        // }
         qBuf->output->realloc(buf->samples);
         qBuf->output->copyFrom(buf);
         qBuf->inUse = true;
@@ -89,28 +59,6 @@ namespace PluginVisualizer {
             audioQueueSamplePos += buf->output->samples;
         }
         return success;
-    }
-
-    param_converted_t module_visualizer::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
-        // //TODO: use std::from_chars when floating point version arrives in libc++
-        // auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
-        // switch (idx) {
-        //     case PARAM_LATENCY: {
-        //         return {math::clamp(math::roundfS64(fTextFieldVal)/static_cast<float>(MAX_LATENCY), 0.0f, 1.0f), true};
-        //     }
-        //     default:
-        //         break;
-        // }
-        return internalplugin::convertParamValueDisplay(idx, displayValue);
-    }
-
-    param_unit_t module_visualizer::convertParamValueToDisplay(int32_t idx, float value) {
-    //     auto param = getParam(idx);
-    //     dbgassert(param);
-    //     if (param->idx == PARAM_LATENCY) {
-    //         return {StringFormat("%d", math::max(0, math::min(MAX_LATENCY, math::roundfS32(value * MAX_LATENCY)))), param->unit};
-    //     }
-        return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
     std::shared_ptr<PluginViewContainer> module_visualizer::createViewCtrInternal() {
