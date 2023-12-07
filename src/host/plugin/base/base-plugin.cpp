@@ -21,7 +21,6 @@
 #include "host/daw/mainctrl.h"
 #include "host/host_pluginmanager.h"
 #include "host/host_plugin_window.h"
-#include "snapshot/snapshot.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "host/track/track.h"
@@ -247,6 +246,26 @@ std::shared_ptr<guiplugin> effectbase::getPluginGui(int32_t uuid) {
         uiInstances[uuid] = std::move(newGui);
     }
     return uiInstances[uuid];
+}
+
+plugin_windowlayout_snapshot_t effectbase::getWindowLayoutSnapshot() {
+    if (this->windowHost) {
+        this->windowHost->storePosition();
+    }
+    plugin_windowlayout_snapshot_t snapshot;
+    snapshot.isValidSnapshot = true;
+    snapshot.windowPosSizeValid = this->bWindowPosSizeValid;
+    snapshot.windowPosSize = this->lastWindowPosSize;
+    snapshot.isWindowOpen = this->bEditOpen;
+    return snapshot;
+}
+
+void effectbase::loadWindowLayoutSnapshot(const plugin_windowlayout_snapshot_t& snapshot) {
+    if (snapshot.isValidSnapshot) {
+        this->bWindowPosSizeValid = snapshot.windowPosSizeValid;
+        this->lastWindowPosSize = snapshot.windowPosSize;
+        this->bOpenWindowOnEnable = snapshot.isWindowOpen;
+    }
 }
 
 class guideferred final : public guiplugin {

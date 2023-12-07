@@ -59,6 +59,7 @@ public:
     void onResize(ivec2 newSize);
     ivec2 getContentSize() const;
     void setPosition(ivec2 newPos);
+    void storePosition();
 
     void updateFromMainThread() const;
     void captureWindowFrame();

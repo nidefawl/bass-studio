@@ -501,7 +501,6 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     // this->dispatch(effSetProgram, 0, programIdx);
     this->bIsLoadingProgram = false;
     for (auto& [uuid, snapshot] : pluginSnapshot.uiSnapshots) {
-        bOpenWindowOnEnable |= snapshot.isWindowOpen;
         auto gui = uiInstances.find(uuid);
         if (gui != uiInstances.end()) {
             gui->second->loadSnapshot(snapshot);
@@ -510,6 +509,7 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
             this->uiSnapshots[uuid].isValidSnapshot = true;
         }
     }
+    loadWindowLayoutSnapshot(pluginSnapshot.windowLayout);
 }
 
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
@@ -519,6 +519,7 @@ void vstplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_op
         gui->makeSnapshot(uiSnapshot, opts);
         ps.uiSnapshots[uuid] = uiSnapshot;
     }
+    ps.windowLayout = getWindowLayoutSnapshot();
     ps.slot = this->slot;
 }
 

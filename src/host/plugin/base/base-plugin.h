@@ -221,18 +221,13 @@ public:
         return trackImpl != nullptr;
     }
 
-    void storeWindowPos(ivec2 posSize) {
-        this->lastWindowPosSize.x = posSize.x;
-        this->lastWindowPosSize.y = posSize.y;
-    }
     void storeWindowPosSize(ivec4 posSize) {
         this->lastWindowPosSize = posSize;
         this->bWindowPosSizeValid = true;
     }
-    bool getLastWindowPosSize(ivec4& posSize) {
-        posSize = this->lastWindowPosSize;
-        return this->bWindowPosSizeValid;
-    }
+
+    plugin_windowlayout_snapshot_t getWindowLayoutSnapshot();
+    void loadWindowLayoutSnapshot(const plugin_windowlayout_snapshot_t& snapshot);
 
 public:
     virtual effect_deferred* toDeferred();

@@ -319,12 +319,16 @@ bool host_plugin_window::init(effectbase* _plugin, const String& name, ivec2 siz
 
 void host_plugin_window::close() {
     SetActiveWindow(getMainHWND());
+    storePosition();
+    plugin->onClose();
+    destroy();
+}
+
+void host_plugin_window::storePosition() {
     RECT rcDlg;
     if (GetWindowRect(hwnd, &rcDlg)) {
         plugin->storeWindowPosSize({rcDlg.left, rcDlg.top, rcDlg.right - rcDlg.left, rcDlg.bottom - rcDlg.top});
     }
-    plugin->onClose();
-    destroy();
 }
 
 void host_plugin_window::destroy() {

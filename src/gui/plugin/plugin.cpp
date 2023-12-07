@@ -1022,7 +1022,6 @@ void guiplugin::setLayoutMode(int32_t layoutMode) {
 void guiplugin::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts){
     if (opts.storeLayouts) {
         puis.layoutMode = layoutMode;
-        puis.windowPosSizeValid = effect->getLastWindowPosSize(puis.windowPosSize);
     }
 }
 
@@ -1030,14 +1029,11 @@ void guiplugin::loadSnapshot(const plugin_ui_snapshot_t& puis) {
     if (puis.layoutMode > -1) {
         setLayoutMode(puis.layoutMode);
     }
-    effect->bWindowPosSizeValid = puis.windowPosSizeValid;
-    effect->lastWindowPosSize = puis.windowPosSize;
 }
 
 void guipluginview::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts) {
     guiplugin::makeSnapshot(puis, opts);
     if (opts.storeLayouts) {
-        puis.isWindowOpen = effect->bEditOpen;
         puis.parameterListVisible = params.isVisible();
     }
 }

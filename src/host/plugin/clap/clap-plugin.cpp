@@ -139,7 +139,6 @@ void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     }
     DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
     for (auto& [uuid, snapshot] : pluginSnapshot.uiSnapshots) {
-        bOpenWindowOnEnable |= snapshot.isWindowOpen;
         auto gui = dawHandles->gui.find(uuid);
         if (gui != dawHandles->gui.end()) {
             gui->second->loadSnapshot(snapshot);
@@ -148,6 +147,7 @@ void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
             this->uiSnapshots[uuid].isValidSnapshot = true;
         }
     }
+    loadWindowLayoutSnapshot(pluginSnapshot.windowLayout);
 }
 
 void clapplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
@@ -157,6 +157,7 @@ void clapplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_o
         gui->makeSnapshot(uiSnapshot, opts);
         ps.uiSnapshots[uuid] = uiSnapshot;
     }
+    ps.windowLayout = getWindowLayoutSnapshot();
     ps.slot = this->slot;
 }
 

@@ -109,12 +109,18 @@ void serialize(Archive& archive, glm::ivec4& m) {
 } // namespace glm
 
 template<class Archive>
+void serialize(Archive& archive, plugin_windowlayout_snapshot_t& m) {
+    archive(
+        make_nvp("windowPosSize", m.windowPosSize),
+        make_nvp("windowPosValid", m.windowPosSizeValid),
+        make_nvp("windowOpen", m.isWindowOpen));
+    m.isValidSnapshot = true;
+}
+
+template<class Archive>
 void serialize(Archive& archive, plugin_ui_snapshot_t& m) {
     try {
         archive(
-            make_nvp("windowPosSize", m.windowPosSize),
-            make_nvp("windowPosValid", m.windowPosSizeValid),
-            make_nvp("windowOpen", m.isWindowOpen),
             make_nvp("layoutMode", m.layoutMode),
             make_nvp("parameterListVisible", m.parameterListVisible));
     } catch (const std::exception& e) {
@@ -168,6 +174,9 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
         archive(make_nvp("ui", ui));
         m.uiSnapshots[1] = ui;
     }
+    if (version >= 15) {
+        archive(make_nvp("windowLayout", m.windowLayout));
+    }
     archive(make_nvp("plugins", m.pluginSnapshots));
 }
 
@@ -202,7 +211,8 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
         make_nvp("stageIds", m.stageIds),
         make_nvp("routing", m.effectRouting),
         make_nvp("uisnapshot", m.uiSnapshots),
-        make_nvp("plugins", m.pluginSnapshots)
+        make_nvp("plugins", m.pluginSnapshots),
+        make_nvp("windowLayout", m.windowLayout)
     );
 }
 
@@ -650,7 +660,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(guictrlayout_entry_snapshot_t, 1);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 14);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 15);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);

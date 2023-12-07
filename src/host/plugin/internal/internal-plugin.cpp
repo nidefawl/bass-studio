@@ -51,6 +51,7 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_sto
         gui->makeSnapshot(uiSnapshot, opts);
         ps.uiSnapshots[uuid] = uiSnapshot;
     }
+    ps.windowLayout = getWindowLayoutSnapshot();
     ps.slot = this->slot;
     auto dataBuf = storePresetData();
     if (dataBuf) {
@@ -69,7 +70,6 @@ void internalplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
         loadPresetData(dataBuf);
     }
     for (auto& [uuid, snapshot] : pluginSnapshot.uiSnapshots) {
-        bOpenWindowOnEnable |= snapshot.isWindowOpen;
         auto gui = uiInstances.find(uuid);
         if (gui != uiInstances.end()) {
             gui->second->loadSnapshot(snapshot);
@@ -77,6 +77,14 @@ void internalplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
             this->uiSnapshots[uuid] = snapshot;
             this->uiSnapshots[uuid].isValidSnapshot = true;
         }
+    }
+    loadWindowLayoutSnapshot(pluginSnapshot.windowLayout);
+}
+
+void internalplugin::onEnable() {
+    if (bOpenWindowOnEnable) {
+        bOpenWindowOnEnable = false;
+        showWindow(false);
     }
 }
 

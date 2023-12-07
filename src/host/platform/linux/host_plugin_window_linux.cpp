@@ -120,12 +120,16 @@ bool host_plugin_window::init(effectbase* plugin, const String& name, ivec2 size
 
 void host_plugin_window::close()
 {
-	ivec4 posSize = {};
-	glfwGetWindowPos(glfw, &posSize.x, &posSize.y);
-	glfwGetWindowSize(glfw, &posSize.z, &posSize.w);
-	plugin->storeWindowPosSize(posSize);
+    storePosition();
 	plugin->onClose();
 	glfwHideWindow(glfw);
+}
+
+void host_plugin_window::storePosition() {
+    ivec4 posSize = {};
+    glfwGetWindowPos(glfw, &posSize.x, &posSize.y);
+    glfwGetWindowSize(glfw, &posSize.z, &posSize.w);
+    plugin->storeWindowPosSize(posSize);
 }
 
 void host_plugin_window::destroy()

@@ -54,6 +54,7 @@ public:
     samplecount_t getPluginLatency() override { return 0; };
 
     std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
+    void onEnable() override;
     bool onShow(host_plugin_window* _window) override;
     bool onClose() override;
     void updateFromMainThread() override;

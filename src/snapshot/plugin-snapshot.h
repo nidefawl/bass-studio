@@ -19,11 +19,14 @@ struct plugin_iodesc_snapshot_t {
 };
 struct automation_view_t;
 struct track_effect_routing_snapshot_t;
-struct plugin_ui_snapshot_t {
+struct plugin_windowlayout_snapshot_t {
     bool isValidSnapshot = false;
     ivec4 windowPosSize{};
     bool windowPosSizeValid = false;
     bool isWindowOpen = false;
+};
+struct plugin_ui_snapshot_t {
+    bool isValidSnapshot = false;
     bool parameterListVisible = true;
     int32_t layoutMode = -1;
 };
@@ -45,6 +48,7 @@ struct plugin_snapshot_t {
     track_modulation_routing_snapshot_t modulationRouting;
     track_id_snapshot_t stageIds;
     std::map<int32_t, plugin_ui_snapshot_t> uiSnapshots;
+    plugin_windowlayout_snapshot_t windowLayout;
     std::vector<uint8_t> dataChunk;
     std::vector<uint8_t> dataChunk2;
     std::vector<param_snapshot_t> params;
