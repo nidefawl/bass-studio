@@ -498,9 +498,8 @@ namespace lineplot {
     class guictr_audiovis : public guictr_base {
         static constexpr int INSET_OUTER = 8;
         static constexpr int INSET_INNER = 24;
-        DawInstance* daw;
+        PluginVisualizer::module_visualizer* moduleVisualizer = nullptr;
         std::unique_ptr<audioanaylzer> audioAnalyzer;
-        audiohost* optionalAudioHost{}; // only set when running in standalone mode 
         sampleformat_t curSampleFormat{0, 0, sampleformat_bits_t::FLOAT_32};
         audio_spectrum spectrum;
         overlap_buffer_t<WAVEFORM_BUFFER_SIZE, audio_spectrum::NUM_CHANNELS> buffer;
@@ -723,8 +722,8 @@ void main(void) {
             src_parser parserFbBlur;
             always_assert(!pipeFbBlur->load(&parserFbBlur));
         }
-        explicit guictr_audiovis(DawInstance* daw) 
-            : guictr_base(), daw(daw), curRenderer(pathRenderers[curPreset.nRenderer])
+        explicit guictr_audiovis(::PluginVisualizer::module_visualizer* const eff) 
+            : guictr_base(), moduleVisualizer(eff), curRenderer(pathRenderers[curPreset.nRenderer])
         {
             setGuiType(gui_type::CTR_TYPE_AUDIO_VISUALIZER);
             for (int32_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
@@ -748,10 +747,6 @@ void main(void) {
 
         ~guictr_audiovis() override {
             removeGuis();
-            if (optionalAudioHost) {
-                optionalAudioHost->stopAudio();
-                delete optionalAudioHost;
-            }
             for (auto* input : controlsParameters) {
                 delete input;
             }
@@ -795,13 +790,7 @@ void main(void) {
 
         void onRemove() override {
             guictr_base::onRemove();
-            if (optionalAudioHost) {
-                optionalAudioHost->stopAudio();
-                // delete optionalAudioHost;
-                // optionalAudioHost = nullptr;
-            } else {
-            }
-            bIsIdle = true;
+            moduleVisualizer = nullptr;
         }
         void earlyInit() {
             checkGLError("pre earlyInit");
@@ -839,8 +828,16 @@ void main(void) {
                 }
             }
         }
-
-        void init(const sampleformat_t& sampleFormat) {
+        void initSampleFormat(const sampleformat_t& sampleFormat) {
+            if (moduleVisualizer) {
+                auto sf = moduleVisualizer->getSampleFormat();
+                audioAnalyzer = std::make_unique<audioanaylzer>();
+                audioAnalyzer->init(sampleFormat.blockSize, sampleFormat.sampleRate);
+                spectrum = *audioAnalyzer->analyzerLf;
+                this->curSampleFormat = sf;
+            }
+        }
+        void initRenderer() {
             pipeFbBlur        = std::make_shared<blur_tex_shader>();
             vboFullscreenQuad = std::make_shared<DrawVBO>();
             vboFullscreenQuad->genBuffers();
@@ -992,49 +989,8 @@ void main(void) {
             ctrlPts.emplace_back(0.9f, 0.5f);
             modifyPointOperation(ctrlPts, OP_CLEAR);
             modifyPointOperation(ctrlPts, OP_GEN_SINE);
-
-            if (optionalAudioHost)
-            {
-                auto& tls      = daw_tls::getTls();
-                tls.audioHost  = optionalAudioHost;
-
-                app_iosettings& ioSettings = tls.settings->iosettings;
-
-#ifdef _WIN32
-                ioSettings.blocksize   = 512;
-                ioSettings.samplerate  = 0;
-                ioSettings.device_api  = "Windows WASAPI";
-                app_ioaudioconfig& cnf = ioSettings.getConfig(ioSettings.device_api);
-                cnf.device_api         = ioSettings.device_api;
-                cnf.deviceNameInput    = "loopback";
-                cnf.deviceNameOutput   = "default";
-#endif
-#ifdef __linux__
-                ioSettings.blocksize   = 512;
-                ioSettings.samplerate  = 0;
-                ioSettings.device_api  = "ALSA";
-                app_ioaudioconfig& cnf = ioSettings.getConfig(ioSettings.device_api);
-                cnf.device_api         = ioSettings.device_api;
-                cnf.deviceNameInput    = "default";
-                cnf.deviceNameOutput   = "default";
-#endif
-                if (!optionalAudioHost->startAudio(ioSettings)) {
-                    throw appexception("Failed starting audio stream");
-                }
-                const auto stream = optionalAudioHost->getStream(0);
-                const auto sampleRate = stream->getSampleRate();
-                const auto blockSize = stream->getBlockSize();
-                audioAnalyzer = std::make_unique<audioanaylzer>();
-                audioAnalyzer->init(blockSize, sampleRate);
-                spectrum = *audioAnalyzer->analyzerLf;
-                this->curSampleFormat = {sampleRate, blockSize, sampleformat_bits_t::FLOAT_32};
-            } else if (daw) {
-                auto sf = daw->getHost()->getSampleFormatInternal();
-                audioAnalyzer = std::make_unique<audioanaylzer>();
-                audioAnalyzer->init(sampleFormat.blockSize, sampleFormat.sampleRate);
-                spectrum = *audioAnalyzer->analyzerLf;
-                this->curSampleFormat = sf;
-            }
+        }
+        void initLoadPreset() {
             bool didSetPreset = false;
             if (bHasPresetToLoad) {
                 setPreset(presetToLoad);
@@ -1804,15 +1760,14 @@ void main(void) {
             bakeOpt.antialias = curPreset.fAntialias * oversample;
             bakeOpt.scale     = 1;
 
-            DAW::AudioIO::AudioStream* stream    = optionalAudioHost ? optionalAudioHost->getStream(0) : nullptr;
             auto tNow      = getTimeMicros();
-            if (timeLastBlock > 0 && stream) {
+            if (timeLastBlock > 0) {
                 double timeSince = (tNow - timeLastBlock) / 1000000.0;
-                waveformWindowOffset2 += math::floordS32(timeSince * (double) stream->getSampleRate());
+                waveformWindowOffset2 += math::floordS32(timeSince * (double) curSampleFormat.sampleRate);
             }
             timeLastBlock            = tNow;
             BakeGLPath* ptrBakedPath = nullptr;
-            if (curPreset.mode == AUDIO_WAVEFORM && stream) {
+            if (curPreset.mode == AUDIO_WAVEFORM) {
 
                 auto nSampleSize      = bufferProcessed[0].size();
                 ivec2 sizeOversampled = sizeViewInner * oversample;
@@ -1838,7 +1793,7 @@ void main(void) {
                 sample.nChannels     = 2;
                 sample.nSamples      = nSampleSize;
                 sample.bitsPerSample = 32;
-                sample.sampleRate    = stream->getSampleRate();
+                sample.sampleRate    = curSampleFormat.sampleRate;
                 sample.samples.resize(2);
                 for (int n = 0; n < 2; n++) {
                     auto& ch = sample.samples[n];
@@ -2053,15 +2008,21 @@ void main(void) {
                 earlyInit();
                 bEarlyInit = true;
             }
-            if (bIsIdle && ((daw&&daw->getAudioHost()&&daw->getAudioHost()->isStreaming())||optionalAudioHost)) {
+            if (bIsIdle && moduleVisualizer) {
                 bIsIdle = false;
             }
-            if (bIsIdle) {
+            if (!moduleVisualizer) {
                 return;
             }
+            const sampleformat_t sampleFormat = moduleVisualizer->getSampleFormat();
             if (!bInit) {
-                init(daw->getHost()->getSampleFormatInternal());
+                initSampleFormat(sampleFormat);
+                initRenderer();
+                initLoadPreset();
                 bInit = true;
+            } else if (this->curSampleFormat != sampleFormat) {
+                initSampleFormat(sampleFormat);
+                initLoadPreset();
             }
             if (bHasPresetToLoad) {
                 bHasPresetToLoad = false;
@@ -2139,10 +2100,6 @@ void main(void) {
             int nR        = 0;
             bool rendered = false;
             const bool renderAudio = curPreset.mode == FFT_SPECTRUM || curPreset.mode == PATH_SCRIPT;
-            DAW::AudioIO::AudioStream* stream = nullptr;
-            if (optionalAudioHost) {
-                stream = optionalAudioHost->getStream(0);
-            }
             constexpr static bool RENDER_ALL_FRAMES = false;
             auto processAudioBuffer = [&](AudioBuffer* bufInput) {
                 if (bufInput->output->channels) {
@@ -2162,36 +2119,14 @@ void main(void) {
                 nR++;
             };
             AudioBuffer* bufInput = nullptr;
-            if (stream && audioAnalyzer) {
-                while (stream->try_dequeueInput(bufInput)) {
-                    processAudioBuffer(bufInput);
-                    bufInput->inUse = false;
-                    if (nR >= 3) 
-                        break;
-                }
-            } else if (audioAnalyzer) {
-                auto getFirstLatencyEffect = [&](DAW::Host::Host*) -> effectbase*
-                {
-                    std::vector<effectbase *> effects;
-                    daw->getHost()->getAllInstances(effects);
-                    for (auto e : effects) {
-                        if (e->getModuleType() == PLUGIN_TYPE_VISUALIZER) {
-                            return e;
-                        }
-                    }
-                    return nullptr;
-                };
-                effectbase* eff = getFirstLatencyEffect(daw->getHost());
-                if (eff) {
-                    auto* moduleAudioVisualizer = static_cast<PluginVisualizer::module_visualizer*>(eff);
-                    if (moduleAudioVisualizer->getOutputQueueSize() > 0) {
-                        // auto lock = daw->lockPlayThread();
-                        while (moduleAudioVisualizer->try_dequeue(bufInput)) {
-                            processAudioBuffer(bufInput);
-                            bufInput->inUse = false;
-                            // if (nR >= 3) 
-                            //     break;
-                        }
+            if (audioAnalyzer && moduleVisualizer) {
+                if (moduleVisualizer->getOutputQueueSize() > 0) {
+                    // auto lock = daw->lockPlayThread();
+                    while (moduleVisualizer->try_dequeue(bufInput)) {
+                        processAudioBuffer(bufInput);
+                        bufInput->inUse = false;
+                        // if (nR >= 3) 
+                        //     break;
                     }
                 }
             }
@@ -2631,8 +2566,8 @@ CEREAL_CLASS_VERSION(lineplot::settings_preset_t, 3);
 
 namespace DAW::UI {
 
-guictr_base* MakeAudioVisualizer(DawInstance* daw) {
-    auto ctr = new lineplot::guictr_audiovis(daw);
+guictr_base* MakeAudioVisualizer(::PluginVisualizer::module_visualizer* const eff) {
+    auto ctr = new lineplot::guictr_audiovis(eff);
     return ctr;
 }
 

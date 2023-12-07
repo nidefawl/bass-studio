@@ -22,7 +22,12 @@
 #include "host/audiobuffer/audioblock.h"
 #include "host/meter/meter.h"
 #include "snapshot/snapshot.h"
+#include "tls.h"
 #include "window.h"
+
+namespace DAW::UI {
+    guictr_base* MakeAudioVisualizer(::PluginVisualizer::module_visualizer* const eff);
+} // namespace DAW::UI
 
 namespace PluginVisualizer {
 
@@ -61,8 +66,53 @@ namespace PluginVisualizer {
         return success;
     }
 
+
+    class PluginViewContainerVisualizer final : public PluginViewContainer {
+    public:
+        module_visualizer* const eff;
+        guictr_base* ctr_main = nullptr;
+        explicit PluginViewContainerVisualizer(module_visualizer* eff)
+            : eff(eff) {
+        }
+        ~PluginViewContainerVisualizer() override {
+        }
+        void layout(int32_t winW, int32_t winH) override {
+            ctr_main->pos  = { 0, 0 };
+            ctr_main->size = { winW, winH };
+        }
+        void addTo(std::vector<guictr_base*>& v) override {
+            v.push_back(ctr_main);
+        }
+        void setFree() override {
+            if (ctr_main) {
+                dbgassert(!ctr_main->getControl());
+                delete ctr_main;
+                ctr_main = nullptr;
+            }
+            PluginViewContainer::setFree();
+        }
+        void setUsed() override {
+            if (!ctr_main)
+                ctr_main = DAW::UI::MakeAudioVisualizer(eff);
+            PluginViewContainer::setUsed();
+        }
+        void onGuiOpen() override {
+        }
+        void onGuiClose() override {
+        }
+        void onSetParameter(int32_t index, float value) override {
+        }
+        void getFixedSize(int32_t* w, int32_t* h) override {
+            *w = 1920*0.8;
+            *h = 1080*0.8;
+        }
+        bool isViewSupported(int32_t uiId) const override {
+            return uiId == UID_VIEW_CTR_WINDOW;
+        }
+    };
+
     std::shared_ptr<PluginViewContainer> module_visualizer::createViewCtrInternal() {
-        return std::make_shared<PluginViewContainerBasic<guictr_plugin_basic, module_visualizer>>(this, 100, 150);
+        return std::make_shared<PluginViewContainerVisualizer>(this);
     }
 } // namespace PluginVisualizer
 

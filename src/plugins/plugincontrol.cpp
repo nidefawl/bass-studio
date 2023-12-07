@@ -45,8 +45,11 @@ void PluginControl::destroy() {
     log_lf(Log::L_ERROR, "Destroy PluginControl %s\n", StringAsCStr(windowName));
     isOK = false;
     if (view) {
-        //delete view;
+        for (guictr_base* ctr : containers) {
+            ctr->setControl(nullptr);
+        }
         view->setFree();
+        containers.clear();
         view = nullptr;
     }
 }

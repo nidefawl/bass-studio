@@ -11,10 +11,6 @@
 #include "logging.h"
 #include "tls.h"
 
-namespace DAW::UI {
-    guictr_base* MakeAudioVisualizer(DawInstance* daw);
-} // namespace DAW::UI
-
 bool getContainerLabel(gui_type type, String& out) {
     switch (type) {
         case CTR_TYPE_LAYOUT:
@@ -95,9 +91,6 @@ bool getContainerLabel(gui_type type, String& out) {
         case CTR_TYPE_PLUGINS:
             out = "Plugins";
             return true;
-        case CTR_TYPE_AUDIO_VISUALIZER:
-            out = "Audio Visualizer";
-            return true;
         default:
             break;
     }
@@ -146,9 +139,6 @@ ContainerFactory& getContainerFactory() {
         };
         containerFactory[gui_type::CTR_TYPE_MIDI_MONITOR] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(DAW::UI::makeGuiMidiInspect(ctxt));
-        };
-        containerFactory[gui_type::CTR_TYPE_AUDIO_VISUALIZER] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(DAW::UI::MakeAudioVisualizer(ctxt.daw));
         };
 #endif
         containerFactory[gui_type::CTR_TYPE_PROPERTIES] = [](auto& ctxt) {

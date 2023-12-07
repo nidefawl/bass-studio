@@ -21,11 +21,11 @@ public:
     virtual void onGuiOpen()              = 0;
     /* may be called multiple times */
     virtual void onGuiClose()                               = 0;
-    void setFree() {
+    virtual void setFree() {
         onGuiClose();
         inUse = false;
     }
-    void setUsed() {
+    virtual void setUsed() {
         inUse = true;
     }
     bool isInUse() const {
