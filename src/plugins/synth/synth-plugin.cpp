@@ -4987,7 +4987,7 @@ class guicontainer_plugin_synth final : public guictr_base {
             return uiId != UID_VIEW_CTR_NODES;
         }
     };
-    void fml() {/*NO*/}
+
     void module_synth::getUiSnapshot(snapshot_t& snapshot) {
         for (auto& view : views) {
             auto implCtrType = dynamic_cast<PluginViewContainerSynth*>(view.get());
