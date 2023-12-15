@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "event.h"
 #include "str_util.h"
 #include "math/vec.h"
 
