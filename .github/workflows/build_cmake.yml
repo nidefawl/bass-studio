@@ -223,7 +223,7 @@ jobs:
     - name: Download ninja, cmake and clang mingw toolchain (linux crosscompile)
       if: steps.build-cache-linux-cross.outputs.cache-hit != 'true'
       run: |
-        wget --no-check-certificate -nv https://raw.githubusercontent.com/nidefawl/bass-studio/master/dist/python/python311-win32.zip -O python-win32.zip
+        wget --no-check-certificate -nv https://raw.githubusercontent.com/nidefawl/daw-deps/master/python/python311-win32.zip -O python-win32.zip
         unzip python-win32.zip -d ${{ env.BUILD_DIR }} && rm *.zip
         wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v16.0.0-3-linux/llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2 -O llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2
         tar -xjf llvm-clang-*.bz2 && rm *.bz2
