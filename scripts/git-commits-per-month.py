@@ -100,6 +100,8 @@ def runscript(script, args=[], pathAdd=None, shellEnv={'_': ''}):
   # rotates and right aligns the x labels, and moves the bottom of the
   # axes up to make room for them
   fig.autofmt_xdate()
+  # add title
+  plt.title('Git commits per month')
 
   plt.show()
 
