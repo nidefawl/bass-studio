@@ -400,7 +400,7 @@ int main(int argc, char** argv) {
                         delete track1->getStage()->arp;
                         track1->getStage()->arp = nullptr;
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_HOSTINFO, -1);
                         dbgassert(pluginInstance);
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
                         pluginInstance->onEnable();
@@ -451,7 +451,7 @@ int main(int argc, char** argv) {
                         track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_HOSTINFO, -1);
                         dbgassert(pluginInstance);
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
                         pluginInstance->onEnable();
@@ -491,17 +491,17 @@ int main(int argc, char** argv) {
                         // deep copy (of clip_t instances)
                         track1->getClips() = trDataMidi;
                         dawInstance->addTrackImpl(-1, track1, 0);
-                        track1->getStage()->arp->setParamValue(PARAM_ENABLE, 1.0f, FLG_PAR_UPDATE_INIT);
+                        track1->getStage()->arp->setParamValue(PARAM_ENABLE, 0.0f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_PATTERN, 0.0f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_SYNTH, -1);
-                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+29, 0.8f, FLG_PAR_UPDATE_INIT);
-                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+31, 0.8f, FLG_PAR_UPDATE_INIT);
-                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+40, 1.0f, FLG_PAR_UPDATE_INIT);
-                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+41, 1.0f, FLG_PAR_UPDATE_INIT);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_SYNTH, 0, -1);
+                        pluginInstance->setParamValue(29, 0.8f, FLG_PAR_UPDATE_INIT);
+                        pluginInstance->setParamValue(31, 0.8f, FLG_PAR_UPDATE_INIT);
+                        pluginInstance->setParamValue(40, 1.0f, FLG_PAR_UPDATE_INIT);
+                        pluginInstance->setParamValue(41, 1.0f, FLG_PAR_UPDATE_INIT);
                         dbgassert(pluginInstance);
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
                         pluginInstance->onEnable();
@@ -551,20 +551,25 @@ int main(int argc, char** argv) {
             TestContext{"32 Tracks (2x2x4 Groups, Arp Active)", false, dawInstance.get(), testGroups2 },
             TestContext{"32 Tracks (2x2x4 Groups, Arp, Graph Cache)", false, dawInstance.get(), testGroupsCached },
         };
+        try {
+            for (TestContext& benchmarkCtxt : synthBenchmarks) {
+                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            }
 
-        for (TestContext& benchmarkCtxt : synthBenchmarks) {
-            benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            for (TestContext& benchmarkCtxt : processingBenchmarks) {
+                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            }
+
+            benchmark::Initialize(&argc, argv);
+            if (::benchmark::ReportUnrecognizedArguments(argc, argv))
+                return 1;
+            benchmark::RunSpecifiedBenchmarks();
+            benchmark::Shutdown();
+        } catch (std::exception& e) {
+            log_printf("exception %s\n", e.what());
+        } catch (...) {
+            log_printf("unhandled exception\n");
         }
-
-        // for (TestContext& benchmarkCtxt : processingBenchmarks) {
-        //     benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
-        // }
-
-        benchmark::Initialize(&argc, argv);
-        if (::benchmark::ReportUnrecognizedArguments(argc, argv))
-            return 1;
-        benchmark::RunSpecifiedBenchmarks();
-        benchmark::Shutdown();
         // getGlobalLogger()->setLevel(Log::LEVEL_ALL);
         trDataMidi.deleteClips(nullptr);
         host->setOutput(nullptr);

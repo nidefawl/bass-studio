@@ -528,12 +528,12 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
         case PLUGIN_TYPE_STEREO_WIDTH:
             eff = new PluginStereoWidth::module_stereowidth(0, hostcallback);
             break;
-        case PLUG_INT_SYNTH:
+        case PLUGIN_TYPE_SYNTH:
         {
             delete hostcallback;
             return PluginSynth::createPlugin(audioMaster);
         }
-        case PLUG_INT_HOSTINFO:
+        case PLUGIN_TYPE_HOSTINFO:
         {
             delete hostcallback;
             return PluginHostInfo::createPlugin(audioMaster);

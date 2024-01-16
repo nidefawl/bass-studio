@@ -14,8 +14,8 @@ typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 namespace DAW::Host {
 void PluginManager::registerModules() {
     builtinModules.clear();
-    builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
-    builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
+    builtinModules.push_back({ PLUGIN_TYPE_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
+    builtinModules.push_back({ PLUGIN_TYPE_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
 }
 LoadResultPlugin PluginManager::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
     auto it = std::find_if(builtinModules.begin(), builtinModules.end(), [moduleId](auto& reg) {

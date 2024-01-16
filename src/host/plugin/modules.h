@@ -23,8 +23,7 @@ enum PluginType : int32_t {
     PLUGIN_TYPE_EQ,
     PLUGIN_TYPE_VISUALIZER,
     NUM_INTERNAL_PLUGINS,
-    PLUG_INT_HOSTINFO = 1004,
-    PLUG_INT_SYNTH = 1005
+    PLUGIN_TYPE_HOSTINFO = 1004,
 };
 
 class effectbase;
