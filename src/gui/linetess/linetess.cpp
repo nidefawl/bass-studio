@@ -559,7 +559,6 @@ namespace lineplot {
         std::vector<std::vector<float>> vecVecCtrlPtsRaw;
 
 
-        bool bIsIdle = true;
         bool bEarlyInit = false;
         bool bInit = false;
         uint32_t curPath         = 0;
@@ -830,12 +829,11 @@ void main(void) {
         }
         void initSampleFormat(const sampleformat_t& sampleFormat) {
             if (moduleVisualizer) {
-                auto sf = moduleVisualizer->getSampleFormat();
                 audioAnalyzer = std::make_unique<audioanaylzer>();
                 audioAnalyzer->init(sampleFormat.blockSize, sampleFormat.sampleRate);
                 spectrum = *audioAnalyzer->analyzerLf;
-                this->curSampleFormat = sf;
             }
+            this->curSampleFormat = sampleFormat;
         }
         void initRenderer() {
             pipeFbBlur        = std::make_shared<blur_tex_shader>();
@@ -1034,6 +1032,8 @@ void main(void) {
             restoreRetainedParameters(curPresetCopy);
             onModeChanged();
             setColorSelector();
+            if (!audioAnalyzer) 
+                return;
             audioAnalyzer->analyzerHf->setNumBands(curPreset.nBands);
             audioAnalyzer->analyzerLf->setNumBands(curPreset.nBands);
             audioAnalyzer->analyzerHf->setFreqRange(curPreset.freqMin, curPreset.freqMax);
@@ -2008,13 +2008,10 @@ void main(void) {
                 earlyInit();
                 bEarlyInit = true;
             }
-            if (bIsIdle && moduleVisualizer) {
-                bIsIdle = false;
+            sampleformat_t sampleFormat{44100, 512, sampleformat_bits_t::FLOAT_32};
+            if (moduleVisualizer) {
+                sampleFormat = moduleVisualizer->getSampleFormat();
             }
-            if (!moduleVisualizer) {
-                return;
-            }
-            const sampleformat_t sampleFormat = moduleVisualizer->getSampleFormat();
             if (!bInit) {
                 initSampleFormat(sampleFormat);
                 initRenderer();
