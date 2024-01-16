@@ -539,7 +539,7 @@ int main(int argc, char** argv) {
             TestContext{"1 Synth All Disabled", false, dawInstance.get(), testSynthAllDisabled },
         };
 
-        std::array<TestContext, 11> processingBenchmarks = {
+        std::array<TestContext, 10> processingBenchmarks = {
             TestContext{"0 Tracks (Empty)", false, dawInstance.get(), testCase0Tracks },
             TestContext{"2 Tracks (Empty)", false, dawInstance.get(), testCase2Tracks },
             TestContext{"32 Tracks (Empty)", false, dawInstance.get(), test32TracksEmpty },
