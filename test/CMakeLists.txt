@@ -119,6 +119,11 @@ DEFINE_TEST(
 set_source_files_properties("../src/platform/${PROJECT_PLATFORM}/platform_${PROJECT_PLATFORM}.cpp" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 DEFINE_TEST(test_fileio TRUE test_fileio.cpp common/test_common.cpp)
+DEFINE_TEST(test_image_loading TRUE test_image_loading.cpp common/test_common.cpp)
+DEFINE_TEST(test_pybind TRUE test_pybind.cpp common/test_common.cpp)
+set_source_files_properties(test_pybind.cpp PROPERTIES 
+  SKIP_PRECOMPILE_HEADERS OFF
+)
 DEFINE_TEST(test_midifile TRUE test_midifile.cpp common/test_common.cpp)
 DEFINE_TEST(test_audioblock TRUE test_audioblock.cpp common/test_common.cpp)
 DEFINE_TEST(test_resampler TRUE test_resampler.cpp common/test_common.cpp)
@@ -143,3 +148,5 @@ endif()
 if (PROJECT_CFG_FSANITIZE STREQUAL "address" OR PROJECT_CFG_FSANITIZE STREQUAL "memory")
   DEFINE_TEST(test_memory_leak TRUE test_memory_leak.cpp)
 endif()
+
+DEFINE_TEST(test_gui TRUE test_gui.cpp common/test_appctrl.cpp gui/testctr.cpp gui/testctr2.cpp gui/edit_ieee_float.cpp)
