@@ -1248,6 +1248,8 @@ class SynthImpl final : public PluginLockable, public SynthState {
         int32_t minPolyVoiceIndex = 0;
         int32_t maxPolyVoiceIndex = 0;
 
+        int32_t statsMaxVoiceCount = 0; // max voices seen during runtime
+
     private:
         module_synth* const moduleInstance;
         PluginVST2_Synth* const instanceVst2;
@@ -1732,6 +1734,10 @@ class SynthImpl final : public PluginLockable, public SynthState {
 
         int32_t getActiveVoiceCount() {
             return activeVoiceCount;
+        }
+
+        int32_t getStatsMaxVoiceCount() {
+            return statsMaxVoiceCount;
         }
 
         void setTempo(double d) {
@@ -2660,12 +2666,13 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 outputs[1][s] = fp_math::silenceNanInff(static_cast<float>(outR));
 
                 dbgassert((list.numPolyVoices > 0) == (list.numUnisonVoices > 0));
-                numActiveVoices = math::max(math::max(0, list.numPolyVoices), numActiveVoices);
+                numActiveVoices = math::max(math::max(0, list.numUnisonVoices), numActiveVoices);
                 if (s == nFrames - 1) {
                     prevVoiceList = list;
                 }
             }
             this->activeVoiceCount = numActiveVoices;
+            this->statsMaxVoiceCount = math::max(this->statsMaxVoiceCount, numActiveVoices);
         }
         void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount);
 
@@ -3026,6 +3033,9 @@ class SynthImpl final : public PluginLockable, public SynthState {
         }
         SynthImpl* getSynth() {
             return impl;
+        }
+        void onPreUnload() override {
+            log_lf(Log::L_WARN, "getStatsMaxVoiceCount: %d\n", impl->getStatsMaxVoiceCount());
         }
     };
 
