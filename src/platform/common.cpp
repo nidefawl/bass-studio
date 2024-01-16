@@ -325,11 +325,11 @@ int64_t ReadImage(const String& Filename, ImageBuf& ref) {
     if (!FileExists(path)) {
         throw FileIOException(StringFormat("File not found: %s", StringAsCStr(path)));
     }
-    unsigned char* data = stbi_load(StringAsCStr(path), &ref.w, &ref.h, &ref.bitdepth, 0);
+    unsigned char* data = stbi_load(StringAsCStr(path), &ref.w, &ref.h, &ref.bitdepth, 4);
     if (!data) {
         throw FileIOException(StringFormat("%s: %s", StringAsCStr(path), stbi_failure_reason()));
     }
-    int64_t bufSize = ref.w * ref.h * ref.bitdepth;
+    int64_t bufSize = ref.w * ref.h * 4;
     ref.bytes.reserve(bufSize);
     ref.bytes.assign(data, data + bufSize);
     stbi_image_free(data);
