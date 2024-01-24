@@ -616,14 +616,14 @@ int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, sam
     AudioBlock blockFull(1, SPLIT_SAMPLECOUNT*numChannels);
     samplecount_t samplesWritten = 0;
     samplecount_t samplesWritten2 = 0;
-    int64_t sampleIdx = 0;
+    samplecount_t sampleIdx = 0;
     for (audiotrack_split_t* split : samples) {
         auto* sample = split->getSample();
         dbgassert(split->samplePos + SPLIT_SAMPLECOUNT >= samplePos && split->samplePos < samplePosEnd);
 
-        const size_t readBeginOffset = math::clamp<samplecount_t>(samplePos - split->samplePos, 0, SPLIT_SAMPLECOUNT);
-        const size_t readEndOffset = math::clamp<samplecount_t>(samplePosEnd - split->samplePos, 0, SPLIT_SAMPLECOUNT);
-        const size_t readLen = math::clamp<samplecount_t>(readEndOffset - readBeginOffset, 0, SPLIT_SAMPLECOUNT);
+        const auto readBeginOffset = math::clamp<samplecount_t>(samplePos - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+        const auto readEndOffset = math::clamp<samplecount_t>(samplePosEnd - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+        const auto readLen = math::clamp<samplecount_t>(readEndOffset - readBeginOffset, 0, SPLIT_SAMPLECOUNT);
 
         dbgassert(sample->nChannels == numChannels);
         dbgassert(sample->nChannels == sample->samples.size());
@@ -632,17 +632,14 @@ int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, sam
         dbgassert(sample->nSamples == static_cast<samplecount_t>(sample->samples[1].size()));
         dbgassert(blockFull.samples == sample->nSamples*sample->nChannels);
 
-        if (sample->samples.size() >= 2) {
-            float* in1 = sample->samples[0].data() + readBeginOffset;
-            float* in2 = sample->samples[1].data() + readBeginOffset;
-            float* out0 = blockFull.buf[0];
-            for (size_t nSample = 0; nSample < readLen; nSample++) {
-                *out0++ = *in1++;
-                *out0++ = *in2++;
+        float* out0 = blockFull.buf[0];
+        for (samplecount_t nSample = 0; nSample < readLen; ++nSample) {
+            for (channelnum_t ch = 0; ch < sample->nChannels; ++ch) {
+                *out0++ = sample->samples[ch][readBeginOffset + nSample];
             }
-            samplesWritten2 += readLen;
-            samplesWritten += samplecount_t(drwav_write_pcm_frames(&wav, readLen, blockFull.buf[0]));
         }
+        samplesWritten2 += readLen;
+        samplesWritten += samplecount_t(drwav_write_pcm_frames(&wav, readLen, blockFull.buf[0]));
         sampleIdx++;
     }
 
