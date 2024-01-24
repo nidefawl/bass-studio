@@ -115,8 +115,6 @@ double StringToF(const String& s) { return atof(s.c_str()); }
 
 #ifdef _WIN32
 void processWindowMessages() {
-    DWORD timeout = 50;
-    MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLEVENTS);
     MSG msg;
     int maxProcess = 500;
     while (!fatalError && PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) && maxProcess-- > 0) {
