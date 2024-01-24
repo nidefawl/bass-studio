@@ -975,7 +975,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 }
 
 track_impl_t::track_impl_t(DAW::Host::PluginManager* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels)
-    : audio_stage_t(_host, _id, _sampleFormat, _numChannels * 2, _numChannels * 2, 0),
+    : audio_stage_t(_host, _id, _sampleFormat, _numChannels * 2, _numChannels, 0),
       arp(new DAW::midiarp(this)), track(_track),
       inputChannel(_track->type != TRACK_TYPE_MIDI ? DAW::ChannelDefaultNone() : DAW::ChannelNone()),
       outputChannel(DAW::ChannelDefaultNone()),
