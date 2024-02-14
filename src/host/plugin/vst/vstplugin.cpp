@@ -84,8 +84,8 @@ void vstplugin::onEnable() {
         postLoad();
         bool bShowWindow = this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET;
         bShowWindow |= bOpenWindowOnEnable;
-        bOpenWindowOnEnable = false;
-        if (bShowWindow) {
+        if (bShowWindow && seqthreads::CurrentThreadType() == seqthreads::ThreadType::MainThread) {
+            bOpenWindowOnEnable = false;
             showWindow(false);
         }
     }
