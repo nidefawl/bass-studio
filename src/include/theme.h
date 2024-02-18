@@ -7,6 +7,7 @@
 #include "guiconstant.h"
 #include "guifonts.h"
 #include "str_util.h"
+#include "guibackgroundimage.h"
 
 NVGcolor rgbaToNvg(uint32_t color);
 
@@ -18,6 +19,7 @@ struct guitheme_t {
     std::unordered_map<uint32_t, uint32_t> mapColors;
     std::unordered_map<uint32_t, int32_t> mapProperties;
     std::unordered_map<uint32_t, UIFont::font_instance> mapFonts;
+    std::unordered_map<uint32_t, container_background_image> mapBackgrounds;
     struct guitheme_override_state_t;
     std::shared_ptr<guitheme_override_state_t> pOverrideState;
     guitheme_t();
@@ -39,6 +41,9 @@ struct guitheme_t {
     NVGcolor getContrastColor(GuiColor::constant_t _constant) const;
     uint32_t getColorInt32(GuiColor::constant_t _constant);
     UIFont::font_instance getFont(UIFont::font_type_t _fonttype) const;
+    const container_background_image* getBackgroundImage(GuiBackgroundImage::constant_t _constant) const;
+    void setBackgroundImage(GuiBackgroundImage::constant_t _constant, const container_background_image& s);
+    void clearBackgroundImage(GuiBackgroundImage::constant_t _constant);
     void bindFonts();
     UIFont::font_instance setFont(UIFont::font_type_t _fonttype, String s);
     void setColor(GuiColor::constant_t _constant, uint32_t _value);

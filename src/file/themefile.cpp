@@ -1,4 +1,5 @@
 #include "themefile.h"
+#include "fileio.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "config.h"
@@ -32,6 +33,7 @@ struct theme_data {
     std::unordered_map<String, uint32_t> mapColors;
     std::unordered_map<String, int32_t> mapProperties;
     std::unordered_map<String, String> mapFonts;
+    std::unordered_map<String, container_background_image> mapBackgrounds;
 };
 
 void storeThemeData(guitheme_t const& m, theme_data& out) {
@@ -45,10 +47,15 @@ void storeThemeData(guitheme_t const& m, theme_data& out) {
         if (c.idx == 0) continue;
         out.mapProperties[c.name] = mapPropertie.second;
     }
-    for (const auto & mapFont : m.mapFonts) {
+    for (const auto& mapFont : m.mapFonts) {
         UIFont::font_type_t c = UIFont::getConstantById(mapFont.first);
         if (c.idx == 0) continue;
         out.mapFonts[c.name] = mapFont.second.name;
+    }
+    for (const auto& mapBackground : m.mapBackgrounds) {
+        GuiBackgroundImage::constant_t c = GuiBackgroundImage::getConstantById(mapBackground.first);
+        if (c.idx == 0) continue;
+        out.mapBackgrounds[c.name] = mapBackground.second;
     }
 }
 void loadThemeData(theme_data& data, guitheme_t& out) {
@@ -61,7 +68,6 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
     }
     for (const auto& mapPropertie : data.mapProperties) {
         GuiConstant::constant_t c = GuiConstant::getConstantByName(mapPropertie.first);
-        //dbgassert(c.idx == 0);
         // some constants may not be defined, and thats ok
         if (c.idx > 0) {
             out.mapProperties[c.idx] = math::clamp<int32_t>(mapPropertie.second, c.rangeMin, c.rangeMax);
@@ -74,6 +80,13 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
             out.mapFonts[c.idx] = UIFont::font_instance{mapFont.second};
         }
     }
+    for (const auto& mapBackground : data.mapBackgrounds) {
+        GuiBackgroundImage::constant_t c = GuiBackgroundImage::getConstantByName(mapBackground.first);
+        // some constants may not be defined, and thats ok
+        if (c.idx > 0) {
+            out.mapBackgrounds[c.idx] = mapBackground.second;
+        }
+    }
 }
 
 template <class Archive>
@@ -81,40 +94,55 @@ void serialize(Archive& archive, NVGcolor& m) {
     archive(make_nvp("r", m.r), make_nvp("g", m.g), make_nvp("b", m.b), make_nvp("a", m.a));
 }
 
+namespace glm
+{
+template<class Archive>
+void serialize(Archive& archive, glm::vec2& m) {
+    archive(make_nvp("x", m.x), make_nvp("y", m.y));
+}
+} // namespace glm
+
+template <class Archive>
+void serialize(Archive& archive, container_background_image& m) {
+    archive(make_nvp("path", m.path),
+            make_nvp("layout", m.layout),
+            make_nvp("verticalPos", m.verticalPos),
+            make_nvp("horizontalPos", m.horizontalPos),
+            make_nvp("scale", m.scale),
+            make_nvp("scaleAbsolute", m.scaleAbsolute));
+}
+
 template <class Archive>
 void serialize(Archive& archive, theme_data& m) {
     archive(make_nvp("colors", m.mapColors));
     archive(make_nvp("properties", m.mapProperties));
     archive(make_nvp("fonts", m.mapFonts));
+    archive(make_nvp("images", m.mapBackgrounds));
 }
 template <class Archive>
-void save(Archive& archive, guitheme_t const& m) {
-    archive(make_nvp("name", m.name));
+void save(Archive& archive, themefile const& m) {
+    archive(make_nvp("name", m.theme.name));
 
     // convert theme data to a data structure that is easier to serialize
     theme_data data;
-    storeThemeData(m, data);
+    storeThemeData(m.theme, data);
     archive(make_nvp("data", data));
 }
 
 template <class Archive>
-void load(Archive& archive, guitheme_t& m) {
-    m = guitheme_t();
-    archive(make_nvp("name", m.name));
-
+void load(Archive& archive, themefile& m) {
+    m.theme = guitheme_t();
+    archive(make_nvp("name", m.theme.name));
     theme_data data;
     archive(make_nvp("data", data));
-    loadThemeData(data, m);
+    loadThemeData(data, m.theme);
 }
-template <class Archive>
-void serialize(Archive& archive, themefile& m) {
-    archive(make_nvp("default", m.defaultTheme), make_nvp("current", m.theme), make_nvp("themes", m.themes));
-}
-themefile loadThemeFile() {
-    Stringstream ss;
 
-    String cwdPathTheme = App::Platform::toUserdataPath(THEMEFILE_NAME);
-    std::ifstream file(cwdPathTheme, std::ifstream::in);
+themefile loadTheme(const String& path) {
+    Stringstream ss;
+    String pathFile = path + "/" + THEMEFILE_NAME;
+    App::Platform::sanitizePathToFile(pathFile);
+    std::ifstream file(pathFile, std::ifstream::in);
     if (file) {
         ss << file.rdbuf();
         std::streampos length = file.tellg();
@@ -125,13 +153,15 @@ themefile loadThemeFile() {
             return tmpSettings;
         }
     }
-    throw FileIOException("Failed reading theme file " + cwdPathTheme);
+    throw FileIOException("Failed reading theme file " + pathFile);
 }
-void saveThemeFile(themefile& _settings) {
-    String cwdPathTheme = App::Platform::toUserdataPath(THEMEFILE_NAME);
+void saveTheme(const String& path, themefile& _settings) {
+    CreateDirectoryIfNotExists(path);
+    String pathFile = path + "/" + THEMEFILE_NAME;
+    App::Platform::sanitizePathToFile(pathFile);
     std::ofstream file;
     file.exceptions(~std::ofstream::goodbit);
-    file.open(cwdPathTheme, std::ofstream::out);
+    file.open(pathFile, std::ofstream::out);
     cereal::JSONOutputArchive ar(file);
     ar(_settings);
 }

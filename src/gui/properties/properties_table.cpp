@@ -5,7 +5,13 @@
 #include <memory>
 #include <numeric>
 
+#include "appsettings.h"
+#include "basectrl.h"
+#include "fileio.h"
 #include "gui/container/container_builder.h"
+#include "gui/dialog/dialogs.h"
+#include "guibackgroundimage.h"
+#include "host/daw/mainctrl.h"
 #include "math/seq_math.h"
 #include "saferef.h"
 #include "str_util.h"
@@ -24,17 +30,16 @@
 #include "gui/plugin/plugin.h"
 #include "gui/controls/textfield.h"
 #include "gui/controls/button.h"
-#include "gui/controls/colorpick.h"
 #include "gui/table/table.h"
 #include "theme.h"
 #include "thememgr.h"
-
 #include "gui/container/container.h"
 #include "gui/container/scrollcontainer.h"
 #include "gui/controls/colorpick.h"
 #include "gui/dropdown/dropdown.h"
 #include "properties_table.h"
 #include "gui/controls/inputfield.h"
+#include "gui/controls/background_image_settings.h"
 #include "host/automation/automation.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
@@ -59,6 +64,7 @@ namespace Table {
         virtual void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {};
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) = 0;
+        virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiBackgroundImage::constant_t constant) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) = 0;
         virtual ~click_type_handler() = default;
     };
@@ -376,6 +382,9 @@ public:
                 void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) override {
                     hover();
                 }
+                void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiBackgroundImage::constant_t constant) override {
+                    hover();
+                }
                 void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
                     hover();
                 }
@@ -415,6 +424,9 @@ public:
 
                     }
                     void click() {
+                    }
+                    void warnDefaultTheme() {
+                        dynamic_cast<AppCtrl*>(table->parentCtrl)->openDialog(new guidialog_message_box("Default theme", "You cannot change the default theme.\nPlease create a new theme and modify that instead."));
                     }
                     void onClickNotImplemented(const click_ctxt_t& ctxt) override {
                         table->setActiveControl(nullptr);
@@ -495,6 +507,10 @@ public:
                         click();
                         if (theme == nullptr)
                             return;
+                        if (theme->isDefault) {
+                            warnDefaultTheme();
+                            return;
+                        }
                         auto& numberInput = table->m_numberInputI32;
                         table->m_numberInputTmp            = theme->get(constant);
                         numberInput.setRef(&table->m_numberInputTmp);
@@ -514,10 +530,49 @@ public:
                         evt.guiDragged = &numberInput;
                         numberInput.handleDraggedBegin(evt);
                     }
+                    void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiBackgroundImage::constant_t constant) override {
+                        click();
+                        if (theme == nullptr)
+                            return;
+                        if (theme->isDefault) {
+                            warnDefaultTheme();
+                            return;
+                        }
+                        BaseCtrl* const ctrl = table->parentCtrl;
+                        container_background_image bgImage;
+                        auto current = theme->getBackgroundImage(constant);
+                        if (current) {
+                            bgImage = *current;
+                        }
+                        guictr_set_background* loadImg = new guictr_set_background();
+                        loadImg->size = {480, 480};
+                        loadImg->pos = {0, 0};
+                        loadImg->setEditBackground(bgImage);
+                        loadImg->fnEditBackground = [ctrl, constant](const container_background_image& bg) {
+                            auto theme = ctrl->getTheme();
+                            if (bg.path.empty()) {
+                                theme->clearBackgroundImage(constant);
+                            } else {
+                                theme->setBackgroundImage(constant, bg);
+                            }
+                        };
+                        guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+                        ctxtMenu->size = loadImg->size;
+                        ctxtMenu->add(loadImg);
+                        ctxtMenu->canTakeInputFocus = true;
+                        ctxtMenu->maxHeight = loadImg->size.y;
+                        ctxtMenu->setBackgroundRendered(false);
+                        ctrl->openContextMenu(ctxtMenu, evt.mousepos);
+                        table->setActiveControl(nullptr);
+                    }
                     void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
                         click();
                         if (theme == nullptr)
                             return;
+                        if (theme->isDefault) {
+                            warnDefaultTheme();
+                            return;
+                        }
                         guidropdown_selectfont& selectFont = table->m_selectFont;
                         selectFont.pos = clickedcell.pos;
                         selectFont.size = clickedcell.size;
@@ -540,6 +595,10 @@ public:
                         click();
                         if (theme == nullptr)
                             return;
+                        if (theme->isDefault) {
+                            warnDefaultTheme();
+                            return;
+                        }
                         gui_color_pick* color = new gui_color_pick();
                         color->size = {480, 240};
                         color->pos = {0, 0};
@@ -818,6 +877,10 @@ struct tbltype_theme_constant {
     guitheme_t* theme;
     GuiConstant::constant_t constant;
 };
+struct tbltype_theme_bgimage_constant {
+    guitheme_t* theme;
+    GuiBackgroundImage::constant_t constant;
+};
 struct tbltype_theme_font {
     guitheme_t* theme;
     UIFont::font_type_t fonttype;
@@ -883,6 +946,17 @@ void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
     ctxt.callback->onClick(ctxt, obj.theme, obj.constant);
 }
 
+void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_bgimage_constant& obj) {
+    auto t = obj.theme->getBackgroundImage(obj.constant);
+    String name = t == nullptr ? "<null>" : t->path;
+    tblString str = {name, 1};
+    drawTbl(ctxt, str);
+}
+template <>
+void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_bgimage_constant& obj) {
+    ctxt.callback->onClick(ctxt, obj.theme, obj.constant);
+}
+
 void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_font& obj) {
     auto t = obj.theme->getFont(obj.fonttype);
     drawTbl(ctxt, t.name);
@@ -942,6 +1016,11 @@ void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
         for (auto _constant2 : vec2) {
             add(_constant2, tbltype_theme_constant{ currentObjPtr, _constant2 });
         }
+        std::vector<GuiBackgroundImage::constant_t> vec4 = GuiBackgroundImage::getAllConstants();
+        std::sort(vec4.begin(), vec4.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
+        for (auto _constant2 : vec4) {
+            add(_constant2, tbltype_theme_bgimage_constant{ currentObjPtr, _constant2 });
+        }
         std::vector<UIFont::font_type_t> vec3 = UIFont::getAllConstants();
         std::sort(vec3.begin(), vec3.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
         for (auto _constant3 : vec3) {
@@ -999,6 +1078,8 @@ public:
         if (_id >= 0 && _id < CtrSize(strThemeNames)) {
             closeContextMenu();
             themeMgr->setThemeName(strThemeNames[_id]);
+            auto& settings = daw_tls::getSettings();
+            settings.selectedTheme = themeMgr->getRef().name;
             return true;
         }
         return false;
@@ -1042,7 +1123,10 @@ public:
         margin = 2;
         buttonAdd.setText("+");
         buttonRemove.setText("-");
+        buttonRemove.setTooltipText("Remove current theme");
+        buttonAdd.setTooltipText("Clone theme");
         buttonSave.setText("save");
+        buttonSave.setTooltipText("Save changes to disk");
         add(&scrollContainer);
         add(&selectTheme);
         add(&buttonSave);
@@ -1050,10 +1134,28 @@ public:
         add(&buttonAdd);
         scrollContainer.add(&themeProperties);
         scrollContainer.maxHeight = -1;
+        buttonSave.setEnabled(false);
+        buttonRemove.setEnabled(true);
     }
 
     ~guictr_theme_settings() override {
         removeGuis();
+    }
+
+    void onTick(AppCtrl* ctrl) override {
+        for (guibase* gui : guis) {
+            if (gui->isVisible()) {
+                gui->onTick(ctrl);
+            }
+        }
+        guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
+        if (thememgr->getRef().isDefault) {
+            buttonRemove.setEnabled(false);
+            buttonSave.setEnabled(false);
+        } else {
+            buttonRemove.setEnabled(true);
+            buttonSave.setEnabled(true);
+        }
     }
 
     void render(NVGcontext* vg) override {
@@ -1072,19 +1174,39 @@ public:
     }
 
     void buttonClicked(guibase* button) override {
+        auto& settings = daw_tls::getSettings();
         if (button == &buttonAdd) {
+            auto cb = [&settings, p = this->parentCtrl](const String& str) {
+                guitheme_mgr* thememgr = p->getThemeMgr();
+                thememgr->cloneCurrentTheme(str);
+                thememgr->setThemeName(str);
+                settings.selectedTheme = thememgr->getRef().name;
+                return true;
+            };
             guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
-            thememgr->saveCurrentAsNewTheme("User");
-            this->parentCtrl->relayout();
+            auto baseName          = thememgr->getRef().isDefault ? "User" : thememgr->getRef().name;
+            int32_t idx            = 0;
+            String themeName;
+            do {
+                themeName = baseName;
+                if (idx > 0) {
+                    themeName = baseName + StringFormat(" %d", idx);
+                }
+                idx++;
+            } while (FileExists(App::Platform::toUserdataPath("themes/" + themeName)));
+            auto popupPos = toScreenSpace(selectTheme.getLeftBottom() + ivec2(10, 10));
+            DAW::OpenFloatingTextInput(dynamic_cast<AppCtrl*>(this->getControl()), popupPos, size, themeName, cb);
         }
         if (button == &buttonRemove) {
             guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
-            thememgr->removeTheme(thememgr->getRef());
+            thememgr->removeCurrentTheme();
+            settings.selectedTheme = thememgr->getRef().name;
             this->parentCtrl->relayout();
         }
         if (button == &buttonSave) {
             guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
-            thememgr->saveThemes();
+            thememgr->saveCurrentTheme();
+            settings.selectedTheme = thememgr->getRef().name;
         }
     }
 

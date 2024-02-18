@@ -1,5 +1,6 @@
 #include "logging.h"
 #include "types.h"
+#include <exception>
 #include <memory>
 #include <vector>
 #include <nanovg.h>
@@ -17,6 +18,7 @@
 
 
 using ImgData = std::shared_ptr<uint8_t>;
+const SupportedFileTypes FILE_TYPES_IMAGES = SupportedFileTypes{PROJECT_FILE_TYPE_DESC "s", { SupportedFileType{ "jpg", "jpg" }, SupportedFileType{ "png", "png" } } };
 
 namespace {
     void setColor(uint8_t* b, uint32_t i) {
@@ -51,6 +53,7 @@ namespace RenderResources {
     NvgImageTexture imgIcons[NUM_IMGS];
     std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;
     std::vector<FontDesc> fontsInstalled;
+    std::unordered_map<String, NvgImageTexture> perContextTextures;
     namespace {
         void load(NVGcontext* vg, const char* path, ImageBuf& out) {
             try {
@@ -170,4 +173,29 @@ namespace RenderResources {
         }
     }
 
+    /** loads texture and store in perContextTextures */
+    const NvgImageTexture* loadTexture(NVGcontext* vg, const String& path) {
+        auto texEntry = perContextTextures.find(path);
+        if (texEntry == perContextTextures.end()) {
+            perContextTextures[path] = NvgImageTexture();
+        }
+        texEntry = perContextTextures.find(path);
+        NvgImageTexture& tex = texEntry->second;
+        if (tex.perContextId.find(vg) == tex.perContextId.end()) {
+            try {
+                ImageBuf imgBuf;
+                if (ReadImage(path, imgBuf) < 0) {
+                    log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
+                }
+                load(vg, StringAsCStr(path), imgBuf);
+                int32_t nvgid = nvgCreateImageRGBA(vg, imgBuf.w, imgBuf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)imgBuf.bytes.data());
+                nvgImageSize(vg, nvgid, &tex.width, &tex.height);
+                tex.perContextId[vg] = nvgid;
+            } catch (std::exception& e) {
+                log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", StringAsCStr(path), e.what());
+                return nullptr;
+            }
+        }
+        return &tex;
+    }
 } // namespace RenderResources

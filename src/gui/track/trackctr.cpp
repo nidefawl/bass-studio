@@ -1,6 +1,7 @@
 #include <nanovg.h>
 #include "assert_dbg.h"
 #include "event.h"
+#include "fileio.h"
 #include "guicolors.h"
 #include "str_util.h"
 #include "tls.h"
@@ -556,6 +557,21 @@ void guictr_tracks::render(NVGcontext* vg) {
         }
     }
 }
+
+guitrack_editor::guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+    : guictr_base(),
+      iGuiMgr(_iGuiMgr),
+      cursor(_cursor),
+      project(_project),
+      projectGlobals(_projectGlobals),
+      grid(_grid),
+      dragdrop(_dragdropclip) {
+    setGuiType(gui_type::CTR_TYPE_TRACKS_EDITOR);
+    this->dawCtrl = _dawCtrl;
+    padding       = 0;
+    sortChildren  = true;
+}
+
 void guitrack_editor::addSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al, bool insertFront) {
 
     if (insertFront) {
@@ -1028,3 +1044,4 @@ void guictr_tracks::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mous
     entry->content->pluginMultiDragRelease(g, mousepos);
     dawCtrl->getDragDropTarget().reset();
 }
+

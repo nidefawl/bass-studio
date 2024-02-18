@@ -483,9 +483,8 @@ void DawInstance::loadFile(String path, int flags) {
         if (!tls.mainCtrl || (flags & DAW::PluginLoadFlags::FLAG_INVOKE_USER_CB_DEFERLOAD) == 0) {
             cb(flags & DAW::PluginLoadFlags::FLAG_DEFER_LOAD);
         } else {
-            guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
+            auto dlg = new guidialog_cb_yes_no("Load plugins", "Load all plugin instances?");
             dlg->cb = cb;
-            dlg->message = "Load plugins?";
             tls.mainCtrl->openDialog(dlg);
         }
     }

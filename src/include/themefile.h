@@ -5,10 +5,8 @@
 
 struct themefile {
 public:
-    guitheme_t defaultTheme;
     guitheme_t theme;
-    std::vector<guitheme_t> themes;
     themefile() = default;
 };
-void saveThemeFile(themefile& _settings);
-bool loadThemeFile(themefile& _settings);
+themefile loadTheme(const String& path);
+void saveTheme(const String& path, themefile& _settings);

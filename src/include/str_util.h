@@ -55,6 +55,7 @@ const char* noteName(int note);//DONT KEEP REFERENCE
 String noteNameAndNumber(int note);//DONT KEEP REFERENCE
 namespace StrUtil {
 int32_t StringReplace(String& s, const String& f, const String& r);
+int32_t StringToLower(String& s);
 }
 
 template<typename T>

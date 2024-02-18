@@ -1,4 +1,5 @@
 #include "test_appctrl.h"
+#include "appsettings.h"
 #include "glheaders.h"
 
 #include <nanovg.h>
@@ -253,7 +254,8 @@ void TestAppCtrl::initApp(const std::vector<String>& args) {
             i++;
         }
     }
-    daw_tls::initNewTls();
+    auto& tls = daw_tls::initNewTls();
+    loadSettings(*tls.settings);
 }
 
 bool TestAppCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {

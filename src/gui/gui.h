@@ -78,7 +78,6 @@ void drawImage(NVGcontext* vg, int image, float alpha,
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs);
 void drawSquareInset(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 
-guitheme_t* getDefaultTheme();
 ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {
@@ -106,6 +105,7 @@ enum guiflag : int32_t {
     FLG_IS_AUTOMATABLE           = 0x00100000,
     FLG_IS_AUTOMATED             = 0x00200000,
     FLG_IS_AUTOMATION_INACTIVE   = 0x00400000,
+    FLG_SUPPRESS_TOOLTIP         = 0x00800000,
 };
 enum guiflag_titlebar : int32_t {
     TITLEBAR_FLG_NONE = 0,
@@ -364,7 +364,7 @@ public:
         return false;
     }
     virtual bool canOpenTooltip() const {
-        return isVisibleInParent();
+        return !(flags & FLG_SUPPRESS_TOOLTIP) && isVisibleInParent();
     }
     void setTooltipText(String _tooltipText) {
         tooltipText = std::move(_tooltipText);

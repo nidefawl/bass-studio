@@ -1,6 +1,7 @@
 #include "appsettings.h"
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
+#include <cereal/details/helpers.hpp>
 #include <cereal/types/map.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
@@ -168,7 +169,8 @@ void save(Archive& ar, appsettings const& settings, const std::uint32_t version)
         make_nvp("iosettings", settings.iosettings),
         make_nvp("pathmapping", settings.pathmapping),
         make_nvp("recentfiles", settings.recentfiles),
-        make_nvp("windowSettings", settings.windowSettings)
+        make_nvp("windowSettings", settings.windowSettings),
+        make_nvp("theme", settings.selectedTheme)
     );
 }
 
@@ -214,9 +216,14 @@ void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
             make_nvp("recentfiles", settings.recentfiles),
             make_nvp("windowSettings", settings.windowSettings)
         );
+        if (version > 3) {
+            ar(
+                make_nvp("theme", settings.selectedTheme)
+            );
+        }
     }
 }
-CEREAL_CLASS_VERSION(appsettings, 3);
+CEREAL_CLASS_VERSION(appsettings, 4);
 
 
 void loadSettings(appsettings& settings) {

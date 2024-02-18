@@ -55,7 +55,7 @@ using DAW::channel_ref_t;
 using DAW::midichannel_ref_t;
 
 namespace DAW {
-    void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback) {
+    void OpenFloatingTextInput(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback) {
         const int titleHeight = ctrl->getTheme()->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
         auto const field = new gui_textfield();

@@ -79,6 +79,16 @@ int32_t StringReplace(String& s, const String& f, const String& r) {
     }
     return nOccurences;
 }
+int32_t StringToLower(String& s) {
+    int32_t nOccurences = 0;
+    for (auto& c : s) {
+        if (c >= 'A' && c <= 'Z') {
+            c += 32;
+            nOccurences++;
+        }
+    }
+    return nOccurences;
+}
 }
 
 static const char* const noteNames[12]{

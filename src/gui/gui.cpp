@@ -568,11 +568,6 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
     }
 }
 
-guitheme_t* getDefaultTheme() {
-    static guitheme_t theme;
-    return &theme;
-}
-
 bool guibase::isChildOf(guibase* g) {
     if (this == g) return true;
     return parent && parent->isChildOf(g);

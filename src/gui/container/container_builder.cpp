@@ -85,6 +85,12 @@ bool getContainerLabel(gui_type type, String& out) {
         case CTR_TYPE_TRACKS:
             out = "Tracks";
             return true;
+        case CTR_TYPE_TRACKS_EDITOR:
+            out = "Trackeditor";
+            return true;
+        case CTR_TYPE_CLIPEDITOR_NOTES:
+            out = "Noteeditor";
+            return true;
         case CTR_TYPE_NODES:
             out = "Nodes";
             return true;

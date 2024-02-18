@@ -378,3 +378,77 @@ void guictr_base::determineSize(ivec2& prefSize) {
         }
     }
 }
+
+void container_background_image::render(guictr_base* ctr, NVGcontext* vg) const {
+    auto sizeCtr = vec2(ctr->getSizeContent());
+    const RenderResources::NvgImageTexture* bgImage = RenderResources::loadTexture(vg, path);
+    if (bgImage) {
+        nvgSave(vg);
+        auto id = bgImage->perContextId.find(vg);
+        dbgassert(id != bgImage->perContextId.end());
+        NVGpaint paintIcon = nvgImagePattern(vg, 0, 0, bgImage->width, bgImage->height, 0, id->second, 1.0f);
+        auto imgSize = vec2(bgImage->width, bgImage->height);
+        paintIcon.innerColor = paintIcon.outerColor = NVGcolor{ 1.0f, 1.0f, 1.0f, 1.0f };
+        vec2 targetSize = (sizeCtr * scale);
+        if (scaleAbsolute && scale.x > 0) {
+            // scale to absolute pixels (width)
+            targetSize.x = scale.x;
+            targetSize.y = imgSize.y * (targetSize.x / imgSize.x);
+        } else if (scaleAbsolute && scale.y > 0) {
+            // scale to absolute pixels (height)
+            targetSize.y = scale.y;
+            targetSize.x = imgSize.x * (targetSize.y / imgSize.y);
+        }
+        auto scale = (targetSize / imgSize);
+        auto minScale = math::min(scale.x, scale.y);
+        vec2 offset(0);
+        if (layout == position) {
+            if (horizontalPos == left) {
+                offset.x = 0;
+            } else if (horizontalPos == center) {
+                offset.x = (sizeCtr.x - imgSize.x * minScale) / 2.0f;
+            } else if (horizontalPos == right) {
+                offset.x = sizeCtr.x - imgSize.x * minScale;
+            }
+            if (verticalPos == top) {
+                offset.y = 0;
+            } else if (verticalPos == middle) {
+                offset.y = (sizeCtr.y - imgSize.y * minScale) / 2.0f;
+            } else if (verticalPos == bottom) {
+                offset.y = sizeCtr.y - imgSize.y * minScale;
+            }
+            scale = vec2(minScale);
+        } else if (layout == fill) {
+            scale = sizeCtr / imgSize;
+        } else if (layout == contain) {
+            scale = vec2(minScale);
+            offset.y = (sizeCtr.y - imgSize.y * minScale) / 2.0f;
+            offset.x = (sizeCtr.x - imgSize.x * minScale) / 2.0f;
+        } else if (layout == cover) {
+            if (imgSize.x * sizeCtr.y > imgSize.y * sizeCtr.x) {
+                scale = vec2(sizeCtr.y / imgSize.y);
+                offset.x = (sizeCtr.x - imgSize.x * scale.x) / 2.0f;
+            } else {
+                scale = vec2(sizeCtr.x / imgSize.x);
+                offset.y = (sizeCtr.y - imgSize.y * scale.y) / 2.0f;
+            }
+        }
+        nvgTranslate(vg, offset.x, offset.y);
+        nvgScale(vg, scale.x, scale.y);
+        nvgBeginPath(vg);
+        nvgRect(vg, 0, 0, bgImage->width, bgImage->height);
+        nvgFillPaint(vg, paintIcon);
+        nvgFill(vg);
+        nvgRestore(vg);
+    }
+}
+
+guictr_base::guictr_base(gui_type guiType)
+    : guibase(guiType) {
+    setBackgroundRendered(false);
+    setBackgroundRenderedInset(true);
+    setFlag(FLG_SUPPRESS_TOOLTIP, true);
+    // using layout_t   = container_background_image::layout_t;
+    // using position_t = container_background_image::position_t;
+    // this->bgImage    = container_background_image{ R"(R:\private\waifu\other\6.png)", layout_t::cover, position_t::bottom, position_t::right, vec2(1.0f) };
+}

@@ -20,13 +20,12 @@ public:
     String getThemeName() const {
         return current.name;
     }
-    void removeTheme(guitheme_t theme);
-    void saveCurrentAsNewTheme(String name);
-    void saveThemes();
     void loadThemes();
-    void setTheme(guitheme_t theme);
     void getThemes(std::vector<guitheme_t>& _out);
     void getThemeNames(std::vector<String>& _out);
-    void removeThemeName(String themeName);
-    void setThemeName(String themeName);
+    void setThemeName(const String& themeName);
+    void setTheme(guitheme_t theme);
+    void cloneCurrentTheme(const String& themeName);
+    void removeCurrentTheme();
+    void saveCurrentTheme();
 };

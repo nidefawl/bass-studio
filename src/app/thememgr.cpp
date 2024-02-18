@@ -1,4 +1,6 @@
 #include <vector>
+#include "appsettings.h"
+#include "fileio.h"
 #include "logging.h"
 #include "thememgr.h"
 
@@ -8,121 +10,28 @@
 #include "basectrl.h"
 #include "platform.h"
 
-void saveThemeFile(themefile& _settings);
-themefile loadThemeFile();
-
-bool hasThemeWithName(const std::vector<guitheme_t>& themes, const String& themeName) {
-    auto it = std::find_if(begin(themes), end(themes), [themeName](guitheme_t const& x) { return x.name == themeName; });
-    return it != end(themes);
-}
-
-void guitheme_mgr::saveCurrentAsNewTheme(String name) {
-    int32_t idx     = 0;
-    String baseName = name;
-    String themeName;
-    do {
-        themeName = baseName;
-        if (idx > 0) {
-            themeName = baseName + StringFormat(" %d", idx);
-        }
-        idx++;
-    } while (hasThemeWithName(themes, themeName));
+void guitheme_mgr::cloneCurrentTheme(const String& themeName) {
+    String pathTheme = App::Platform::toUserdataPath("themes/" + themeName);
+    if (FileExists(pathTheme)) {
+        return;
+    }
     guitheme_t copy = current;
     copy.isDefault  = false;
     copy.name       = themeName;
+    themefile themeFile;
+    themeFile.theme = copy;
+    saveTheme(pathTheme, themeFile);
     themes.push_back(copy);
-    this->setThemeName(themeName);
 }
 
-void guitheme_mgr::saveThemes() {
-
-    for (auto& t : themes) {
-        if (!t.isDefault && t.name == current.name) {
-            t = current;
-        }
-    }
-    themefile themeFile;
-    themeFile.defaultTheme = defaultTheme;
-    themeFile.theme        = current;
-    themeFile.themes       = themes;
-    auto it                = themeFile.themes.begin();
-    while (it != themeFile.themes.end()) {
-        if (!it->name.length() || it->name == "default" || it->isDefault) {
-            it = themeFile.themes.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    try {
-        saveThemeFile(themeFile);
-    } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "Failed saving theme file %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(THEMEFILE_NAME)), e.what());
-    }
-}
-
-void guitheme_mgr::loadThemes() {
-    guitheme_t theme;
-    theme.isDefault = true;
-    theme.name      = "default";
-    defaultTheme    = theme;
-    if (current.name.empty()) {
-        current.name = "default";
-    }
-    themefile themeFile;
-    try {
-        themeFile = loadThemeFile();
-    } catch (std::exception& e) {
-        log_lf(Log::L_DEBUG, "Using internal theme: %s\n", e.what());
-    }
-    String selectedTheme   = themeFile.theme.name;
-    auto it                = themeFile.themes.begin();
-    while (it != themeFile.themes.end()) {
-        it->isDefault = false;
-        if (!it->name.length() || it->name == "default") {
-            it = themeFile.themes.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    themeFile.themes.insert(themeFile.themes.begin(), defaultTheme);
-    themes = themeFile.themes;
-    setThemeName(selectedTheme);
-}
-void guitheme_mgr::removeTheme(guitheme_t theme) {
-    removeThemeName(theme.name);
-}
-void guitheme_mgr::setTheme(guitheme_t setTheme) {
-    for (guitheme_t& theme2 : themes) {
-        // save current theme
-        if (!theme2.isDefault && theme2.name == current.name) {
-            theme2 = current;
-        }
-    }
-    if (setTheme.isDefault) {
-        setTheme = defaultTheme;
-    }
-    current = setTheme;
-    current.bindFonts();
-    if (parent && parent->isOk()) {
-        parent->relayout();
-    }
-}
-
-void guitheme_mgr::setThemeName(String themeName) {
-    if (themeName == "default") {
-        setTheme(defaultTheme);
+void guitheme_mgr::removeCurrentTheme() {
+    if (current.isDefault)
+        return;
+    String themeName = current.name;
+    String pathTheme = App::Platform::toUserdataPath("themes/" + themeName);
+    if (!FileExists(pathTheme)) {
         return;
     }
-    auto it = std::find_if(begin(themes), end(themes), [themeName](guitheme_t const& x) { return x.name == themeName; });
-    if (it != end(themes)) {
-        guitheme_t& themeByName = *it;
-        setTheme(themeByName);
-    } else {
-        setTheme(defaultTheme);
-    }
-}
-
-void guitheme_mgr::removeThemeName(String themeName) {
     String nextTheme = "";
     bool erased      = false;
     auto it          = themes.begin();
@@ -143,6 +52,84 @@ void guitheme_mgr::removeThemeName(String themeName) {
         } else {
             setThemeName(nextTheme);
         }
+        // delete folder on disk
+        DeleteDirectory(pathTheme);
+    }
+}
+
+void guitheme_mgr::saveCurrentTheme() {
+    if (current.isDefault)
+        return;
+    String pathTheme = App::Platform::toUserdataPath("themes/" + current.name);
+    if (!FileExists(pathTheme)) {
+        return;
+    }
+    themefile themeFile;
+    themeFile.theme = current;
+    saveTheme(pathTheme, themeFile);
+}
+
+void guitheme_mgr::loadThemes() {
+    guitheme_t theme;
+    theme.isDefault = true;
+    theme.name      = "default";
+    defaultTheme    = theme;
+    if (current.name.empty()) {
+        auto& settings = daw_tls::getSettings();
+        current.name = settings.selectedTheme;
+    }
+    this->themes.clear();
+    themes.push_back(defaultTheme);
+    std::vector<FileFound> files;
+    try {
+        findFilesWithExt(App::Platform::toUserdataPath("themes/"), "json", true, files);
+    } catch (std::exception& e) {
+        log_lf(Log::L_DEBUG, "Using internal theme: %s\n", e.what());
+    }
+    String selectedTheme = current.name;
+    for (const FileFound& file : files) {
+        try {
+            String themeParentDir;
+            SplitPath(file.path, &themeParentDir, nullptr, nullptr, nullptr);
+            themefile themeFile = loadTheme(themeParentDir);
+            if (themeFile.theme.name.length()) {
+                themes.push_back(themeFile.theme);
+            }
+        } catch (std::exception& e) {
+            log_lf(Log::L_DEBUG, "Failed loading theme %s: %s\n", StringAsCStr(file.path), e.what());
+        }
+    }
+    setThemeName(selectedTheme);
+}
+
+void guitheme_mgr::setTheme(guitheme_t setTheme) {
+    for (guitheme_t& theme2 : themes) {
+        // save current theme
+        if (!theme2.isDefault && theme2.name == current.name) {
+            theme2 = current;
+        }
+    }
+    if (setTheme.isDefault) {
+        setTheme = defaultTheme;
+    }
+    current = setTheme;
+    current.bindFonts();
+    if (parent && parent->isOk()) {
+        parent->relayout();
+    }
+}
+
+void guitheme_mgr::setThemeName(const String& themeName) {
+    if (themeName == "default") {
+        setTheme(defaultTheme);
+        return;
+    }
+    auto it = std::find_if(begin(themes), end(themes), [themeName](guitheme_t const& x) { return x.name == themeName; });
+    if (it != end(themes)) {
+        guitheme_t& themeByName = *it;
+        setTheme(themeByName);
+    } else {
+        setTheme(defaultTheme);
     }
 }
 

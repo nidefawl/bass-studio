@@ -664,6 +664,12 @@ namespace PluginEQ {
             nvgRect(vg, pos.x - extend, pos.y - extend, size.x + extend * 2, size.y + extend * 2);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
             nvgFill(vg);
+
+            auto bgImage = theme->getBackgroundImage(GuiBackgroundImage::BG_EQUALIZER_1);
+            if (bgImage) {
+                bgImage->render(this, vg);
+            }
+
             /* draw dark grid areas */
             int32_t nRendered = 0;
 

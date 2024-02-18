@@ -36,6 +36,6 @@ int main(int argc, char* argv[]) {
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
     vecArgs.insert(vecArgs.end(), { "--log", "gui.log" });
     // vecArgs.insert(vecArgs.end(), { "--center", "1" });
-    // vecArgs.insert(vecArgs.end(), { "--app", "5" });
+    vecArgs.insert(vecArgs.end(), { "--app", "0" });
     return startApplication(vecArgs, testAppInstance);
 }

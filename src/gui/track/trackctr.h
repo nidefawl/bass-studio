@@ -84,19 +84,8 @@ public:
 
     trackstate_t m_resizePreModifyState;
     bool selectionMoved = false;
-    guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
-        : guictr_base(),
-          iGuiMgr(_iGuiMgr),
-          cursor(_cursor),
-          project(_project),
-          projectGlobals(_projectGlobals),
-          grid(_grid),
-          dragdrop(_dragdropclip) {
-        setGuiType(gui_type::CTR_TYPE_TRACKS_EDITOR);
-        this->dawCtrl = _dawCtrl;
-        padding      = 0;
-        sortChildren = true;
-    }
+    std::optional<container_background_image> bgSecondImage;
+    guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip);
     ~guitrack_editor() override = default;
     scaled_grid& getGrid() { return grid; }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;

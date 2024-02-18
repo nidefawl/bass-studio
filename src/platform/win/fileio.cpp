@@ -32,6 +32,47 @@ bool CreateDirectoryIfNotExists(const String& DirPath) {
     return true;
 }
 
+bool DeleteDirectory(const String& DirPath, bool bRecursive) {
+    if (!assert_expr(!DirPath.empty())) {
+        return false;
+    }
+    if (bRecursive) {
+        SHFILEOPSTRUCTA fileOp;
+        fileOp.hwnd   = nullptr;
+        fileOp.wFunc  = FO_DELETE;
+        fileOp.pFrom  = StringAsCStr(DirPath + "\\*");
+        fileOp.pTo    = nullptr;
+        fileOp.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
+        fileOp.fAnyOperationsAborted = FALSE;
+        fileOp.lpszProgressTitle     = nullptr;
+        return SHFileOperationA(&fileOp) == 0;
+    } else {
+        // delete contents first
+        WIN32_FIND_DATAA findFileData;
+        HANDLE hFind = FindFirstFileA(StringAsCStr(DirPath + "\\*"), &findFileData);
+        if (hFind == INVALID_HANDLE_VALUE) {
+            return false;
+        }
+        do {
+            if (findFileData.cFileName[0] == '.' && (findFileData.cFileName[1] == 0 || (findFileData.cFileName[1] == '.' && findFileData.cFileName[2] == 0))) {
+                continue;
+            }
+            String filePath = DirPath + "\\" + findFileData.cFileName;
+            if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                if (!DeleteDirectory(filePath, true)) {
+                    return false;
+                }
+            } else {
+                if (0 == DeleteFileA(StringAsCStr(filePath))) {
+                    return false;
+                }
+            }
+        } while (FindNextFileA(hFind, &findFileData) != 0);
+        return RemoveDirectoryA(StringAsCStr(DirPath)) != 0;
+    }
+}
+
+
 void ThrowLastErrorIf(bool expression, const String& msg) {
     if (expression) {
         throw FileIOException(GetLastError(), msg);

@@ -6,6 +6,8 @@
 #include "rand.h"
 
 #include <functional>
+#include <utility>
+#include <utility>
 #include <nanovg.h>
 
 class guidialog_cb_yes_no final : public guidialog_base {
@@ -14,24 +16,16 @@ class guidialog_cb_yes_no final : public guidialog_base {
 
 public:
     std::function<void(int)> cb;
-    String message;
-    // int64_t tmCreatedMillis = 0;
-    // void onTick(AppCtrl* ctrl) override {
-    //     if (getTimeMillis() - tmCreatedMillis > 555) {
-    //         // seq_rand rnd;
-    //         // rnd.rng_seed(static_cast<uint64_t>(tmCreatedMillis));
-    //         // cb(rnd.rng_bits(1) != 0);
-    //         cb(1);
-    //     }
-    // }
+    String strMessage;
 public:
-    guidialog_cb_yes_no() : guidialog_base(ivec2(360, 140), true) {
+    guidialog_cb_yes_no(String title, String message) 
+    : guidialog_base(ivec2(360, 140), true), strMessage(std::move(message)) {
         btnYes.setText("Yes");
         btnNo.setText("No");
         add(&btnYes);
         add(&btnNo);
         setBackgroundRendered(true);
-        // tmCreatedMillis = getTimeMillis();
+        setLabel(std::move(title));
     }
     ~guidialog_cb_yes_no() override {
         remove(&btnNo);
@@ -42,7 +36,7 @@ public:
             const int htt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
             determine_string_width strw(parentCtrl, theme);
             prefSize = dialogSize;
-            prefSize.x = math::clamp<int32_t>(math::roundfS32(strw.getStringWidth(message, htt)*1.5f), prefSize.x, 640);
+            prefSize.x = math::clamp<int32_t>(math::roundfS32(strw.getStringWidth(strMessage, htt)*1.5f), prefSize.x, 640);
         }
     }
 
@@ -68,13 +62,65 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
+        const int htt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
+        const auto cs = vec2(getSizeContent()) * vec2(1, 0.6f);
+        renderCenteredMultilineText(vg, theme, strMessage, htt, getLabelColor(), vec2(0), cs);
         for (auto c : guis) {
             nvgSave(vg);
             c->render(vg);
             nvgRestore(vg);
         }
-        const int htt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
+    }
+};
+
+
+class guidialog_message_box final : public guidialog_base {
+    guibutton btnOk;
+    String strMessage;
+public:
+    guidialog_message_box(String title, String message)
+    : guidialog_base(ivec2(420, 160), true), strMessage(std::move(message)) {
+        setLabel(std::move(title));
+        btnOk.setText("Ok");
+        add(&btnOk);
+        setBackgroundRendered(true);
+    }
+    ~guidialog_message_box()
+    {
+        remove(&btnOk);
+    }
+
+    void layout() override {
         const auto cs = getSizeContent();
-        renderText(vg, vec2(cs.x / 2, cs.y / 4), vec2(cs.x-htt*4, cs.y / 2), message, htt, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        const int htt = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+        determine_string_width strw(parentCtrl, theme);
+        btnOk.size = {htt*4, htt};
+        btnOk.pos  = {cs.x / 2 - btnOk.size.x/2, cs.y * 3/4 - btnOk.size.y / 2};
+    }
+
+    void buttonClicked(guibase* button) override {
+        if (!parentCtrl) return;
+        auto parentParent = parentCtrl->getParentCtrl();
+        if (!parentParent) return;
+        parentParent->closeDialogs();
+    }
+
+    void render(NVGcontext* vg) override {
+        if (isBackgroundRendered()) {
+            renderBackground(vg);
+        }
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        const auto cs = vec2(getSizeContent()) * vec2(1, 0.6f);
+        float fFontScale = 1.0f;
+        ivec2 size       = this->size;
+        int fontScale    = math::roundfS32((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
+        renderCenteredMultilineText(vg, theme, strMessage, fontScale, getLabelColor(), vec2(0), cs);
+        for (auto c : guis) {
+            nvgSave(vg);
+            c->render(vg);
+            nvgRestore(vg);
+        }
     }
 };

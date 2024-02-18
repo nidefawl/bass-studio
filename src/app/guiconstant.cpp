@@ -103,3 +103,64 @@ namespace GuiConstant {
 
     constant_t CONST_NOTE_RENDER_MODE("CONST_NOTE_RENDER_MODE", 1, 0, 1);
 }// namespace GuiConstant
+
+
+namespace GuiBackgroundImage {
+
+    static std::vector<constant_t*>& _getConstants() {
+        static std::vector<constant_t*> allconstants;
+        return allconstants;
+    }
+
+    constant_t getConstantById(uint32_t id) {
+        auto& v = _getConstants();
+        for (auto* c : v) {
+            if (c->idx == id) {
+                return *c;
+            }
+        }
+        return {};
+    }
+
+    constant_t getConstantByName(const String& name) {
+        auto& v = _getConstants();
+        for (auto* c : v) {
+            if (c->name == name) {
+                return *c;
+            }
+        }
+        return {};
+    }
+
+    std::vector<constant_t> getAllConstants() {
+        std::vector<constant_t> v;
+        auto constants = _getConstants();
+        v.reserve(constants.size());
+        for (auto it = constants.begin(); it != constants.end();) {
+            v.push_back(*(*it++));
+        }
+        return v;
+    }
+
+    uint32_t getNextId() {
+        static uint32_t constantsNextId = 1;
+        return constantsNextId++;
+    }
+
+    constant_t::constant_t() noexcept : idx(0), name(nullptr) {
+    }
+
+    constant_t::constant_t(const char* _name) noexcept
+        : idx(getNextId()), name(_name) {
+        auto& allconstants = _getConstants();
+        allconstants.push_back(this);
+    }
+
+}// namespace GuiBackgroundImage
+
+namespace GuiBackgroundImage {
+    constant_t BG_TRACKEDITOR_1("BG_TRACKEDITOR_1");
+    constant_t BG_TRACKEDITOR_2("BG_TRACKEDITOR_2");
+    constant_t BG_NOTEEDITOR_1("BG_NOTEEDITOR_1");
+    constant_t BG_EQUALIZER_1("BG_EQUALIZER_1");
+} // namespace GuiBackgroundImage

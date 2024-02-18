@@ -16,7 +16,7 @@
 #define WINDOW_HAS_MENUBAR 1
 #endif
 #define SETTINGS_NAME "data/settings.json"
-#define THEMEFILE_NAME "data/theme.json"
+#define THEMEFILE_NAME "theme.json"
 #define KEYBIND_SETTINGS_FILENAME "data/keybinds.json"
 #define CREATE_DEBUG_COMPANION_WINDOW 1
 #define PARAM_COMMON_COUNT (1 << 12)

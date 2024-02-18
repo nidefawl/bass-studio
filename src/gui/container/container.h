@@ -10,6 +10,7 @@
 #include "guiconstant.h"
 #include "gui/gui.h"
 #include "assert_dbg.h"
+#include "guibackgroundimage.h"
 
 class BaseCtrl;
 struct guitheme_t;
@@ -43,14 +44,8 @@ public:
     ivec4 snapSides{ 0, 0, 0, 0 };
     std::vector<guibase*> guis;
     bool sortChildren = false;
-
 public:
-    explicit guictr_base(gui_type guiType = gui_type::CTR_TYPE_UNKNOWN)
-        : guibase(guiType)
-    {
-        setBackgroundRendered(false);
-        setBackgroundRenderedInset(true);
-    }
+    explicit guictr_base(gui_type guiType = gui_type::CTR_TYPE_UNKNOWN);
 
     ~guictr_base() override {
         // The derived class has to remove guis before this dtor is called

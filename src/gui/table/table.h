@@ -159,6 +159,7 @@ namespace Table {
     void drawTbl(const table_ctxt_t& ctxt, const ivec4& obj);
     void drawTbl(const table_ctxt_t& ctxt, const GuiConstant::constant_t& obj);
     void drawTbl(const table_ctxt_t& ctxt, const GuiColor::constant_t& obj);
+    void drawTbl(const table_ctxt_t& ctxt, const GuiBackgroundImage::constant_t& obj);
 
 
     template<typename T>

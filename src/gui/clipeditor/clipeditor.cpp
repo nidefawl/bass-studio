@@ -519,6 +519,11 @@ void gui_clipcontent_base::renderBackground(NVGcontext* vg) {
     nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
     nvgFill(vg);
 
+    auto bgImage = theme->getBackgroundImage(GuiBackgroundImage::BG_NOTEEDITOR_1);
+    if (bgImage) {
+        bgImage->render(this, vg);
+    }
+
     double x = -bgOffset;
     for (int i = 0; i < steps_bg; i += 2) {
         nvgBeginPath(vg);

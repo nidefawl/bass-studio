@@ -225,3 +225,22 @@ void guitheme_t::pingConstant(GuiConstant::constant_t _constant) {
 void guitheme_t::endPing() {
     this->pOverrideState->endPing();
 }
+
+const container_background_image* guitheme_t::getBackgroundImage(GuiBackgroundImage::constant_t _constant) const {
+    auto it = mapBackgrounds.find(_constant.idx);
+    if (it == mapBackgrounds.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+void guitheme_t::clearBackgroundImage(GuiBackgroundImage::constant_t _constant) {
+    auto it = mapBackgrounds.find(_constant.idx);
+    if (it != mapBackgrounds.end()) {
+        mapBackgrounds.erase(it);
+    }
+}
+
+void guitheme_t::setBackgroundImage(GuiBackgroundImage::constant_t _constant, const container_background_image& s) {
+    mapBackgrounds[_constant.idx] = s;
+}

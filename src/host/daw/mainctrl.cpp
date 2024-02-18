@@ -1195,7 +1195,6 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
 
     themes.loadThemes();
 
-    getDefaultTheme()->bindFonts();
     setupView();
 
     menus.recent.type  = ngui::menu_type::submenu;
@@ -1746,7 +1745,8 @@ DAW::async_task_t* createTestTask();
 bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
     if (event.type == KeyboardState::K_PRESS) {
         if (!event.cmd && event.keyCode == KeyboardKey::DAW_KB_T) {
-            daw.setAsyncTask(createTestTask());
+            // daw.setAsyncTask(createTestTask());
+            // themes.getRef().set(, int32_t _value)
             return true;
         }
         if (!event.cmd && event.keyCode == KeyboardKey::DAW_KB_L) {

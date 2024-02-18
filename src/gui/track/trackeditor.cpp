@@ -1,5 +1,6 @@
 #include "appconfig.h"
 #include "assert_dbg.h"
+#include "fileio.h"
 #include "host/audiosample.h"
 #include "commands.h"
 #include "compiler.h"
@@ -11,6 +12,8 @@
 #include "host/track/track_types.h"
 #include "trackctr.h"
 #include <cstdint>
+#include <nanovg.h>
+#include <nanovg_min.h>
 #include <utility>
 #include <vector>
 #include "exceptions.h"
@@ -1168,6 +1171,16 @@ void guitrack_editor::render(NVGcontext* vg) {
     nvgRect(vg, -2, 0, w + 2, size.y);
     nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
     nvgFill(vg);
+
+    auto bgImage = theme->getBackgroundImage(GuiBackgroundImage::BG_TRACKEDITOR_1);
+    if (bgImage) {
+        bgImage->render(this, vg);
+    }
+
+    auto bgImage2 = theme->getBackgroundImage(GuiBackgroundImage::BG_TRACKEDITOR_2);
+    if (bgImage2) {
+        bgImage2->render(this, vg);
+    }
 
     /* draw dark grid areas */
     int nRendered = 0;

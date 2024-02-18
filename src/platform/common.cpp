@@ -66,7 +66,7 @@ void extractDefaultPresets() {
 	// TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_read_open_filename(a, outName.c_str(), 10240));
     auto defaultsArchive = toDefaultSettingFilesPath("data.zip");
     if (!FileExists(defaultsArchive)) {
-        log_lf(Log::L_ERROR, "data.zip not found in %s\n", StringAsCStr(defaultsArchive));
+        // log_lf(Log::L_ERROR, "data.zip not found in %s\n", StringAsCStr(defaultsArchive));
         return;
     }
     auto a = archive_read_new();
@@ -322,6 +322,10 @@ int64_t ReadFileText(const String& filename, String& out, int resourceType) {
 
 int64_t ReadImage(const String& Filename, ImageBuf& ref) {
     String path = App::Platform::toResourcePath(Filename);
+    if (!FileExists(path)) {
+        path = Filename;
+        // throw FileIOException(StringFormat("File not found: %s", StringAsCStr(path)));
+    }
     if (!FileExists(path)) {
         throw FileIOException(StringFormat("File not found: %s", StringAsCStr(path)));
     }

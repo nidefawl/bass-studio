@@ -52,3 +52,22 @@ namespace GuiConstant {
     extern constant_t CONST_TRACK_CONTROLS_WIDTH;
 
 }// namespace GuiConstant
+
+namespace GuiBackgroundImage {
+
+    struct constant_t {
+        uint32_t idx;
+        const char* name;
+        constant_t() noexcept;
+        explicit constant_t(const char* _name) noexcept;
+    };
+
+    std::vector<constant_t> getAllConstants();
+    constant_t getConstantById(uint32_t id);
+    constant_t getConstantByName(const String& name);
+
+    extern constant_t BG_TRACKEDITOR_1;
+    extern constant_t BG_TRACKEDITOR_2;
+    extern constant_t BG_NOTEEDITOR_1;
+    extern constant_t BG_EQUALIZER_1;
+} // namespace GuiBackgroundImage

@@ -130,6 +130,13 @@ namespace Table {
         nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_BOTTOM);
         nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y - INSET_TABLE_CELL_PADDING, obj.name, nullptr);
     }
+    void drawTbl(const table_ctxt_t& ctxt, const GuiBackgroundImage::constant_t& obj) {
+        const vec2& pos  = ctxt.pos;
+        const vec2& size = ctxt.size;
+        bool right       = 0;// (obj.flags&1);
+        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_BOTTOM);
+        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y - INSET_TABLE_CELL_PADDING, obj.name, nullptr);
+    }
     void drawTbl(const table_ctxt_t& ctxt, const SafeRef<guibase>& obj) {
         const vec2& pos = ctxt.pos;
         const vec2& size = ctxt.size;
