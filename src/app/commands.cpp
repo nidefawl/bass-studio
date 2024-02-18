@@ -143,6 +143,7 @@ namespace DAW::UI {
         Add(CMD_CUT, {"Cut", "Cut selected items", "", ICON_CUT}, KC_CUT);
         Add(CMD_PASTE, {"Paste", "Paste items", "", ICON_PASTE}, KC_PASTE);
         Add(CMD_PASTE_NO_AUTOMATION, {"Paste (no automation)", "Paste items without automation", "", ICON_PASTE}, KC_PASTE_NO_AUTOMATION);
+        Add(CMD_DELETE_TIME, {"Delete Time", "Delete time", ""}, {});
 
         Add(CMD_FILE_NEW, {"New", "Create a new project", "", ICON_FILE}, KC_NEW);
         Add(CMD_FILE_OPEN, {"Open", "Open a project", "", ICON_FOLDER}, KC_OPEN);

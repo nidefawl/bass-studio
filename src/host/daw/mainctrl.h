@@ -123,6 +123,7 @@ namespace DAW {
     void OpenFloatingTextInput(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
     void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip);
+    void deleteTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
 }// namespace DAW
 
 struct clip_cursor_t {

@@ -224,6 +224,10 @@ struct lfo_automation_src_param_t final : public automated_param_t {
             String getName() const override {
                 return StringFormat("LFO %d", paramIdx+1);
             }
+            void deleteTickRange(tick_t tickBegin, tick_t tickEnd) override {
+            }
+            void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
+            }
         };
         module_lfo* module;
         std::array<lfo_automation_src_param_t, NUM_CHANNELS> macroAutomationSrcParams;

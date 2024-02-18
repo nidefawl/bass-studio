@@ -349,7 +349,32 @@ namespace DAW {
                     modified        = true;
                     desc            = idxBegin == idxEnd ? "Create clip" : "Create clips";
                 }
-                if (command == CMD_DELETE && cursor.getRange()) {
+                if (command == CMD_DELETE_TIME && cursor.getRange()) {
+                    track_gui_entry_t* trMin = nullptr;
+                    track_gui_entry_t* trMax = nullptr;
+                    for (track_gui_entry_t* t : iGuiMgr.getTracksVisibleFlat()) {
+                        if (!trMin || trMin->idx > t->idx) {
+                            trMin = t;
+                        }
+                        if (!trMax || trMax->idx < t->idx) {
+                            trMax = t;
+                        }
+                    }
+                    DAW::Cursor cursorCopy = cursor;
+                    cursorCopy.setLeftAligned();
+                    cursorCopy.setTrack(trMin->idx);
+                    cursorCopy.selTrackRange    = (trMax->idx - trMin->idx);
+                    cursorCopy.cursorSubTrack   = -1;
+                    cursorCopy.selSubTrackRange = 0;
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursorCopy.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursorCopy.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+                    DAW::deleteTime(daw, iGuiMgr, cursorCopy);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Delete time";
+                } else if (command == CMD_DELETE && cursor.getRange()) {
                     int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);

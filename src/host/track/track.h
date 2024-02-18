@@ -55,6 +55,7 @@ public:
     friend void copyClipsInRange(const trackdata_clips_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len);
     friend bool hasClipsInRange(const trackdata_clips_t& in, int32_t srcPos, int32_t len);
     friend void cutIntersectingClips(trackdata_clips_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb* cb);
+    friend void offsetClips(trackdata_clips_t& midi, tick_t tickBegin, tick_t tickOffset);
 
 private:
     std::vector<clip_t*> clips;

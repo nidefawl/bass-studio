@@ -272,6 +272,8 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(guitrack_editor* const _edito
     entries.back()->setGrayedOut(clipboardType != ClipBoardType::CLIPBOARD_CLIPS);
     addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_DELETE));
     entries.back()->setGrayedOut(!bHasContentSelected);
+    addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_DELETE_TIME));
+    entries.back()->setGrayedOut(!cursor.getRange());
     if (bHasContentSelected) {
         addEntry(new ctxtmenu_splitter());
         sel = new ctxtmenu_color_select("Pick Color", 100);

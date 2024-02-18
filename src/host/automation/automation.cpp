@@ -278,6 +278,58 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
     points = std::move(pointsTmp);
 }
 
+void automation_t::deleteTickRange(tick_t tickBegin, tick_t tickEnd) {
+    std::vector<automation_point_t> pointsTmp;
+    pointsTmp.reserve(points.size());
+    int32_t idx1 = 0;
+    for (; idx1 < CtrSize(points); idx1++) {
+        auto& pt = points[idx1];
+        if (pt.time < tickBegin) {
+            pointsTmp.push_back(pt);
+        } else {
+            break;
+        }
+    }
+    for (; idx1 < CtrSize(points); idx1++) {
+        auto& pt = points[idx1];
+        if (pt.time > tickEnd) {
+            auto ptCpy = pt;
+            ptCpy.time -= (tickEnd - tickBegin);
+            pointsTmp.push_back(ptCpy);
+        }
+    }
+    points = std::move(pointsTmp);
+    simplifyData(points);
+}
+
+void automation_t::insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) {
+    std::vector<automation_point_t> pointsTmp;
+    pointsTmp.reserve(points.size() + data.size());
+    int32_t idx1 = 0;
+    for (; idx1 < CtrSize(points); idx1++) {
+        auto& pt = points[idx1];
+        if (pt.time < tickBegin) {
+            pointsTmp.push_back(pt);
+        } else {
+            break;
+        }
+    }
+    for (int32_t idx = 0; idx < (int) data.size(); idx++) {
+        auto pt = data[idx];
+        pt.time += tickBegin;
+        pt.val = quantizeFloat(pt.val, quantizationSteps);
+        pointsTmp.push_back(pt);
+    }
+    for (; idx1 < CtrSize(points); idx1++) {
+        auto& pt = points[idx1];
+        auto ptCpy = pt;
+        ptCpy.time += (tickEnd - tickBegin);
+        pointsTmp.push_back(ptCpy);
+    }
+    points = std::move(pointsTmp);
+    simplifyData(points);
+}
+
 void toggleDeviceEnableState(automatable_t* effect, int flags) {
     auto paramEnable = effect->getParam(PARAM_ENABLE);
     auto f = paramEnable->getValue() > 0 ? 0 : 1;

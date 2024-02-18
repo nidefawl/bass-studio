@@ -116,6 +116,8 @@ struct automation_t {
     void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* out) const;
     void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
     void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
+    void deleteTickRange(tick_t tickBegin, tick_t tickEnd);
+    void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data);
     std::pair<float, float> getMinMax();
     std::optional<std::pair<tick_t, tick_t>> getBeginEnd() const;
     void activate() {
@@ -156,6 +158,8 @@ struct automated_param_t {
     virtual String getName() const = 0;
     virtual void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const = 0;
     virtual void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) = 0;
+    virtual void deleteTickRange(tick_t tickBegin, tick_t tickEnd) = 0;
+    virtual void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) = 0;
     virtual std::optional<std::pair<tick_t, tick_t>> getBeginEnd() const {
         return std::nullopt;
     }
@@ -190,6 +194,12 @@ struct automation_lane_t final : public automated_param_t {
     }
     void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) override {
         src.setRange(tickBegin, tickEnd, data);
+    }
+    void deleteTickRange(tick_t tickBegin, tick_t tickEnd) override {
+        src.deleteTickRange(tickBegin, tickEnd);
+    }
+    void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
+        src.insertTickRange(tickBegin, tickEnd, data);
     }
     String getName() const override {
         return "Automation";

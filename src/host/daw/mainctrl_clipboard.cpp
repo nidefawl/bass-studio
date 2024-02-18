@@ -287,7 +287,7 @@ namespace DAW {
                     int32_t subTrackIdx = trackSBegin + i;
                     if (tr->validSubtrack(subTrackIdx)) {
                         gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
-                        automated_param_t* automation     = subtrack->getAutomation();
+                        automated_param_t* automation  = subtrack->getAutomation();
                         if (automation) {
                             automation->setRange(tickBegin, tickEnd, empty);
                         }
@@ -296,6 +296,30 @@ namespace DAW {
             }
         }
     }
+
+    void deleteTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor) {
+        int32_t tickBegin     = _cursor.getTickBegin();
+        int32_t tickEnd       = _cursor.getTickEnd();
+        int32_t trackBegin    = _cursor.getTrackBegin();
+        int32_t trackEnd      = _cursor.getTrackEnd();
+        if (!_cursor.isSubtrackSelection()) {
+            for (int i = trackBegin; i <= trackEnd; i++) {
+                if (trackList.validTrackIdx(i)) {
+                    track_gui_entry_t* tr = trackList.atNC(i);
+                    cutIntersectingClips(tr->track->getClips(), tickBegin, tickEnd, daw);
+                    offsetClips(tr->track->getClips(), tickEnd, tickBegin - tickEnd);
+                    for (size_t j = 0; j < tr->subtracks.size(); ++j) {
+                        gui_track_subtrack* subtrack = tr->subtracks[j];
+                        automated_param_t* automation  = subtrack->getAutomation();
+                        if (automation) {
+                            automation->deleteTickRange(tickBegin, tickEnd);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     bool isSelectionEmpty(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool bIgnoreAutomation) {
         auto isEmpty = true;
         int32_t tickBegin     = _cursor.getTickBegin();
@@ -458,6 +482,16 @@ void cutIntersectingClips(trackdata_clips_t& midi, tick_t tickBegin, tick_t tick
         it++;
     }
     midi.sortClips();
+}
+
+void offsetClips(trackdata_clips_t& midi, tick_t tickBegin, tick_t tickOffset) {
+    for (auto& c : midi.clips) {
+        if (c->time >= tickBegin) {
+            c->time += tickOffset;
+            c->setDirty();
+        }
+    }
+
 }
 
 //TODO: rename

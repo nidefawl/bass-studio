@@ -374,6 +374,10 @@ struct macro_automation_src_param_t final : public automated_param_t {
             }
             void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const override {
             }
+            void deleteTickRange(tick_t tickBegin, tick_t tickEnd) override {
+            }
+            void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
+            }
         };
         module_macros* module{};
         std::array<macro_automation_src_param_t, NUM_MACROS> macroAutomationSrcParams;
