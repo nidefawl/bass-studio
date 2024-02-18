@@ -1358,7 +1358,12 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
 
 void DawInstance::removeTrackId(uint32_t trackId) {
     if (project.trackList.validTrackIdx(trackId)) {
-        removeTrackImpl(project.trackList[trackId], FLG_TRK_CHANGE_USER);
+        auto tr = project.trackList[trackId];
+        // delete children recursively
+        for (auto& child : tr->children) {
+            removeTrackId(child->projectIdx);
+        }
+        removeTrackImpl(tr, FLG_TRK_CHANGE_USER);
     }
 }
 
