@@ -40,7 +40,6 @@
 #include <nanovg.h>
 
 #include <nanovg_min.h>
-#include <pybind11/pytypes.h>
 #include <utility>
 #include <vector>
 

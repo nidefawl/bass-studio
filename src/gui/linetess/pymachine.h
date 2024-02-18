@@ -1,5 +1,5 @@
 #pragma once
-#ifdef HAVE_PYTHON_INTERPRETER
+#if HAVE_PYTHON_INTERPRETER
 
 namespace PyMachine {
 
@@ -9,11 +9,11 @@ namespace PyMachine {
 
 }// namespace PyMachine
 
+#define USE_PYTHON
+#endif
+
 namespace DAW {
     void InitPythonInterpreter();
     void DeinitPythonInterpreter();
     bool IsPythonInitialized();
 } // namespace DAW
-
-#define USE_PYTHON
-#endif

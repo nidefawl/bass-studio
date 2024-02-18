@@ -7,17 +7,24 @@
 #include <pybind11/complex.h>
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
+#endif
+
+#include "types.h"
+#include "note.h"
+#include "str_util.h"
 #include "fileio.h"
+#include "platform.h"
+#include "logging.h"
 #include "gui/clipeditor/clipeditor_python_processor.h"
+#include <vector>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
-#include "platform.h"
-#include "str_util.h"
-#include "logging.h"
-#include <vector>
+
 #ifdef _WIN32
 #include "str_win32.h"
 #endif
+
+#ifdef USE_PYTHON
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -188,7 +195,6 @@ std::vector<note_t> RunPythonNoteProcessor(const String& processorName, python_s
 }
 
 #else
-
 
 void TryLoadPythonNoteProcessor(const char* path) {
     try {

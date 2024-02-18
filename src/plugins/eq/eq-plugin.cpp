@@ -39,7 +39,6 @@
 #include <algorithm>
 #include <memory>
 #include <nanovg.h>
-#include <pybind11/gil.h>
 #include <vector>
 #include "filter-coeffs.h"
 

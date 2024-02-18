@@ -371,6 +371,7 @@ if (TARGET pybind11::embed)
   target_compile_definitions(${LINK_TARGET} PUBLIC HAVE_PYTHON_INTERPRETER=1)
 else()
   message(WARNING "pybind11::embed not found")
+  target_compile_definitions(${LINK_TARGET} PUBLIC HAVE_PYTHON_INTERPRETER=0)
 endif()
 
 target_link_libraries(${LINK_TARGET} PUBLIC zlib)
