@@ -19,6 +19,9 @@
 #include "host/audiohost/audio_host.h"
 #include "seq_util.h"
 
+void AppWndProc_disableBlockReentrant();
+void AppWndProc_enableBlockReentrant();
+
 namespace {
 class guigraph2d final : public guictr_base {
         std::vector<vec2> m_data;
@@ -407,6 +410,7 @@ public:
     void buttonClicked(guibase* button) override {
         if (&btnLoadAll == button) {
             auto daw = dawCtrl->getDaw();
+            AppWndProc_enableBlockReentrant();
             ThreadLock lock = daw->getPlayThread()->lockThread();
             auto* host = daw->getHost();
             std::vector<effectbase*> pluginsDeferred;
@@ -423,6 +427,7 @@ public:
                     audioStagesAffected.push_back(effectLoaded->getTrackLink());
                 }
             }
+            AppWndProc_disableBlockReentrant();
             daw->onPluginsChanged();
         }
     }
