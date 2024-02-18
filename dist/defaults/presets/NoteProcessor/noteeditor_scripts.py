@@ -88,8 +88,24 @@ class randomizeNoteVelocity(note_processor):
                 note.velocity = 127
         return ctxt.notes
 
+class makeVelocityRamp(note_processor):
+    '''Create a velocity ramp'''
+    def getName(self):
+        return 'Create a velocity ramp'
+    def getParameters(self):
+        return [
+            ('Velocity Start', PARAM_TYPE_INT, 0.0, 127.0, 5.0),
+            ('Velocity End', PARAM_TYPE_INT, 0.0, 127.0, 127.0),
+        ]
+    def process(self, ctxt):
+        start, end = ctxt.params[:2]
+        for i, note in enumerate(ctxt.notes):
+            note.velocity = int(start + (end - start) * i / len(ctxt.notes))
+        return ctxt.notes
+
 export_processors = [
     randomizeNoteVelocity(),
     randomizeNoteStartTime(),
     generate4x4Pattern(),
+    makeVelocityRamp(),
 ]
