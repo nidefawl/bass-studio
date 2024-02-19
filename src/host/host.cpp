@@ -1360,7 +1360,8 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     if (DAW::isPlaybackState(playbackState)) {
         if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && track->type == TRACK_TYPE_AUDIO) {
             if (sampleLatencyCompensated >= 0) {
-                trackImpl->audioInput.store(&trackImpl->input, sampleLatencyCompensated);
+                auto firstPair = trackImpl->input.SubChannelsBlock(0, 2);
+                trackImpl->audioInput.store(&firstPair, sampleLatencyCompensated);
                 trackImpl->audioInput.convertToSamples(this);
                 // trackImpl->recorder.samplesRecorded += trackImpl->audioInput.convertToSamples(this);
             } else {

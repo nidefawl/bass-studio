@@ -1817,6 +1817,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
         ThreadLock lock = daw && daw->getMainControl() ? daw->getMainControl()->lockPlayThread() : ThreadLock::MakeVoidLock();
         this->hasNewRecordedData = false;
         if (recordDataProcessed && recordDataProcessed->getLen() > 0) {
+            auto channelCount = math::min<channelnum_t>(trImpl->input.channels, 2);
             clip_t* pClip = nullptr;
             std::swap(recordDataProcessed, pClip);
             auto tr = trImpl->getTrack();
@@ -1828,7 +1829,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                         create_sample_req_t ssr;
                         ssr.format      = trImpl->sampleFormat;
                         ssr.id          = -1;
-                        ssr.numChannels = trImpl->input.channels;
+                        ssr.numChannels = channelCount;
                         ssr.preAllocate = 1024L*64;
                         auto [fPath, fName] = daw->createUniqueNonExistingFilename("recorded", trImpl->track ? trImpl->track->name : "", "Recorded", "wav");
                         ssr.path = fPath;
@@ -1849,7 +1850,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                             ssr.offset = samplesWritten;
                             auto nSamplesRead = trImpl->audioInput.readSamples(firstRecordedSample+ssr.offset,
                                                             ssr.length,
-                                                            trImpl->input.channels,
+                                                            channelCount,
                                                             ssr.channels);
                             dbgassert(nSamplesRead <= ssr.length);
                             if (nSamplesRead > 0) {
