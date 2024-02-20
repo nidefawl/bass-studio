@@ -24,10 +24,12 @@ inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t ti
     auto& trackData = track->getClips();
     auto clips = trackData.getClips();
 
+    auto numChannels = math::min<channelnum_t>(track->audio->input.channels, 2);
+
     create_sample_req_t csr;
     csr.format      = track->audio->sampleFormat;
     csr.id          = -1;
-    csr.numChannels = track->audio->input.channels;
+    csr.numChannels = numChannels;
     auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", track->name, name, "wav");
     csr.path = fPath;
 
@@ -294,6 +296,7 @@ struct consolidate_task_t final : public async_task_t {
                 if (!fillAudio) {
                     auto stage = trEntry->track->audio;
                     dbgassert(stage);
+                    auto numChannels = math::min<channelnum_t>(stage->input.channels, 2);
                     auto sampleFormat = stage->sampleFormat;
                     auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", trEntry->track->name, clip->name, "wav");
                     auto& prjGlobals = daw->getProjectGlobals();
@@ -306,12 +309,12 @@ struct consolidate_task_t final : public async_task_t {
                     create_sample_req_t csr;
                     csr.format      = sampleFormat;
                     csr.id          = -1;
-                    csr.numChannels = stage->input.channels;
+                    csr.numChannels = numChannels;
                     csr.path        = fPath;
                     csr.preAllocate = numSamples;
                     auto samplefile = cache->createSample(csr);
                     dbgassert(samplefile);
-                    fillAudio = std::make_shared<consolidate_fill_audio_t>(daw, sampleFormat, stage->input.channels, samplefile->id, samplePos, numSamples);
+                    fillAudio = std::make_shared<consolidate_fill_audio_t>(daw, sampleFormat, numChannels, samplefile->id, samplePos, numSamples);
                     trEntry->track->getClips().getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), fillAudio->clips);
                     clipAudioInProgress = clip;
                 }
