@@ -52,6 +52,12 @@ void guitrack_mixers::render(NVGcontext* vg) {
     nvgRect(vg, 0, 0, cs.x, cs.y);
     nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
     nvgFill(vg);
+
+    auto bgImage = theme->getBackgroundImage(GuiBackgroundImage::BG_TRACKEDITOR_MIXERS_1);
+    if (bgImage) {
+        bgImage->render(this, vg);
+    }
+
     for (track_t* g : project.tracksBottom) {
 
         track_gui_entry_t* entry;

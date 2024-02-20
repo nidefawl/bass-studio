@@ -1622,6 +1622,13 @@ void gui_track_controls::render(NVGcontext* vg) {
     if (dawCtrl->getSelectedTrack() == m_track) {
         bgColor = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK);
     }
+
+    auto bgImage = theme->getBackgroundImage(GuiBackgroundImage::BG_TRACK_MIXER_1);
+    if (bgImage) {
+        bgImage->render(this, vg);
+        bgColor.a *= 0.5f;
+    }
+
     nvgBeginPath(vg);
     nvgRect(vg, 0, 0, size.x, size.y);
     nvgFillColor(vg, bgColor);
