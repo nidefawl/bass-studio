@@ -174,13 +174,19 @@ namespace RenderResources {
     }
 
     /** loads texture and store in perContextTextures */
-    const NvgImageTexture* loadTexture(NVGcontext* vg, const String& path) {
+    const NvgImageTexture* loadTexture(NVGcontext* vg, const String& path, const int flags) {
         auto texEntry = perContextTextures.find(path);
         if (texEntry == perContextTextures.end()) {
             perContextTextures[path] = NvgImageTexture();
         }
         texEntry = perContextTextures.find(path);
         NvgImageTexture& tex = texEntry->second;
+        if (tex.flags != flags){
+            for (auto& it : tex.perContextId) {
+                nvgDeleteImage(it.first, it.second);
+            }
+            tex.perContextId.clear();
+        }
         if (tex.perContextId.find(vg) == tex.perContextId.end()) {
             try {
                 ImageBuf imgBuf;
@@ -188,9 +194,11 @@ namespace RenderResources {
                     log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
                 }
                 load(vg, StringAsCStr(path), imgBuf);
-                int32_t nvgid = nvgCreateImageRGBA(vg, imgBuf.w, imgBuf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)imgBuf.bytes.data());
+                // NVG_IMAGE_GENERATE_MIPMAPS
+                int32_t nvgid = nvgCreateImageRGBA(vg, imgBuf.w, imgBuf.h, flags, (const unsigned char*)imgBuf.bytes.data());
                 nvgImageSize(vg, nvgid, &tex.width, &tex.height);
                 tex.perContextId[vg] = nvgid;
+                tex.flags = flags;
             } catch (std::exception& e) {
                 log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", StringAsCStr(path), e.what());
                 return nullptr;

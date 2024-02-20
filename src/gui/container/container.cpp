@@ -1,5 +1,6 @@
 #include <nanovg.h>
 #include "assert_dbg.h"
+#include "guibackgroundimage.h"
 #include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -381,7 +382,11 @@ void guictr_base::determineSize(ivec2& prefSize) {
 
 void container_background_image::render(guictr_base* ctr, NVGcontext* vg) const {
     auto sizeCtr = vec2(ctr->getSizeContent());
-    const RenderResources::NvgImageTexture* bgImage = RenderResources::loadTexture(vg, path);
+    int flags = NVG_IMAGE_GENERATE_MIPMAPS;
+    if (layout == repeat) {
+        flags |= NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY;
+    }
+    const RenderResources::NvgImageTexture* bgImage = RenderResources::loadTexture(vg, path, flags);
     if (bgImage) {
         nvgSave(vg);
         auto id = bgImage->perContextId.find(vg);
@@ -433,12 +438,19 @@ void container_background_image::render(guictr_base* ctr, NVGcontext* vg) const 
                 offset.y = (sizeCtr.y - imgSize.y * scale.y) / 2.0f;
             }
         }
-        nvgTranslate(vg, offset.x, offset.y);
-        nvgScale(vg, scale.x, scale.y);
-        nvgBeginPath(vg);
-        nvgRect(vg, 0, 0, bgImage->width, bgImage->height);
-        nvgFillPaint(vg, paintIcon);
-        nvgFill(vg);
+        if (layout == repeat) {
+            nvgBeginPath(vg);
+            nvgRect(vg, 0, 0, sizeCtr.x, sizeCtr.y);
+            nvgFillPaint(vg, paintIcon);
+            nvgFill(vg);
+        } else {
+            nvgTranslate(vg, offset.x, offset.y);
+            nvgScale(vg, scale.x, scale.y);
+            nvgBeginPath(vg);
+            nvgRect(vg, 0, 0, bgImage->width, bgImage->height);
+            nvgFillPaint(vg, paintIcon);
+            nvgFill(vg);
+        }
         nvgRestore(vg);
     }
 }

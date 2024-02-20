@@ -106,11 +106,14 @@ class window_impl final : public window_abstract_t {
         for (int x = 0; x < w; x++) {
             for (int y = 0; y < w; y++) {
                 int idx   = (x * w + y) * 4;
-                int scale = 16;
-                int ix    = x % scale;
-                setColor(dataBuf + idx, ix < 10 ? 0xffffffff : 0x00ffffff);
+                float fx = x / float(w-1);
+                float fy = y / float(w-1);
+                float brightness = fx * fy;
+                auto rgb_u32 = vec3ToRgbU32(vec3(brightness));
+                setColor(dataBuf + idx, 0xFF000000 | rgb_u32);
             }
         }
+        //
         return imageData;
     }
 public:
@@ -303,43 +306,38 @@ public:
             nvgRestore(vg);
         }
 
-        //NVGpaint paintQuad = nvgImagePattern(vg, 0, 0, imgQuad.width, imgQuad.height, 0, imageId, 1.0f);
-        //nvgSetPaintColor(vg, &paintQuad, rgbToNvg(0xFFFF00FF));
+        NVGpaint texRepeatPattern = nvgImagePattern(vg, 0, 0, imgQuad.width, imgQuad.height, 0, imgQuad.perContextId[vg], 1.0f);
+        {
+            ivec2 qSize(100, 100);
+            seq_rand rand;
+            rand.rng_seed(0xABCD);
+            for (int i = 0; i < 6; i++) {
+                ivec2 qPos = {rand.rng_rand(1000), rand.rng_rand(1000)};
+                nvgTranslate(vg, qPos.x, qPos.y);
+                nvgBeginPath(vg);
+                nvgRect(vg, 0, 0, qSize.x, qSize.y);
+                nvgFillPaint(vg, texRepeatPattern);
+                nvgFill(vg);
+                nvgTranslate(vg, -qPos.x, -qPos.y);
+            }
+        }
+
         NVGpaint paint;
         memset(&paint, 0, sizeof(paint));
         paint.image      = -1;
-        paint.innerColor = rgbToNvg(0xFF00FF);
-        paint.outerColor = rgbToNvg(0xFF00FF);
-        paint.customPar  = 1234;
-
-/*         {
-            ivec2 qSize(100, 10);
-            seq_rand rand;
-            for (int i = 0; i < 6; i++) {
-                nvgBeginPath(vg);
-                //ivec2 qSize(10 + rand.rng_rand(7) * 20, 10 + rand.rng_rand(7) * 20);
-                // nvgBatchedRect(vg, rand.rng_rand(1000), rand.rng_rand(1000), qSize.x, qSize.y);
-                ivec2 qPos = {rand.rng_rand(1000), rand.rng_rand(1000)};
-                qSize.y = rand.rng_rand(60)+10;
-                NVGpaint paintGradient = nvgBoxGradient(vg, qPos.x, qPos.y, qSize.x, qSize.y, 5.0f, 10.f, nvgRGBA(0, 244, 0, 255), nvgRGBA(244, 0, 0, 255));
-                nvgRect(vg, qPos.x, qPos.y , qSize.x, qSize.y);
-                nvgFillPaint(vg, paintGradient);
-                nvgFill(vg);
-            }
-            // nvgBatchedRender(vg);
-        } */
+        paint.innerColor = rgbToNvg(0x00FFFF);
+        paint.outerColor = rgbToNvg(0x00FF00);
         {
             ivec2 qSize(20);
             seq_rand rand;
+            rand.rng_seed(0xABCD);
             for (int i = 0; i < 6; i++) {
-                //ivec2 qSize(10 + rand.rng_rand(7) * 20, 10 + rand.rng_rand(7) * 20);
                 nvgBatchedRect(vg, rand.rng_rand(1000), rand.rng_rand(1000), qSize.x, qSize.y);
             }
             paint.renderType = 5;
             nvgFillPaint(vg, paint);
             nvgBatchedRender(vg);
         }
-
 
         String strTest   = "Test String 🤩🤩🤩";
         ivec2 strBoxSize = { 160, 40 };

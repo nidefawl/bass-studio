@@ -3,6 +3,8 @@
 #include "gui/controls/inputfield.h"
 #include "gui/controls/textfield.h"
 #include "gui/dropdown/dropdown_generic.h"
+#include "guibackgroundimage.h"
+#include "renderresources.h"
 
 class guictr_set_background : public guictr_base {
     class guictr_load_image : public guictr_base {
@@ -90,7 +92,7 @@ class guictr_set_background : public guictr_base {
         btnClearImage.id = 0x12;
         btnClearImage.setLabel("Clear Image");
         btnClearImage.setText(btnClearImage.getLabel());
-        dropdownLayout.setOptions({ "Fixed Position", "Fill", "Contain", "Cover" });
+        dropdownLayout.setOptions({ "Fixed Position", "Fill", "Contain", "Cover", "Repeat" });
         dropdownLayout.id = 0x13;
         dropdownLayout.setSelectedIndex(0);
         dropdownLayout.setLabel("Layout Mode");
@@ -147,7 +149,7 @@ class guictr_set_background : public guictr_base {
         }
     }
     void determineSize(ivec2& prefSize) override {
-        prefSize.y = 7*(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT) + padding);
+        prefSize.y = 7*(32 + padding);
     }
     ~guictr_set_background() override {
         removeGuis();

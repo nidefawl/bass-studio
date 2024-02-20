@@ -54,8 +54,9 @@ namespace RenderResources {
     };
     struct NvgImageTexture {
         std::unordered_map<NVGcontext*, int32_t> perContextId;
-        int width;
-        int height;
+        int width  = 0;
+        int height = 0;
+        int flags  = 0;
     };
     struct NvgFonts {
         std::vector<FontDesc> fontsInstalled;
@@ -65,7 +66,7 @@ namespace RenderResources {
     extern NvgImageTexture imgIcons[NUM_IMGS];
     extern std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;
     extern std::vector<FontDesc> fontsInstalled;
-    const NvgImageTexture* loadTexture(NVGcontext* vg, const String& path);
+    const NvgImageTexture* loadTexture(NVGcontext* vg, const String& path, const int flags);
 }// namespace RenderResources
 
 extern const SupportedFileTypes FILE_TYPES_IMAGES;

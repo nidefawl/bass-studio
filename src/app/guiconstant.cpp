@@ -2,6 +2,7 @@
 #include <nanovg_min.h>
 #include <vector>
 #include "guiglobals.h"
+#include "guibackgroundimage.h"
 #include "logging.h"
 
 namespace GuiConstant {
@@ -163,4 +164,6 @@ namespace GuiBackgroundImage {
     constant_t BG_TRACKEDITOR_2("BG_TRACKEDITOR_2");
     constant_t BG_NOTEEDITOR_1("BG_NOTEEDITOR_1");
     constant_t BG_EQUALIZER_1("BG_EQUALIZER_1");
+    constant_t BG_TRACKEDITOR_MIXERS_1("BG_TRACKEDITOR_MIXERS_1");
+    constant_t BG_TRACK_MIXER_1("BG_TRACK_MIXER_1");
 } // namespace GuiBackgroundImage
