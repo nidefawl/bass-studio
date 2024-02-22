@@ -2506,19 +2506,20 @@ void guictr_clipeditorview::handleDraggedBegin(MouseEvent& evt) {
     }
     if (!dawCtrl->isClipEditorVisible()) {
         dawCtrl->showClipEditor();
+        return;
     }
-    float scaleX   = getScaleX();
-    float scaleXSS = getScreenSpaceScaleX();
     vec2 posFrame, sizeFrame;
     getFrameBounds(posFrame, sizeFrame);
     // if click is outside frame then set offset to mousepos
+    /* float scaleX   = getScaleX();
+    float scaleXSS = getScreenSpaceScaleX();
     if (evt.mousepos.x < posFrame.x || evt.mousepos.x > posFrame.x + sizeFrame.x) {
         auto& grid = getGrid();
         auto newOffset = (evt.relMousepos.x - sizeFrame.x * 0.5f) * (scaleXSS / scaleX);
         grid.setOffset(math::roundfS32(math::max(0.0f, newOffset)));
         grid.notifyChange();
         return;
-    }
+    } */
     parentCtrl->captureMouse(this);
     dragMode      = drag_view;
     dragDirection = -1;
