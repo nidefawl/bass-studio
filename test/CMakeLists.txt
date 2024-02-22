@@ -85,6 +85,9 @@ if (NOT MSVC)
   set_source_files_properties(../src/util/fp_math.cpp PROPERTIES
     COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections;-fno-fast-math;-O2"
   )
+  set_source_files_properties(test_math.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-finite-math-only"
+  )
 endif()
 
 DEFINE_TEST(
