@@ -2086,6 +2086,8 @@ void gui_track_content_base::trackEntryDragRelease(gui_track* g, ivec2 mousepos)
 void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
+        auto trackCtr = m_trackentry->parent;
+        double scrollPixelOffset = trackCtr->getScrollOffsetPixels();
         int32_t mouseDragDist = evt.relMousepos.y;
         bool resizeTop        = m_track->type < TRACK_TYPE_MIDI;
         if (resizeTop) {
@@ -2109,6 +2111,9 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
         }
         parent->onChildLayoutChanged(this);
         dawCtrl->updateVisibleTrackContents();
+        if (nChanged) {
+            trackCtr->scrollToPixelOffset(scrollPixelOffset);
+        }
     }
 }
 class guictxtmenu_track final : public guictxtmenu {
