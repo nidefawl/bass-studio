@@ -90,6 +90,7 @@ public:
         if (!clip)
             return;
         clip->notes = before;
+        clip->setDirty();
         if (bHasCursor)
             daw->updateClipViewsAndCursor(clip, cursorBefore);
         else
