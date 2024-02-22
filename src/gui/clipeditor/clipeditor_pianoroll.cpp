@@ -156,9 +156,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
     if (firstKey > 0) {
         firstKey--;
     }
-    //  if (fold) {
-    //    firstKey = firstKey % 12;
-    //  }
+
     float yOff      = offset - firstKey * scale - scale;
     ivec2 noteMouse = { -1, -1 };
     if (dragMode == dragmode::drag_none || dragMode == dragmode::drag_piano_key) {
@@ -280,23 +278,18 @@ void gui_pianoroll::render(NVGcontext* vg) {
             }
         }
         nvgStroke(vg);
-        const float FONT_SIZE = 24.0f;
+        float FONT_SIZE = 24.0f;
+        while (FONT_SIZE > 6.0f && scale <= FONT_SIZE) {
+            FONT_SIZE -= 2.0f;
+        }
         setFont(vg, FONT_SIZE, labelColor, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        lastOctave = -1;
         y = 0;
-        for (int i = firstKey; len > 0 && i <= len; i++) {
+        for (int i = firstKey; scale > FONT_SIZE && len > 0 && i < len; ++i) {
             int32_t pitch      = pitches[math::clamp(i, 0, len - 1)];
-            int32_t noteOctave = pitch / 12;
-            if (scale > FONT_SIZE || i == firstKey /*|| i == len*/ || lastOctave != noteOctave) {
-                const char* notename = noteName(pitch);
-                float textY          = h - y + scale - (math::clamp<float>(scale, FONT_SIZE, 32)) / 2.0;
-                nvgText(vg, 4, textY, notename, NULL);
-            }
-            lastOctave = noteOctave;
+            const char* notename = noteName(pitch);
+            float textY          = h - y + scale - (math::clamp<float>(scale, FONT_SIZE, 32)) / 2.0;
+            nvgText(vg, 4, textY, notename, NULL);
             y += scale;
-            if (y >= size.y + scale * 2) {
-                break;
-            }
         }
         nvgRestore(vg);
     } else {
