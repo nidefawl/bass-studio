@@ -196,7 +196,7 @@ guiplugin::guiplugin(effectbase* _effect)
     addGuiBtnTitlebar(&buttonLayout);
     addGuiBtnTitlebar(&buttonDelete);
     addGuiBtnTitlebar(&buttonSave);
-    //buttonDelete.setTint(0x404040);
+    setFlag(FLG_SUPPRESS_TOOLTIP, false);
 }
 void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
     int32_t clickedParamIdx = -1;

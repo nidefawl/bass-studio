@@ -30,41 +30,6 @@ enum class action_plugin_ctr {
 };
 }
 
-// whats that?
-class guictr_test final : public guictr_base {
-public:
-    guictr_test() : guictr_base() {
-        setBackgroundRendered(true);
-    }
-    ~guictr_test() override {
-        guis.clear();
-    }
-    void render(NVGcontext* vg) override {
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        for (auto gui : guis) {
-            gui->render(vg);
-        }
-        nvgResetScissor(vg);
-        nvgResetTransform(vg);
-    }
-    void layout() override {
-        for (auto gui : guis) {
-            gui->layout();
-        }
-    }
-    void handleDraggedMove(MouseEvent& evt) override {
-        ivec2& guiPos = evt.guiDragged->pos;
-        guiPos        = evt.mousepos + evt.dragOffset;
-    }
-    void handleDraggedRelease(MouseEvent& evt) override {
-    }
-};
-
 class guiplaceholder final : public guibase {
 public:
     String message;

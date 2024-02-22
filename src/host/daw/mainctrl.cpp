@@ -207,7 +207,6 @@ public:
 
     guictr_menubar ctr_menu;
     guictr_daw_controls ctr_tempo;
-    guictr_test ctr_test;
     gui_statusbar statusbar;
     guictr_pluginview ctr_pluginview;
     guictr_clipeditorview ctr_clipeditorview;

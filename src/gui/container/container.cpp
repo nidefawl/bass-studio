@@ -460,7 +460,4 @@ guictr_base::guictr_base(gui_type guiType)
     setBackgroundRendered(false);
     setBackgroundRenderedInset(true);
     setFlag(FLG_SUPPRESS_TOOLTIP, true);
-    // using layout_t   = container_background_image::layout_t;
-    // using position_t = container_background_image::position_t;
-    // this->bgImage    = container_background_image{ R"(R:\private\waifu\other\6.png)", layout_t::cover, position_t::bottom, position_t::right, vec2(1.0f) };
 }
