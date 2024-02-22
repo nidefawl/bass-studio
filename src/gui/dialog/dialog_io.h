@@ -41,6 +41,7 @@ public:
     void buttonClicked(guibase* button) override;
     void setActiveEntry(int32_t idx);
     void addEntry(setting_dialog* ctr, String title);
+    void setControl(BaseCtrl* parentCtrl) override;
 };
 
 class guidropdown_setting_options_t;

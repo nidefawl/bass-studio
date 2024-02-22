@@ -1574,6 +1574,13 @@ void guidialog_settings::buttonClicked(guibase* button) {
     guidialog_base::buttonClicked(button);
 }
 
+void guidialog_settings::setControl(BaseCtrl* parentCtrl) {
+    guidialog_base::setControl(parentCtrl);
+    if (!parentCtrl) {
+        saveSettings(daw_tls::getSettings());
+    }
+}
+
 void guidropdown_setting_options_t::handleDraggedRelease(MouseEvent& evt) {
     if (options.empty()) return;
     guictxtmenu_base* popup = new guidropdown_setting_options_ctxt_t(this);
