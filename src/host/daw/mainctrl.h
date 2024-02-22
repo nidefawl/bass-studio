@@ -450,7 +450,7 @@ public:
     bool loadProject1(const std::shared_ptr<project_file>& file, int flags);
     void loadProjectFinish();
     void unloadUnreferencedSamples();
-    void startPlaying();
+    void startPlaying(tick_t pos = -1);
     void stopPlaying();
     void startExport();
     /**

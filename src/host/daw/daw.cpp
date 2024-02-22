@@ -129,8 +129,12 @@ SupportedFileTypes FILE_TYPES_PROJECTS = SupportedFileTypes{PROJECT_FILE_TYPE_DE
 MainCtrl* DawInstance::getMainControl() {
     return this->tls.mainCtrl;
 }
-void DawInstance::startPlaying() {
-    setAudioThreadState(playback_state::status_playback);
+void DawInstance::startPlaying(tick_t pos) {
+    if (pos >= 0) {
+        projectGlobals.cursor.setEmptySelection();
+        projectGlobals.cursor.cursorPos = pos;
+    }
+    playThread.addRequest(REQ_STATE, (int) playback_state::status_playback, true);
 }
 
 void DawInstance::startExport() {

@@ -101,18 +101,18 @@ namespace DAW {
             this->selRange = t - getTickBegin();
         }
         void setLeftAligned() {
-            int32_t stick    = getTickBegin();
-            int32_t etick    = getTickEnd();
-            int32_t str      = getTrackBegin();
-            int32_t etr      = getTrackEnd();
-            int32_t sstr     = getSubTrackBegin();
-            int32_t estr     = getSubTrackEnd();
-            cursorPos        = stick;
-            selRange         = etick - stick;
-            cursorTrack      = str;
-            selTrackRange    = etr - str;
-            cursorSubTrack   = sstr;
-            selSubTrackRange = estr - sstr;
+            if (selRange < 0) {
+                cursorPos += selRange;
+                selRange  = -selRange;
+            }
+            if (selTrackRange < 0) {
+                cursorTrack += selTrackRange;
+                selTrackRange = -selTrackRange;
+            }
+            if (selSubTrackRange < 0) {
+                cursorSubTrack += selSubTrackRange;
+                selSubTrackRange = -selSubTrackRange;
+            }
         }
         void setEmptySelection() {
             *this = Cursor();

@@ -1766,7 +1766,10 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                 if (daw.isPlaying()) {
                     daw.stopPlaying();
                 } else {
-                    daw.startPlaying(); //TODO: pass cursor position
+                    if (getCursor().selRange < 0) {
+                        getCursor() = getCursor().getLeftAligned();
+                    }
+                    daw.startPlaying();
                 }
             }
             return true;

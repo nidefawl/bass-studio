@@ -197,6 +197,9 @@ private:
                                 case playback_state::status_playback: {
                                     dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
                                     dbgassert(host->m_sampleFormatInternal.blockSize != 0);
+                                    if (req->fn) {
+                                        req->fn();
+                                    }
                                     // copy start pos to this thread
                                     tick_t startPos        = ctrl->getCursorPos();
                                     int32_t bpm100         = ctrl->getCurrentTempo();
