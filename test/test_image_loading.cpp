@@ -167,7 +167,7 @@ namespace {
         applyColorPalette(imgOutput, colorPalette);
         String name;
         SplitPath(path, nullptr, &name, nullptr);
-        String filename = StringFormat("out4/%s_%d_colors.png", StringAsCStr(name), numColors);
+        String filename = StringFormat("test_image_loading/%s_%d_colors.png", StringAsCStr(name), numColors);
         String parentPath;
         SplitPath(filename, &parentPath, nullptr, nullptr);
         CreateDirectoryIfNotExists(parentPath);
@@ -179,15 +179,10 @@ namespace {
 
 int main() {
     App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
-    // test_createAndApplyPaletteToImage("test.jpg");
-    // test_createAndApplyPaletteToImage("wallhaven_we5zjr_2880x3840_2023_02_25_sfw.jpg");
     std::vector<FileFound> files;
-    findFilesWithExt("R:\\private\\waifu", "jpg", false, files);
+    findFilesWithExt(TEST_PATH("images"), "jpg", true, files);
+    findFilesWithExt(TEST_PATH("images"), "png", true, files);
     for (auto& f : files) {
-        auto fs = GetFileSizeSafe(f.path);
-        if (fs > 1024 * 512) {
-            continue;
-        }
         test_createAndApplyPaletteToImage(f.path);
     }
     return 0;
