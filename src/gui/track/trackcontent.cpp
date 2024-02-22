@@ -453,10 +453,9 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {
 }
 
-void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
+void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& trackSize) {
     size   = this->parent->size;
     culled = !getClipPositionInt(grid, trackSize, m_clip, pos, size, 0);
-    auto daw = dawCtrl->getDaw();
     auto prjGlobals = daw->getProjectGlobals();
     auto cache = daw->getAudioCache();
     audiofile_t* audio = cache->get(m_clip->audio.id);
@@ -505,7 +504,7 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
         return;
     }
 
-    const auto tempo100 = project.tempo100;
+    const auto tempo100 = prjGlobals.tempo100;
     const auto samplerate = m_track->audio->sampleFormat.sampleRate;
     auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, trackSize, m_clip, pos, size - shrink, posClipped, sizeClipped);
     if (waveform.size.x < 1 || waveform.size.y < 1) {
@@ -703,9 +702,10 @@ gui_track::gui_track(track_gui_entry_t* _entry, scaled_grid& _grid)
     padding = 0;
 }
 
-void gui_track::updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid) {
+void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
     automation.setData();
     automation.updateVisibleTrackContents(grid);
+    auto daw = dawCtrl->getDaw();
     std::vector<clip_t*> clips = m_track->getClips().getClips();
     for (clip_t* clip : clips) {
         auto* gui = DAW::createClipGui(this, m_trackentry, clip);
@@ -713,11 +713,11 @@ void gui_track::updateVisibleTrackContents(project_globals_t& project, scaled_gr
         if (gui->parent != this) {
             add(gui);
         }
-        gui->updatePosition(project, grid, size);
+        gui->updatePosition(daw, grid, size);
     }
     for (gui_track_subtrack* gui : m_trackentry->subtracks) {
         const bool throttleRefresh = m_trackentry->parentCtrl->isZooming();
-        gui->updatePosition(project, grid, size, throttleRefresh);
+        gui->updatePosition(daw, grid, size, throttleRefresh);
     }
 }
 

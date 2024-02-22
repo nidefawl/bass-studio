@@ -721,7 +721,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
     }
 
 
-    ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+    ThreadLock lock = dawCtrl->lockPlayThread();
     int first       = g->effects.front()->getSlot();
     int last        = g->effects.back()->getSlot();
 
@@ -910,7 +910,7 @@ void action_remove_modules::releaseResources(DawInstance* daw) {
 }
 
 void action_remove_modules::undo(DawInstance* daw) {
-    ThreadLock lock      = MainCtrl::getPlayThread()->lockThread();
+    ThreadLock lock      = daw->lockPlayThread();
     audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
     if (!stage) {
         setError("missing trackimpl");
@@ -928,7 +928,7 @@ void action_remove_modules::undo(DawInstance* daw) {
 }
 
 void action_remove_modules::redo(DawInstance* daw) {
-    ThreadLock lock      = MainCtrl::getPlayThread()->lockThread();
+    ThreadLock lock      = daw->lockPlayThread();
     audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
     if (!stage) {
         setError("missing trackimpl");

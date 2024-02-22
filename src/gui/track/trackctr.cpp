@@ -279,7 +279,7 @@ void guictr_tracks::updateVisibleTracks() {
         entry->content->setVisible(bVisible);
         entry->mixer->setVisible(bVisible);
         if (bVisible) {
-            entry->content->updateVisibleTrackContents(projectGlobals, m_grid);
+            entry->content->updateVisibleTrackContents(m_grid);
             for (gui_track_subtrack* au : entry->subtracks) {
                 au->updateVisibleTrackContents(m_grid);
             }
@@ -289,7 +289,7 @@ void guictr_tracks::updateVisibleTracks() {
 void guictr_tracks::layoutVisibleTracks() {
     track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
     for (track_gui_entry_t* entry : tracks) {
-        entry->content->updateVisibleTrackContents(projectGlobals, m_grid);
+        entry->content->updateVisibleTrackContents(m_grid);
         for (gui_track_subtrack* au : entry->subtracks) {
             au->updateVisibleTrackContents(m_grid);
         }

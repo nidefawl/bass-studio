@@ -718,11 +718,6 @@ public:
     explicit MainCtrl(DawInstance& _daw);
     ~MainCtrl() override = default;
 
-    static PlaybackThread* getPlayThread() {
-        MainCtrl* ctrl = MainCtrl::get();
-        return ctrl ? ctrl->daw.getPlayThread() : nullptr;
-    }
-
     void initApp(const std::vector<String>& args) override;
     void startApp() override;
 

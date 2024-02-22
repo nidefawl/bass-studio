@@ -28,7 +28,7 @@ class gui_subtrack_waveview final : public gui_track_subtrack {
     int32_t tickOffset  = 0;
     int32_t updateCalls = 0;
 
-    std::vector<audiotrack_split_t*> waveviewSamplesPresent;
+    std::vector<std::shared_ptr<audiotrack_split_t>> waveviewSamplesPresent;
     std::vector<int64_t> waveviewSampleIdsPresent;
 public:
     gui_subtrack_waveview(track_gui_entry_t* _entry, scaled_grid& grid)
@@ -54,7 +54,7 @@ public:
         if (tickOffset++ > 60) {
             tickOffset = 0;
             ivec2 ts   = { 0, 0 };
-            updatePosition(dawCtrl->getDaw()->getGlobals(), getGrid(), ts, false);
+            updatePosition(dawCtrl->getDaw(), getGrid(), ts, false);
         }
     }
 
@@ -239,8 +239,8 @@ public:
         return true;
     }
 
-    void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) override {
-
+    void updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) override {
+        const auto globals = dawCtrl->getDaw()->getGlobals();
 
         culled = size.x < 1 || size.y < 1;//!getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 
@@ -266,24 +266,29 @@ public:
         waveviewSamplesPresent.clear();
         waveviewSampleIdsPresent.clear();
 
-        this->m_track->audio->audioOutput.visitSamples(
-            [this, &trackPosSampleStart, &trackPosSampleEnd]
-            (const std::shared_ptr<audiotrack_split_t>& split) {
-                if (split && split->samplePos < trackPosSampleEnd && split->samplePos + split->getSample()->nSamples > trackPosSampleStart) {
-                    waveviewSamplesPresent.push_back(split.get());
-                    waveviewSampleIdsPresent.push_back(split->sampleId);
+        {
+            auto lock = daw->lockPlayThread();
+            this->m_track->audio->audioOutput.visitSamples_NoLock(
+                [this, &trackPosSampleStart, &trackPosSampleEnd]
+                (const std::shared_ptr<audiotrack_split_t>& split) {
+                    if (split && split->samplePos < trackPosSampleEnd && split->samplePos + split->getSample()->nSamples > trackPosSampleStart) {
+                        waveviewSamplesPresent.push_back(split);
+                        waveviewSampleIdsPresent.push_back(split->sampleId);
+                    }
                 }
-            }
-        );
+            );
+        }
 
-        for (auto& sample : waveviewSamplesPresent) {
+        for (auto& shrdSample : waveviewSamplesPresent) {
+            auto sample = shrdSample.get();
             if (!this->splits.count(sample->sampleId)) {
                 splits[sample->sampleId] = waveview_entry();
             }
             waveview_entry& entry = this->splits[sample->sampleId];
             auto& texture         = entry.waveformTex;
 
-            entry.sample = this->m_track->audio->audioOutput.getSampleById(sample->sampleId);
+            // entry.sample = this->m_track->audio->audioOutput.getSampleById(sample->sampleId);
+            entry.sample = shrdSample;
             waveform_layout_updated_t updatedEntry;
             bool samplesVisible = makeWaveformFromWaveview(tempo100, sr, entry, pos, size, updatedEntry);
             if (!samplesVisible
@@ -349,7 +354,7 @@ public:
     }
 
     void renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) override {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
         gui_track_subtrack::renderMixerInfo(vg, pos, size);
         const int htt         = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int fontSize    = htt;

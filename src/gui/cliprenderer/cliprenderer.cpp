@@ -194,7 +194,7 @@ gui_midi_clip::~gui_midi_clip() {
     delete impl;
 }
 
-void gui_midi_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
+void gui_midi_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& trackSize) {
     size   = this->parent->size;
     culled = !getClipPositionInt(grid, trackSize, m_clip, pos, size, 0);
 }

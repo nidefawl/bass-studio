@@ -115,7 +115,7 @@ public:
     virtual int getClipType()                    = 0;
     virtual void renderDebugPass(NVGcontext* vg) = 0;
     virtual void updateClipRenderCache(NVGcontext* vg) = 0;
-    virtual void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
+    virtual void updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& trackSize) = 0;
 };
 struct midi_clip_render_cache_t;
 class gui_midi_clip final : public gui_clip {
@@ -129,7 +129,7 @@ public:
         return CLIP_MIDI;
     }
 
-    void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) override;
+    void updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& trackSize) override;
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     void renderDebugPass(NVGcontext* vg) override;
@@ -187,7 +187,7 @@ public:
         return CLIP_AUDIO;
     }
 
-    void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) override;
+    void updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& trackSize) override;
     void updateClipRenderCache(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
@@ -302,7 +302,7 @@ public:
         guiTrAutomation.destroyGuis();
         guictr_base::destroyGuis();
     }
-    virtual void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) {
+    virtual void updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) {
     }
 
     virtual void renderDebugPass(NVGcontext* vg) {
@@ -332,7 +332,7 @@ public:
     void renderTrackFolded(NVGcontext* vg);
     void renderTrack(NVGcontext* vg);
     void render(NVGcontext* vg) override;
-    virtual void updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid);
+    virtual void updateVisibleTrackContents(scaled_grid& grid);
 
     bool handleKeyInput(KeyEvent& kevt) override {
         return parent->handleKeyInput(kevt);

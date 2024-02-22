@@ -29,13 +29,6 @@ struct audiotrack_t {
     int64_t samplesStored = 0;
     std::vector<std::shared_ptr<audiotrack_block_t>> data;
     std::vector<std::shared_ptr<audiotrack_split_t>> samples;
-    std::shared_ptr<audiotrack_split_t> getSample(samplecount_t samplePos);
-    std::shared_ptr<audiotrack_split_t> getSampleById(int64_t sampleId);
-    template<typename Functor>
-    void visitSamples(Functor f) {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-        std::for_each(samples.begin(), samples.end(), f);
-    }
     template<typename Functor>
     void visitSamples_NoLock(Functor f) {
         std::for_each(samples.begin(), samples.end(), f);

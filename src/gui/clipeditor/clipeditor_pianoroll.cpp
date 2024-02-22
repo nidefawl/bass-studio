@@ -88,7 +88,7 @@ void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
         if (note.y >= 0 && note.y < MAX_OCTAVES * 12) {
             int32_t notePitch = math::floorfS32(note.y);
             if (lastNote != notePitch) {
-                ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+                ThreadLock lock = dawCtrl->lockPlayThread();
                 if (lastNote > -1) {
                     int32_t killTime = midihost::getInstance()->killNote(-1, 0, lastNote);
                     if (killTime < lastNoteTime) {
@@ -106,7 +106,7 @@ void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
 void gui_pianoroll::handleDraggedRelease(MouseEvent& evt) {
     dragMode = dragmode::drag_none;
     if (lastNote > -1) {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
         midihost::getInstance()->killNote(-1, 0, lastNote);
     }
     lastNote = -1;

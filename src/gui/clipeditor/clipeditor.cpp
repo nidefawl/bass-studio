@@ -1361,7 +1361,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
     bool inSelection = false;
     if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES || guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
         if (evt.type == M_EVT_DOUBLECLICK) {
-            ThreadLock lock            = MainCtrl::getPlayThread()->lockThread();
+            ThreadLock lock            = dawCtrl->lockPlayThread();
             clip_cursor_t cursorBefore = view.m_cursor;
             notes.clearSelection();
             clip_notes_t notesBefore = notes;
@@ -1608,7 +1608,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         setSelectionFrame(getMinMaxTime(view.draggedSelection));
 
     } else if (dragMode >= drag_notes_move) {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
         int modeMove    = SNAP_LEAST;
         if (isAlt(evt.kbmods)) {
             modeMove = SNAP_OFF;

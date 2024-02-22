@@ -18,24 +18,6 @@ static constexpr samplecount_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES / (sizeof(fl
 /*static*/ samplecount_t audiotrack_t::GetSplitSampleLength() {
     return PER_BLOCK_SAMPLES;
 }
-std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int64_t sampleId) {
-    //TODO: this lock could be narrowed
-    ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    for (const std::shared_ptr<audiotrack_split_t>& sample : samples) {
-        if (sample && sample->sampleId == sampleId)
-            return sample;
-    }
-    return nullptr;
-}
-std::shared_ptr<audiotrack_split_t> audiotrack_t::getSample(samplecount_t samplePos) {
-    //TODO: this lock could be narrowed
-    ThreadLock lock    = MainCtrl::getPlayThread()->lockThread();
-    auto startBlock = static_cast<size_t>((samplePos) / PER_BLOCK_SAMPLES);
-    if (samples.size() > startBlock && samples[startBlock]) {
-        return samples[startBlock];
-    }
-    return nullptr;
-}
 int64_t audiotrack_t::readSamples(samplecount_t samplePos, samplecount_t numSamples, channelnum_t numChannels, std::vector<samplechannel_t>& outChannels) {
     dbgassert(numChannels == 2);
     const samplecount_t SPLIT_SAMPLECOUNT = audiotrack_t::GetSplitSampleLength();

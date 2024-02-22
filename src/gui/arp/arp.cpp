@@ -63,7 +63,7 @@ void gui_arp::buttonClicked(guibase* _button) {
     if (_button == &buttonBypass) {
         auto* arp = getArp();
         if (arp) {
-            ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+            ThreadLock lock = dawCtrl->lockPlayThread();
             toggleDeviceEnableState(arp, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
         }
     }

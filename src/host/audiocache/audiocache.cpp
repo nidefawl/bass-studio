@@ -397,9 +397,9 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
             log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
         }
     }
+    log_lf(Log::L_INFO, "Loading %s\n", StringAsCStr(path));
     if (LoadAudioSample(wav, pFile->sample.get(), samplerate, path.c_str())) {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED;
-        log_printf("Loaded %s\n", StringAsCStr(path));
     } else {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING;
         log_lf(Log::L_WARN, "Failed to load %s\n", StringAsCStr(path));
