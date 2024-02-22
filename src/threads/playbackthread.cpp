@@ -167,6 +167,7 @@ private:
                             auto reqState = static_cast<playback_state>(req->param);
                             if (m_status == playback_state::status_render && reqState != playback_state::status_render) {
                                 log_lf(Log::L_WARN, "status_render cancelled\n");
+                                m_status = status_no_process;
                                 host->postExportEnd(ctrl, exportSettingsLocal);
                                 if (renderCompleteFn) {
                                     renderCompleteFn();
