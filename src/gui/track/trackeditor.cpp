@@ -821,11 +821,11 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
             if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT) {
                 if (clip->start() != tick) {
                     tick_t offset = tick - clip->time;
-                    if (clip->getLen() - offset < MIN_CLIPSIZE) {
-                        offset = clip->getLen() - MIN_CLIPSIZE;
-                    }
                     if (!(grid.grid_dens.getSnap() == SNAP_OFF || isAlt(evt.kbmods)) && clip->getLen() - offset < grid.getTickLength()) {
                         offset = clip->getLen() - grid.getTickLength();
+                    }
+                    if (clip->getLen() - offset < MIN_CLIPSIZE) {
+                        offset = clip->getLen() - MIN_CLIPSIZE;
                     }
                     clip->time += offset;
                     clip->adjustLen(-offset);
@@ -835,11 +835,11 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
                 if (clip->end() != tick) {
                     tick_t offset = clip->end() - tick;
                     if (offset) {
-                        if (clip->getLen() - offset < MIN_CLIPSIZE) {
-                            offset = clip->getLen() - MIN_CLIPSIZE;
-                        }
                         if (!(grid.grid_dens.getSnap() == SNAP_OFF || isAlt(evt.kbmods)) && clip->getLen() - offset < grid.getTickLength()) {
                             offset = clip->getLen() - grid.getTickLength();
+                        }
+                        if (clip->getLen() - offset < MIN_CLIPSIZE) {
+                            offset = clip->getLen() - MIN_CLIPSIZE;
                         }
                         clip->adjustLen(-offset);
                     }
@@ -868,16 +868,16 @@ void guitrack_editor::dragClipboardMove(ivec2 local, KeyboardMods kbmods) {
             tick_t tickendExact = cursorBegin.getTickBegin() + dragMouseTicks;
             timeOffset          = tickendExact;
             if (grid.grid_dens.getSnap() != SNAP_OFF && !isAlt(kbmods)) {
-                std::vector<tick_t> snapPoints;
-                snapPoints.reserve(5 * 2 + 1);
+                std::array<tick_t, (5*2+1)> snapPoints{};
+                size_t idx = 0;
                 tick_t len           = grid.getTickLength();
                 tick_t posSelStart   = floor(tickendExact / (double) len);
                 tick_t posOffsetSnap = floor(dragMouseTicks / (double) len);
                 for (int i = -2; i <= 2; i++) {
-                    snapPoints.push_back(len * (posSelStart + i));
-                    snapPoints.push_back(cursorBegin.getTickBegin() + len * (posOffsetSnap + i));
+                    snapPoints[idx++] = len * (posSelStart + i);
+                    snapPoints[idx++] = cursorBegin.getTickBegin() + len * (posOffsetSnap + i);
                 }
-                snapPoints.push_back(cursorBegin.getTickBegin());
+                snapPoints[idx++] = cursorBegin.getTickBegin();
                 std::sort(snapPoints.begin(), snapPoints.end(), [tickendExact](tick_t const& t1, tick_t const& t2) {
                     return math::abs(tickendExact - t1) < math::abs(tickendExact - t2);
                 });
