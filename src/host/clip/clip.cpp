@@ -1189,3 +1189,13 @@ gui_clip* clip_t::getGuiClip(DawCtrl* parentCtrl) {
     }
     return nullptr;
 }
+
+void clip_t::updateNoteView() const {
+    if (dirty) {
+        noteViewRender.reqRevision++;
+        noteViewRenderFullClip.reqRevision++;
+        dirty = false;
+        getNotesView(0, getLen(), noteViewRender, false);
+        static_cast<clip_notes_t*>(&noteViewRenderFullClip)->copy(this->notes);
+    }
+}

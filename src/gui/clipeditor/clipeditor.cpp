@@ -2222,13 +2222,15 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
         cache->reset();
         return;
     }
-    noteview_render_t& notesView = cl->getNoteViewRender();
+    noteview_render_t& notesView = cl->getNoteViewFullClip();
 
-    // ivec2 cp = this->getPosContent();
     ivec2 sizeContents  = this->getSizeContent();
     ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
 
-    tick_t clipLen = cl->getLen();
+    tick_t clipLen = 0;
+    if (notesView.firstNote != notesView.lastNote) {
+        clipLen = notesView.lastNote.end();
+    }
     float numBars  = clipLen / (float) TICKS_BAR;
     float barSize  = sizeContents.x / (float) numBars;
 
@@ -2254,14 +2256,13 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
         nvgSave(vg);
         nvgTranslate(vg, clipPosScreen.x, clipPosScreen.y);
         nvgSave(vg);
-        // nvgTranslate(vg, 0, 0);
 
         if (sizeContents.x > 0 && sizeContents.y > 0) {
             clip_notes_t& notes = notesView;
             if (!notes.isEmpty()) {
                 note_t minN      = notesView.minNote;
                 note_t maxN      = notesView.maxNote;
-                int32_t numNotes = math::max((int32_t) 8, maxN.pitch - minN.pitch);
+                int32_t numNotes = math::max<int32_t>(1, maxN.pitch - minN.pitch + 1);
                 float scale      = sizeContents.y / (float) numNotes;
                 std::vector<const note_t*> notesClipped;
                 std::vector<const note_t*> notesMuted;
@@ -2288,12 +2289,12 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
                     }
                     float objPosNote = noteTime / (float) TICKS_BAR;
                     float objLenNote = note.len / (float) TICKS_BAR;
-                    float ny     = noteToScreen(note.pitch - minN.pitch, scale, 0, sizeContents.y);
+                    float ny     = noteToScreen(note.pitch - minN.pitch, scale, -scale, sizeContents.y);
                     float nx     = math::max(0.0f, objPosNote * barSize);
                     float nw     = math::min(objLenNote * barSize, sizeContents.x - nx);
-                    float nh     = scale;
-                    float insetx = calcInset(1, nw);
-                    float insety = calcInset(1, nh);
+                    float nh     = math::max(2.0f, scale);
+                    float insetx = 0.5f;
+                    float insety = 0.5f;
                     if (noteRenderMode == 0) {
                         nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
                     } else {
@@ -2332,12 +2333,12 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
 
                             float objPosNote = noteTime / (float) TICKS_BAR;
                             float objLenNote = note.len / (float) TICKS_BAR;
-                            float ny         = noteToScreen(note.pitch - minN.pitch, scale, 0, sizeContents.y);
-                            float nx         = objPosNote * barSize;
-                            float nw         = objLenNote * barSize;
-                            float nh         = scale;
-                            float insetx     = calcInset(1, nw);
-                            float insety     = calcInset(1, nh);
+                            float ny     = noteToScreen(note.pitch - minN.pitch, scale, -scale, sizeContents.y);
+                            float nx     = objPosNote * barSize;
+                            float nw     = objLenNote * barSize;
+                            float nh     = math::max(2.0f, scale);
+                            float insetx = 0.5f;
+                            float insety = 0.5f;
                             if (noteRenderMode == 0) {
                                 nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
                             } else {

@@ -980,7 +980,6 @@ public:
         auto clipEditor = getClipEditor();
         if (clipEditor) {
             m_grid = clipEditor->noteeditor.getGrid();
-            // m_view = clipEditor->noteeditor.getClipView();
         }
     }
     guictr_clipeditor* getClipEditor() {
@@ -1006,11 +1005,8 @@ public:
     float getScreenSpaceScaleX();
     void getFrameBounds(vec2& posFrame, vec2& sizeFrame);
     void resetCache();
-
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
-    // void layout() override {
-    // }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };

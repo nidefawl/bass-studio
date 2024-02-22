@@ -288,9 +288,9 @@ public:
         updateNoteView();
         return this->noteViewRender;
     }
-    clip_notes_t& getNoteViewPlayback() const {
+    noteview_render_t& getNoteViewFullClip() const {
         updateNoteView();
-        return this->noteViewPlayback;
+        return this->noteViewRenderFullClip;
     }
     tick_t getLoopBegin() const;
     tick_t getNumLoops() const;
@@ -330,16 +330,9 @@ public:
 
 private:
     mutable bool dirty = true;
-    mutable clip_notes_t noteViewPlayback;
     mutable noteview_render_t noteViewRender;
-    void updateNoteView() const {
-        if (dirty) {
-            noteViewRender.reqRevision++;
-            dirty = false;
-            getNotesView(0, getLen(), noteViewPlayback, true);
-            getNotesView(0, getLen(), noteViewRender, false);
-        }
-    }
+    mutable noteview_render_t noteViewRenderFullClip;
+    void updateNoteView() const;
 };
 
 note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time);
