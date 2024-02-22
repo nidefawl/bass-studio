@@ -123,7 +123,7 @@ set_source_files_properties("../src/platform/${PROJECT_PLATFORM}/platform_${PROJ
 
 DEFINE_TEST(test_fileio TRUE test_fileio.cpp common/test_common.cpp)
 DEFINE_TEST(test_image_loading TRUE test_image_loading.cpp common/test_common.cpp)
-DEFINE_TEST(test_pybind TRUE test_pybind.cpp common/test_common.cpp)
+
 set_source_files_properties(test_pybind.cpp PROPERTIES 
   SKIP_PRECOMPILE_HEADERS OFF
 )
@@ -153,3 +153,7 @@ if (PROJECT_CFG_FSANITIZE STREQUAL "address" OR PROJECT_CFG_FSANITIZE STREQUAL "
 endif()
 
 DEFINE_TEST(test_gui TRUE test_gui.cpp common/test_appctrl.cpp gui/testctr.cpp gui/testctr2.cpp gui/edit_ieee_float.cpp)
+
+if (TARGET pybind11::embed)
+  DEFINE_TEST(test_pybind TRUE test_pybind.cpp common/test_common.cpp)
+endif()
