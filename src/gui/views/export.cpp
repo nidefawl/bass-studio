@@ -1,12 +1,10 @@
-#include "gui/container/container_builder.h"
+#include "controls.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
-#include "guicolors.h"
+#include "gui/container/container_builder.h"
 #include "gui/controls/button.h"
-#include "controls.h"
 #include "host/daw/mainctrl.h"
 #include "host/host_pluginmanager.h"
-#include "host/audiohost/audio_host.h"
 
 namespace {
     constexpr int TEXT_FONT_SIZE = 20;
@@ -23,9 +21,10 @@ class guictr_timeframe final : public guictr_base {
 public:
     guictr_timeframe(tick_t* s, tick_t* d, bool* l)
         : guictr_base(),
-          tmTickStart(s),
+          tmTickStart(false),
           tmTickLen(true),
           pIsLocked(l) {
+        tmTickStart.setRef(toRef(), s);
         tmTickLen.setRef(toRef(), d);
         padding = 0;
         margin  = 0;
