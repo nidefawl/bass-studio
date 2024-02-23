@@ -1209,6 +1209,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.file.addCommand(this, GlobalCommandType::CMD_BUNDLE_PROJECT_ZIP);
     menus.file.addCommand(this, GlobalCommandType::CMD_SET_STARTUP_PROJECT);
     menus.file.addSeperator();
+    menus.file.addCommand(this, GlobalCommandType::CMD_EXPORT_AUDIO);
     menus.file.addCommand(this, GlobalCommandType::CMD_EXPORT_TRACK);
     menus.file.addCommand(this, GlobalCommandType::CMD_IMPORT_TRACK);
     menus.file.addSeperator();

@@ -125,8 +125,9 @@ namespace DAW::UI {
         Add(CMD_INSERT_MIDI_TRACK, {"Insert MIDI Track", "Insert a new MIDI track", "", ICON_PLUS}, {});
         Add(CMD_INSERT_RETURN_TRACK, {"Insert Return Track", "Insert a new return track", "", ICON_PLUS}, {});
         Add(CMD_INSERT_MASTER_TRACK, {"Insert Master Track", "Insert a new master track", "", ICON_PLUS}, {});
-        Add(CMD_IMPORT_TRACK, {"Import Track", "Import a track from a file", "", ICON_FOLDER}, {});
-        Add(CMD_EXPORT_TRACK, {"Export Track", "Export a track to a file", "", ICON_SAVE}, {});
+        Add(CMD_IMPORT_TRACK, {"Import Single Track", "Import a track from a file", "", ICON_FOLDER}, {});
+        Add(CMD_EXPORT_TRACK, {"Export Single Track", "Export a track to a file", "", ICON_SAVE}, {});
+        Add(CMD_EXPORT_AUDIO, {"Export Audio", "Render the project to an audio file", "", ICON_SAVE}, {});
         Add(CMD_UNDO, {"Undo", "Undo last action", ""}, KC_UNDO);
         Add(CMD_REDO, {"Redo", "Redo last action", ""}, KC_REDO);
         Add(CMD_SELECT_ALL, {"Select All", "Select all items", ""}, KC_SELECTALL);

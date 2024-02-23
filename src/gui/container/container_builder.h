@@ -1,5 +1,6 @@
 #pragma once
 class guictr_base;
+class guidialog_base;
 class DawInstance;
 
 struct create_ctr_t {
@@ -16,4 +17,5 @@ guictr_base* makeGuiPerformance(create_ctr_t ctxt);
 guictr_base* makeGuiExport(create_ctr_t ctxt);
 guictr_base* makeGuiClipEditor(create_ctr_t ctxt);
 guictr_base* makeGuiMidiInspect(create_ctr_t ctxt);
+guidialog_base* makeGuiExportDialog(create_ctr_t ctxt);
 }

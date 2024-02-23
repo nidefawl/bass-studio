@@ -91,8 +91,11 @@ public:
     void buttonClicked(guibase* button) override {
         if (button == &btnLock) {
             *pIsLocked       = !*pIsLocked;
-            btnLock.drawParm = *pIsLocked ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
         }
+        if (button == &tmTickStart || button == &tmTickLen) {
+            *pIsLocked = true;
+        }
+        btnLock.drawParm = *pIsLocked ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
     }
     bool isLocked() const {
         return *pIsLocked;
@@ -147,8 +150,8 @@ public:
 
         int32_t closeSize = 32;
 
-        btnExport.size = ivec2(math::min(cs.x / 2 - inset * 2, closeSize * 3), closeSize);
-        btnExport.pos  = ivec2(cs.x - btnExport.size.x + inset, cs.y - inset - btnExport.size.y);
+        btnExport.size = ivec2(math::min(cs.x / 2, closeSize * 3), closeSize);
+        btnExport.pos  = ivec2(cs.x - inset - btnExport.size.x, cs.y - inset - btnExport.size.y);
 
 
         inset               = 5;
@@ -219,8 +222,30 @@ public:
     }
 };
 
+class guidialog_export final : public guidialog_base {
+    guictr_base* ctrExport;
+public:
+    guidialog_export(DawInstance* daw) 
+        : guidialog_base(ivec2{520, 200}),
+        ctrExport(new gui_export(daw->getExportSettings()))
+    {
+        padding = 2;
+        margin = 0;
+        setLabel(ctrExport->getLabel());
+        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
+        add(ctrExport);
+    }
+    ~guidialog_export() override {
+        removeGuis();
+        delete ctrExport;
+    }
+};
+
 
 namespace DAW::UI {
+    guidialog_base* makeGuiExportDialog(create_ctr_t ctxt) {
+        return new guidialog_export(ctxt.daw);
+    }
     guictr_base* makeGuiExport(create_ctr_t ctxt) {
         dbgassert(ctxt.daw);
         auto& settings = ctxt.daw->getExportSettings();

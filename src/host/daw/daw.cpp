@@ -868,6 +868,10 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             case CMD_PREFERENCES:
                 mainCtrl->openDialog(new DAW::DialogSettings::guidialog_settings(this));
                 return true;
+            case CMD_EXPORT_AUDIO: {
+                mainCtrl->openDialog(DAW::UI::makeGuiExportDialog(create_ctr_t{this}));
+                return true;
+            }
             case CMD_EXIT:
                 mainCtrl->mainWindow->requestClose();
                 return true;
