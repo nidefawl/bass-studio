@@ -203,21 +203,20 @@ public:
         selectFolder.setTooltipText(settings.exportPath);
     }
     void buttonClicked(guibase* button) override {
-
         if (button->id == 0x10) {
             promptExportPath();
             return;
         }
-
-
         if (button->id == 0x20) {
             if (settings.exportPath.empty()) {
                 promptExportPath();
             }
             if (!settings.exportPath.empty()) {
                 dawCtrl->getDaw()->startExport();
+                if (parent) {
+                    parent->buttonClicked(button);
+                }
             }
-            return;
         }
     }
 };
@@ -238,6 +237,11 @@ public:
     ~guidialog_export() override {
         removeGuis();
         delete ctrExport;
+    }
+    void buttonClicked(guibase* button) override {
+        if (button->id == 0x20) {
+            closeContextMenu();
+        }
     }
 };
 

@@ -539,7 +539,7 @@ void Host::preExportBegin(project_controller_t* ctrl, export_settings_t& exportS
     }
 }
 
-void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
+void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings, bool bCancelled) {
     getHostCallback()->isOfflineRendering = false;
     const tick_t tickBegin = exportSettings.exportPos;
     const tick_t tickEnd = tickBegin + exportSettings.exportLen;
@@ -550,7 +550,7 @@ void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSe
     const samplerate_t numSamples = sampleEnd - sampleBegin;
 
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
-        if ((trackMaster->getStage()->flags & audiostageflags_t::RECORD_OUTPUT) != audiostageflags_t::NONE) {
+        if (!bCancelled && (trackMaster->getStage()->flags & audiostageflags_t::RECORD_OUTPUT) != audiostageflags_t::NONE) {
             String exportPath;
             App::Platform::createUniqueFilename(exportPath, exportSettings.exportPath);
             writeTrackSamplesToDisk(exportPath, trackMaster->getStage(), sampleBegin, numSamples);

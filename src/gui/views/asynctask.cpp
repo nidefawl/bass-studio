@@ -92,11 +92,12 @@ void gui_asyc_progress::render(NVGcontext* vg) {
         double progressOverall = 0;
         double progressDetail = 0;
         task->getPreciseProgress(progressOverall, progressDetail);
-        for (int i = 0; i < 2; ++i) {
-            const int h = htt;
+        int numBars = progressDetail < 0 ? 1 : 2;
+        for (int i = 0; i < numBars; ++i) {
+            const int h = numBars == 1 ? htt+htt/2 : htt;
             const int w = cs.x - htt * 1;
             const int x = cs.x / 2 - w / 2;
-            const int y = (i==1?(cs.y / 2):(cs.y/6)) - h / 2;
+            const int y = numBars == 1 ? cs.y / 3 - h / 2 : ((i==1?(cs.y / 2):(cs.y/6)) - h / 2);
             double progress = i == 0 ? progressOverall : progressDetail;
             nvgBeginPath(vg);
             nvgRect(vg, x, y, w, h);
@@ -108,9 +109,10 @@ void gui_asyc_progress::render(NVGcontext* vg) {
             nvgFillColor(vg, theme->getColor(GuiColor::COL_KNOB));
             nvgFillCustomPar(vg, -3);
             nvgFill(vg);
-            float fontHeight = h * 0.5f;
-            float pos = renderText(vg, vec2(x + fontHeight, y + h / 2), vec2(w-fontHeight, h), i == 0 ? label : desc, h * 0.65f, NVG_ALIGN_LEFT| NVG_ALIGN_MIDDLE);
+            float fontHeight = numBars == 1 ? htt * 0.75f : h * 0.65f;
+            float pos = renderText(vg, vec2(x + fontHeight, y + h / 2), vec2(w-fontHeight, h), i == 0 ? label : desc, fontHeight, NVG_ALIGN_LEFT| NVG_ALIGN_MIDDLE);
             if (pos < w * 0.45f) {
+                fontHeight = numBars == 1 ? htt * 0.75f : h * 0.5f;
                 renderText(vg, vec2(x + w / 2, y + h / 2), vec2(w * 0.5f, h), StringFormat("%.0f%%", progress * 100), fontHeight, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             }
         }

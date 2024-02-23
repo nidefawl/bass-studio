@@ -137,7 +137,51 @@ void DawInstance::startPlaying(tick_t pos) {
     playThread.addRequest(REQ_STATE, (int) playback_state::status_playback, true);
 }
 
+namespace DAW {
+    struct export_project_task final : public async_task_t {
+        DawInstance* daw;
+        export_settings_t settings;
+        export_project_task(DawInstance* daw)
+            : daw(daw)
+            , settings(daw->getExportSettings()) {
+        }
+        String getTaskName() const override {
+            return "Rendering Audio";
+        }
+        String getProgressDesc() const override {
+            return "";
+        }
+        void run() override {
+            switch (m_state) {
+                case state::idle:
+                    m_state = state::running;
+                    break;
+                case state::running:
+                    if (daw->getPlayThread()->getState() != playback_state::status_render) {
+                        m_state = state::finished;
+                    }
+                    break;
+                case state::error:
+                case state::finished:
+                case state::cancelled:
+                    break;
+            }
+            requestFrame();
+        }
+        void cancel() override {
+            canceled = true;
+            daw->stopPlaying();
+        }
+        void getPreciseProgress(double& progressOverall, double& progressDetail) override {
+            progressDetail  = -1;
+            auto tick = daw->getPlaybackPos() - settings.exportPos;
+            progressOverall = tick / double(settings.exportLen);
+        }
+    };
+}
+
 void DawInstance::startExport() {
+    setAsyncTask(new DAW::export_project_task(this));
     setAudioThreadState(playback_state::status_no_process);
     if (tls.audioHost) {
         tls.audioHost->stopAudio();
