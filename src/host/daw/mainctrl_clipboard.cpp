@@ -308,10 +308,12 @@ namespace DAW {
                     track_gui_entry_t* tr = trackList.atNC(i);
                     cutIntersectingClips(tr->track->getClips(), tickBegin, tickEnd, daw);
                     offsetClips(tr->track->getClips(), tickEnd, tickBegin - tickEnd);
-                    for (size_t j = 0; j < tr->subtracks.size(); ++j) {
-                        gui_track_subtrack* subtrack = tr->subtracks[j];
-                        automated_param_t* automation  = subtrack->getAutomation();
-                        if (automation) {
+                    std::vector<automatable_t *> targets;
+                    tr->track->getStage()->getAutomatableTrackTargets(targets);
+                    for (auto& automatable : targets) {
+                        std::vector<automation_lane_t*> allParams;
+                        automatable->getAllAutomatedParamRef(allParams);
+                        for (auto automation : allParams) {
                             automation->deleteTickRange(tickBegin, tickEnd);
                         }
                     }
