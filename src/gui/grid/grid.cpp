@@ -72,23 +72,11 @@ tick_t scaled_grid::screenToTickSnapExact(double x, int snap) const {
     return tickSnapExact(screenToTick(x), snap);
 }
 tick_t scaled_grid::tickSnapExact(tick_t tick, int snap) const {
-    if (snap != SNAP_OFF && this->grid_dens.getSnap() != GRID_OFF) {
-        if (snap == SNAP_LEAST) {
-            const grid_div* min  = nullptr;
-            for (auto& d : gridList) {
-                if (d.time > tick) { return min == nullptr ? 0 : min->time; }
-                min = &d;
-            }
-            if (min) {
-                tick = min->time;
-            } else {
-                return 0;
-            }
-        } else {
-            tick_t p = distPrev(tick);
-            tick_t n = distNext(tick);
-            return p < n ? prev(tick) : next(tick);
-        }
+    if ((snap & SNAP_ON) && this->grid_dens.getSnap() != GRID_OFF) {
+        tick_t p = distPrev(tick);
+        tick_t n = distNext(tick);
+        auto closestTick = p < n ? prev(tick) : next(tick);
+        return (snap & SNAP_UNCLAMPED_ZERO) ? closestTick : math::max<tick_t>(0, closestTick);
     }
     return tick;
 }

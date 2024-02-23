@@ -1609,7 +1609,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 
     } else if (dragMode >= drag_notes_move) {
         ThreadLock lock = dawCtrl->lockPlayThread();
-        int modeMove    = SNAP_LEAST;
+        int modeMove    = SNAP_ON;
         if (isAlt(evt.kbmods)) {
             modeMove = SNAP_OFF;
         }
@@ -1625,7 +1625,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 
         tick_t timeOffset = 0;
         const note_t noteDrag = this->beginDragNote;
-        if (modeMove == SNAP_LEAST) {
+        if (modeMove == SNAP_ON) {
             tick_t handlePos = dragMode == drag_note_right ? noteDrag.end() : noteDrag.start();
             handlePos += tickOffset;
             if (math::abs(timeOffsetEx) > gridSize / 4) {
