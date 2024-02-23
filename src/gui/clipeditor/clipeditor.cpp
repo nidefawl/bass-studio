@@ -1752,6 +1752,7 @@ void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
         notes.paste(note, true);
     }
     notes.selectLastN(view.draggedSelection.size());
+    notes.updateBounds();
     clip->setDirty();
     view.updateNotePitches(false);
 }
