@@ -919,6 +919,11 @@ public:
     }
 
     void onWindowCloseRequest() override {
+        if ((windowCreationFlags & WINDOW_IS_DIALOG) && parent) {
+#ifdef _WIN32
+            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, NULL);
+#endif
+        }
         bool b = ctrl->onWindowCloseRequest();
         if (!b) {
             glfwSetWindowShouldClose(glfw, 0);
@@ -1228,6 +1233,11 @@ public:
     }
 
     void onWindowClose() override {
+        if ((windowCreationFlags & WINDOW_IS_DIALOG) && parent) {
+#ifdef _WIN32
+            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, NULL);
+#endif
+        }
 #ifdef _WIN32
         if (parent && disablesParent)
             EnableWindow(parent->getHWND(), TRUE);
