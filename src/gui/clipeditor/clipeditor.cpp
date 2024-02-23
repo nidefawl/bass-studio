@@ -2298,12 +2298,13 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
                     float nx     = math::max(0.0f, objPosNote * barSize);
                     float nw     = math::min(objLenNote * barSize, sizeContents.x - nx);
                     float nh     = math::max(2.0f, scale);
-                    float insetx = 0.5f;
-                    float insety = 0.5f;
+                    float insetStr = math::clamp(math::clamp(nw-1.0f, 0.0f, 4.0f)/4.0f, 0.0f, 1.0f);
+                    float nwInset  = math::max(nw - 1.0f*insetStr, 1.0f);
+                    float nxInset  = nx + 0.5f*insetStr;
                     if (noteRenderMode == 0) {
-                        nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                        nvgRect(vg, nxInset, ny, nwInset, nh);
                     } else {
-                        nvgBatchedRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                        nvgBatchedRect(vg, nxInset, ny, nwInset, nh);
                     }
 
                     notesRendered++;
@@ -2344,15 +2345,16 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
                                 relNotePitch += (8 - numNotes) / 2;
                             }
                             float ny     = noteToScreen(relNotePitch, scale, -scale, sizeContents.y);
-                            float nx     = objPosNote * barSize;
-                            float nw     = objLenNote * barSize;
+                            float nx     = math::max(0.0f, objPosNote * barSize);
+                            float nw     = math::min(objLenNote * barSize, sizeContents.x - nx);
                             float nh     = math::max(2.0f, scale);
-                            float insetx = 0.5f;
-                            float insety = 0.5f;
+                            float insetStr = math::clamp(math::clamp(nw-1.0f, 0.0f, 4.0f)/4.0f, 0.0f, 1.0f);
+                            float nwInset  = math::max(nw - 1.0f*insetStr, 1.0f);
+                            float nxInset  = nx + 0.5f*insetStr;
                             if (noteRenderMode == 0) {
-                                nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                                nvgRect(vg, nxInset, ny, nwInset, nh);
                             } else {
-                                nvgBatchedRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                                nvgBatchedRect(vg, nxInset, ny, nwInset, nh);
                             }
                             notesRendered++;
                         }
@@ -2473,14 +2475,14 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
             nvgSave(vg);
             nvgTranslate(vg, posContents.x, posContents.y);
             nvgSave(vg);
-            if (cache->isCacheValid(0)) {
-                nvgFillFromCache(vg, cache->arr[0]);
-            }
             if (cache->isCacheValid(1)) {
                 nvgFillFromCache(vg, cache->arr[1]);
             }
             if (cache->isCacheValid(2)) {
                 nvgFillFromCache(vg, cache->arr[2]);
+            }
+            if (cache->isCacheValid(0)) {
+                nvgFillFromCache(vg, cache->arr[0]);
             }
             notesRendered += cache->notesRendered;
             nvgRestore(vg);

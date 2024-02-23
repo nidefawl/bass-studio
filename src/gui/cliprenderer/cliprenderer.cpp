@@ -264,12 +264,13 @@ void renderMidiClipToCache(NVGcontext* vg, noteview_cache_impl_t* impl, const gu
                     float nx     = math::max(0.0f, objPosNote * barSize);
                     float nw     = math::min(objLenNote * barSize, sizeContent.x - nx);
                     float nh     = math::max(2.0f, scale);
-                    float insetx = 0.5f;
-                    float insety = 0.5f;
+                    float insetStr = math::clamp(math::clamp(nw-1.0f, 0.0f, 4.0f)/4.0f, 0.0f, 1.0f);
+                    float nwInset  = math::max(nw - 1.0f*insetStr, 1.0f);
+                    float nxInset  = nx + 0.5f*insetStr;
                     if (noteRenderMode == 0) {
-                        nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                        nvgRect(vg, nxInset, ny, nwInset, nh);
                     } else {
-                        nvgBatchedRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                        nvgBatchedRect(vg, nxInset, ny, nwInset, nh);
                     }
 
                     notesRendered++;
@@ -309,16 +310,18 @@ void renderMidiClipToCache(NVGcontext* vg, noteview_cache_impl_t* impl, const gu
                                 // offset relNotePitch to center notes
                                 relNotePitch += (8 - numNotes) / 2;
                             }
-                            float ny         = noteToScreen(relNotePitch, scale, -scale, sizeContent.y);
-                            float nx         = objPosNote * barSize;
-                            float nw         = objLenNote * barSize;
+                            
+                            float ny     = noteToScreen(relNotePitch, scale, -scale, sizeContent.y);
+                            float nx     = math::max(0.0f, objPosNote * barSize);
+                            float nw     = math::min(objLenNote * barSize, sizeContent.x - nx);
                             float nh     = math::max(2.0f, scale);
-                            float insetx = 0.5f;
-                            float insety = 0.5f;
+                            float insetStr = math::clamp(math::clamp(nw-1.0f, 0.0f, 4.0f)/4.0f, 0.0f, 1.0f);
+                            float nwInset  = math::max(nw - 1.0f*insetStr, 1.0f);
+                            float nxInset  = nx + 0.5f*insetStr;
                             if (noteRenderMode == 0) {
-                                nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                                nvgRect(vg, nxInset, ny, nwInset, nh);
                             } else {
-                                nvgBatchedRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
+                                nvgBatchedRect(vg, nxInset, ny, nwInset, nh);
                             }
                             notesRendered++;
                         }
@@ -444,14 +447,14 @@ void gui_midi_clip::render(NVGcontext* vg) {
             nvgTranslate(vg, pos.x, pos.y);
             nvgSave(vg);
             nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
-            if (impl->isCacheValid(0)) {
-                nvgFillFromCache(vg, impl->arr[0]);
-            }
             if (impl->isCacheValid(1)) {
                 nvgFillFromCache(vg, impl->arr[1]);
             }
             if (impl->isCacheValid(2)) {
                 nvgFillFromCache(vg, impl->arr[2]);
+            }
+            if (impl->isCacheValid(0)) {
+                nvgFillFromCache(vg, impl->arr[0]);
             }
             notesRendered += impl->notesRendered;
             nvgRestore(vg);
@@ -511,14 +514,14 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
         nvgTranslate(vg, pos.x, pos.y);
         nvgSave(vg);
         nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
-        if (cache->isCacheValid(0)) {
-            nvgFillFromCache(vg, cache->arr[0]);
-        }
         if (cache->isCacheValid(1)) {
             nvgFillFromCache(vg, cache->arr[1]);
         }
         if (cache->isCacheValid(2)) {
             nvgFillFromCache(vg, cache->arr[2]);
+        }
+        if (cache->isCacheValid(0)) {
+            nvgFillFromCache(vg, cache->arr[0]);
         }
         notesRendered += cache->notesRendered;
         nvgRestore(vg);
