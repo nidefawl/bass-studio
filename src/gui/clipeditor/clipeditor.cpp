@@ -2262,8 +2262,8 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
             if (!notes.isEmpty()) {
                 note_t minN      = notesView.minNote;
                 note_t maxN      = notesView.maxNote;
-                int32_t numNotes = math::max<int32_t>(1, maxN.pitch - minN.pitch + 1);
-                float scale      = sizeContents.y / (float) numNotes;
+                int32_t numNotes = maxN.pitch - minN.pitch + 1;
+                float scale      = sizeContents.y / (float) math::max<int32_t>(8, numNotes);
                 std::vector<const note_t*> notesClipped;
                 std::vector<const note_t*> notesMuted;
                 int begin = 0;
@@ -2289,7 +2289,12 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
                     }
                     float objPosNote = noteTime / (float) TICKS_BAR;
                     float objLenNote = note.len / (float) TICKS_BAR;
-                    float ny     = noteToScreen(note.pitch - minN.pitch, scale, -scale, sizeContents.y);
+                    auto relNotePitch = note.pitch - minN.pitch;
+                    if (numNotes < 8) {
+                        // offset relNotePitch to center notes
+                        relNotePitch += (8 - numNotes) / 2;
+                    }
+                    float ny     = noteToScreen(relNotePitch, scale, -scale, sizeContents.y);
                     float nx     = math::max(0.0f, objPosNote * barSize);
                     float nw     = math::min(objLenNote * barSize, sizeContents.x - nx);
                     float nh     = math::max(2.0f, scale);
@@ -2333,7 +2338,12 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
 
                             float objPosNote = noteTime / (float) TICKS_BAR;
                             float objLenNote = note.len / (float) TICKS_BAR;
-                            float ny     = noteToScreen(note.pitch - minN.pitch, scale, -scale, sizeContents.y);
+                            auto relNotePitch = note.pitch - minN.pitch;
+                            if (numNotes < 8) {
+                                // offset relNotePitch to center notes
+                                relNotePitch += (8 - numNotes) / 2;
+                            }
+                            float ny     = noteToScreen(relNotePitch, scale, -scale, sizeContents.y);
                             float nx     = objPosNote * barSize;
                             float nw     = objLenNote * barSize;
                             float nh     = math::max(2.0f, scale);
