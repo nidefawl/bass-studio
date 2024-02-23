@@ -1,5 +1,6 @@
 #include "gui/container/container.h"
 #include "gui/controls/button.h"
+#include "gui/controls/colorpick.h"
 #include "gui/controls/inputfield.h"
 #include "gui/controls/textfield.h"
 #include "gui/dropdown/dropdown_generic.h"
@@ -82,6 +83,7 @@ class guictr_set_background : public guictr_base {
     guictr_scale scale;
     guibutton btnClearImage;
     std::array<guictr_3buttons, 3> btnPos;
+    gui_color_select colorSelect;
     std::function<void(const container_background_image&)> fnEditBackground;
     guictr_set_background() : guictr_base() {
         padding = 2;
@@ -125,6 +127,9 @@ class guictr_set_background : public guictr_base {
             add(&btnPos[y]);
         }
         add(&scale);
+        add(&colorSelect);
+        colorSelect.setText("Color");
+        colorSelect.id = 0x14;
         add(&btnClearImage);
         setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
     }
@@ -173,6 +178,9 @@ class guictr_set_background : public guictr_base {
         if (button->id == 0x12) {
             selectImagePath.pathVal.setValue("");
             bgImage.path = "";
+        }
+        if (button->id == 0x14) {
+            bgImage.rgba = colorSelect.getColor();
         }
         for (int i = 0; i < 9; i++) {
             if (button->id == 0x20 + i) {

@@ -41,7 +41,7 @@ public:
             parent->rightClicked(evt, this);
     }
     void setText(String _str) {
-        if (getLabel().empty())
+        if (label.empty())
             setLabel(_str);
         str = _str;
     }

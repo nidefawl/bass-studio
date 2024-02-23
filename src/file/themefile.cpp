@@ -26,6 +26,7 @@
 #include <cereal/types/memory.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal_optional_nvp/cereal_optional_nvp.hpp>
 
 using namespace cereal;
 
@@ -110,6 +111,7 @@ void serialize(Archive& archive, container_background_image& m) {
             make_nvp("horizontalPos", m.horizontalPos),
             make_nvp("scale", m.scale),
             make_nvp("scaleAbsolute", m.scaleAbsolute));
+    make_optional_nvp(archive, "rgba", m.rgba);
 }
 
 template <class Archive>

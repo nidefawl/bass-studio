@@ -1,3 +1,4 @@
+#include "../TestBase.hpp"
 
 #include <GLFW/glfw3.h>
 #include <nanovg_min.h>
@@ -157,7 +158,7 @@ class guictr_testgui : public guictr_base {
     std::array<guictr_bgimage, 12> bgTests;
     guictr_base* ctrTabbed;
     int nr{};
-    String testImage = "wallhaven-we5g56.png";
+    String testImage = TEST_PATH("images/moe.jpg");
 public:
     guictr_testgui();
     ~guictr_testgui() override;

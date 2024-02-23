@@ -201,6 +201,8 @@ namespace RenderResources {
                 tex.flags = flags;
             } catch (std::exception& e) {
                 log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", StringAsCStr(path), e.what());
+                tex.perContextId[vg] = -1;
+                tex.flags = flags;
                 return nullptr;
             }
         }

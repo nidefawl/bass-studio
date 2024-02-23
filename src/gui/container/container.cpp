@@ -393,7 +393,7 @@ void container_background_image::render(guictr_base* ctr, NVGcontext* vg) const 
         dbgassert(id != bgImage->perContextId.end());
         NVGpaint paintIcon = nvgImagePattern(vg, 0, 0, bgImage->width, bgImage->height, 0, id->second, 1.0f);
         auto imgSize = vec2(bgImage->width, bgImage->height);
-        paintIcon.innerColor = paintIcon.outerColor = NVGcolor{ 1.0f, 1.0f, 1.0f, 1.0f };
+        paintIcon.innerColor = paintIcon.outerColor = rgbaToNvg(this->rgba);
         vec2 targetSize = (sizeCtr * scale);
         if (scaleAbsolute && scale.x > 0) {
             // scale to absolute pixels (width)

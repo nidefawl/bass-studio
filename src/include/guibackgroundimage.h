@@ -21,6 +21,7 @@ struct container_background_image {
     position_t horizontalPos = center;
     vec2 scale = vec2(1.0f);
     bool scaleAbsolute = false;
+    uint32_t rgba = 0xFFFFFFFF;
     void render(guictr_base* ctr, NVGcontext* vg) const;
 };
 
