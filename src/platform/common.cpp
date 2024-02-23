@@ -200,7 +200,6 @@ int32_t createUniqueFilename(String& pathString, const String& baseName) {
         nextPath += std::to_string(idx);
         nextPath += ".";
         nextPath += ext;
-        idx++;
         pathString = nextPath;
     }
     return idx;
