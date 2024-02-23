@@ -1143,6 +1143,11 @@ public:
     }
 
     void hide() override {
+        if ((windowCreationFlags & WINDOW_IS_DIALOG) && parent) {
+#ifdef _WIN32
+            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, NULL);
+#endif
+        }
         appwindow::hideWindow();
     }
     void setWindowTitle(const String& windowTitle) override {
