@@ -117,7 +117,7 @@ struct automation_t {
     void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
     void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
     void deleteTickRange(tick_t tickBegin, tick_t tickEnd);
-    void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data);
+    void insertTickRange(tick_t tickPos, tick_t len, const std::vector<automation_point_t>& data);
     std::pair<float, float> getMinMax();
     std::optional<std::pair<tick_t, tick_t>> getBeginEnd() const;
     void activate() {

@@ -281,6 +281,8 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 void automation_t::deleteTickRange(tick_t tickBegin, tick_t tickEnd) {
     std::vector<automation_point_t> pointsTmp;
     pointsTmp.reserve(points.size());
+    automation_point_t ptStart{ tickBegin, getValueAt(tickBegin) };
+    automation_point_t ptEnd{ tickBegin, getValueAt(tickEnd) };
     int32_t idx1 = 0;
     for (; idx1 < CtrSize(points); idx1++) {
         auto& pt = points[idx1];
@@ -290,6 +292,8 @@ void automation_t::deleteTickRange(tick_t tickBegin, tick_t tickEnd) {
             break;
         }
     }
+    pointsTmp.push_back(ptStart);
+    pointsTmp.push_back(ptEnd);
     for (; idx1 < CtrSize(points); idx1++) {
         auto& pt = points[idx1];
         if (pt.time > tickEnd) {
@@ -302,31 +306,15 @@ void automation_t::deleteTickRange(tick_t tickBegin, tick_t tickEnd) {
     simplifyData(points);
 }
 
-void automation_t::insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) {
-    std::vector<automation_point_t> pointsTmp;
-    pointsTmp.reserve(points.size() + data.size());
-    int32_t idx1 = 0;
-    for (; idx1 < CtrSize(points); idx1++) {
-        auto& pt = points[idx1];
-        if (pt.time < tickBegin) {
-            pointsTmp.push_back(pt);
-        } else {
-            break;
+void automation_t::insertTickRange(tick_t tickPos, tick_t len, const std::vector<automation_point_t>& data) {
+    for (auto& pt : points) {
+        if (pt.time >= tickPos) {
+            pt.time += len;
         }
     }
-    for (int32_t idx = 0; idx < (int) data.size(); idx++) {
-        auto pt = data[idx];
-        pt.time += tickBegin;
-        pt.val = quantizeFloat(pt.val, quantizationSteps);
-        pointsTmp.push_back(pt);
+    for (const auto& pt : data) {
+        addPointAt(points, pt.time + tickPos, quantizationSteps, pt.val);
     }
-    for (; idx1 < CtrSize(points); idx1++) {
-        auto& pt = points[idx1];
-        auto ptCpy = pt;
-        ptCpy.time += (tickEnd - tickBegin);
-        pointsTmp.push_back(ptCpy);
-    }
-    points = std::move(pointsTmp);
     simplifyData(points);
 }
 

@@ -124,6 +124,7 @@ namespace DAW {
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
     void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip);
     void deleteTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
+    void insertTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor, int32_t len);
 }// namespace DAW
 
 struct clip_cursor_t {

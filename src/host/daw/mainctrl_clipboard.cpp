@@ -322,6 +322,32 @@ namespace DAW {
         }
     }
 
+    void insertTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor, int32_t len) {
+        int32_t tickBegin     = _cursor.getTickBegin();
+        int32_t trackBegin    = _cursor.getTrackBegin();
+        int32_t trackEnd      = _cursor.getTrackEnd();
+        if (!_cursor.isSubtrackSelection()) {
+            for (int i = trackBegin; i <= trackEnd; i++) {
+                if (trackList.validTrackIdx(i)) {
+                    track_gui_entry_t* tr = trackList.atNC(i);
+                    cutIntersectingClips(tr->track->getClips(), tickBegin, tickBegin, daw);
+                    offsetClips(tr->track->getClips(), tickBegin, len);
+                    std::vector<automatable_t *> targets;
+                    tr->track->getStage()->getAutomatableTrackTargets(targets);
+                    for (auto& automatable : targets) {
+                        std::vector<automation_lane_t*> allParams;
+                        automatable->getAllAutomatedParamRef(allParams);
+                        for (auto automation : allParams) {
+                            automation->insertTickRange(tickBegin, len, {});
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
     bool isSelectionEmpty(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool bIgnoreAutomation) {
         auto isEmpty = true;
         int32_t tickBegin     = _cursor.getTickBegin();
@@ -493,7 +519,6 @@ void offsetClips(trackdata_clips_t& midi, tick_t tickBegin, tick_t tickOffset) {
             c->setDirty();
         }
     }
-
 }
 
 //TODO: rename

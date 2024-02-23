@@ -374,6 +374,43 @@ namespace DAW {
                     handledKeyinput = true;
                     modified        = true;
                     desc            = "Delete time";
+                } else if (command == CMD_INSERT_TIME && cursor.cursorPos != INVALID_TICK) {
+                    track_gui_entry_t* trMin = nullptr;
+                    track_gui_entry_t* trMax = nullptr;
+                    for (track_gui_entry_t* t : iGuiMgr.getTracksVisibleFlat()) {
+                        if (!trMin || trMin->idx > t->idx) {
+                            trMin = t;
+                        }
+                        if (!trMax || trMax->idx < t->idx) {
+                            trMax = t;
+                        }
+                    }
+                    DAW::Cursor cursorCopy = cursor;
+                    cursorCopy.setLeftAligned();
+                    cursorCopy.setTrack(trMin->idx);
+                    cursorCopy.selTrackRange    = (trMax->idx - trMin->idx);
+                    cursorCopy.cursorSubTrack   = -1;
+                    cursorCopy.selSubTrackRange = 0;
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursorCopy.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursorCopy.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+
+                    auto& clipboard = daw->getClipsClipboard();
+                    track_selection_t pasteSelection;
+                    iGuiMgr.getTrackSelection(cursorCopy, pasteSelection);
+                    project.trackList.copyTracks(pasteSelection.trackIdxMin, pasteSelection.trackIdxMax, preModifyState);
+                    cursor.setLeftAligned();
+
+                    DAW::insertTime(daw, iGuiMgr, cursorCopy, clipboard->selRange);
+                    DAW::pasteClipboard(daw, iGuiMgr, clipboard.get(), cursor, bCopyAutomation);
+                    cursor.selTrackRange = clipboard->selTrackRange;
+                    cursor.selRange      = clipboard->selRange;
+
+                    grid.makeTickVisible(cursorCopy.getTickBegin() + clipboard->selRange);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Insert time";
                 } else if (command == CMD_DELETE && cursor.getRange()) {
                     int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
