@@ -84,6 +84,7 @@ namespace RenderResources {
             load(vg, "icons/copy.png", imgIconsBuf[ICON_COPY]);
             load(vg, "icons/paste.png", imgIconsBuf[ICON_PASTE]);
             load(vg, "icons/cut.png", imgIconsBuf[ICON_CUT]);
+            load(vg, "icons/delete.png", imgIconsBuf[ICON_DELETE]);
             load(vg, "icons/adjust.png", imgIconsBuf[ICON_ADJUST]);
             load(vg, "icons/close.png", imgIconsBuf[ICON_CLOSE]);
             load(vg, "icons/bypass.png", imgIconsBuf[ICON_BYPASS]);

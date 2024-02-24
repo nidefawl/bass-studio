@@ -11,6 +11,7 @@ enum ICON : int32_t {
     ICON_COPY,
     ICON_PASTE,
     ICON_CUT,
+    ICON_DELETE,
     ICON_ADJUST,
     ICON_CLOSE,
     ICON_BYPASS,
