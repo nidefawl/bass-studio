@@ -42,7 +42,6 @@ void PluginControl::destroy() {
     if (!isOK) {
         return;
     }
-    log_lf(Log::L_ERROR, "Destroy PluginControl %s\n", StringAsCStr(windowName));
     isOK = false;
     if (view) {
         for (guictr_base* ctr : containers) {

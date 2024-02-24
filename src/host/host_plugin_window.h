@@ -45,9 +45,6 @@ class host_plugin_window {
 public:
     static host_plugin_window* make(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
     static host_plugin_window* getWindowInstance(WINDOW_HANDLE handle);
-    ~host_plugin_window() {
-        log_lf(Log::L_DEBUG, "destroy window\n");
-    }
     bool init(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
     WINDOW_HANDLE getHWND() const;
     WINDOW_HANDLE getWindowHandle() const;
