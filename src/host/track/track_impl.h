@@ -98,7 +98,7 @@ struct clip_recorder {
     store_sample_req_t ssr;
     void updateRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, int 
     trackType, const std::vector<note_t>& m_list);
-    void finishRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list);
+    void finishRecordingClip();
     public:
     clip_t* getRecordingClip() {
         return recordingClip;

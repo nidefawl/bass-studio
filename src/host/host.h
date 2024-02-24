@@ -190,6 +190,7 @@ public:
 
     void preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings);
     void postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings, bool bCancelled);
+    void setCustomGraph(const std::shared_ptr<DAW::processing_graph_t>& graph);
 };
 }
 

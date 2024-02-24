@@ -534,12 +534,10 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
 
 void Host::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
     getHostCallback()->isOfflineRendering = true;
-    for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
-        trackMaster->getStage()->flags |= audiostageflags_t::RECORD_OUTPUT;
-    }
 }
 
 void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings, bool bCancelled) {
+    impl->processingGraph = nullptr;
     getHostCallback()->isOfflineRendering = false;
     const tick_t tickBegin = exportSettings.exportPos;
     const tick_t tickEnd = tickBegin + exportSettings.exportLen;
@@ -557,6 +555,11 @@ void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSe
         }
         trackMaster->getStage()->flags &= ~audiostageflags_t::RECORD_OUTPUT;
     }
+}
+
+void Host::setCustomGraph(const std::shared_ptr<DAW::processing_graph_t>& graph) {
+    cacheAudioGraph = true;
+    impl->processingGraph = graph;
 }
 
 int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples) {
@@ -1344,7 +1347,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     tmp.timer.reset();
     trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, trackNode.inputLatency, midiRealtimeInput);
 
-    track->getStage()->procStats.timeTrackProcessMidi = tmp.timer.getTime();
+    trackImpl->procStats.timeTrackProcessMidi = tmp.timer.getTime();
 
     const auto numChannelsTrack = trackImpl->input.channels;
 
@@ -1354,7 +1357,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     allSources.insert(allSources.end(), trackNode.pushs.cbegin(), trackNode.pushs.cend());
     tmp.timer.reset();
     MixInputs(this, trackNode, tmp, this->impl, &trackImpl->input, allSources, numChannelsTrack, trackNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + ticksPerBlock, playbackState, req.ptrExternalInputs);
-    track->getStage()->procStats.timeTrackMixInputs = tmp.timer.getTime();
+    trackImpl->procStats.timeTrackMixInputs = tmp.timer.getTime();
 
     /* Store block in audioInput memory */
     if (DAW::isPlaybackState(playbackState)) {
@@ -1373,7 +1376,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     /* Update currently recording clip */
     trackImpl->recorder.update(playbackState, sampleLatencyCompensated, sampleLatencyCompensated + sampleFormat.blockSize, processingPos, tickBlockEnd, track->type, prjGlobals.recordArmed && isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED));
 
-    track->getStage()->procStats.timeTrackRecordPre = tmp.timer.getTime();
+    trackImpl->procStats.timeTrackRecordPre = tmp.timer.getTime();
 
     /* Read audio clips and add them */
     if (DAW::isPlaybackState(playbackState)) {
@@ -1382,7 +1385,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, sampleLatencyCompensated, tmpBlock.samples, tmpBlock);
         trackImpl->input.addFromOp(&tmpBlock, AudioBlock::mix_op::ADD, 1.0f);
     }
-    track->getStage()->procStats.timeTrackFillAudioClips = tmp.timer.getTime();
+    trackImpl->procStats.timeTrackFillAudioClips = tmp.timer.getTime();
 
     dbgassert(
             this->m_sampleFormatInternal == trackImpl->sampleFormat
@@ -1413,7 +1416,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             trackImpl->procStats.numBlocksProcessed++;
         }
     }
-    track->getStage()->procStats.timeTrackProcessAudio = tmp.timer.getTime();
+    trackImpl->procStats.timeTrackProcessAudio = tmp.timer.getTime();
 
 
     trackImpl->outputPost.clear();
@@ -1457,7 +1460,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             } else {
                 log_printf("cannot write to negative offset %zd (samplepos %zd - stage.latencyOutput %zd)\n", postStageSamplePos, postStageSamplePos, trackImpl->getOutputLatency());
             }
-            track->getStage()->procStats.timeTrackRecordPost = tmp.timer.getTime();
+            trackImpl->procStats.timeTrackRecordPost = tmp.timer.getTime();
         }
 
     }

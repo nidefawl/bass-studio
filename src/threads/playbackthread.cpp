@@ -167,12 +167,13 @@ private:
                             auto reqState = static_cast<playback_state>(req->param);
                             if (m_status == playback_state::status_render && reqState != playback_state::status_render) {
                                 m_status = status_no_process;
+                                ctrl->getGlobals().recordArmed = false;
+                                host->onStopPlayback(this->m_prjCtrl);
                                 host->postExportEnd(ctrl, exportSettingsLocal, true);
                                 if (renderCompleteFn) {
                                     renderCompleteFn();
                                     renderCompleteFn = nullptr;
                                 }
-                                reqState = status_stop;
                             }
                             switch (reqState) {
                                 case playback_state::status_render: {
@@ -301,8 +302,8 @@ private:
 
                     if (m_status == playback_state::status_render) {
                         numBlocksProcessed = host->processRender(this->m_prjCtrl, samplePos, tickPos);
+                        // log_lf(Log::L_DEBUG, "processedBlocks: %d, tickpos: %s\n", numBlocksProcessed, tickAsBeatString(tickPos, false).c_str());
                     }
-                    //LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
 
                     if (numBlocksProcessed) {
                         samplePos += blockSize * numBlocksProcessed;
@@ -327,13 +328,13 @@ private:
                         if (m_status == status_render) {
                             if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
                                 m_status = status_no_process;
+                                ctrl->getGlobals().recordArmed = false;
+                                host->onStopPlayback(this->m_prjCtrl);
                                 host->postExportEnd(ctrl, exportSettingsLocal, false);
                                 if (renderCompleteFn) {
                                     renderCompleteFn();
                                     renderCompleteFn = nullptr;
                                 }
-                                auto req = std::make_shared<PlaybackThreadReq>(REQ_STATE, static_cast<int32_t>(playback_state::status_stop));
-                                addRequest(req);
                             }
                             numBlocksRendered += numBlocksProcessed;
                         }

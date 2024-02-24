@@ -80,7 +80,6 @@ namespace DAW {
         }
     };
     struct processing_graph_t {
-        std::vector<processing_track_node_t*> nodesSolo;
         std::vector<processing_track_node_t*> nodesFlatOrdered;
         std::vector<processing_track_node_t*> roots; // audio_stage output buffer
         std::vector<processing_track_node_ptr> nodes;// audio_stage input buffer, effects, audio_stage output buffer
@@ -133,6 +132,7 @@ namespace DAW {
      * @return false Failed building graph: Cycles detected or something else went wrong
      */
     bool buildProcessingGraph(const Host::Host* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
+    bool buildProcessingGraphSolo(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat, const track_vector& tracksSolod, std::shared_ptr<processing_graph_t>& out_procgraph);
     bool validateTrackRoutings(const Host::Host* host, const track_vector& tracksFlat);
     int32_t GetUnqiueProcessingNodeId(const DAW::processing_track_node_t& node);
 

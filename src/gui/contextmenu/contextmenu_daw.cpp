@@ -255,12 +255,18 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(guitrack_editor* const _edito
     }
     if (bHasContentSelected) {
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CONSOLIDATE));
-        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_MUTE));
-        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_BEGIN_RENAME));
-    } else {
+    } 
+    if (!bHasContentSelected) {
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CREATE_EMPTY_CLIP));
         entries.back()->setGrayedOut(cursor.getRange() < 2);
     }
+    if (m_trackentry && m_trackentry->parent && cursor.getRange()) {
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_RENDER_TO_AUDIO));
+    } 
+    if (bHasContentSelected) {
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_MUTE));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_BEGIN_RENAME));
+    } 
     addEntry(new ctxtmenu_splitter());
     addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CUT));
     entries.back()->setGrayedOut(!bHasContentSelected);

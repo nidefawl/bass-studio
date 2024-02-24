@@ -1840,13 +1840,16 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                         pClip->audio.id = audioSampleId;
                         pClip->rgb = tr->rgb;
                     }
-                    if (samplesRecorded >= trImpl->sampleFormat.sampleRate>>2 && audioSampleId >= 0) {
+                    auto numSamplesRecord = samplesRecorded;
+                    if ( ( (isRecording && numSamplesRecord >= trImpl->sampleFormat.sampleRate>>2)
+                            || (!isRecording && numSamplesRecord > 0) )
+                             && audioSampleId >= 0) {
                         auto* file = cache->get(audioSampleId);
                         if (file) {
                             update = true;
                             ssr.format = trImpl->sampleFormat;
                             ssr.id = audioSampleId;
-                            ssr.length = samplesRecorded;
+                            ssr.length = numSamplesRecord;
                             ssr.offset = samplesWritten;
                             auto nSamplesRead = trImpl->audioInput.readSamples(firstRecordedSample+ssr.offset,
                                                             ssr.length,
@@ -1858,7 +1861,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                                 ssr.preAllocate = 1024L*64;
                                 cache->updateSample(ssr);
                                 samplesWritten += samplesRecorded;
-                                samplesRecorded = 0;
+                                samplesRecorded -= nSamplesRead;
                                 pClip->name = file->name;
                                 pClip->audio.id = audioSampleId;
                                 pClip->rgb = tr->rgb;
@@ -1871,16 +1874,14 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                     }
                 }
                 if (!this->isRecording) {
-                    samplesWritten = 0;
+                    samplesWritten  = 0;
                     samplesRecorded = 0;
-                    audioSampleId = -1;
+                    audioSampleId   = -1;
                 }
                 if (!update) {
                     delete pClip;
                     return false;
                 }
-                // log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %zu notes\n", pClip->notes.m_list.size());
-                // log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
                 tick_t tickBegin = pClip->time;
                 tick_t tickEnd   = pClip->end();
                 daw->cutIntersecting(tr, tickBegin, tickEnd);
@@ -1896,13 +1897,13 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
     }
     return false;
 }
-void clip_recorder::finishRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list) {
-    for (auto& note : m_list) {
+void clip_recorder::finishRecordingClip() {
+    if (!isRecording) {
+        return;
+    }
+    for (auto& note : midiProcessedInput.m_list) {
         note_t noteCopy = note;
-        if (noteCopy.time < tickPosBlockStart && noteCopy.isHeld()) {
-            noteCopy.len = tickPosBlockStart - noteCopy.time;
-            noteCopy.setIsHeld(false);
-        }
+        noteCopy.setIsHeld(false);
         if (noteCopy.len > 0 && !noteCopy.isHeld()) {
             noteCopy.time -= recordingClip->start();
             noteCopy.setEnabled(true);
@@ -1947,6 +1948,7 @@ void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, sampl
             recordingClip->lenSamples = samplePosBlockEnd - firstRecordedSample;
         }
     }
+    samplesRecorded += samplePosBlockEnd - samplePosBlockStart;
     if (recordingClip && tickBlockEnd - recordingClip->time > TICKS_QUARTER) {
         for (auto& note : m_list) {
             if (!note.isHeld()) {
@@ -1964,7 +1966,6 @@ void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, sampl
         cloned->loopLen     = ((math::max(1, cloned->getLen() / (TICKS_BAR * 4))) * (TICKS_BAR * 4));
         cloned->notes.updateBounds();
         cloned->setDirty();
-        samplesRecorded += samplePosBlockEnd - samplePosBlockStart;
         std::swap(recordDataProcessed, cloned);
         delete cloned;
         hasNewRecordedData = true;
@@ -1972,7 +1973,7 @@ void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, sampl
 }
 void clip_recorder::update(playback_state state, samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickBlockStart, tick_t tickBlockEnd, int trackType, bool bRecordArmed) {
 
-    bool bIsPlayingAndRecording = state == playback_state::status_playback && bRecordArmed;
+    bool bIsPlayingAndRecording = DAW::isPlaybackState(state) && bRecordArmed;
     if (notesProcessed || bIsPlayingAndRecording) {
         midiProcessedInput.updateBounds();
         if (bIsPlayingAndRecording) {
@@ -1981,7 +1982,7 @@ void clip_recorder::update(playback_state state, samplecount_t samplePosBlockSta
     }
 
     if (recordingClip && !bIsPlayingAndRecording) {
-        finishRecordingClip(samplePosBlockStart, samplePosBlockEnd, tickBlockStart, tickBlockEnd, midiProcessedInput.m_list);
+        finishRecordingClip();
     }
     notesProcessed = false;
 }

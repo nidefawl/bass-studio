@@ -7,6 +7,7 @@
 #include "event.h"
 #include "gui/gui.h"
 #include "host/daw/daw_async_task.h"
+#include "host/project/project.h"
 #include "seq_time.h"
 #include "tls.h"
 #include "host/track/track_types.h"
@@ -50,6 +51,7 @@
 #include "wave/waveform_render.h"
 #include "wave/waveform_render_impl.h"
 #include "host/daw/daw_async_consolidate_clips.h"
+#include "host/daw/daw_freeze_track.h"
 
 
 /*static*/ void action_modify_track::loadTrackSnapshot(DawInstance* daw, track_t* track, const track_snapshot_t* trackStored) {
@@ -471,6 +473,14 @@ namespace DAW {
                     auto clipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                     daw->setClipClipboard(clipboard);
                     handledKeyinput = true;
+                } else if (command == CMD_RENDER_TO_AUDIO && dawCtrl->getSelectedTrack()) {
+                    auto pTask = new freeze_track_task_t{};
+                    pTask->daw = daw;
+                    pTask->cursor = cursor.getLeftAligned();
+                    pTask->track = dawCtrl->getSelectedTrack();
+                    daw->setAsyncTask(pTask);
+                    handledKeyinput = true;
+                    desc            = "Freeze track";
                 } else if (command == CMD_CONSOLIDATE && cursor.getRange() && !cursor.isSubtrackSelection()) {
                     auto pTask = new consolidate_task_t{};
                     auto& task = *pTask;

@@ -85,78 +85,79 @@ inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t ti
     return audioClip;
 }
 
-    struct consolidate_fill_audio_t {
-        static constexpr samplecount_t blockSize = samplecount_t(32*1024);
-        DawInstance* const daw;
-        sampleformat_t format{};
-        AudioBlock blockTemp;
-        project_globals_t prjGlobals;
-        store_sample_req_t ssr;
-        samplecount_t samplePos = 0;
-        samplecount_t numSamples = 0;
-        samplecount_t numSamplesRead = 0;
-        bool finished = false;
+struct consolidate_fill_audio_t {
+    static constexpr samplecount_t blockSize = samplecount_t(32*1024);
+    DawInstance* const daw;
+    sampleformat_t format{};
+    AudioBlock blockTemp;
+    project_globals_t prjGlobals;
+    store_sample_req_t ssr;
+    samplecount_t samplePos = 0;
+    samplecount_t numSamples = 0;
+    samplecount_t numSamplesRead = 0;
+    bool finished = false;
 public:
-        int32_t sampleId = 0;
-        std::vector<clip_t*> clips;
+    int32_t sampleId = 0;
+    std::vector<clip_t*> clips;
 public:
-        consolidate_fill_audio_t(
-            DawInstance* daw,
-            sampleformat_t format,
-            channelnum_t numChannels,
-            int32_t sampleId,
-            samplecount_t samplePos,
-            samplecount_t numSamples)
-        : daw(daw),
-            format(format),
-            prjGlobals(daw->getProjectGlobals()),
-            samplePos(samplePos),
-            numSamples(numSamples),
-            sampleId(sampleId)
-        {
-            ssr.id = sampleId;
-            ssr.format = format;
-            ssr.channels.resize(numChannels);
-            ssr.preAllocate = 0;
-            ssr.bDownsample = false;
-            for (auto& ch : ssr.channels) {
-                ch.resize(blockSize);
-            }
-            blockTemp = AudioBlock(ssr.channels);
+    consolidate_fill_audio_t(
+        DawInstance* daw,
+        sampleformat_t format,
+        channelnum_t numChannels,
+        int32_t sampleId,
+        samplecount_t samplePos,
+        samplecount_t numSamples)
+    : daw(daw),
+        format(format),
+        prjGlobals(daw->getProjectGlobals()),
+        samplePos(samplePos),
+        numSamples(numSamples),
+        sampleId(sampleId)
+    {
+        ssr.id = sampleId;
+        ssr.format = format;
+        ssr.channels.resize(numChannels);
+        ssr.preAllocate = 0;
+        ssr.bDownsample = false;
+        for (auto& ch : ssr.channels) {
+            ch.resize(blockSize);
         }
-        double getProgress() const {
-            return numSamples ? (double)numSamplesRead / (double)numSamples : 0.0;
+        blockTemp = AudioBlock(ssr.channels);
+    }
+    double getProgress() const {
+        return numSamples ? (double)numSamplesRead / (double)numSamples : 0.0;
+    }
+    void processSingleBlock() {
+        if (finished) {
+            return;
         }
-        void processSingleBlock() {
-            if (finished) {
-                return;
-            }
-            if (clips.empty()) {
-                finished = true;
-                return;
-            }
-            auto cache = daw->getAudioCache();
-            blockTemp.clear();
-            auto readSamplesLeft = numSamples - numSamplesRead;
-            auto readLen = math::min(blockSize, readSamplesLeft);
-            dbgassert(readLen > 0);
-            DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, format, samplePos, blockTemp);
-            samplePos += readLen;
-            ssr.offset = numSamplesRead;
-            ssr.length = readLen;
-            cache->updateSample(ssr);
-            numSamplesRead += readLen;
-            if (numSamplesRead >= numSamples) {
-                auto file = cache->get(sampleId);
-                dbgassert(file);
-                audiocache::Downsample(file->getSample());
-                finished = true;
-            }
+        if (clips.empty()) {
+            finished = true;
+            return;
         }
-        bool isFinished() const {
-            return finished;
+        auto cache = daw->getAudioCache();
+        blockTemp.clear();
+        auto readSamplesLeft = numSamples - numSamplesRead;
+        auto readLen = math::min(blockSize, readSamplesLeft);
+        dbgassert(readLen > 0);
+        DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, format, samplePos, blockTemp);
+        samplePos += readLen;
+        ssr.offset = numSamplesRead;
+        ssr.length = readLen;
+        cache->updateSample(ssr);
+        numSamplesRead += readLen;
+        if (numSamplesRead >= numSamples) {
+            auto file = cache->get(sampleId);
+            dbgassert(file);
+            audiocache::Downsample(file->getSample());
+            finished = true;
         }
-    };
+    }
+    bool isFinished() const {
+        return finished;
+    }
+};
+
 struct consolidate_task_t final : public async_task_t {
     SafeRef<guibase> refGui;
     DawCtrl* dawCtrl;

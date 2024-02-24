@@ -146,6 +146,7 @@ namespace DAW::UI {
         Add(CMD_PASTE_NO_AUTOMATION, {"Paste (no automation)", "Paste items without automation", "", ICON_PASTE}, KC_PASTE_NO_AUTOMATION);
         Add(CMD_DELETE_TIME, {"Delete Time", "Delete time", "", ICON_DELETE}, {});
         Add(CMD_INSERT_TIME, {"Insert Time", "Insert time", "", ICON_PASTE}, {});
+        Add(CMD_RENDER_TO_AUDIO, {"Render Audio", "Render to new Audio Track"}, {});
 
         Add(CMD_FILE_NEW, {"New", "Create a new project", "", ICON_FILE}, KC_NEW);
         Add(CMD_FILE_OPEN, {"Open", "Open a project", "", ICON_FOLDER}, KC_OPEN);

@@ -2133,9 +2133,9 @@ public:
         this->size.x  = 260;
         this->maxHeight = 0;
         this->dawCtrl = _dawCtrl;
-        addEntry(cmdDuplicateTrack = new ctxtmenu_entry("Duplicate track", 1));
-        addEntry(cmdRenameTrack = new ctxtmenu_entry("Rename track", 6));
-        addEntry(cmdDeleteTrack = new ctxtmenu_entry("Delete track", 2));
+        addEntry(cmdDuplicateTrack = new ctxtmenu_entry("Duplicate Track", 1));
+        addEntry(cmdRenameTrack = new ctxtmenu_entry("Rename Track", 6));
+        addEntry(cmdDeleteTrack = new ctxtmenu_entry("Delete Track", 2));
         addEntry(new ctxtmenu_splitter());
         addEntry(cmdShowAllAutomation = new ctxtmenu_entry("Show all automation", 0));
         addEntry(cmdShowWaveform = new ctxtmenu_entry("Show waveform", 5));
@@ -2178,8 +2178,7 @@ public:
                     }
                 }
             }
-        } else 
-        if (_id == cmdReactivateAutomation->id) {
+        } else if (_id == cmdReactivateAutomation->id) {
             if (tr) {
                 std::vector<automatable_t*> targets;
                 tr->audio->getAutomatableTrackTargets(targets);
@@ -2250,9 +2249,7 @@ public:
             DAW::OpenRenameTrackPopup(dawCtrl, m_trackentry);
             return true;
         } else if (_id == cmdShowWaveform->id) {
-
             auto trackCtr = m_trackentry->parent;
-
             bool isShown = (tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE;
             if (isShown) {
                 tr->audio->flags &= ~(audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT);
@@ -2267,7 +2264,6 @@ public:
                 auto gui = makeGuiSubtrack(m_trackentry, m_trackentry->parent->getGrid(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
                 trackCtr->addSubTrack(m_trackentry, gui, true);
             }
-
             daw->updateVisibleTrackContents();
         }
         closeContextMenu();
