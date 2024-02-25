@@ -141,6 +141,9 @@ public:
         channelnum_t getNumOutputChannels() const override {
             return this->nOutputChannels;
         }
+        void requestReset() {
+            host->requestReset();
+        }
     };
 
 private:
@@ -150,6 +153,7 @@ private:
     samplerate_t lSampleRate = 0;
     blocksize_t lBlockSize      = 0;
     String lastErrorMessage;
+    std::atomic<bool> bRequestReset{ false };
 
 
     bool onError(const char* msg, int err);
@@ -157,7 +161,6 @@ private:
 public:
     audiohost()  = default;
     ~audiohost() = default;
-    static audiohost* getInstance();
     HostIOStream* getStream(size_t idx);
     std::shared_ptr<audiohost::HostIOStream> getStreamSharedPtr(size_t idx);
     bool initPa();
@@ -170,5 +173,11 @@ public:
     bool stopAudio();
     bool isStreaming() {
         return !streams.empty();
+    }
+    void requestReset() {
+        bRequestReset = true;
+    }
+    bool isResetRequested() {
+        return bRequestReset;
     }
 };

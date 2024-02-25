@@ -95,11 +95,6 @@ DawInstance* DawInstance::getOptional() {
         return &mainCtrl->daw;
     return nullptr;
 }
-audiohost* audiohost::getInstance() {
-    dbgassert(daw_tls::tls.tlsInitialized);
-    dbgassert(daw_tls::tls.audioHost);
-    return daw_tls::tls.audioHost;
-}
 midihost* midihost::getInstance() {
     dbgassert(daw_tls::tls.tlsInitialized);
     dbgassert(daw_tls::tls.midiHost);

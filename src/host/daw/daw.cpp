@@ -194,8 +194,8 @@ bool DawInstance::configureSampleRate() {
         ThreadLock lock  = getPlayThread()->lockThread();
         auto host  = getHost();
         auto ahost = getAudioHost();
-        ahost->stopAudio();
         host->setOutput(nullptr);
+        ahost->stopAudio();
         if (settings.dawsettings.audioEnabled) {
             auto oldSampleRate = host->m_sampleFormatInternal.sampleRate;
             host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
@@ -252,25 +252,38 @@ void DawInstance::onTick() {
         updateVisibleTrackContents();
     }
 
+    auto settings = tls.settings;
+    auto host = tls.host;
+    auto audioHost = tls.audioHost;
+    auto midiHost = tls.midiHost;
     if (bExportFinished) {
         bExportFinished = false;
         {
             auto lock = getPlayThread()->lockThread();
-            auto& settings = daw_tls::getSettings();
-            if (settings.dawsettings.audioEnabled) {
-                if (tls.audioHost->startAudio(settings.iosettings)) {
-                    auto stream = tls.audioHost->getStreamSharedPtr(0);
-                    tls.host->setOutput(stream);
+            if (settings->dawsettings.audioEnabled) {
+                if (audioHost->startAudio(settings->iosettings)) {
+                    auto stream = audioHost->getStreamSharedPtr(0);
+                    host->setOutput(stream);
                 }
             }
-            if (tls.midiHost) {
-                tls.midiHost->startMidi();
+            if (midiHost) {
+                midiHost->startMidi();
             }
         }
         setAudioThreadState(playback_state::status_stop);
     }
+    
+    if (host->isStreaming() && audioHost->isResetRequested()) {
+        auto lock = getPlayThread()->lockThread();
+        host->setOutput(nullptr);
+        audioHost->stopAudio();
+        if (audioHost->startAudio(settings->iosettings)) {
+            auto stream = audioHost->getStreamSharedPtr(0);
+            host->setOutput(stream);
+        }
+    }
 
-    tls.host->onTick();
+    host->onTick();
 
     bool noPopups = true;
     for (auto* ctrl : dawCtrls) {

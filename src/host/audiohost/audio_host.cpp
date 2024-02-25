@@ -17,6 +17,7 @@
 #include <portaudio.h>
 #ifdef _WIN32
 #include <pa_win_wasapi.h>
+#include <pa_asio.h>
 #endif
 #include <vector>
 #include <memory>
@@ -423,7 +424,60 @@ bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {
     return success;
 }
 
+extern "C" {
+
+/** ASIO message callback, set in PaAsioStreamInfo.
+    Do not call PortAudio or PaAsio functions inside this callback!
+
+@param value Message-specific integer value.
+Indicates buffer size in paAsioBufferSizeChange.
+
+@param message Message-specific pointer value.
+Unused as of the ASIO 2.2 SDK.
+
+@param opt Message-specific double value.
+opt[0] indicates sample rate in paAsioSampleRateChange.
+
+@param userData The value of a user supplied pointer passed to
+Pa_OpenStream() intended for storing synthesis data etc.
+
+@return True if the application handled the message, false otherwise.
+*/
+long PaAsioMessageCallback( long messageType, long value, void *message, double *opt, void *userData ) {
+    audiohost::HostIOStream* stream = static_cast<audiohost::HostIOStream*>(userData);
+    switch (messageType) {
+        case paAsioResetRequest: {
+            log_lf(Log::L_DEBUG, "PaAsioMessageCallback: paAsioResetRequest\n");
+            stream->requestReset();
+            return 1;
+        }
+        case paAsioSampleRateChanged:
+            log_lf(Log::L_DEBUG, "PaAsioMessageCallback: paAsioSampleRateChanged\n");
+            stream->requestReset();
+            return 1;
+        case paAsioBufferSizeChange:
+            log_lf(Log::L_DEBUG, "PaAsioMessageCallback: paAsioBufferSizeChange\n");
+            stream->requestReset();
+            return 1;
+        case paAsioResyncRequest:
+            log_lf(Log::L_DEBUG, "PaAsioMessageCallback: paAsioResyncRequest\n");
+            stream->requestReset();
+            return 1;
+        case paAsioLatenciesChanged:
+            log_lf(Log::L_DEBUG, "PaAsioMessageCallback: paAsioLatenciesChanged\n");
+            stream->requestReset();
+            return 1;
+        default:
+            log_lf(Log::L_DEBUG, "PaAsioMessageCallback: unknown message type %ld\n", messageType);
+            return 0;
+    }
+    return 0;
+}
+
+}
+
 bool audiohost::startAudio(app_iosettings& iosettings) {
+    bRequestReset = false;
     lastErrorMessage.clear();
     if (!initPa()) {
         lastErrorMessage = "Failed to initialize PortAudio";
@@ -528,6 +582,19 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     } else {
         inputParams.channelCount = 0;
     }
+
+    PaAsioStreamInfo paAsioStreamInfo{};
+    if (apiSelectedInfo->type == PaHostApiTypeId::paASIO){
+        paAsioStreamInfo.size = sizeof(PaAsioStreamInfo);
+        paAsioStreamInfo.hostApiType = PaHostApiTypeId::paASIO;
+        paAsioStreamInfo.version = 2;
+        paAsioStreamInfo.flags = paAsioUseMessageCallback;
+        paAsioStreamInfo.channelSelectors = nullptr;
+        paAsioStreamInfo.messageCallback = PaAsioMessageCallback;
+        inputParams.hostApiSpecificStreamInfo = &paAsioStreamInfo;
+        outputParams.hostApiSpecificStreamInfo = &paAsioStreamInfo;
+    }
+
     inputParams.channelCount = math::clamp<int>(inputParams.channelCount, 0, MAX_AUDIO_IO_CHANNELS);
     outputParams.channelCount = math::clamp<int>(outputParams.channelCount, 0, MAX_AUDIO_IO_CHANNELS);
     log_printf("With %d output channels\n", outputParams.channelCount);
@@ -622,6 +689,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     return true;
 }
 bool audiohost::stopAudio() {
+    bRequestReset = false;
     int numStreamsStopped = 0;
 
     std::vector<std::shared_ptr<HostIOStream>> streamsCopy = streams;
