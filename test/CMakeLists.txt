@@ -160,3 +160,5 @@ DEFINE_TEST(test_gui TRUE test_gui.cpp common/test_appctrl.cpp gui/testctr.cpp g
 if (TARGET pybind11::embed)
   DEFINE_TEST(test_pybind TRUE test_pybind.cpp common/test_common.cpp)
 endif()
+
+DEFINE_TEST(test_audiofiles TRUE test_audiofiles.cpp common/test_common.cpp)

@@ -17,6 +17,8 @@
 #include "str_util.h"
 #include "host/audiosample.h"
 #include <dr_libs/dr_wav.h>
+#include <dr_libs/dr_mp3.h>
+#include <dr_libs/dr_flac.h>
 #include "thread.h"
 #include "tls.h"
 #include "types.h"
@@ -26,7 +28,13 @@
 #include "fileio.h"
 #include "logging.h"
 #include <soxr.h>
+#include <variant>
 #include <vector>
+
+struct drflac_file {
+    drflac* pFlac = nullptr;
+};
+using audiofile_variant = std::variant<std::monostate, drwav, drmp3, drflac_file>;
 
 /* void audiocache::getLoaded(std::vector<audiofile_t*>& v) {
     v.reserve(list.size());
@@ -199,84 +207,137 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     dbgassert(mapId[_id] == pFile);
     return pFile;
 }
-static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samplerate, const char* taskDesc) {
-    {
-        struct close_wave_file {
-            drwav* wav;
-            ~close_wave_file() { drwav_uninit(wav); }
-        } closeWaveFile{&wav};
-        std::vector<float> pSamples(wav.totalPCMFrameCount * wav.channels);
-        memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
-        auto numSamplesInput = samplecount_t(drwav_read_pcm_frames_f32(&wav, wav.totalPCMFrameCount, pSamples.data()));
-        if (wav.channels <= 0) {
+
+static bool LoadAudioSample(audiofile_variant& audiofile, audiosample_t* sample, samplerate_t targetSamplerate, const char* taskDesc) {
+    log_lf(Log::L_INFO, "Loading %s\n", taskDesc);
+
+    samplerate_t sourceSamplerate = 0;
+    channelnum_t sourceNumChannels = 0;
+    samplecount_t numSamplesInput = 0;
+    std::vector<float> pSamples;
+
+    if (std::holds_alternative<drwav>(audiofile)) {
+        auto& wav = std::get<drwav>(audiofile);
+        sourceSamplerate = wav.sampleRate;
+        sourceNumChannels = wav.channels;
+        if (sourceNumChannels <= 0) {
+            drwav_uninit(&wav);
             log_lf(Log::L_WARN, "File %s has 0 channels\n", taskDesc);
             return false;
         }
-        // log_lf(Log::L_TRACE, "totalSampleCount: %zu\n", wavTotalSampleCount);
-        // log_lf(Log::L_TRACE, "numSamplesRead: %zu\n", numSamplesRead);
-        // log_lf(Log::L_TRACE, "channels: %d\n", wav.fmt.channels);
-        // log_lf(Log::L_TRACE, "sampleRate: %d\n", wav.fmt.sampleRate);
-        // log_lf(Log::L_TRACE, "bitsPerSample: %d\n", wav.fmt.bitsPerSample);
-        // log_lf(Log::L_TRACE, "samples: %zu\n", nSamples);
-
-
-        sample->bitsPerSample = wav.bitsPerSample;
-        sample->nChannels     = math::clamp<size_t>(wav.channels, 0, 255);
-        sample->sampleRate    = samplerate;
-        sample->nSamples      = 0;
-
-        std::vector<samplechannel_t> loadedSampleChannels(sample->nChannels);
-        // deinterleave
-        for (channelnum_t i = 0; i < sample->nChannels; i++) {
-            loadedSampleChannels[i].resize(numSamplesInput);
-            auto out = loadedSampleChannels[i].begin();
-            // interleaved sample is at samples[ chIdx + sampleIdx * chCount ]
-            for (samplecount_t j = i; j < numSamplesInput * wav.channels; j += wav.channels) {
-                *out++ = pSamples[j];
+        pSamples.resize(wav.totalPCMFrameCount * wav.channels);
+        memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
+        numSamplesInput = samplecount_t(drwav_read_pcm_frames_f32(&wav, wav.totalPCMFrameCount, pSamples.data()));
+        drwav_uninit(&wav);
+    } else if (std::holds_alternative<drmp3>(audiofile)) {
+        auto& mp3 = std::get<drmp3>(audiofile);
+        sourceSamplerate = mp3.sampleRate;
+        sourceNumChannels = mp3.channels;
+        if (sourceNumChannels <= 0) {
+            log_lf(Log::L_WARN, "File %s has 0 channels\n", taskDesc);
+            drmp3_uninit(&mp3);
+            return false;
+        }
+        auto total = samplecount_t(drmp3_get_pcm_frame_count(&mp3) * sourceNumChannels);
+        size_t chunkSize = 4096 * 32;
+        pSamples.resize(total + chunkSize);
+        while (true) {
+            auto outputBuffer = pSamples.data() + numSamplesInput;
+            if (size_t(numSamplesInput) + chunkSize > pSamples.size()) {
+                auto extraSamples = pSamples.size() + chunkSize - numSamplesInput;
+                log_lf(Log::L_WARN, "File %s has %zd more samples than expected\n", taskDesc, extraSamples);
+                pSamples.resize(pSamples.size() + extraSamples);
+            }
+            auto numSamplesDecoded = drmp3_read_pcm_frames_f32(&mp3, chunkSize / sourceNumChannels, outputBuffer);
+            numSamplesInput += numSamplesDecoded * sourceNumChannels;
+            if (numSamplesDecoded < chunkSize / sourceNumChannels) {
+                break;
             }
         }
-        if (samplerate != wav.sampleRate) {
-
-            std::vector<samplechannel_t> resampledChannels(sample->nChannels);
-            std::vector<float*> channelPtrsOut(sample->nChannels);
-            std::vector<float*> channelPtrsIn(sample->nChannels);
-            auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * samplerate / (double) wav.sampleRate + .5); /* Assay output len. */
-
-            for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
-                channelPtrsIn[ch] = loadedSampleChannels[ch].data();
-                resampledChannels[ch].resize(numSamplesResampled);
-                channelPtrsOut[ch] = resampledChannels[ch].data();
-            }
-
-            soxr_quality_spec_t q_spec             = soxr_quality_spec(0, 0);
-            soxr_io_spec_t io_spec                 = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
-            soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
-
-            soxr_error_t error = 0;
-            size_t offset = 0;
-
-            soxr_t soxr = soxr_create(wav.sampleRate, samplerate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
-            if (!!error) {
-                log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(error));
-            } else {
-                error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
-                if (!!error) {
-                    log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(error));
-                } else {
-                    sample->nSamples = static_cast<int64_t>(offset);
-                    sample->samples = std::move(resampledChannels);
-                }
-            }
-            soxr_delete(soxr);
-        } else {
-            sample->nSamples = numSamplesInput;
-            sample->samples.resize(sample->nChannels);
-            sample->samples = std::move(loadedSampleChannels);
+        if (size_t(total) < pSamples.size()) {
+            pSamples.resize(size_t(total));
         }
-        audiocache::Downsample(sample);
-        return true;
+        numSamplesInput = pSamples.size() / sourceNumChannels;
+        drmp3_uninit(&mp3);
+    } else if (std::holds_alternative<drflac_file>(audiofile)) {
+        auto& flac = *std::get<drflac_file>(audiofile).pFlac;
+        sourceSamplerate = flac.sampleRate;
+        sourceNumChannels = flac.channels;
+        if (sourceNumChannels <= 0) {
+            log_lf(Log::L_WARN, "File %s has 0 channels\n", taskDesc);
+            drflac_close(&flac);
+            return false;
+        }
+        pSamples.resize(flac.totalPCMFrameCount * flac.channels);
+        memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
+        if (drflac_seek_to_pcm_frame(&flac, 0) != DRFLAC_TRUE) {
+            log_lf(Log::L_WARN, "Failed to seek to PCM frame\n");
+            drflac_close(&flac);
+            return false;
+        }
+        numSamplesInput = samplecount_t(drflac_read_pcm_frames_f32(&flac, flac.totalPCMFrameCount, pSamples.data()));
+        drflac_close(&flac);
+    } else {
+        log_lf(Log::L_ERROR, "Unknown audio file type\n");
+        return false;
     }
-    return false;
+
+    sample->bitsPerSample = 32;
+    sample->nChannels     = math::clamp<size_t>(sourceNumChannels, 0, 255);
+    sample->sampleRate    = targetSamplerate;
+    sample->nSamples      = 0;
+
+    std::vector<samplechannel_t> loadedSampleChannels(sample->nChannels);
+
+    // deinterleave
+    for (channelnum_t i = 0; i < sample->nChannels; i++) {
+        loadedSampleChannels[i].resize(numSamplesInput);
+        auto out = loadedSampleChannels[i].begin();
+        // interleaved sample is at samples[ chIdx + sampleIdx * chCount ]
+        for (samplecount_t j = i; j < numSamplesInput * sourceNumChannels; j += sourceNumChannels) {
+            *out++ = pSamples[j];
+        }
+    }
+
+    if (targetSamplerate != sourceSamplerate) {
+        std::vector<samplechannel_t> resampledChannels(sample->nChannels);
+        std::vector<float*> channelPtrsOut(sample->nChannels);
+        std::vector<float*> channelPtrsIn(sample->nChannels);
+        auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * targetSamplerate / (double) sourceSamplerate + .5); /* Assay output len. */
+
+        for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+            channelPtrsIn[ch] = loadedSampleChannels[ch].data();
+            resampledChannels[ch].resize(numSamplesResampled);
+            channelPtrsOut[ch] = resampledChannels[ch].data();
+        }
+
+        soxr_quality_spec_t q_spec             = soxr_quality_spec(0, 0);
+        soxr_io_spec_t io_spec                 = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
+        soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
+
+        soxr_error_t error = 0;
+        size_t offset = 0;
+
+        soxr_t soxr = soxr_create(sourceSamplerate, targetSamplerate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
+        if (!!error) {
+            log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(error));
+        } else {
+            error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
+            if (!!error) {
+                log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(error));
+            } else {
+                sample->nSamples = static_cast<int64_t>(offset);
+                sample->samples = std::move(resampledChannels);
+            }
+        }
+        soxr_delete(soxr);
+    } else {
+        sample->nSamples = numSamplesInput;
+        sample->samples.resize(sample->nChannels);
+        sample->samples = std::move(loadedSampleChannels);
+    }
+    audiocache::Downsample(sample);
+    return true;
 }
 void audiocache::Downsample(audiosample_t* sample) {
     int64_t timeBeginDownsample = getTimeMicros();
@@ -367,20 +428,37 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
     file->id     = _id;
     file->path   = pathIn;
     file->pathLoaded = path;
-    String a, b, c, d;
-    SplitPath(path, &a, &b, &c, &d);
-    file->name = b;
-    file->ext  = c;
+    String pathOnly, nameOnly, extOnly, nameExt;
+    SplitPath(path, &pathOnly, &nameOnly, &extOnly, &nameExt);
+    file->name = nameOnly;
+    file->ext  = extOnly;
     auto pFile  = file.get();
     this->mapId[_id] = pFile;
     list.push_back(std::move(file));
-    drwav wav{};
+    audiofile_variant drAudiofile = std::monostate{};
     std::vector<uint8_t> heapBuffer;
     bool bCanRead = false;
     if (!entry) {
-        bCanRead = drwav_init_file(&wav, StringAsCStr(path), nullptr);
+        if (extOnly == "wav") {
+            drAudiofile = drwav{};
+            bCanRead = drwav_init_file(&std::get<drwav>(drAudiofile), StringAsCStr(path), nullptr);
+        } else if (extOnly == "mp3") {
+            drAudiofile = drmp3{};
+            bCanRead = drmp3_init_file(&std::get<drmp3>(drAudiofile), StringAsCStr(path), nullptr);
+        } else if (extOnly == "flac" || extOnly == "ogg") {
+            auto pDrFlac = drflac_open_file(StringAsCStr(path), nullptr);
+            if (pDrFlac) {
+                bCanRead = true;
+                drAudiofile = drflac_file{pDrFlac};
+            }
+        } else {
+            log_lf(Log::L_WARN, "Unsupported file type %s\n", StringAsCStr(path));
+            return nullptr;
+        }
+
         if (!bCanRead) {
             log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
+            return nullptr;
         }
     } else {
         dbgassert(entry && ar);
@@ -390,21 +468,40 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
         auto sizeRead = archive_read_data(ar, heapBuffer.data(), heapBuffer.size());
         if (sizeRead != sizeToRead) {
             log_lf(Log::L_WARN, "Failed to read file %s: read %zd bytes, expected %zu bytes\n", StringAsCStr(path), sizeRead, sizeToRead);
-        } else {
-            bCanRead = drwav_init_memory(&wav, heapBuffer.data(), heapBuffer.size(), nullptr);
+            return nullptr;
         }
+
+        if (extOnly == "wav") {
+            drAudiofile = drwav{};
+            bCanRead = drwav_init_memory(&std::get<drwav>(drAudiofile), heapBuffer.data(), heapBuffer.size(), nullptr);
+        } else if (extOnly == "mp3") {
+            drAudiofile = drmp3{};
+            bCanRead = drmp3_init_memory(&std::get<drmp3>(drAudiofile), heapBuffer.data(), heapBuffer.size(), nullptr);
+        } else if (extOnly == "flac" || extOnly == "ogg") {
+            drflac* pDrFlac = drflac_open_memory(heapBuffer.data(), heapBuffer.size(), nullptr);
+            if (pDrFlac) {
+                bCanRead = true;
+                drAudiofile = drflac_file{pDrFlac};
+            }
+        } else {
+            log_lf(Log::L_WARN, "Unsupported file type %s\n", StringAsCStr(path));
+            return nullptr;
+        }
+
         if (!bCanRead) {
             log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
+            return nullptr;
         }
     }
-    log_lf(Log::L_INFO, "Loading %s\n", StringAsCStr(path));
-    if (LoadAudioSample(wav, pFile->sample.get(), samplerate, path.c_str())) {
+
+    if (LoadAudioSample(drAudiofile, pFile->sample.get(), samplerate, path.c_str())) {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED;
     } else {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING;
         log_lf(Log::L_WARN, "Failed to load %s\n", StringAsCStr(path));
         return nullptr;
     }
+
     return pFile;
 }
 

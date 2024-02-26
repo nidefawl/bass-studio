@@ -1590,14 +1590,13 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
         return false;
     }
     tmpFileDragPaths = files;
-    if (files.size()) {
-        String path = files.front();
-        if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT)
-            || StrEndsWith(path, "." PROJECT_FILE_EXT))
-            return true;
-        if (StrEndsWith(path, ".wav")) {
-            String nameWithoutExt;
-            SplitPath(path, nullptr, &nameWithoutExt, nullptr, nullptr);
+    for (auto path : files) {
+        if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT) || StrEndsWith(path, "." PROJECT_FILE_EXT))
+            continue;
+        String ext;
+        String nameWithoutExt;
+        SplitPath(path, nullptr, &nameWithoutExt, &ext);
+        if (stl_contains(std::array{ SUPPORTED_AUDIO_FILE_TYPES }, ext)) {
             audiofile_t* audio = daw.getAudioCache()->loadFile(path, -1, "", nullptr, nullptr);
             if (audio) {
                 auto* sample = audio->sample.get();
@@ -1623,7 +1622,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
                 }
             }
         }
-        if (StrEndsWith(path, ".mid")) {
+        if (ext == "mid") {
             LoadMidiTask task(files.front());
             if (!daw.workerThread.pushTask(&task)) {
                 return false;
@@ -2021,7 +2020,7 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
         }
         renderStats.numWaveFormsRendered += nUpdates;
         renderStats.timeUpdateWaveforms = timer.getTime();
-        if (nUpdates > 15 || renderStats.timeUpdateWaveforms > 20L * 1000) {
+        /* if (nUpdates > 15 || renderStats.timeUpdateWaveforms > 20L * 1000) {
             log_printf("%d updates took %zd\n", nUpdates, renderStats.timeUpdateWaveforms);
             auto timings = waveformRenderer->getTimings();
             log_lf(Log::L_DEBUG, "waveform.tmPassed\t\t%zd\n", timings.tmPassed);
@@ -2033,7 +2032,7 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
             log_lf(Log::L_DEBUG, "waveform.tmDrawGL\t\t%zd\n", timings.tmDrawGL);
             log_lf(Log::L_DEBUG, "waveform.comparisonsA\t%zd\n", timings.comparisonsA);
             log_lf(Log::L_DEBUG, "waveform.comparisonsB\t%zd\n", timings.comparisonsB);
-        }
+        } */
     }
 }
 
@@ -2241,11 +2240,6 @@ void load_project_task::run() {
                         step++;
                         substep = 0;
                         numSubsteps = 0;
-                        // while (!loader.isFinished()) {
-                        //     log_lf(Log::L_ERROR, "1Loading sample %s\n", StringAsCStr(loader.curFileName));
-                        //     loader.loadSingleStep();
-                        //     log_lf(Log::L_ERROR, "2Loading sample %s\n", StringAsCStr(loader.curFileName));
-                        // }
                     }
                 break;
                 case 2: {
