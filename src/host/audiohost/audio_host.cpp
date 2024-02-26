@@ -424,6 +424,7 @@ bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {
     return success;
 }
 
+#ifdef _WIN32
 extern "C" {
 
 /** ASIO message callback, set in PaAsioStreamInfo.
@@ -475,6 +476,7 @@ long PaAsioMessageCallback( long messageType, long value, void *message, double 
 }
 
 }
+#endif
 
 bool audiohost::startAudio(app_iosettings& iosettings) {
     bRequestReset = false;
@@ -583,6 +585,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         inputParams.channelCount = 0;
     }
 
+#ifdef _WIN32
     PaAsioStreamInfo paAsioStreamInfo{};
     if (apiSelectedInfo->type == PaHostApiTypeId::paASIO){
         paAsioStreamInfo.size = sizeof(PaAsioStreamInfo);
@@ -594,6 +597,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         inputParams.hostApiSpecificStreamInfo = &paAsioStreamInfo;
         outputParams.hostApiSpecificStreamInfo = &paAsioStreamInfo;
     }
+#endif
 
     inputParams.channelCount = math::clamp<int>(inputParams.channelCount, 0, MAX_AUDIO_IO_CHANNELS);
     outputParams.channelCount = math::clamp<int>(outputParams.channelCount, 0, MAX_AUDIO_IO_CHANNELS);
