@@ -341,7 +341,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, 0); // vstVersion
                     queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
-                    queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, timeDisk);
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, file.path);
                     queryInsertPlugin.bind(bndIdx++, relPath);
@@ -387,7 +387,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, data.version);
                     queryInsertPlugin.bind(bndIdx++, data.vstVersion);
                     queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
-                    queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, timeDisk);
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, file.path);
                     queryInsertPlugin.bind(bndIdx++, relPath);
@@ -452,7 +452,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, 0); // vstVersion
                     queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
-                    queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, timeDisk);
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, file.path);
                     queryInsertPlugin.bind(bndIdx++, relPath);
@@ -496,7 +496,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, data.version);
                     queryInsertPlugin.bind(bndIdx++, data.vstVersion);
                     queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
-                    queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, timeDisk);
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, file.path);
                     queryInsertPlugin.bind(bndIdx++, relPath);
