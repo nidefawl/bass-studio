@@ -159,7 +159,6 @@ private:
     auto quickControlsSelectedPage() const { return _quickControlsSelectedPage; }
     void setQuickControlsSelectedPageByHost(clap_id page_id);
 
-    bool loadNativePluginPreset(const std::string& path);
     bool loadStateFromFile(const std::string& path);
     bool saveStateToFile(const std::string& path);
 
@@ -263,7 +262,7 @@ private:
         clapplugin::clapParamsClear,
         clapplugin::clapParamsRequestFlush,
     };
-    static const constexpr clap_host_quick_controls _hostQuickControls = {
+    static const constexpr clap_host_remote_controls _hostQuickControls = {
         clapplugin::clapQuickControlsChanged,
         nullptr,
     };
@@ -292,7 +291,7 @@ private:
     const clap_plugin_factory* _pluginFactory                 = nullptr;
     const clap_plugin* _plugin                                = nullptr;
     const clap_plugin_params* _pluginParams                   = nullptr;
-    const clap_plugin_quick_controls* _pluginQuickControls    = nullptr;
+    const clap_plugin_remote_controls* _pluginQuickControls   = nullptr;
     const clap_plugin_audio_ports* _pluginAudioPorts          = nullptr;
     const clap_plugin_gui* _pluginGui                         = nullptr;
     const clap_plugin_timer_support* _pluginTimerSupport      = nullptr;
@@ -398,8 +397,8 @@ private:
 
     std::unordered_map<clap_id, bool> _isAdjustingParameter;
 
-    std::vector<std::unique_ptr<clap_quick_controls_page>> _quickControlsPages;
-    std::unordered_map<clap_id, clap_quick_controls_page*> _quickControlsPagesIndex;
+    std::vector<std::unique_ptr<clap_remote_controls_page>> _quickControlsPages;
+    std::unordered_map<clap_id, clap_remote_controls_page*> _quickControlsPagesIndex;
     clap_id _quickControlsSelectedPage = CLAP_INVALID_ID;
 
     /* delayed actions */

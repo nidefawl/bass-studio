@@ -1,5 +1,6 @@
 #include <clap/events.h>
 #include <clap/ext/latency.h>
+#include <clap/ext/remote-controls.h>
 #include <clap/plugin.h>
 #include <clap/stream.h>
 #include <exception>
@@ -342,7 +343,7 @@ void clapplugin::initPluginExtensions() {
         return;
 
     initPluginExtension(_pluginParams, CLAP_EXT_PARAMS);
-    initPluginExtension(_pluginQuickControls, CLAP_EXT_QUICK_CONTROLS);
+    initPluginExtension(_pluginQuickControls, CLAP_EXT_REMOTE_CONTROLS);
     initPluginExtension(_pluginAudioPorts, CLAP_EXT_AUDIO_PORTS);
     initPluginExtension(_pluginGui, CLAP_EXT_GUI);
     initPluginExtension(_pluginTimerSupport, CLAP_EXT_TIMER_SUPPORT);
@@ -563,7 +564,7 @@ const void* clapplugin::clapExtension(const clap_host* host, const char* extensi
     //     return &h->_hostPosixFdSupport;
     if (!strcmp(extension, CLAP_EXT_PARAMS))
         return &h->_hostParams;
-    if (!strcmp(extension, CLAP_EXT_QUICK_CONTROLS))
+    if (!strcmp(extension, CLAP_EXT_REMOTE_CONTROLS))
         return &h->_hostQuickControls;
     if (!strcmp(extension, CLAP_EXT_STATE))
         return &h->_hostState;
@@ -1344,29 +1345,29 @@ void clapplugin::scanQuickControls() {
 
     clap_id firstPageId = CLAP_INVALID_ID;
     for (uint32_t iControlIndex = 0; iControlIndex < N; ++iControlIndex) {
-        auto page = std::make_unique<clap_quick_controls_page>();
+        auto page = std::make_unique<clap_remote_controls_page>();
         if (!_pluginQuickControls->get(_plugin, iControlIndex, page.get())) {
             log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls.get_page(%d) failed, while the page count is %d\n", iControlIndex, N);
             continue;
         }
 
-        if (page->id == CLAP_INVALID_ID) {
+        if (page->page_id == CLAP_INVALID_ID) {
             log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls.get_page(%d) gave an invalid page_id\n", iControlIndex);
             continue;
         }
 
         if (iControlIndex == 0)
-            firstPageId = page->id;
+            firstPageId = page->page_id;
 
-        auto it = _quickControlsPagesIndex.find(page->id);
+        auto it = _quickControlsPagesIndex.find(page->page_id);
         if (it != _quickControlsPagesIndex.end()) {
-            log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls.get_page(%d) gave twice the same page_id: %d\n", iControlIndex, page->id);
-            log_lf(Log::L_ERROR, HLOG " 1. name: %s\n", it->second->name);
-            log_lf(Log::L_ERROR, HLOG " 2. name: %s\n", page->name);
+            log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls.get_page(%d) gave twice the same page_id: %d\n", iControlIndex, page->page_id);
+            log_lf(Log::L_ERROR, HLOG " 1. name: %s\n", it->second->page_name);
+            log_lf(Log::L_ERROR, HLOG " 2. name: %s\n", page->page_name);
             continue;
         }
 
-        _quickControlsPagesIndex.insert_or_assign(page->id, page.get());
+        _quickControlsPagesIndex.insert_or_assign(page->page_id, page.get());
         _quickControlsPages.emplace_back(std::move(page));
     }
 
@@ -1412,20 +1413,6 @@ void clapplugin::clapQuickControlsChanged(const clap_host* host) {
     }
 
     h->scanQuickControls();
-}
-
-bool clapplugin::loadNativePluginPreset(const std::string& path) {
-    checkForMainThread();
-
-    if (!_pluginPresetLoad)
-        return false;
-
-    if (!_pluginPresetLoad->from_file) {
-        log_lf(Log::L_ERROR, HLOG "clap_plugin_preset_load does not implement load_from_file\n");
-        return false;
-    }
-
-    return _pluginPresetLoad->from_file(_plugin, path.c_str());
 }
 
 void clapplugin::clapStateMarkDirty(const clap_host* host) {
