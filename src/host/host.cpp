@@ -2032,7 +2032,7 @@ int32_t Host::getPlayThreadId()
 
 void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlobals, const std::vector<clip_t*>& clips, const sampleformat_t& sf, samplecount_t samplePosBegin, AudioBlock& out) {
     for (clip_t* clip : clips) {
-        audiofile_t* audio = cache->get(clip->audio.id);
+        audiofile_t* audio = cache->getDerivedSample(clip->audio);
         if (!audio)
             continue;
         audiosample_t* sample = audio->sample.get();

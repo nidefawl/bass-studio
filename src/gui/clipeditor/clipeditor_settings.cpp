@@ -35,6 +35,8 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
       clipTimeStartOffsetTicks(true),
       clipTimeStartOffsetSamples(nullptr),
       clipAudioId(nullptr),
+      clipAudioPitch(nullptr),
+      clipAudioStretch(nullptr),
       quantization()
 {
     setCanMouseHit(true);
@@ -57,8 +59,12 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     clipTimeStartOffsetTicks.setLabel("Tick offset");
     clipTimeStartOffsetSamples.setLabel("Sample offset");
     clipAudioId.setLabel("Sample ID");
+    clipAudioPitch.setLabel("Pitch");
+    clipAudioStretch.setLabel("Stretch");
     btnDuplicateLoop.setText("Duplicate Loop");
     btnSelectMuted.setText("Select all muted");
+    clipAudioPitch.setStepSize(0.01f);
+    clipAudioStretch.setStepSize(0.01f);
     add(&btnLoop);
     add(&clipLoopStart);
     add(&clipLoopLen);
@@ -67,6 +73,8 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     add(&clipTimeStartOffsetTicks);
     add(&clipTimeStartOffsetSamples);
     add(&clipAudioId);
+    add(&clipAudioPitch);
+    add(&clipAudioStretch);
     add(&btnDuplicateLoop);
     add(&btnSelectMuted);
     add(&quantization);
@@ -128,6 +136,10 @@ void gui_clipsettings::buttonClicked(guibase* button) {
             }
         }
     }
+
+    if (&clipAudioPitch == button || &clipAudioStretch == button) {
+        parent->buttonClicked(button);
+    }
 }
 
 void gui_clipsettings::updateClipViewReferences() {
@@ -146,6 +158,9 @@ void gui_clipsettings::updateClipViewReferences() {
             clipTimeStartOffsetSamples.setRef(nullptr);
             clipTimeStartOffsetTicks.setRef(ref, &clip->offsetStart);
             clipAudioId.setRef(&clip->audio.id);
+            clipAudioSettings = clip->audio.settings;
+            clipAudioPitch.setRef(&clipAudioSettings.pitch);
+            clipAudioStretch.setRef(&clipAudioSettings.stretch);
         }
     }
     if (!bHasRef) {
@@ -157,6 +172,8 @@ void gui_clipsettings::updateClipViewReferences() {
         clipTimeStartOffsetSamples.setRef(nullptr);
         clipTimeStartOffsetTicks.clearRef();
         clipAudioId.setRef(nullptr);
+        clipAudioPitch.setRef(nullptr);
+        clipAudioStretch.setRef(nullptr);
     }
     if (dawCtrl) {
         auto project = dawCtrl->getDaw();
@@ -365,7 +382,11 @@ void gui_clipsettings::layout() {
     clipTimeStartOffsetSamples.pos  = ivec2(0, clipTimeStartOffsetTicks.bottom() + padding);
     clipAudioId.size                = ivec2(btnW, btnH);
     clipAudioId.pos                 = ivec2(clipTimeStartOffsetSamples.right() + padding, clipTimeStartOffsetTicks.bottom() + padding);
-    btnDuplicateLoop.pos            = ivec2(0, clipAudioId.bottom() + padding);
+    clipAudioPitch.size             = ivec2(btnW, btnH);
+    clipAudioPitch.pos              = ivec2(0, clipAudioId.bottom() + padding);
+    clipAudioStretch.size           = ivec2(btnW, btnH);
+    clipAudioStretch.pos            = ivec2(clipAudioPitch.right() + padding, clipAudioPitch.top());
+    btnDuplicateLoop.pos            = ivec2(0, clipAudioStretch.bottom() + padding);
     btnDuplicateLoop.size           = ivec2(w, btnH);
     btnSelectMuted.pos              = ivec2(0, btnDuplicateLoop.bottom() + padding);
     btnSelectMuted.size             = ivec2(w, btnH);

@@ -85,7 +85,7 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     w.samplesPerPx      = samplesPerPx;
     w.linewidth         = 2.0f;
 
-    w.audioId = m_clip->audio.id;
+    w.audioId = m_clip->audio.idDerived > -1 ? m_clip->audio.idDerived : m_clip->audio.id;
     if (m_clip->hasFadeIn()) {
         auto fadeRef = m_clip->getSampleFadeIn(tempo100, samplerate);
         w.fades[0] = {*fadeRef.shape, fadeRef.samplesFadePos, fadeRef.samplesFadeDuration};

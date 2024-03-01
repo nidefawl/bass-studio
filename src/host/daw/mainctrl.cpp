@@ -1902,6 +1902,7 @@ void DawCtrl::onPreDestroy() {
 }
 
 void MainCtrl::onPreDestroy() {
+    daw.onPrePreDestroy();
     {
         ThreadLock lock = daw.playThread.lockThread();
         //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
@@ -2513,4 +2514,98 @@ bool DawCtrl::onWindowCloseRequest() {
         ws.flags = 0; // flag closed
     }
     return true;
+}
+
+namespace DAW {
+
+class ProcessClipAudioThreadTask final : public WorkerThread::ThreadTask {
+    std::atomic<bool> m_cancelled{};
+    clip_ref_t clipRef{};
+    clip_audio_t clipAudio{};
+    audiocache* cache = nullptr;
+    audiofile_t* audiofile = nullptr;
+public:
+    void setClipData(clip_ref_t clipRef, clip_audio_t clipAudio, audiocache* cache) {
+        this->clipRef = clipRef;
+        this->clipAudio = clipAudio;
+        this->cache = cache;
+    }
+
+    ~ProcessClipAudioThreadTask() {
+    }
+
+    void run() override {
+        audiofile = cache->getDerivedSample(clipAudio);
+    }
+    void finishMainThread(DawInstance* daw) {
+        auto clip = clipRef.clip();
+        if (!clip) {
+            return;
+        }
+        if (!audiofile) {
+            log_lf(Log::L_WARN, "Failed to create derived audio sample for clip %s\n", clip->name.c_str());
+        } else {
+            clip->audio = clipAudio;
+            clip->setDirty();
+            daw->unloadUnreferencedSamples();
+            daw->layoutTrackEditors();
+            daw->updateVisibleTrackContents();
+            for (auto& dawCtrl : daw->dawCtrls) {
+                dawCtrl->view->visitEntries([](SPLayoutEntry& entry) {
+                    if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {
+                        auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
+                        clipEditor->refreshAudioWaveform();
+                    }
+                    return true;
+                });
+            }
+        }
+    }
+
+    void setCancelled() {
+        m_cancelled = true;
+        setError();
+    }
+
+    bool isCancelled() const {
+        return m_cancelled;
+    }
+};
+
+} // namespace DAW
+
+void DawInstance::updateAudioProcessingTask() {
+    if (this->processAudioTaskRunning 
+        && this->processAudioTaskRunning->isCompleted()) {
+        if (!this->processAudioTaskRunning->isCancelled()) {
+            auto lock = getPlayThread()->lockThread();
+            this->processAudioTaskRunning->finishMainThread(this);
+            this->processAudioTaskRunning.reset();
+        }
+    }
+    if (!this->processAudioTasks.empty()) {
+        auto it = std::remove_if(this->processAudioTasks.begin(), this->processAudioTasks.end(), [](const std::shared_ptr<DAW::ProcessClipAudioThreadTask>& task) {
+            return task->isCompleted();
+        });
+        this->processAudioTasks.erase(it, this->processAudioTasks.end());
+    }
+}
+
+void DawInstance::updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& settings) {
+    if (clip && clip->clipType == CLIP_AUDIO) {
+        auto workerThread = getWorkerThread();
+        if (this->processAudioTaskRunning && !this->processAudioTaskRunning->isCompleted()) {
+            this->processAudioTaskRunning->setCancelled();
+        }
+        auto newTask = std::make_shared<DAW::ProcessClipAudioThreadTask>();
+        clip_audio_t clipAudio = clip->audio;
+        clipAudio.idDerived = -1;
+        clipAudio.settings = settings;
+        clip_ref_t ref;
+        ref.set(clip);
+        newTask->setClipData(ref, clipAudio, getAudioCache());
+        this->processAudioTaskRunning = newTask;
+        this->processAudioTasks.push_back(newTask);
+        workerThread->pushTask(newTask.get());
+    }
 }

@@ -40,13 +40,19 @@ struct clip_fade_t {
     DAW::Shape::shape_t shape;
 };
 
+struct clip_audio_settings_t {
+    float pitch = 0.0f;
+    float stretch = 1.0f;
+};
+
 class clip_audio_t {
 public:
     int32_t id = -1;
-    rendered_audio_clip_t* renderedAudio = nullptr;
     clip_fade_t fadeIn;
     clip_fade_t fadeOut;
-
+    clip_audio_settings_t settings;
+    int32_t idDerived = -1;
+    rendered_audio_clip_t* renderedAudio = nullptr;
 public:
     clip_audio_t();
     ~clip_audio_t();
@@ -64,11 +70,13 @@ public:
         this->id = obj.id;
         this->fadeIn = obj.fadeIn;
         this->fadeOut = obj.fadeOut;
+        this->settings = obj.settings;
+        this->idDerived = obj.idDerived;
     }
     int32_t lenSamples() const;
 
     bool isEmpty() const {
-        return id == -1;
+        return id < 0;
     }
     void setDefaultFade(bool bIn);
     void setEmptyFade(bool bIn);
@@ -215,7 +223,6 @@ public:
     clip_audio_t audio;
     clip_control_data_t controlData;
     tick_t time = 0;
-    //private:
     tick_t len = 0;
 
 public:

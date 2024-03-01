@@ -1844,7 +1844,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                     if ( ( (isRecording && numSamplesRecord >= trImpl->sampleFormat.sampleRate>>2)
                             || (!isRecording && numSamplesRecord > 0) )
                              && audioSampleId >= 0) {
-                        auto* file = cache->get(audioSampleId);
+                        auto* file = cache->getSample(audioSampleId);
                         if (file) {
                             update = true;
                             ssr.format = trImpl->sampleFormat;

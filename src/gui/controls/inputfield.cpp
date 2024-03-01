@@ -1,6 +1,7 @@
 #include "inputfield.h"
 
 #include "keyboard.h"
+#include "logging.h"
 #include "str_util.h"
 
 void gui_numberinput_field_base::render(NVGcontext* vg) {
@@ -93,17 +94,16 @@ void gui_numberinput_field_base::handleDraggedMove(MouseEvent& evt) {
         if (math::abs(disty) < 1)
             return;
 
-        evt.dragDistance->y = 0;
         int absy = math::abs(disty);
         if (absy >= 4)
             absy = 64;
         else if (absy >= 2)
             absy = 4;
-        onMouseDragValue(disty, absy);
-        if (parent)
-            parent->buttonClicked(this);
-
-        return;
+        if (onMouseDragValue(disty, absy)) {
+            evt.dragDistance->y = 0;
+            if (parent)
+                parent->buttonClicked(this);
+        }
     }
 }
 
@@ -159,10 +159,11 @@ String gui_numberinput_field_generic<int32_t>::valueToStringLiteral(int32_t val)
 }
 
 template<>
-void gui_numberinput_field_generic<int32_t>::onMouseDragValue(int32_t disty, int32_t absy) {
+bool gui_numberinput_field_generic<int32_t>::onMouseDragValue(int32_t disty, int32_t absy) {
     if (this->number) {
         setValue(getValue() - ((disty < 0 ? -1 : 1) * absy));
     }
+    return true;
 }
 template<>
 void gui_numberinput_field_generic<int32_t>::onKeyInputChangeValue(ivec2 direction) {
@@ -180,10 +181,11 @@ String gui_numberinput_field_generic<uint32_t>::valueToStringLiteral(uint32_t va
 }
 
 template<>
-void gui_numberinput_field_generic<uint32_t>::onMouseDragValue(int32_t disty, int32_t absy) {
+bool gui_numberinput_field_generic<uint32_t>::onMouseDragValue(int32_t disty, int32_t absy) {
     if (this->number) {
         setValue(getValue() - ((disty < 0 ? -1 : 1) * absy));
     }
+    return true;
 }
 template<>
 void gui_numberinput_field_generic<uint32_t>::onKeyInputChangeValue(ivec2 direction) {
@@ -200,10 +202,16 @@ String gui_numberinput_field_generic<float>::valueToStringLiteral(float val) {
     return StringFormat(strFormat ? strFormat : "%.3f", val);
 }
 template<>
-void gui_numberinput_field_generic<float>::onMouseDragValue(int32_t disty, int32_t absy) {
+bool gui_numberinput_field_generic<float>::onMouseDragValue(int32_t disty, int32_t absy) {
     if (this->number) {
-        setValue(*number - ((disty < 0 ? -1 : 1) * absy) * 0.0001f);
+        float step = stepSize != 0 ? stepSize : 0.0064f;
+        float r = disty / 64.0f;
+        if (stepSize != 0 && math::abs(r) < math::abs(1.0f)) {
+            return false;
+        }
+        setValue(*number - (disty < 0 ? -1 : 1) * (step));
     }
+    return true;
 }
 template<>
 void gui_numberinput_field_generic<float>::onKeyInputChangeValue(ivec2 direction) {
@@ -221,10 +229,16 @@ double gui_numberinput_field_generic<double>::parseLiteral(const char* szNumber)
     return atof(szNumber);
 }
 template<>
-void gui_numberinput_field_generic<double>::onMouseDragValue(int32_t disty, int32_t absy) {
+bool gui_numberinput_field_generic<double>::onMouseDragValue(int32_t disty, int32_t absy) {
     if (this->number) {
-        setValue(*number - ((disty < 0 ? -1 : 1) * absy) * 0.0001);
+        double step = stepSize != 0 ? stepSize : 0.0064;
+        double r = disty / 64.0;
+        if (stepSize != 0 && math::abs(r) < math::abs(1.0)) {
+            return false;
+        }
+        setValue(*number - (disty < 0 ? -1 : 1) * (step));
     }
+    return true;
 }
 template<>
 void gui_numberinput_field_generic<double>::onKeyInputChangeValue(ivec2 direction) {

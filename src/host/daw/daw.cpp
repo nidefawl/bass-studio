@@ -97,6 +97,9 @@ void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t
             if (clip->audio.id >= 0 && !std::binary_search(uniqueSampleIds.cbegin(), uniqueSampleIds.cend(), clip->audio.id)) {
                 insertSorted(uniqueSampleIds, clip->audio.id);
             }
+            if (clip->audio.idDerived >= 0 && !std::binary_search(uniqueSampleIds.cbegin(), uniqueSampleIds.cend(), clip->audio.idDerived)) {
+                insertSorted(uniqueSampleIds, clip->audio.idDerived);
+            }
         }
     }
 }
@@ -282,6 +285,8 @@ void DawInstance::onTick() {
             host->setOutput(stream);
         }
     }
+
+    updateAudioProcessingTask();
 
     host->onTick();
 
@@ -1514,7 +1519,7 @@ std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const Str
     return {uniqueFilePath, uniqueFileName};
 }
 
-void DawInstance::onPreDestroy() {
+void DawInstance::onPrePreDestroy() {
     dbgassert(initState > 2);
     const bool isRealtimeInstance = initState > 3;
     initState = -1;
@@ -1537,6 +1542,31 @@ void DawInstance::onPreDestroy() {
         tls.audioHost->deinitPa();
         tls.midiHost->deinitPm();
     }
+}
+
+void DawInstance::onPreDestroy() {
+    // dbgassert(initState > 2);
+    // const bool isRealtimeInstance = initState > 3;
+    // initState = -1;
+
+    // if (isRealtimeInstance) {
+    //     setAudioThreadState(playback_state::status_no_process);
+    //     tls.midiHost->stopMidi();
+    //     tls.audioHost->stopAudio();
+    // }
+    // projectToLoad = nullptr;
+    // clipboardPlugins = nullptr;
+    // dragdropclip.reset();
+    // plugindb.closeDatabase();
+
+    // if (isRealtimeInstance) {
+    //     this->workerThread.stopThread();
+    //     this->workerThread.joinThread();
+    //     this->playThread.stopThread();
+    //     this->playThread.joinThread();
+    //     tls.audioHost->deinitPa();
+    //     tls.midiHost->deinitPm();
+    // }
 
     tls.host->unload();
     tls.audioCache->unloadAll();

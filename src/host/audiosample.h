@@ -45,6 +45,7 @@ struct audiosample_t {
     uint16_t bitsPerSample;
     std::vector<samplechannel_t> samples;
     std::vector<std::vector<samplechannel_t>> downsampled;
+    int64_t sampleVersion = 0;
 };
 
 struct samplesource_t {

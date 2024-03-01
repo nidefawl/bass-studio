@@ -650,7 +650,7 @@ clip_audio_t::~clip_audio_t() {
 int32_t clip_audio_t::lenSamples() const {
     auto cache = audiocache::getInstance();
     dbgassert(cache);
-    audiofile_t* audio = cache->get(this->id);
+    audiofile_t* audio = cache->getDerivedSample(*this);
     auto* sample       = audio ? audio->sample.get() : nullptr;
     if (sample)
         return sample->nSamples;

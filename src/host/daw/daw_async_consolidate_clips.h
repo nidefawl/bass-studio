@@ -147,7 +147,7 @@ public:
         cache->updateSample(ssr);
         numSamplesRead += readLen;
         if (numSamplesRead >= numSamples) {
-            auto file = cache->get(sampleId);
+            auto file = cache->getSample(sampleId);
             dbgassert(file);
             audiocache::Downsample(file->getSample());
             finished = true;

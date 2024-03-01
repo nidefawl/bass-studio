@@ -989,7 +989,7 @@ audioclip_texture_t makeWaveformFromSample(const int32_t tempo100, const sampler
     //    w.method = SampleMethod::sample_energy;
     //else
     w.method  = SampleMethod::sample_straight;
-    w.audioId = clipAudio.id;
+    w.audioId = clipAudio.idDerived > -1 ? clipAudio.idDerived : clipAudio.id;
     w.clipped = true;
     //log_lf(Log::L_DEBUG, "waveform %d - %d - %d - %d %f %f %f\n", w.audioId, w.sampleBegin, w.sampleBeginOffset, w.sampleEnd, w.samplesPerPx, grid.zoom, lenSamples);
     //log_lf(Log::L_DEBUG, "waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%f]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scaleX);
@@ -1022,13 +1022,13 @@ inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const au
     return false;
 }
 void gui_audiocontent::updatePosition() {
-    const clip_t* clip         = view.clip();
+    clip_t* clip         = view.clip();
     if (!clip || clip->clipType != CLIP_AUDIO) {
         releaseRendered();
         return;
     }
     auto& clipAudio    = clip->audio;
-    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
+    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(clipAudio);
     if (!audio) {
         releaseRendered();
         return;
@@ -1038,6 +1038,7 @@ void gui_audiocontent::updatePosition() {
 
     dbgassert(size.x > 0);
     audioclip_texture_t waveform = makeWaveformFromSample(tempo100, samplerate, grid, clipAudio, ivec2(0, 0), size);
+    waveform.sampleVersion = audio->getSample()->sampleVersion;
     if (waveform.size.x < 1 || waveform.size.y < 1) {
         releaseRendered();
         waveformRef->waveform = waveform;
@@ -1046,8 +1047,8 @@ void gui_audiocontent::updatePosition() {
     }
 
     if (dawCtrl->getWaveformRenderer()->canQueueUpdate()) {
-        bool equal = waveform.size == waveformRef->waveform.size &&
-                     clipAudio.id == waveformRef->waveform.audioId &&
+        bool equal = waveformRef->rendered && waveform.size == waveformRef->waveform.size &&
+                     waveform.audioId == waveformRef->waveform.audioId &&
                      isAlmostEqualWaveformSample(waveform, waveformRef->waveform);
         if (!equal) {
             this->updatedWaveform = waveform;
@@ -1065,8 +1066,7 @@ void gui_audiocontent::prerender(NVGcontext* vg) {
     if (!clip || clip->clipType != CLIP_AUDIO) {
         return;
     }
-    auto& clipAudio    = clip->audio;
-    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
+    auto audio = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(clip->audio);
     if (!waveformRef->queued) {
         if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
             return;
@@ -1210,9 +1210,9 @@ void guictr_audioeditor::gridChanged(scaled_grid& _grid) {
 }
 
 void guictr_audioeditor::handleDraggedBegin(MouseEvent& evt) {
-    if (evt.guiDragged == this) {
-        parentClipEditor.selectEditClip(nullptr);
-    }
+    // if (evt.guiDragged == this) {
+    //     parentClipEditor.selectEditClip(nullptr);
+    // }
 }
 
 void guictr_audioeditor::relayout() {

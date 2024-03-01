@@ -1115,7 +1115,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
             if (!clipAudio.renderedAudio) {
                 clipAudio.renderedAudio = new rendered_audio_clip_t(dawCtrl->getWaveformRenderer());
             }
-            audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
+            audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(clipAudio);
 
             if (!audio) {
                 clipAudio.renderedAudio->releaseWaveformTexture();
@@ -1140,6 +1140,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
             const auto tempo100 = prjGlobals.tempo100;
             const auto samplerate = audio->sample->sampleRate;
             auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, entry->content->size, cl, clipPos, clipSize - shrink, posClipped, sizeClipped);
+            waveform.sampleVersion = audio->sample->sampleVersion;
             if (waveform.size.x < 1 || waveform.size.y < 1) {
                 clipAudio.renderedAudio->releaseWaveformTexture();
                 clipAudio.renderedAudio->updateWaveformTexture(waveform);

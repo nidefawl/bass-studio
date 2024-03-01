@@ -1,10 +1,12 @@
 
 
+#include "gui/controls/button.h"
 #include "gui/linetess/pymachine.h"
 #include "appsettings.h"
 #include "assert_dbg.h"
 #include "color_util.h"
 #include "gui/container/container_builder.h"
+#include "host/audiobuffer/audioblock.h"
 #include "host/clip/clip.h"
 #include "host/daw/clipboard.h"
 #include "event.h"
@@ -32,11 +34,13 @@
 #include "host/shape/shape.h"
 #include "host/track/track.h"
 #include "host/track/track_impl.h"
+#include "host/audiosample.h"
 #include "host/host_pluginmanager.h"
 #include "appconfig.h"
 #include "str_util.h"
 #include "types.h"
 #include <cstdint>
+#include <cstring>
 #include <nanovg.h>
 
 #include <nanovg_min.h>
@@ -245,6 +249,23 @@ bool guictr_clipeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return guictr_base::mouseHitTest(mpos, evt);
 }
 
+void guictr_clipeditor::refreshAudioWaveform() {
+    audioeditor.content.releaseRendered();
+    audioeditor.content.updatePosition();
+}
+
+void guictr_clipeditor::buttonClicked(guibase* button) {
+    if (&settingsCtr.clipAudioPitch == button || &settingsCtr.clipAudioStretch == button) {
+        clip_t* clip = view.clip();
+        if (clip && clip->clipType == CLIP_AUDIO) {
+            dawCtrl->getDaw()->updateDerivedAudio(clip, settingsCtr.clipAudioSettings);
+        }
+
+    } else if (parent) {
+        parent->buttonClicked(button);
+    }
+}
+
 void guictr_clipeditor::render(NVGcontext* vg) {
     if (isBackgroundRendered()) {
         renderBackground(vg);
@@ -309,7 +330,8 @@ void guictr_clipeditor::layout() {
 
     guibase* leftContainer = nullptr;
     auto& dawSettings = daw_tls::getDawSettings();
-    arp.setVisible(dawSettings.uiShowSettingsArp);
+    auto clip = view.clip();
+    arp.setVisible(dawSettings.uiShowSettingsArp && clip && clip->clipType == CLIP_MIDI);
     settingsScrollCtr.setVisible(dawSettings.uiShowSettingsClip);
     if (settingsScrollCtr.isVisible()) {
         leftContainer = &settingsScrollCtr;

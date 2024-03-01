@@ -3,12 +3,14 @@
 #include <archive_entry.h>
 #include <cstdint>
 #include <cstring>
+#include <signalsmith-stretch.h>
 #include <sys/types.h>
 #include <unordered_map>
 #include <atomic>
 #include "appsettings.h"
 #include "assert_dbg.h"
 #include "host/audiobuffer/audioblock.h"
+#include "host/clip/clip.h"
 #include "config.h"
 #include "host/daw/daw_async_project_load.h"
 #include "math/seq_math.h"
@@ -42,9 +44,9 @@ using audiofile_variant = std::variant<std::monostate, drwav, drmp3, drflac_file
         v.push_back(w.get());
     }
 } */
-audiofile_t* audiocache::get(int32_t i) {
-    size_t count = this->mapId.count(i);
-    return count ? this->mapId.at(i) : nullptr;
+audiofile_t* audiocache::getSample(int32_t i) {
+    auto it = mapId.find(i);
+    return it != mapId.end() ? it->second : nullptr;
 }
 audiofile_t* audiocache::getByFilename(const String& pathFile) {
     for (auto& w : list) {
@@ -835,4 +837,75 @@ void audiocache::load(samplefile_index_t& sampleIndex, ProjectFileType projectFi
 
 bool audiocache::isEmpty() const {
     return list.empty() && mapId.empty();
+}
+
+
+audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio) {
+    if (clipAudio.isEmpty()) {
+        return nullptr;
+    }
+    if (clipAudio.settings.pitch == 0.0f && clipAudio.settings.stretch == 1.0f) {
+        return getSample(clipAudio.id);
+    }
+    if (clipAudio.idDerived == -1) {
+        auto it = mapId.find(clipAudio.id);
+        if (it == mapId.end()) {
+            log_lf(Log::L_WARN, "getDerivedSample: sample %d not found\n", clipAudio.id);
+            clipAudio.idDerived = -2;
+            return nullptr;
+        }
+        auto audiofile = it->second;
+        const auto& sourceSample = audiofile->sample;
+        auto stretchFactor = double(clipAudio.settings.stretch);
+        signalsmith::stretch::SignalsmithStretch<float> stretch;
+        stretch.presetDefault(sourceSample->nChannels, sourceSample->sampleRate);
+        auto pitchSemitones = clipAudio.settings.pitch;
+        auto pitchLinear = std::pow(2.0, pitchSemitones / 12.0);
+        stretch.setTransposeFactor(pitchLinear);
+        samplecount_t preRoll = math::ceildS64(stretch.outputLatency() + stretch.inputLatency() * stretchFactor);
+        samplecount_t numSamplesStretched = math::ceildS64(double(sourceSample->nSamples) * stretchFactor);
+        auto blockStretched = AudioBlock(sourceSample->nChannels, numSamplesStretched + preRoll);
+        blockStretched.clear();
+        stretch.process(sourceSample->samples, sourceSample->nSamples, blockStretched.buf, numSamplesStretched);
+
+        // feed preroll num silent samples
+        auto inputSizePreRoll = math::ceildS64(preRoll * (1.0 / stretchFactor));
+        auto blockSilent = AudioBlock(sourceSample->nChannels, inputSizePreRoll);
+        blockSilent.clear();
+        auto blockOutOffset = blockStretched.getOffsetBlock(numSamplesStretched);
+        stretch.process(blockSilent.buf, blockSilent.samples, blockOutOffset.buf, preRoll);
+
+        auto blockNoPreRoll = blockStretched.getOffsetBlock(preRoll);
+        create_sample_req_t ssr {
+            .format = sampleformat_t{samplerate, 512, sampleformat_bits_t::FLOAT_32},
+            .numChannels = blockNoPreRoll.channels,
+            .isTemporarySample = true,
+            .path = audiofile->path,
+            .id = -1,
+            .preAllocate = blockNoPreRoll.samples,
+        };
+        auto derivedSample = createSample(ssr);
+        if (!derivedSample) {
+            log_lf(Log::L_WARN, "Failed to create derived sample for %s\n", audiofile->path.c_str());
+            return nullptr;
+        }
+        derivedSample->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_DERIVED;
+        auto sample = derivedSample->getSample();
+        sample->nSamples = blockNoPreRoll.samples;
+        sample->samples.resize(blockNoPreRoll.channels);
+        for (channelnum_t c = 0; c < blockNoPreRoll.channels; c++) {
+            auto& ch = sample->samples[c];
+            ch.resize(blockNoPreRoll.samples);
+            std::memcpy(ch.data(), blockNoPreRoll.buf[c], blockNoPreRoll.samples * sizeof(float));
+        }
+        sample->sampleVersion++;
+        Downsample(sample);
+        clipAudio.idDerived = derivedSample->id;
+    }
+    return getSample(clipAudio.idDerived);
+}
+
+audiofile_t* audiocache::getDerivedSample(const clip_audio_t& clipAudio) const {
+    auto it = mapId.find(clipAudio.idDerived);
+    return it != mapId.end() ? it->second : nullptr;
 }

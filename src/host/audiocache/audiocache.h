@@ -3,6 +3,7 @@
 #include <atomic>
 #include <memory>
 #include <functional>
+#include "host/clip/clip.h"
 #include "host/project/project.h"
 #include "types.h"
 #include "str_util.h"
@@ -13,6 +14,7 @@
 
 struct archive;
 struct NVGcontext;
+class clip_audio_t;
 
 struct audiofile_path_t {
     int32_t id = 0;
@@ -27,6 +29,7 @@ struct audiofile_t final : public samplesource_t {
         AUDIOFILE_FLAG_MISSING = 1 << 2,
         AUDIOFILE_FLAG_TEMPORARY = 1 << 3,
         AUDIOFILE_FLAG_BUNDLED = 1 << 4,
+        AUDIOFILE_FLAG_DERIVED = 1 << 5,
     };
     int32_t id = 0;
     String path;
@@ -63,6 +66,8 @@ struct create_sample_req_t {
     int32_t id = -1;
     samplecount_t preAllocate = 0;
 };
+struct create_derived_sample_req_t {
+};
 class audiocache {
     samplerate_t samplerate = 0;
     std::atomic<int32_t> nextIdx{ 0 };
@@ -86,7 +91,9 @@ public:
     audiofile_t* createSample(const create_sample_req_t& ssr);
     void setSamplerate(samplerate_t samplerate);
     void unloadSampleId(int32_t id);
-    audiofile_t* get(int32_t i);
+    audiofile_t* getSample(int32_t i);
+    audiofile_t* getDerivedSample(clip_audio_t& clipAudio);
+    audiofile_t* getDerivedSample(const clip_audio_t& clipAudio) const;
     audiofile_t* getByFilename(const String& pathFile);
     void store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v);
     void load(samplefile_index_t& v, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir);

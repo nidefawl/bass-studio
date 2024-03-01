@@ -495,7 +495,13 @@ void serialize(Archive& archive, clip_fade_t& m) {
 
 template<class Archive>
 void save(Archive& archive, clip_audio_t const& m) {
-    archive(make_nvp("id", m.id), make_nvp("fadeIn", m.fadeIn), make_nvp("fadeOut", m.fadeOut));
+    archive(
+        make_nvp("id", m.id),
+        make_nvp("fadeIn", m.fadeIn),
+        make_nvp("fadeOut", m.fadeOut),
+        make_nvp("pitch", m.settings.pitch),
+        make_nvp("stretch", m.settings.stretch)
+    );
 }
 
 template<class Archive>
@@ -507,6 +513,8 @@ void load(Archive& archive, clip_audio_t& m) {
         m.setDefaultFade(true);
     if (m.fadeOut.shape.pts.empty())
         m.setDefaultFade(false);
+    make_optional_nvp(archive, "pitch", m.settings.pitch);
+    make_optional_nvp(archive, "stretch", m.settings.stretch);
 }
 
 //TODO: don't archive each note seperately

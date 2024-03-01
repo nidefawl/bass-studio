@@ -427,10 +427,13 @@ public:
     gui_timeinput clipTimeStartOffsetTicks;
     gui_numberinput_i32 clipTimeStartOffsetSamples;
     gui_numberinput_i32 clipAudioId;
+    gui_numberinput_float clipAudioPitch;
+    gui_numberinput_float clipAudioStretch;
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_quantizationsettings quantization;
     std::vector<guictr_base*> noteEditorScripts;
+    clip_audio_settings_t clipAudioSettings;
     explicit gui_clipsettings(guictr_clipeditor& parent, clip_view_t& _view);
     ~gui_clipsettings() override;
     void render(NVGcontext* vg) override;
@@ -813,7 +816,6 @@ public:
     void prerender(NVGcontext* vg) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
 
-
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
         bool hit = guictr_base::mouseHitTest(v, evt);
         if (!hit && this->contains(v) && evt.type == MOUSE_DRAGDROP_CLIP) {
@@ -822,6 +824,7 @@ public:
         }
         return hit;
     }
+
     bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         bool bHasAudioSample = false;
         for (auto& track : clip.clipboard->tracks) {
@@ -846,6 +849,7 @@ public:
         }
         return false;
     }
+
     bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         if (!action.dragtype) {
             if (!clipDropBegin(clip, mousepos, kbmods))
@@ -859,6 +863,7 @@ public:
         }
         return false;
     }
+
     bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
 
@@ -873,6 +878,8 @@ public:
                         dawCtrl->getDaw()->updateVisibleTrackContents();
                         dawCtrl->showClipEditor();
                         dawCtrl->getDaw()->setSingleClip(thisClip);
+                        releaseRendered();
+                        updatePosition();
                         return true;
                     }
                 }
@@ -881,12 +888,14 @@ public:
         }
         return false;
     }
+
     void clipDropCancel() override {
         if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
             action.clipboard = nullptr;
             action.dragtype  = DRAG_NONE;
         }
     }
+
 
     void releaseRendered();
     void updatePosition();
@@ -903,7 +912,6 @@ public:
     void renderBackground(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     void layout() override;
-    // bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void handleDraggedBegin(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
@@ -944,6 +952,7 @@ public:
     void selectEditClip(clip_t* clip);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void render(NVGcontext* vg) override;
+    void buttonClicked(guibase* button) override;
     void layout() override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
@@ -957,6 +966,7 @@ public:
         if (parentCtrl)
             resetClipView();
     }
+    void refreshAudioWaveform();
 };
 
 

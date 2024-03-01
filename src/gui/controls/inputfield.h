@@ -44,7 +44,7 @@ public:
 
     virtual String getAsStringLiteral()                        = 0;
     virtual void endEditImpl()                                 = 0;
-    virtual void onMouseDragValue(int32_t disty, int32_t absy) = 0;
+    virtual bool onMouseDragValue(int32_t disty, int32_t absy) = 0;
     virtual void onKeyInputChangeValue(ivec2 direction)        = 0;
 };
 template<typename T>
@@ -52,6 +52,7 @@ class gui_numberinput_field_generic : public gui_numberinput_field_base {
 protected:
     T* number;
     const char* strFormat = nullptr;
+    T stepSize{};
 public:
     std::function<void(gui_numberinput_field_base*, T)> fnValueEditChanged;
     std::function<T(T)> fnClamp;
@@ -67,9 +68,12 @@ public:
     void setStringFormat(const char* strFormat) {
         this->strFormat = strFormat;
     }
+    void setStepSize(T stepSize) {
+        this->stepSize = stepSize;
+    }
     virtual T parseLiteral(const char* szNumber);
     virtual String valueToStringLiteral(T val);
-    void onMouseDragValue(int32_t disty, int32_t absy) override;
+    bool onMouseDragValue(int32_t disty, int32_t absy) override;
     void onKeyInputChangeValue(ivec2 direction) override;
     String getAsStringLiteral() override {
         if (this->number) {

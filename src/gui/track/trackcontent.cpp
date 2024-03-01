@@ -173,7 +173,7 @@ void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
         getClippedPosSize(parent->size, posClipped, sizeClipped);
         if (sizeClipped.x > 0 && sizeClipped.y > 0) {
             gui_waveform_texture_ref* ref = getWaveformTextureRef();
-            auto file = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
+            auto file = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(m_clip->audio);
             renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
             nvgBeginPath(vg);
             nvgRect(vg, posClipped.x, posClipped.y, sizeClipped.x, sizeClipped.y);
@@ -203,7 +203,7 @@ void gui_audio_clip::render(NVGcontext* vg) {
         getClippedPosSize(parent->size, posClipped, sizeClipped);
 
         gui_waveform_texture_ref* ref = getWaveformTextureRef();
-        auto file = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
+        auto file = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(m_clip->audio);
         renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
         if (fadeInLayout.size.y < 5 || sizeClipped.x < 1 || sizeClipped.y < 1) {
             return;
@@ -458,7 +458,7 @@ void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& 
     culled = !getClipPositionInt(grid, trackSize, m_clip, pos, size, 0);
     auto prjGlobals = daw->getProjectGlobals();
     auto cache = daw->getAudioCache();
-    audiofile_t* audio = cache->get(m_clip->audio.id);
+    audiofile_t* audio = cache->getDerivedSample(m_clip->audio);
 
     if (culled || !audio) {
         releaseWaveformTexture();
@@ -507,6 +507,7 @@ void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& 
     const auto tempo100 = prjGlobals.tempo100;
     const auto samplerate = m_track->audio->sampleFormat.sampleRate;
     auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, trackSize, m_clip, pos, size - shrink, posClipped, sizeClipped);
+    waveform.sampleVersion = audio->sample->sampleVersion;
     if (waveform.size.x < 1 || waveform.size.y < 1) {
         releaseWaveformTexture();
         updateWaveformTexture(waveform);
@@ -606,8 +607,7 @@ void rendered_audio_clip_t::releaseWaveformTexture() {
 }
 
 void gui_audio_clip::prerender(NVGcontext* vg) {
-    auto& clipAudio    = m_clip->audio;
-    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
+    auto audio = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(m_clip->audio);
     updateClipPrerender(vg, m_clip, audio, culled);
 }
 
@@ -634,7 +634,7 @@ void guitooltip<gui_audio_clip>::setContent() {
     using tbl_rows = std::vector<table_entry_t>;
     {
         //TODO: fix dawCtrl in tooltips/popups
-        audiofile_t* c = audiocache::getInstance()->get(clipPtr->audio.id);
+        audiofile_t* c = audiocache::getInstance()->getDerivedSample(clipPtr->audio);
 
         String path;
         if (c) {

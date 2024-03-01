@@ -60,6 +60,9 @@ public:
         m_cond.notify_all();
         task->notifyCustom();
     }
+    bool canRun() const {
+        return task->status <= status_accepted;
+    }
 };
 WorkerThread::ThreadTask::~ThreadTask() {
     delete m_taskImpl;
@@ -142,11 +145,13 @@ private:
             if (!task) {
                 break;
             }
-            try {
-                task->run();
-                task->setCompleted();
-            } catch (...) {
-                task->setException(std::current_exception());
+            if (task->canRun()) {
+                try {
+                    task->run();
+                    task->setCompleted();
+                } catch (...) {
+                    task->setException(std::current_exception());
+                }
             }
             task->notify();
         }
@@ -183,7 +188,7 @@ void WorkerThread::joinThread() {
 int32_t WorkerThread::getThreadId() {
     return m_threadImpl->getThreadId();
 }
-bool WorkerThread::pushTask(ThreadTask* task) {
+bool WorkerThread::pushTask(ThreadTask* task) { //TODO: make this take a shared_ptr
     return this->m_threadImpl->push(task->m_taskImpl);
 }
 void WorkerThread::setTls(daw_tls::tlsinstance tls) {

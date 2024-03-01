@@ -684,10 +684,11 @@ GlobalZoom gui_numberinput_field_generic<GlobalZoom>::parseLiteral(const char* s
     return GlobalZoom{float(atof(szNumber))};
 }
 template<>
-void gui_numberinput_field_generic<GlobalZoom>::onMouseDragValue(int32_t disty, int32_t absy) {
+bool gui_numberinput_field_generic<GlobalZoom>::onMouseDragValue(int32_t disty, int32_t absy) {
     if (this->number) {
         setValue(GlobalZoom{number->zoom - (disty) * 0.125f});
     }
+    return true;
 }
 template<>
 void gui_numberinput_field_generic<GlobalZoom>::onKeyInputChangeValue(ivec2 direction) {
