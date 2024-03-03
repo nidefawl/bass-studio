@@ -8,7 +8,7 @@
 namespace {
 
     void test_audiofile_loading() {
-        TEST_BEGIN("test_midifile_loader");
+        TEST_BEGIN("test_audiofile_loading");
         auto fileTypes = std::array{ SUPPORTED_AUDIO_FILE_TYPES };
         std::vector<FileFound> files;
         for (const auto& fileType : fileTypes) {
