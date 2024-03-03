@@ -162,3 +162,4 @@ if (TARGET pybind11::embed)
 endif()
 
 DEFINE_TEST(test_audiofiles TRUE test_audiofiles.cpp common/test_common.cpp)
+DEFINE_TEST(test_timestretch TRUE test_timestretch.cpp common/test_common.cpp)
