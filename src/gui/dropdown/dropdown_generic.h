@@ -24,10 +24,6 @@ public:
     }
 public:
     ~guidropdown_generic() override = default;
-    // void setOptions(const std::vector<T>& vecOptions, String strSelectedVal) {
-    //     this->current = strSelectedVal;
-    //     this->options = vecOptions;
-    // }
     void setOptions(const std::vector<T>& vecOptions) {
         this->options = vecOptions;
     }
