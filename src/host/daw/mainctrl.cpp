@@ -2123,6 +2123,7 @@ void DawCtrl::updateClipViews(clip_t* notifyClip) {
                 view.copySelectedNoteList();
                 view.updateNotePitches(false);
                 clipEditor->updateClipViewReferences();
+                clipEditor->layout();
             }
         }
         return true;

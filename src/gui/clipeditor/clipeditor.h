@@ -179,7 +179,6 @@ public:
 };
 
 class action_modify_clip_control_data final : public action_base {
-protected:
 public:
     int32_t trackIdx = 0;
     tick_t clipTime  = 0;
@@ -231,6 +230,66 @@ public:
             daw->updateClipViewsAndCursor(clip, cursorAfter);
         else
             daw->updateClipViews(clip);
+    }
+};
+
+class action_modify_clip_groove_setting final : public action_base {
+public:
+    int32_t trackIdx = 0;
+    tick_t clipTime  = 0;
+    int32_t before;
+    int32_t after;
+    action_modify_clip_groove_setting() : action_base() {
+    }
+    action_modify_clip_groove_setting(String description, const clip_view_t& view, const int32_t& oldC) : action_base() {
+        desc = description;
+        after        = view.clip()->selectedGroove;
+        trackIdx     = view.track()->projectIdx;
+        clipTime     = view.clip()->time;
+        before       = oldC;
+    }
+    void undo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_clips_t& midi = tr->getClips();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        clip->selectedGroove = before;
+        clip->setDirty();
+        daw->updateClipViews(clip);
+    }
+    void redo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_clips_t& midi = tr->getClips();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        clip->selectedGroove = after;
+        clip->setDirty();
+        daw->updateClipViews(clip);
+    }
+};
+
+class action_modify_groove_data final : public action_base {
+public:
+    groove_data_t before;
+    groove_data_t after;
+    action_modify_groove_data() : action_base() {
+    }
+    action_modify_groove_data(String description, const project_t& project, const groove_data_t& oldD, const groove_data_t& newD) : action_base() {
+        desc = description;
+        before       = oldD;
+        after        = newD;
+    }
+    void undo(DawInstance* daw) override {
+        // daw->getProject()->grooveData = before;
+        //TODO: implement
+    }
+    void redo(DawInstance* daw) override {
     }
 };
 inline bool isSharp(int n) {
@@ -342,14 +401,14 @@ public:
     vec2 getNoteFromPos(vec2 pos);
 };
 
-class gui_quantizationsettings final : public guictr_base {
+class gui_quantize_clip final : public guictr_base {
     tick_t tickStart = 0;
     tick_t tickEnd = 0;
     gui_timeinput inputStarts;
     gui_timeinput inputEnds;
     guibutton btnQuantize;
 public:
-    explicit gui_quantizationsettings()
+    explicit gui_quantize_clip()
         : guictr_base(),
         inputStarts(true),
         inputEnds(true)
@@ -367,7 +426,7 @@ public:
         add(&inputEnds);
         add(&btnQuantize);
     }
-    ~gui_quantizationsettings() override {
+    ~gui_quantize_clip() override {
         removeGuis();
     }
     void layout() override {
@@ -414,6 +473,30 @@ public:
         tickEnd   = end;
     }
 };
+class gui_clipsettings;
+class gui_clipgroove_settings final : public guictr_base {
+    gui_clipsettings& parentClipSettings;
+public:
+    clip_view_t& view;
+    gui_timeinput lenQuantization;
+    gui_numberinput_float strengthQuantization;
+    gui_numberinput_float strengthGroove;
+    gui_numberinput_float strengthVelocity;
+    gui_numberinput_float randomTiming;
+    gui_numberinput_float randomVelocity;
+    guidropdownbase* dropdownSelectGroove;
+    guibutton btnApply;
+    groove_data_t grooveData;
+public:
+    explicit gui_clipgroove_settings(gui_clipsettings& parent, clip_view_t& _view);
+    ~gui_clipgroove_settings() override {
+        removeGuis();
+    }
+    void setSelectedGroove(const int32_t& _selectedGroove);
+    void layout() override;
+    void render(NVGcontext* vg) override;
+    void buttonClicked(guibase* button) override;
+};
 
 class gui_clipsettings final : public guictr_base {
     guictr_clipeditor& parentClipEditor;
@@ -431,7 +514,8 @@ public:
     gui_numberinput_float clipAudioStretch;
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
-    gui_quantizationsettings quantization;
+    gui_clipgroove_settings grooveSettings;
+    gui_quantize_clip quantization;
     std::vector<guictr_base*> noteEditorScripts;
     clip_audio_settings_t clipAudioSettings;
     explicit gui_clipsettings(guictr_clipeditor& parent, clip_view_t& _view);

@@ -470,6 +470,7 @@ void serialize(Archive& archive, clip_t& m) {
             make_nvp("type", m.clipType),
             make_nvp("lenSamples", m.lenSamples));
     make_optional_nvp(archive, "clip_data", m.controlData);
+    make_optional_nvp(archive, "groove", m.selectedGroove);
     if (m.loopLen == 0) {
         m.loopStart = m.offsetStart;
         m.loopLen = m.len;
@@ -541,6 +542,24 @@ void load(Archive& archive, note_t& m) {
 }
 
 template<class Archive>
+void serialize(Archive& archive, groove_timing_data_t& m) {
+    archive(make_nvp("time", m.timePoints), make_nvp("velocity", m.velocityPoints));
+
+}
+
+template<class Archive>
+void serialize(Archive& archive, groove_data_t& m) {
+    archive(make_nvp("timingData", m.timingData),
+            make_nvp("name", m.name),
+            make_nvp("lenQuantization", m.lenQuantization),
+            make_nvp("strengthQuantization", m.strengthQuantization),
+            make_nvp("strengthGroove", m.strengthGroove),
+            make_nvp("strengthVelocity", m.strengthVelocity),
+            make_nvp("randomTiming", m.randomTiming),
+            make_nvp("randomVelocity", m.randomVelocity));
+}
+
+template<class Archive>
 void serialize(Archive& archive, project_globals_t& m) {
     archive(make_nvp("loopEnabled", m.loopEnabled),
             make_nvp("loopStart", m.loopStart),
@@ -550,6 +569,7 @@ void serialize(Archive& archive, project_globals_t& m) {
             make_nvp("signatureDenom", m.signatureDenom),
             make_nvp("playbackPos", m.playbackPos),
             make_nvp("cursor", m.cursor));
+    make_optional_nvp(archive, "grooveData", m.grooveData);
 }
 
 template<class Archive>

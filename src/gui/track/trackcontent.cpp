@@ -401,7 +401,6 @@ void gui_audio_clip::handleDraggedRelease(MouseEvent& evt) {
     }
     if (bHasEdit) {
         shapeEdit->dragged = {};
-        m_trackentry->parent->layoutVisibleTracks();
         bRequestRefresh = true;
         auto daw = dawCtrl->getDaw();
         auto clipBefore = *m_clip;
@@ -409,6 +408,7 @@ void gui_audio_clip::handleDraggedRelease(MouseEvent& evt) {
         String desc = "Edit Clip Fade" + String(editingFade == 0 ? " In" : " Out");
         daw->pushHist(new action_modify_clip(desc, m_trackentry->track, *m_clip, &clipBefore));
         m_clip->setDirty();
+        m_trackentry->parent->layoutVisibleTracks();
         return;
     }
     evt.relMousepos += pos;

@@ -1,7 +1,7 @@
 #pragma once
 #include "seq_time.h"
 #include "cursor.h"
-#include "logging.h"
+#include <vector>
 
 enum ProjectFileType {
     PROJECT_FILETYPE_JSON,
@@ -18,6 +18,20 @@ struct export_settings_t {
 struct quantize_settings {
     tick_t quantizeStart = 0;
     tick_t quantizeEnd = 0;
+};
+struct groove_timing_data_t {
+    std::vector<double> timePoints;
+    std::vector<double> velocityPoints;
+};
+struct groove_data_t {
+    groove_timing_data_t timingData;
+    String name;
+    tick_t lenQuantization = TICKS_16TH;
+    float strengthQuantization = 0.0f;
+    float strengthGroove = 0.0f;
+    float strengthVelocity = 0.0f;
+    float randomTiming = 0.0f;
+    float randomVelocity = 0.0f;
 };
 
 struct project_globals_t {
@@ -49,4 +63,6 @@ struct project_globals_t {
     DAW::TrackSelection trackSelection;
     /** (synced but not mutex locked)  */
     bool recordArmed = false;
+    /** projects groove settings */
+    std::vector<groove_data_t> grooveData;
 };

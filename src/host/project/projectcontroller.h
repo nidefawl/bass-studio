@@ -1,5 +1,6 @@
 #pragma once
 #include "fileio.h"
+#include "project.h"
 #include "tls.h"
 #include "host/track/track.h"
 #include "host/host_pluginmanager.h"
@@ -79,6 +80,16 @@ public:
     }
     trackallcontainer_t& getTracks() {
         return project->trackList;
+    }
+    std::vector<groove_data_t>& getGrooves() {
+        return projectGlobals->grooveData;
+    }
+    const groove_data_t& getGrooveData(int32_t idx) {
+        static groove_data_t empty{};
+        if (idx < 0 || idx >= int32_t(projectGlobals->grooveData.size())) {
+            return empty;
+        }
+        return projectGlobals->grooveData[idx];
     }
     project_t* getProject() {
         return project;

@@ -37,6 +37,7 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
       clipAudioId(nullptr),
       clipAudioPitch(nullptr),
       clipAudioStretch(nullptr),
+      grooveSettings(*this, _view),
       quantization()
 {
     setCanMouseHit(true);
@@ -77,6 +78,7 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     add(&clipAudioStretch);
     add(&btnDuplicateLoop);
     add(&btnSelectMuted);
+    add(&grooveSettings);
     add(&quantization);
 }
 
@@ -161,6 +163,7 @@ void gui_clipsettings::updateClipViewReferences() {
             clipAudioSettings = clip->audio.settings;
             clipAudioPitch.setRef(&clipAudioSettings.pitch);
             clipAudioStretch.setRef(&clipAudioSettings.stretch);
+            grooveSettings.setSelectedGroove(clip->selectedGroove);
         }
     }
     if (!bHasRef) {
@@ -174,6 +177,7 @@ void gui_clipsettings::updateClipViewReferences() {
         clipAudioId.setRef(nullptr);
         clipAudioPitch.setRef(nullptr);
         clipAudioStretch.setRef(nullptr);
+        grooveSettings.setSelectedGroove(-1);
     }
     if (dawCtrl) {
         auto project = dawCtrl->getDaw();
@@ -390,9 +394,18 @@ void gui_clipsettings::layout() {
     btnDuplicateLoop.size           = ivec2(w, btnH);
     btnSelectMuted.pos              = ivec2(0, btnDuplicateLoop.bottom() + padding);
     btnSelectMuted.size             = ivec2(w, btnH);
-    quantization.padding            = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
-    quantization.pos                = ivec2(quantization.margin, btnSelectMuted.bottom()+quantization.margin*2);
-    quantization.size               = ivec2(w - quantization.margin*2, (btnH*3+quantization.padding*5));
+
+    auto grooveSettingsVisibleChildren = std::count_if(grooveSettings.guis.begin(), grooveSettings.guis.end(), [](guibase* gui) {
+        return gui->isVisible();
+    });
+    grooveSettings.padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+    grooveSettings.pos     = ivec2(grooveSettings.margin, btnSelectMuted.bottom() + grooveSettings.margin * 2);
+    grooveSettings.size    = ivec2(w - grooveSettings.margin * 2, (btnH * (grooveSettingsVisibleChildren) + grooveSettings.padding * (grooveSettingsVisibleChildren+2)));
+
+    quantization.padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+    quantization.pos     = ivec2(quantization.margin, grooveSettings.bottom() + quantization.margin * 3);
+    quantization.size    = ivec2(w - quantization.margin * 2, (btnH * 3 + quantization.padding * 5));
+
     guibase* prevGui = &quantization;
     for (auto* gui : noteEditorScripts) {
         gui->padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
@@ -408,7 +421,7 @@ void gui_clipsettings::layout() {
     }
 }
 
-void gui_quantizationsettings::buttonClicked(guibase* button) {
+void gui_quantize_clip::buttonClicked(guibase* button) {
     if (&inputEnds == button) {
         tickEnd = math::max(0, tickEnd);
         auto& settings = dawCtrl->getDaw()->getQuantizeSettings();

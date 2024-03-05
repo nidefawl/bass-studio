@@ -5,6 +5,7 @@
 #include <limits>
 #include "note.h"
 #include "plugins/synth/IPlugMidi.h"
+#include "rand.h"
 #include "seq_util.h"
 #include "host/shape/shape.h"
 #include "str_util.h"
@@ -16,6 +17,7 @@
 #include "host/audiocache/audiocache.h"
 #include "host/project/project.h"
 #include "host/project/projectcontroller.h"
+#include "tls.h"
 #include "types.h"
 #include "host/host.h"
 #include "util/debug_alloc.h"
@@ -362,8 +364,42 @@ tick_t clip_t::getNumLoops() const {
     return (lenClipLoopSection + loopLen - 1) / loopLen;
 }
 
+void clip_t::applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note) const {
+    auto& groovePatternTiming = grooveData.timingData.timePoints;
+    auto& groovePatternVelocity = grooveData.timingData.velocityPoints;
+    if (groovePatternTiming.empty()) {
+        return;
+    }
+    dbgassert(groovePatternVelocity.size() == groovePatternTiming.size());
+    auto grooveLength = 8.0;
+    double time = note.time / double(TICKS_QUARTER);
+    double timeQuantization = grooveData.lenQuantization / double(TICKS_QUARTER);
+    // apply quantization
+    double quantizedTime = timeQuantization * math::rounddS64(time / timeQuantization);
+    time = time + (quantizedTime - time) * grooveData.strengthQuantization;
+    // find the closest groove point, loop around if needed
+    double groovePos = fmod(time, grooveLength);
+    auto it = std::lower_bound(groovePatternTiming.begin(), groovePatternTiming.end(), groovePos);
+    if (it == groovePatternTiming.end()) {
+        it = groovePatternTiming.begin();
+    }
+    double grooveOffset = *it - groovePos;
+    double grooveVelocity = groovePatternVelocity[std::distance(groovePatternTiming.begin(), it)];
+    time = (time + (grooveOffset) * grooveData.strengthGroove);
+    
+    seq_rand rand;
+    rand.rng_seed(math::floordS64(0x69808 + quantizedTime * 0x18d + note.pitch));
+    // apply random timing
+    double randTime = ((rand.rng_double() * 2.0 - 1.0) * 0.5 * grooveData.randomTiming);
+    time += randTime * timeQuantization;
+    // apply random velocity
+    auto velocity = math::rounddS32(note.velocity + rand.rng_double() * grooveData.randomVelocity * 127);
+    velocity = math::rounddS32(velocity + (grooveVelocity - velocity) * grooveData.strengthVelocity);
+    note.time = math::rounddS32(time * TICKS_QUARTER);
+    note.velocity = math::clamp(velocity, 0, 127);
+}
+
 /* HOT CODEPATH */
-//TODO OPTIMIZE ME MORE. 400x speed up in release mode
 void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, bool forPlayback) const {
     notesView.m_list.clear();
     if (!enabled) {
@@ -381,6 +417,13 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
     bool fillLoop  = loopEnabled && localEnd > preLoopLen;
     bool inPreLoop = localStart < preLoopLen;
     static thread_local std::vector<note_t> listLoop;
+    auto project = daw_tls::getTls().project;
+    auto grooveIdx = selectedGroove;
+    auto groove = groove_data_t{};
+    if (project && grooveIdx >= 0) {
+        groove = project->getGrooveData(selectedGroove);
+    }
+
     if (listLoop.capacity() == 0) {
         listLoop.reserve(128);
     } else {
@@ -400,22 +443,22 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
         if (note.isIntersectTime(offsetStart + localStart, offsetStart + localEndMin)) {
             note_t nnote = note;// copy
             nnote.time -= offsetStart;
+            if (grooveIdx >= 0)
+                applyNoteQuantizationGroove(groove, nnote);
             if (nnote.start() < localStart) {
                 /** cut pre-loop note on the left for render, ignore for playback */
                 if (!forPlayback) {
                     nnote.cutLeft(localStart);
-                    dbgassert(nnote.len >= 0);
                 }
             }
             if (nnote.end() > localEndMin) {
                 /** always cut pre-loop note ends at pre-loop end */
                 if (!forPlayback || localEndMin == preLoopLen) {
                     nnote.cutRight(localEndMin);
-                    dbgassert(nnote.len >= 0);
                 }
             }
-            dbgassert(nnote.len >= 0);
-            notesView.m_list.push_back(nnote);
+            if (nnote.len > 0)
+                notesView.m_list.push_back(nnote);
         }
     }
     if (fillLoop && loopLen > 0 && listLoop.size()) {
@@ -438,6 +481,8 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                 note_t note = *itNote;// copy
                 note.time -= loopStart;
                 note.time += posCurLoopStart;
+                if (grooveIdx >= 0)
+                    applyNoteQuantizationGroove(groove, note);
                 dbgassert(note.len >= 0);
                 if (note.end() > localStart && note.start() < localEnd) {
                     if (note.start() < clipStart) {
@@ -446,17 +491,15 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                         //}
                         if (!forPlayback) {
                             note.cutLeft(clipStart);
-                            dbgassert(note.len >= 0);
                         }
                     }
                     if (note.end() > clipEnd) {
                         if (!forPlayback) {
                             note.cutRight(clipEnd);
-                            dbgassert(note.len >= 0);
                         }
                     }
-                    //dbgassert(note.time >= 0);
-                    notesView.m_list.push_back(note);
+                    if (note.len > 0)
+                        notesView.m_list.push_back(note);
                 }
             }
         }
@@ -817,6 +860,7 @@ void clip_t::copy(const clip_t& obj) {
     notes        = obj.notes;
     audio        = obj.audio;
     controlData  = obj.controlData;
+    selectedGroove = obj.selectedGroove;
     editorLayout = obj.editorLayout;
     dirty        = true;
 }
