@@ -855,6 +855,11 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio) {
             return nullptr;
         }
         auto audiofile = it->second;
+        if (!(audiofile->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED)) {
+            log_lf(Log::L_WARN, "getDerivedSample: sample %s not loaded\n", audiofile->path.c_str());
+            clipAudio.idDerived = -2;
+            return nullptr;
+        }
         const auto& sourceSample = audiofile->sample;
         auto stretchFactor = double(clipAudio.settings.stretch);
         signalsmith::stretch::SignalsmithStretch<float> stretch;
