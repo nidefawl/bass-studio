@@ -272,6 +272,23 @@ struct autosave_state_t {
     int64_t tmLastTrigger   = 0L;
 };
 
+class GrooveLibrary {
+    public:
+    struct groove_entry_t {
+        String file;
+        groove_data_t data;
+    };
+    std::vector<groove_data_t> grooves;
+    GrooveLibrary() = default;
+    void loadGrooves();
+    std::vector<groove_data_t>& getGrooves() {
+        return grooves;
+    }
+    const std::vector<groove_data_t>& getGrooves() const {
+        return grooves;
+    }
+};
+
 class DawInstance final : public project_controller_t, public delete_cb {
     friend class MainCtrl;
     friend class CompanionCtrl;
@@ -296,6 +313,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     WorkerThread workerThread;
     PlaybackThread playThread;
     plugindatabase_t plugindb;
+    GrooveLibrary grooves;
     String lastProjectDirectory;
     int64_t tmLastSave = 0L;
     String projectPathAutosave;
@@ -341,6 +359,9 @@ public:
     void setAsyncTask(DAW::async_task_t* task);
     plugindatabase_t& getPluginDatabase() {
         return plugindb;
+    }
+    const GrooveLibrary& getGrooveLibrary() const {
+        return grooves;
     }
     PlaybackThread* getPlayThread() {
         return &playThread;

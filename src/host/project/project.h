@@ -22,14 +22,15 @@ struct quantize_settings {
 struct groove_timing_data_t {
     std::vector<double> timePoints;
     std::vector<double> velocityPoints;
+    double loopLength = 8.0;
 };
 struct groove_data_t {
     groove_timing_data_t timingData;
     String name;
     tick_t lenQuantization = TICKS_16TH;
     float strengthQuantization = 0.0f;
-    float strengthGroove = 0.0f;
-    float strengthVelocity = 0.0f;
+    float strengthGroove = 1.0f;
+    float strengthVelocity = 1.0f;
     float randomTiming = 0.0f;
     float randomVelocity = 0.0f;
 };

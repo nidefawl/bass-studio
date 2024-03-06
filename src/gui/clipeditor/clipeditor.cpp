@@ -2831,98 +2831,32 @@ void gui_clipgroove_settings::buttonClicked(guibase* button) {
 }
 
 class guictxtmenu_add_groove final : public guictxtmenu {
-    std::array<String, 4> grooveList = { "Groove 1", "Groove 2", "Groove 3", "Groove 4" };
+    std::vector<groove_data_t> grooveList;
     DawCtrl* dawCtrl;
     clip_view_t& view;
 public:
     guictxtmenu_add_groove(DawCtrl* _dawCtrl, clip_view_t& view) : dawCtrl(_dawCtrl), view(view) {
+        grooveList = dawCtrl->getDaw()->getGrooveLibrary().getGrooves();
         for (int i = 0; i < int32_t(grooveList.size()); ++i) {
-            addEntry(new ctxtmenu_entry(grooveList[i], i));
+            addEntry(new ctxtmenu_entry(grooveList[i].name, i));
         }
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
         clip_t* clip = view.clip();
         if (clip && _id >= 0 && _id < int32_t(grooveList.size())) {
             auto& projectGrooves = this->dawCtrl->getDaw()->getGrooves();
-            auto groovePatternTiming = std::array{
-                0.000131118881118881119,
-                0.375131118881118886,
-                0.500047868797868778,
-                0.875027056277056237,
-                1.0000062437562438,
-                1.3750270562770563,
-                1.5000270562770563,
-                1.8750478687978689,
-                2.0000894938394937,
-                2.3751103063603063,
-                2.5000478687978687,
-                2.8750270562770561,
-                3.0000686813186812,
-                3.3750686813186812,
-                3.5001103063603063,
-                3.8750478687978687,
-                4.0000686813186812,
-                4.3750062437562436,
-                4.5000686813186812,
-                4.874985431235431,
-                5.0000478687978687,
-                5.374985431235431,
-                5.5000894938394937,
-                5.8750062437562436,
-                6.0000894938394937,
-                6.3750062437562436,
-                6.5000686813186812,
-                6.8750062437562436,
-                7.0000478687978687,
-                7.374985431235431,
-                7.5000894938394937,
-                7.8750270562770561,
-            };
-            auto groovePatternVelocity = std::array{
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-                127.0,
-            };
             groove_data_t groove{};
             // find unique name
-            String nameGroove = grooveList[_id];
+            auto grooveTemplate = grooveList[_id];
+            String nameGroove = grooveTemplate.name;
             int32_t idx = 1;
             while (std::any_of(projectGrooves.begin(), projectGrooves.end(), [&nameGroove](const auto& groove) { return groove.name == nameGroove; })) {
-                nameGroove = nameGroove + " " + std::to_string(idx);
+                nameGroove = grooveTemplate.name + " " + std::to_string(idx);
                 idx++;
             }
             groove.name = nameGroove;
-            groove.timingData.timePoints = std::vector<double>(groovePatternTiming.begin(), groovePatternTiming.end());
-            groove.timingData.velocityPoints = std::vector<double>(groovePatternVelocity.begin(), groovePatternVelocity.end());
+            groove.timingData.timePoints = std::vector<double>(grooveTemplate.timingData.timePoints.cbegin(), grooveTemplate.timingData.timePoints.cend());
+            groove.timingData.velocityPoints = std::vector<double>(grooveTemplate.timingData.velocityPoints.cbegin(), grooveTemplate.timingData.velocityPoints.cend());
             auto lock = dawCtrl->getDaw()->lockPlayThread();
             projectGrooves.push_back(groove);
             auto grooveIdx = projectGrooves.size() - 1;
@@ -3098,4 +3032,9 @@ void gui_clipgroove_settings::render(NVGcontext* vg) {
         gui->render(vg);
         nvgRestore(vg);
     }
+}
+
+gui_clipgroove_settings::~gui_clipgroove_settings() {
+    removeGuis();
+    delete dropdownSelectGroove;
 }

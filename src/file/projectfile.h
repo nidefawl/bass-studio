@@ -30,3 +30,6 @@ std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path
 
 std::shared_ptr<plugin_snapshot_t> deserializePluginSnapshot(std::vector<uint8_t>& vec);
 bool serializePluginSnapshot(const plugin_snapshot_t& snapshot, std::vector<uint8_t>& buf);
+
+bool saveGrooveFile(const groove_data_t& groove, const String& path);
+std::shared_ptr<groove_data_t> loadGrooveFile(const String& path);

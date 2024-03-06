@@ -544,7 +544,7 @@ void load(Archive& archive, note_t& m) {
 template<class Archive>
 void serialize(Archive& archive, groove_timing_data_t& m) {
     archive(make_nvp("time", m.timePoints), make_nvp("velocity", m.velocityPoints));
-
+    make_optional_nvp(archive, "loopLength", m.loopLength);
 }
 
 template<class Archive>
@@ -945,6 +945,43 @@ std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
         log_printf("loadPluginSnapshot File IO exception: %s: %s (%d)\n", e.what(), StringAsCStr(path), e.GetErrorCode());
     } catch (const std::exception& e) {
         log_printf("loadPluginSnapshot exception: %s\n", e.what());
+    }
+    return nullptr;
+}
+
+bool saveGrooveFile(const groove_data_t& groove, const String& path) {
+    try {
+        Stringstream sstream;
+        {
+            JSONOutputArchive ar(sstream);
+            ar(make_nvp("groove", groove));
+        }
+        sstream.flush();
+        writeStringStream(path, sstream);
+        return true;
+    } catch (const FileIOException& e) {
+        log_printf("saveGrooveFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+    } catch (const std::exception& e) {
+        log_printf("saveGrooveFile exception: %s\n", e.what());
+    }
+    return false;
+}
+
+std::shared_ptr<groove_data_t> loadGrooveFile(const String& path) {
+    try {
+        std::vector<uint8_t> vec;
+        ReadFileVector(path, vec);
+        Stringstream sstream(std::string(vec.begin(), vec.end()));
+        std::shared_ptr<groove_data_t> groove = std::make_shared<groove_data_t>();
+        {
+            JSONInputArchive ar(sstream);
+            ar(make_nvp("groove", *groove.get()));
+        }
+        return groove;
+    } catch (const FileIOException& e) {
+        log_printf("loadGrooveFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+    } catch (const std::exception& e) {
+        log_printf("loadGrooveFile exception: %s\n", e.what());
     }
     return nullptr;
 }

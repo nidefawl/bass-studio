@@ -914,6 +914,7 @@ void DawInstance::startDaw() {
     dbgassert(initState == 1);
     initState++;
     plugindb.openDatabase();
+    grooves.loadGrooves();
 }
 
 void DawInstance::initDaw() {

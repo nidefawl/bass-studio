@@ -2610,3 +2610,141 @@ void DawInstance::updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& 
         workerThread->pushTask(newTask.get());
     }
 }
+
+bool convertClipboardToGrooveData(const clip_clipboard& clipboard, groove_data_t& grooveData) {
+    if (clipboard.tracks.empty()) {
+        return false;
+    }
+    const std::shared_ptr<track_clipboard_t>& trackEntry = clipboard.tracks.front();
+    if (!trackEntry || trackEntry->clips.empty()) {
+        return false;
+    }
+    const std::shared_ptr<clip_t>& clipEntry = trackEntry->clips.front();
+    if (!clipEntry) {
+        return false;
+    }
+    const auto& clipNotes = clipEntry->notes;
+    if (clipNotes.isEmpty()) {
+        return false;
+    }
+    auto& notes = clipNotes.m_list;
+    grooveData.timingData.timePoints.clear();
+    grooveData.timingData.velocityPoints.clear();
+    grooveData.name = "clipboard";
+    grooveData.timingData.timePoints.reserve(notes.size());
+    grooveData.timingData.velocityPoints.reserve(notes.size());
+    for (const auto& note : notes) {
+        grooveData.timingData.timePoints.push_back(note.start() / double(TICKS_QUARTER));
+        grooveData.timingData.velocityPoints.push_back(note.velocity);
+    }
+    // determine loop length, rounded up to next bar
+    grooveData.timingData.loopLength = math::ceildS64(grooveData.timingData.timePoints.back());
+    return true;
+}
+
+void GrooveLibrary::loadGrooves() {
+    String path = App::Platform::toUserdataPath("grooves");
+    std::vector<FileFound> filesFound;
+    findFilesWithExt(path, "groove", true, filesFound);
+    if (filesFound.empty()) {
+        groove_data_t groove{};
+        auto groovePatternTiming = std::array{
+            0.000131118881118881119,
+            0.375131118881118886,
+            0.500047868797868778,
+            0.875027056277056237,
+            1.0000062437562438,
+            1.3750270562770563,
+            1.5000270562770563,
+            1.8750478687978689,
+            2.0000894938394937,
+            2.3751103063603063,
+            2.5000478687978687,
+            2.8750270562770561,
+            3.0000686813186812,
+            3.3750686813186812,
+            3.5001103063603063,
+            3.8750478687978687,
+            4.0000686813186812,
+            4.3750062437562436,
+            4.5000686813186812,
+            4.874985431235431,
+            5.0000478687978687,
+            5.374985431235431,
+            5.5000894938394937,
+            5.8750062437562436,
+            6.0000894938394937,
+            6.3750062437562436,
+            6.5000686813186812,
+            6.8750062437562436,
+            7.0000478687978687,
+            7.374985431235431,
+            7.5000894938394937,
+            7.8750270562770561,
+        };
+        auto groovePatternVelocity = std::array{
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            127.0,
+            110.0,
+        };
+        groove.timingData.timePoints.assign(groovePatternTiming.begin(), groovePatternTiming.end());
+        groove.timingData.velocityPoints.assign(groovePatternVelocity.begin(), groovePatternVelocity.end());
+        groove.timingData.loopLength = 8.0;
+        groove.name = "default";
+        saveGrooveFile(groove, path + "/default.groove");
+        findFilesWithExt(path, "groove", true, filesFound);
+    }
+    this->grooves.clear();
+    for (auto& file : filesFound) {
+        String grooveName = file.name;
+        String groovePath = file.path;
+        auto shrdPtrGroove = loadGrooveFile(groovePath);
+        if (shrdPtrGroove) {
+            this->grooves.push_back(*shrdPtrGroove.get());
+        }
+    }
+    findFilesWithExt(path, "mid", true, filesFound);
+    for (auto& file : filesFound) {
+        LoadMidiTask task(file.path);
+        task.run();
+        auto clipboard = task.getClipboard();
+        if (!clipboard) {
+            log_lf(Log::L_WARN, "Failed to load groove from file %s\n", file.path.c_str());
+            continue;
+        }
+        groove_data_t groove{};
+        if (convertClipboardToGrooveData(*clipboard, groove)) {
+            groove.name = file.name;
+            this->grooves.push_back(groove);
+        }
+    }
+}

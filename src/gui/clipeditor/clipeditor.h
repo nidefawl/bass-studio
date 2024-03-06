@@ -489,9 +489,7 @@ public:
     groove_data_t grooveData;
 public:
     explicit gui_clipgroove_settings(gui_clipsettings& parent, clip_view_t& _view);
-    ~gui_clipgroove_settings() override {
-        removeGuis();
-    }
+    ~gui_clipgroove_settings() override;
     void setSelectedGroove(const int32_t& _selectedGroove);
     void layout() override;
     void render(NVGcontext* vg) override;

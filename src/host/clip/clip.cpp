@@ -371,20 +371,29 @@ void clip_t::applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t
         return;
     }
     dbgassert(groovePatternVelocity.size() == groovePatternTiming.size());
-    auto grooveLength = 8.0;
+    auto grooveLength = grooveData.timingData.loopLength;
     double time = note.time / double(TICKS_QUARTER);
     double timeQuantization = grooveData.lenQuantization / double(TICKS_QUARTER);
     // apply quantization
     double quantizedTime = timeQuantization * math::rounddS64(time / timeQuantization);
     time = time + (quantizedTime - time) * grooveData.strengthQuantization;
-    // find the closest groove point, loop around if needed
+    // search for closest, looking also at the previous point (and looping around)
+    auto it = groovePatternTiming.begin();
+    auto itEnd = groovePatternTiming.end();
     double groovePos = fmod(time, grooveLength);
-    auto it = std::lower_bound(groovePatternTiming.begin(), groovePatternTiming.end(), groovePos);
-    if (it == groovePatternTiming.end()) {
-        it = groovePatternTiming.begin();
+    double minDist = std::numeric_limits<double>::max();
+    size_t minIdx = 0;
+    while (it != itEnd) {
+        double groovePosCur = *it;
+        double dist = std::abs(groovePosCur - groovePos);
+        if (dist < minDist) {
+            minDist = dist;
+            minIdx = std::distance(groovePatternTiming.begin(), it);
+        }
+        it++;
     }
-    double grooveOffset = *it - groovePos;
-    double grooveVelocity = groovePatternVelocity[std::distance(groovePatternTiming.begin(), it)];
+    double grooveVelocity = groovePatternVelocity[minIdx];
+    double grooveOffset = groovePatternTiming[minIdx] - groovePos;
     time = (time + (grooveOffset) * grooveData.strengthGroove);
     
     seq_rand rand;
@@ -440,11 +449,11 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
         if (!inPreLoop)
             continue;
         auto localEndMin = math::min(localEnd, preLoopLen);
-        if (note.isIntersectTime(offsetStart + localStart, offsetStart + localEndMin)) {
-            note_t nnote = note;// copy
-            nnote.time -= offsetStart;
-            if (grooveIdx >= 0)
-                applyNoteQuantizationGroove(groove, nnote);
+        note_t nnote = note;// copy
+        nnote.time -= offsetStart;
+        if (grooveIdx >= 0)
+            applyNoteQuantizationGroove(groove, nnote);
+        if (nnote.isIntersectTime(localStart, localEndMin)) {
             if (nnote.start() < localStart) {
                 /** cut pre-loop note on the left for render, ignore for playback */
                 if (!forPlayback) {
