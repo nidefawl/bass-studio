@@ -975,7 +975,8 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
                 int32_t trackGuiIdx = dstTrack - trackOffset;
                 DAW::pasteFullClipboard(daw, iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
                 daw->updateVisibleTrackContents();
-                showclip = false;
+                gui      = nullptr;
+                showclip = true;
                 auto* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
                 daw->pushHist(track_action);
             }
@@ -1020,14 +1021,15 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             auto cursor = this->cursor.getLeftAligned();
             if (cursor.getRange() > 0) {
                 DAW::GetClipboardView(iGuiMgr, cursor, view, gui);
-                if (view.totalClipCount > 1) {
+                if (view.totalClipCount > 1 || gui == nullptr) {
                     view.viewBegin = cursor.getTickBegin();
                     view.viewEnd   = cursor.getTickEnd();
-                    daw->setEditorSelection(gui->m_clip, view);
+                    daw->setEditorSelection(gui ? gui->m_clip : nullptr, view);
                     return;
                 }
             }
-            daw->setSingleClip(gui->m_clip);
+            if (gui)
+                daw->setSingleClip(gui->m_clip);
         }
     }
 }
