@@ -2821,10 +2821,22 @@ void gui_clipgroove_settings::buttonClicked(guibase* button) {
         if (grooveIdx >= 0 && grooveIdx < int32_t(data.size())) {
             data[grooveIdx] = this->grooveData;
         }
-        auto clip = view.clip();
-        if (clip) {
-            clip->setDirty();
-            daw->updateClipViews(clip);
+        if (view.isAbsoluteTimeMode()) {
+            for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+                for (clip_t* viewClip : vecClips) {
+                    if (trackEntry.track->getClips().hasClip(viewClip)) {
+                        viewClip->setDirty();
+                        daw->updateClipViews(viewClip);
+                    }
+                }
+            }
+            // TODO: history
+        } else {
+            auto clip = view.clip();
+            if (clip) {
+                clip->setDirty();
+                daw->updateClipViews(clip);
+            }
         }
         daw->updateVisibleTrackContents();
     }
@@ -2844,6 +2856,8 @@ public:
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
         clip_t* clip = view.clip();
         if (clip && _id >= 0 && _id < int32_t(grooveList.size())) {
+            auto daw = dawCtrl->getDaw();
+            auto lock = daw->lockPlayThread();
             auto& projectGrooves = this->dawCtrl->getDaw()->getGrooves();
             groove_data_t groove{};
             // find unique name
@@ -2857,20 +2871,28 @@ public:
             groove.name = nameGroove;
             groove.timingData.timePoints = std::vector<double>(grooveTemplate.timingData.timePoints.cbegin(), grooveTemplate.timingData.timePoints.cend());
             groove.timingData.velocityPoints = std::vector<double>(grooveTemplate.timingData.velocityPoints.cbegin(), grooveTemplate.timingData.velocityPoints.cend());
-            auto lock = dawCtrl->getDaw()->lockPlayThread();
             projectGrooves.push_back(groove);
             auto grooveIdx = projectGrooves.size() - 1;
-            clip_t* clip = view.clip();
-            if (clip) {
-                auto daw              = dawCtrl->getDaw();
+            if (view.isAbsoluteTimeMode()) {
+                for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+                    for (clip_t* viewClip : vecClips) {
+                        if (trackEntry.track->getClips().hasClip(viewClip)) {
+                            viewClip->selectedGroove = grooveIdx;
+                            viewClip->setDirty();
+                            daw->updateClipViews(viewClip);
+                        }
+                    }
+                }
+                // TODO: history
+            } else if (clip) {
                 auto grooveDataBefore = clip->selectedGroove;
-                auto histTask         = new action_modify_clip_groove_setting("Edit clip groove", view, grooveDataBefore);
+                auto histTask = new action_modify_clip_groove_setting("Edit clip groove", view, grooveDataBefore);
                 clip->selectedGroove  = grooveIdx;
                 daw->pushHist(histTask);
                 clip->setDirty();
                 daw->updateClipViews(clip);
-                daw->updateVisibleTrackContents();
             }
+            daw->updateVisibleTrackContents();
             closeContextMenu();
         }
         return true;
@@ -2890,25 +2912,36 @@ public:
         }
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
-        clip_t* clip = view.clip();
-        if (clip) {
-            if (_id > 0) {
-                _id -= 2;
-                auto& projectGrooves = dawCtrl->getDaw()->getGrooves();
-                if (_id < 0 || _id >= int32_t(projectGrooves.size())) {
-                    _id = -1;
+        if (_id > 0) {
+            _id -= 2;
+            auto& projectGrooves = dawCtrl->getDaw()->getGrooves();
+            if (_id < 0 || _id >= int32_t(projectGrooves.size())) {
+                _id = -1;
+            }
+            auto daw              = dawCtrl->getDaw();
+            clip_t* clip = view.clip();
+            auto lock = dawCtrl->getDaw()->lockPlayThread();
+            if (view.isAbsoluteTimeMode()) {
+                for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+                    for (clip_t* viewClip : vecClips) {
+                        if (trackEntry.track->getClips().hasClip(viewClip)) {
+                            viewClip->selectedGroove = _id;
+                            viewClip->setDirty();
+                            daw->updateClipViews(viewClip);
+                        }
+                    }
                 }
-                auto daw              = dawCtrl->getDaw();
+                // TODO: history
+            } else if (clip) {
                 auto grooveDataBefore = clip->selectedGroove;
-                auto histTask         = new action_modify_clip_groove_setting("Edit clip groove", view, grooveDataBefore);
-                auto lock = dawCtrl->getDaw()->lockPlayThread();
+                auto histTask = new action_modify_clip_groove_setting("Edit clip groove", view, grooveDataBefore);
                 clip->selectedGroove  = _id;
                 daw->pushHist(histTask);
                 clip->setDirty();
                 daw->updateClipViews(clip);
-                daw->updateVisibleTrackContents();
-                closeContextMenu();
             }
+            daw->updateVisibleTrackContents();
+            closeContextMenu();
         }
         return true;
     }
