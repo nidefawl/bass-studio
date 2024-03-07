@@ -1368,7 +1368,9 @@ void MainCtrl::onTick() {
                             hoverTicks = lastHoveredTrackTicks + 1;
                             if (lastHoveredTrackTicks >= 6) {
                                 setSelectedTrackEntry(tr);
-                                showPluginView();
+                                if (guiDragged->getGuiType() != gui_type::GUI_TYPE_CLIP) {
+                                    showPluginView();
+                                }
                                 hoverTicks = 0;
                             }
                         }
@@ -2347,7 +2349,7 @@ void clip_view_t::copySelectedNoteList() {
 
 void clip_view_t::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
     m_selectionView = clipboardView;
-    bIsAbsoluteMode = clipboardView.totalClipCount > 1;
+    bIsAbsoluteMode = clipboardView.totalClipCount > 1 || clip == nullptr;
     if (clip) {
         m_clipRef.set(clip);
     } else if (clipboardView.totalClipCount 
@@ -2355,7 +2357,7 @@ void clip_view_t::setEditorSelection(clip_t* clip, const editor_view_selection_t
                 && !clipboardView.tracks.begin()->second.empty()) {
         auto firstClip = clipboardView.tracks.front().second.front();
         m_clipRef.set(firstClip);
-        m_clipRef.resetClipOnly();
+        // m_clipRef.resetClipOnly();
     } else {
         m_clipRef.set(nullptr);
     }

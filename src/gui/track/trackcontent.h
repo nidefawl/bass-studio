@@ -36,6 +36,7 @@ public:
           m_track(_entry->track),
           m_trackentry(_entry),
           m_clip(_clip) {
+        this->guiType = gui_type::GUI_TYPE_CLIP;
     }
     ~gui_clip() override = default;
 
