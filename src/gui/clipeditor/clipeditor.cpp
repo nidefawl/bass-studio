@@ -2869,8 +2869,7 @@ public:
                 idx++;
             }
             groove.name = nameGroove;
-            groove.timingData.timePoints = std::vector<double>(grooveTemplate.timingData.timePoints.cbegin(), grooveTemplate.timingData.timePoints.cend());
-            groove.timingData.velocityPoints = std::vector<double>(grooveTemplate.timingData.velocityPoints.cbegin(), grooveTemplate.timingData.velocityPoints.cend());
+            groove.timingData = grooveTemplate.timingData;
             projectGrooves.push_back(groove);
             auto grooveIdx = projectGrooves.size() - 1;
             if (view.isAbsoluteTimeMode()) {
