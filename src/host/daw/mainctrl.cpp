@@ -2342,9 +2342,12 @@ void clip_view_t::updateNotePitches(bool reset) {
 }
 
 void clip_view_t::copySelectedNoteList() {
-    dragStartNotes = clip()->notes;
-    clip()->notes.copySelectionTo(draggedSelection);
-    clip()->notes.copySelectionTo(draggedSelectionBegin);
+    clip_t* currentClip = clip();
+    if (currentClip) {
+        dragStartNotes = currentClip->notes;
+        currentClip->notes.copySelectionTo(draggedSelection);
+        currentClip->notes.copySelectionTo(draggedSelectionBegin);
+    }
 }
 
 void clip_view_t::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {

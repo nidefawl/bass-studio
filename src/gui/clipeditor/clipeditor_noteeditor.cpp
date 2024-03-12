@@ -325,7 +325,7 @@ void guictr_cliphandles::renderHandle(NVGcontext* vg, int32_t trackSelIdx) const
     if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
         float barBeginX = math::max(-wLoopInidicator, tickBeginX);
         float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);
-        NVGcolor color  = rgbToNvg(view.clip()->rgb);
+        NVGcolor color  = rgbToNvg(clip->rgb);
         nvgBeginPath(vg);
         nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator * 2);
         nvgFillColor(vg, color);

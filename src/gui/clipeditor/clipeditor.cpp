@@ -1359,26 +1359,50 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 
 void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
     dragMode     = drag_none;
-    clip_t* clip = view.clip();
-    if (!clip) {
-        return;
-    }
-    clip_notes_t& notes    = clip->notes;
-    ivec2 local            = evt.relMousepos;
+    const ivec2 local      = evt.relMousepos;
+    const tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
+    clip_t* contextClip    = view.clip();
     int32_t pitch          = math::floorfS32(toNoteF(local.y));
     int32_t velClicked     = screenToVel(local.y, size.y);
     auto tickOffset = tick_t(0);
-    if (view.isAbsoluteTimeMode()) {
-        tickOffset = clip->time;
-    }
-    const tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
     note_t* contextNote    = nullptr;
-    if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
-        int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
-        contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
-    } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-        contextNote = notes.get(tickExact - tickOffset, pitch);
+    if (view.isAbsoluteTimeMode()) {
+        for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+            if (!view.clipRef().isTrackValid(trackEntry.track)) {
+                continue;
+            }
+            for (clip_t* cl : vecClips) {
+                clip_notes_t& notes = cl->notes;
+                tickOffset = cl->time;
+                if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
+                    int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
+                    contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+                } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
+                    contextNote = notes.get(tickExact - tickOffset, pitch);
+                }
+                if (contextNote) {
+                    contextClip = cl;
+                    break;
+                }
+            }
+        }
+    } else if (contextClip) {
+        clip_notes_t& notes = contextClip->notes;
+        tickOffset = contextClip->time;
+        if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
+            int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
+            contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+        } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
+            contextNote = notes.get(tickExact - tickOffset, pitch);
+        }
     }
+    if (!contextClip) {
+        return;
+    }
+    if (view.isAbsoluteTimeMode()) {
+        view.setSelected(contextClip);
+    }
+    clip_notes_t& notes    = contextClip->notes;
     tick_t tickGridNearest = grid.screenToTickSnap(local.x, SNAP_ON);
     tick_t tickGridLeast   = grid.prev(tickExact);
     bool inSelection = false;
@@ -1419,7 +1443,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                 }
             }
             dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
-            clip->setDirty();
+            contextClip->setDirty();
             view.updateNotePitches(false);
             inSelection = true;
         } else {
@@ -1516,7 +1540,11 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
     }
 }
 void gui_clipcontent::setStatusText() {
-    clip_notes_t& notes = view.clip()->notes;
+    auto clip = view.clip();
+    if (!clip) {
+        return;
+    }
+    clip_notes_t& notes = clip->notes;
     String selStatus    = StringFormat("%zu notes selected", notes.selection.size());
     if (!view.draggedSelection.empty()) {
         auto pair = getMinMaxSemitones(view.draggedSelection);
