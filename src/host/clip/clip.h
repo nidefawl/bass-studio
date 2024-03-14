@@ -31,6 +31,7 @@ struct track_gui_entry_t;
 class track_t;
 class gui_clip;
 class rendered_audio_clip_t;
+struct groove_data_t;
 namespace DAW::Host {
     struct midievent_ctrl_t;
 }

@@ -10,7 +10,7 @@
 namespace {
 
     void test_timestretch() {
-        TEST_BEGIN("test_midifile_loader");
+        TEST_BEGIN("test_timestretch");
         auto fileTypes = std::array{ SUPPORTED_AUDIO_FILE_TYPES };
         std::vector<FileFound> files;
         for (const auto& fileType : fileTypes) {
