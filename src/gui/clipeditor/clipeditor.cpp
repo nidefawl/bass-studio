@@ -1388,7 +1388,6 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
         }
     } else if (contextClip) {
         clip_notes_t& notes = contextClip->notes;
-        tickOffset = contextClip->time;
         if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
             int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
             contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
