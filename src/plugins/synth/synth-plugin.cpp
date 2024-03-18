@@ -1,4 +1,3 @@
-
 #include "synth-plugin.h"
 #include "assert_dbg.h"
 #include "host/audiobuffer/audioblock.h"
@@ -67,6 +66,7 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 #include <glm/gtx/fast_exponential.hpp>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
+#include <dsp/rates.h>
 
 namespace PluginSynth {
 
@@ -833,6 +833,7 @@ namespace PluginSynth {
     };
 
     const Settings settingsOrdered[] = {
+        Oversampling,
         ShowModulationRanges,
         FilterEnabled,
         FilterDriftEnabled,
@@ -847,7 +848,7 @@ namespace PluginSynth {
         ExprEvaluationEnabled,
         DiagnosticOutputEnabled,
     };
-    const std::array<const char*, 13> stringsSettings = {
+    const std::array<const char*, 14> stringsSettings = {
         "FilterEnabled",
         "ModulationEnabled",
         "LfoEnabled",
@@ -861,6 +862,7 @@ namespace PluginSynth {
         "LfoPhaseDriftEnabled",
         "Lfo1ResetByLfo2Enabled",
         "ShowModulationRanges",
+        "Oversampling",
     };
     enum ModulationType {
         Function,
@@ -1240,6 +1242,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         ModulationSourceData modSrcData{};
         VoiceList prevVoiceList{};
         DAW::Shape::shape_t lfoShape;
+        signalsmith::rates::Oversampler2xFIR<float> oversampler;
     public:
         int32_t activeVoiceCount  = 0;
         int32_t unisonVoiceCount  = 0;
@@ -1265,6 +1268,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             for (auto& setting : settings) {
                 setting = 1.0;
             }
+            settings[Settings::Oversampling]            = true;
             settings[Settings::Lfo1OneShotEnabled]      = true;
             settings[Settings::DiagnosticOutputEnabled] = false;
             settings[Settings::LfoShapeType]            = false;
@@ -1514,9 +1518,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         bool getSettingBool(Settings setting) const {
             return settings[setting] >= 0.5;
         }
-        void setSetting(Settings setting, bool value) {
-            settings[setting] = static_cast<float>(value);
-        }
+        void setSetting(Settings setting, bool value);
         void init() {
             for (auto param : this->vecParams) {
                 OnParamChange(param->enumParam);
@@ -1524,8 +1526,14 @@ class SynthImpl final : public PluginLockable, public SynthState {
             setModulationType(0, 0, static_cast<int32_t>(ModulationType::ModulationSource) + static_cast<int32_t>(ModulationSourceType::Lfo1));
             setModulationDestination(0, 0, Parameters::FilterCutoff, 0.5);
         }
+        samplecount_t getLatency() {
+            return getSetting(Settings::Oversampling) ? oversampler.latency() / 2 : 0;
+        }
         void initSampleRate() {
-            const auto dt = oneOverSR;
+            auto dt = oneOverSR;
+            if (getSetting(Settings::Oversampling)) {
+                dt *= 0.5;
+            }
             for (auto& uv : voices) {
                 uv.visitVoices([this, dt, &uv](auto& v) {
                     UpdateVoiceModulations(uv, v, modSrcData);
@@ -2558,7 +2566,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             const FilterModes filterMode                     = GetParamEnum(Parameters::FilterMode)->getEnumValue<FilterModes>();
             const bool bIsGlideEnabled                       = voiceMode != VoiceModes::Poly;
             int32_t numActiveVoices                          = 0;
-            const auto dt                                    = oneOverSR;
+            const auto dt                                    = getSetting(Settings::Oversampling) ? (oneOverSR * 0.5) : oneOverSR;
             modSrcData[1 + ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
             modSrcData[1 + ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
             modSrcData[1 + ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
@@ -2572,6 +2580,19 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size()*sizeof(double));
                 std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size()*sizeof(double));
             }
+
+            float* synthOutputs[2] = {};
+            synthOutputs[0]        = outputs[0];
+            synthOutputs[1]        = outputs[1];
+            int nOversample        = 1;
+            if (getSetting(Settings::Oversampling)) {
+                // oversampler.up(inputs, nFrames);
+                nOversample = 2;
+                nFrames *= nOversample;
+                synthOutputs[0] = this->oversampler[0];
+                synthOutputs[1] = this->oversampler[1];
+            }
+
             /**
              * framesPerAutomationUpdate 
              * 1 is highest precission, automation is updated every sample
@@ -2580,7 +2601,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             int framesPerAutomationUpdate = 1;
             for (int s = 0; s < nFrames; s++) {
                 if (host && moduleInstance && s % framesPerAutomationUpdate == 0) {
-                    ReadAutomation(host, tick, state, s, nFrames);
+                    ReadAutomation(host, tick, state, s, nFrames, nOversample);
                 }
                 FlushMidi(s);
                 UpdateParameters(dt);
@@ -2662,8 +2683,12 @@ class SynthImpl final : public PluginLockable, public SynthState {
                         }
                     }
                 }
-                outputs[0][s] = fp_math::silenceNanInff(static_cast<float>(outL));
-                outputs[1][s] = fp_math::silenceNanInff(static_cast<float>(outR));
+                /* if (bDiagnostic) {
+                    // build saw wave from -1 to 1 over block length
+                    outL = fmod((s / double(nFrames) + 0.5), 1.0) * 2.0 - 1.0;
+                } */
+                synthOutputs[0][s] = fp_math::silenceNanInff(static_cast<float>(outL));
+                synthOutputs[1][s] = fp_math::silenceNanInff(static_cast<float>(outR));
 
                 dbgassert((list.numPolyVoices > 0) == (list.numUnisonVoices > 0));
                 numActiveVoices = math::max(math::max(0, list.numUnisonVoices), numActiveVoices);
@@ -2673,8 +2698,14 @@ class SynthImpl final : public PluginLockable, public SynthState {
             }
             this->activeVoiceCount = numActiveVoices;
             this->statsMaxVoiceCount = math::max(this->statsMaxVoiceCount, numActiveVoices);
+
+            if (getSetting(Settings::Oversampling)) {
+                nFrames /= nOversample;
+                this->oversampler.down(outputs, nFrames);
+            }
         }
-        void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount);
+
+        void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample);
 
         void OnParamChange(Parameters parameter) {
             double value                         = 0.0;
@@ -2903,6 +2934,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         void setSampleFormat(sampleformat_t sampleFormat) override {
             internalplugin::setSampleFormat(sampleFormat);
             this->impl->setSamplerate(sampleFormat.sampleRate);
+            this->impl->oversampler.resize(2, sampleFormat.blockSize);
         }
 
         param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
@@ -2938,6 +2970,8 @@ class SynthImpl final : public PluginLockable, public SynthState {
         void processMidiMessages(std::vector<IMidiMsg>& midiEvents) override { 
             this->impl->processMidiMessages(midiEvents);
         }
+
+        void settingChanged(Settings setting, float value);
 
         void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override {
             dbgassert(format.sampleRate > 0 && this->impl->oneOverSR == 1.0/format.sampleRate);
@@ -3037,6 +3071,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         void onPreUnload() override {
             log_lf(Log::L_WARN, "getStatsMaxVoiceCount: %d\n", impl->getStatsMaxVoiceCount());
         }
+        samplecount_t getPluginLatency() override { return impl->getLatency(); }
     };
 
     PluginVST2_Synth::PluginVST2_Synth(audioMasterCallback audioMaster)
@@ -3046,6 +3081,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         isSynth(true);
         programsAreChunks(true);
         impl->init();
+        setInitialDelay(impl->getLatency());
     }
     
     PluginVST2_Synth::~PluginVST2_Synth() {
@@ -3222,6 +3258,10 @@ class SynthImpl final : public PluginLockable, public SynthState {
     void PluginVST2_Synth::setSampleRate(float sampleRate) {
         AudioEffectX::setSampleRate(sampleRate);
         this->impl->setSamplerate(sampleRate);
+    }
+    void PluginVST2_Synth::setBlockSize(VstInt32 blockSize) {
+        AudioEffectX::setBlockSize(blockSize);
+        this->impl->oversampler.resize(2, blockSize);
     }
 
     VstInt32 PluginVST2_Synth::processEvents(VstEvents* events) {
@@ -5094,9 +5134,34 @@ class guicontainer_plugin_synth final : public guictr_base {
         return nullptr;
     }
 
-    void SynthImpl::ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount) {
+    void SynthImpl::ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {
         auto bpm100 = host->prjGlobals.tempo100;
-        auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate);
+        auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         moduleInstance->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
+    }
+
+    void SynthImpl::setSetting(Settings setting, bool value) {
+        settings[setting] = static_cast<float>(value);
+        auto lock = this->lock();
+        if (setting == Settings::Oversampling) {
+            initSampleRate();
+        }
+        if (this->instanceVst2) {
+            this->instanceVst2->settingChanged(setting, settings[setting]);
+        }
+        if (this->moduleInstance) {
+            this->moduleInstance->settingChanged(setting, settings[setting]);
+        }
+    }
+
+    void module_synth::settingChanged(Settings setting, float value) {
+        log_lf(Log::L_DEBUG, "Setting changed: %s %f\n", stringsSettings[setting], value);
+    }
+
+    void PluginVST2_Synth::settingChanged(Settings setting, float value) {
+        log_lf(Log::L_DEBUG, "Setting changed: %s %f\n", stringsSettings[setting], value);
+        if (setting == Settings::Oversampling) {
+            setInitialDelay(getSynth()->getLatency());
+        }
     }
 }// namespace PluginSynth

@@ -190,9 +190,10 @@ namespace PluginSynth {
         LfoPhaseDriftEnabled,
         Lfo1ResetByLfo2Enabled,
         ShowModulationRanges,
+        Oversampling,
         NumSettings,
     };
-    extern const std::array<const char*, 13> stringsSettings;
+    extern const std::array<const char*, 14> stringsSettings;
 
     class SynthState {
     public:
@@ -376,6 +377,7 @@ class PluginVST2_Synth final : public BasePluginVST2 {
 
         void notifyUiChanges();
         void onPresetLoaded();
+        void settingChanged(Settings setting, float value);
 
         int32_t loadPreset(const String& path);
         SynthImpl* getSynth();
@@ -390,6 +392,7 @@ class PluginVST2_Synth final : public BasePluginVST2 {
 
         // VST2 API
         void setSampleRate(float sampleRate) override;
+        void setBlockSize(VstInt32 blockSize) override;
         VstInt32 processEvents(VstEvents* events) override;///< Called when new MIDI events come in
         void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
         VstInt32 getChunk (void** data, bool isPreset = false) override;
