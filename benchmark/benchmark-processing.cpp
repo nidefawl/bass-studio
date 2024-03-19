@@ -570,7 +570,6 @@ int main(int argc, char** argv) {
         } catch (...) {
             log_printf("unhandled exception\n");
         }
-        // getGlobalLogger()->setLevel(Log::LEVEL_ALL);
         trDataMidi.deleteClips(nullptr);
         host->setOutput(nullptr);
         dawInstance->unloadProject();
@@ -581,5 +580,7 @@ int main(int argc, char** argv) {
     }
 
     dawInstance->destroy();
+    getGlobalLogger()->setLevel(Log::LEVEL_ALL);
+    log_lf(Log::L_INFO, "exit 0\n");
     return 0;
 }
