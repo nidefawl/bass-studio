@@ -47,6 +47,7 @@
 #include "seq_time.h"
 #include "seq_util.h"
 #include "host/shape/shape.h"
+#include "sse.h"
 #include "str_util.h"
 #include "synth-snapshot.h"
 #include "threads/playbackthread.h"
@@ -128,6 +129,9 @@ namespace PluginSynth {
 
     static constexpr uint16_t NUM_POLY_VOICES   = 64;
     static constexpr uint16_t NUM_UNISON_VOICES = 16;
+    constexpr bool USE_THREADING = false;
+    constexpr uint16_t AUDIOPROCESSING_THREADS = USE_THREADING ? 32 : 0;
+    constexpr uint16_t AUDIOPROCESSING_TASKS = (USE_THREADING) ? NUM_POLY_VOICES * NUM_UNISON_VOICES : 0;
 
     struct HostTempo {
         double barPos;
@@ -1086,7 +1090,7 @@ namespace PluginSynth {
             return this->unit;
         }
     };
-struct SynthParam_Float final : public SynthParamBase {
+    struct SynthParam_Float final : public SynthParamBase {
         explicit SynthParam_Float(Parameters _enumParam) : SynthParamBase(ParamType::FLOAT, _enumParam) {
         }
         double fmin         = 0.0;
@@ -1167,7 +1171,7 @@ struct SynthParam_Float final : public SynthParamBase {
             return { static_cast<float>(dVal), true };
         }
     };
-struct SynthParam_Enum final : public SynthParam_Int {
+    struct SynthParam_Enum final : public SynthParam_Int {
         explicit SynthParam_Enum(Parameters _enumParam) : SynthParam_Int(ParamType::ENUM, _enumParam) {
         }
         std::vector<String> strings;
@@ -1227,7 +1231,6 @@ class SynthImpl final : public PluginLockable, public SynthState {
         std::array<VoiceUnison, NUM_POLY_VOICES> voices;
         std::array<float, Settings::NumSettings> settings{};
         std::vector<std::shared_ptr<PluginViewContainer>> views;
-        Oscillator lfo;
         Oscillator lfo2;
         SmoothSwitch osc1Wave;
         SmoothSwitch osc2Wave;
@@ -1243,6 +1246,121 @@ class SynthImpl final : public PluginLockable, public SynthState {
         VoiceList prevVoiceList{};
         DAW::Shape::shape_t lfoShape;
         signalsmith::rates::Oversampler2xFIR<float> oversampler;
+                
+        class SynthVoicProcessTask final : public WorkerThread::ThreadTask {
+            bool inUse = false;
+            SynthImpl* m_impl = nullptr;
+            double dt = 0.0;
+            VoiceUnison* uv = nullptr;
+            Voice* v = nullptr;
+            FilterModes filterMode = FilterModes::Off;
+            double voice = 0.0;
+        public:
+            ~SynthVoicProcessTask() {
+            }
+            struct process_task_stats_t {
+                int64_t timeStart = 0;
+                int64_t timeEnd = 0;
+            };
+
+            void init(SynthImpl* _impl) {
+                this->m_impl = _impl;
+            }
+
+            process_task_stats_t stats;
+
+            bool isInUse() const {
+                return inUse;
+            }
+
+            void run() override {
+                stats.timeStart = getTimeMicros();
+                double vData = 0.0;
+                voice = m_impl->GetVoiceImpl(dt, *uv, *v, filterMode, vData);
+                stats.timeEnd = getTimeMicros();
+            }
+
+            void setTask(double dt, VoiceUnison& uv, Voice& voice, FilterModes filterMode) {
+                reset();
+                this->dt = dt;
+                this->uv = &uv;
+                this->v = &voice;
+                this->filterMode = filterMode;
+                inUse = true;
+            }
+
+            void resetTask() {
+                inUse = false;
+            }
+
+            double getVoiceData() const {
+                return voice;
+            }
+            VoiceUnison& getVoiceUnison() {
+                return *uv;
+            }
+            Voice& getVoice() {
+                return *v;
+            }
+        };
+        std::array<WorkerThread, AUDIOPROCESSING_THREADS> threads;
+        std::array<SynthVoicProcessTask, AUDIOPROCESSING_TASKS> tasks;
+        uint32_t threadsRunningCount = 0;
+        uint32_t threadCount = AUDIOPROCESSING_THREADS;
+
+        void resetBlock() {
+            for (auto i = threadsRunningCount; USE_THREADING && i < threadCount && i < AUDIOPROCESSING_THREADS; i++) {
+                threads[i].setRealtimePriority(true);
+                threads[i].setTls(daw_tls::getTls());
+                threads[i].startThread(StringFormat("AudioProcessingThread %d", i), seqthreads::ThreadType::AudioThread);
+                auto task = threads[i].call([]() {
+                    setSSEFlushDenormals();
+                });
+                task->wait();
+                threadsRunningCount++;
+            }
+        }
+
+        void startThreads() {
+            uint32_t countStarted = 0;
+            for (WorkerThread& thread : threads) {
+                if (countStarted == this->threadCount) {
+                    break;
+                }
+                thread.setRealtimePriority(true);
+                thread.setTls(daw_tls::getTls());
+                thread.startThread(StringFormat("AudioProcessingThread %d", countStarted), seqthreads::ThreadType::AudioThread);
+                auto task = thread.call([]() {
+                    setSSEFlushDenormals();
+                });
+                task->wait();
+                countStarted++;
+            }
+            threadsRunningCount = countStarted;
+            for (auto& task : tasks) {
+                task.init(this);
+            }
+        }
+
+        void stopThreads() {
+            uint32_t countStopped = 0;
+            for (WorkerThread& thread : threads) {
+                if (countStopped == this->threadsRunningCount) {
+                    break;
+                }
+                thread.stopThread();
+                countStopped++;
+            }
+            countStopped = 0;
+            for (WorkerThread& thread : threads) {
+                if (countStopped == this->threadsRunningCount) {
+                    break;
+                }
+                thread.joinThread();
+                countStopped++;
+            }
+            threadsRunningCount = 0;
+        }
     public:
         int32_t activeVoiceCount  = 0;
         int32_t unisonVoiceCount  = 0;
@@ -1283,7 +1401,6 @@ class SynthImpl final : public PluginLockable, public SynthState {
             synthRand.rng_seed(now);
             resetLfoShape();
             auto pShape = &lfoShape;
-            lfo.setShape(pShape);
             lfo2.setShape(pShape);
             for (size_t i = 0; i < voices.size(); i++) {
                 auto& pv = voices[i];
@@ -1479,6 +1596,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             CreateDirectoryIfNotExists(defaultPresetPath);
             presetManager.load(defaultPresetPath);
             setPreset(defaultPresetPath, "Untitled");
+            startThreads();
         }
 
     public:
@@ -1502,6 +1620,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
         }
         ~SynthImpl()
         {
+            stopThreads();
             for (auto* ptr : vecParams) {
                 delete ptr;
             }
@@ -2074,10 +2193,6 @@ class SynthImpl final : public PluginLockable, public SynthState {
             osc2SplitMix += (targetOsc2SplitMix - osc2SplitMix) * 100.0 * dt;
             lfoWave.Update(dt);
             oscMix += (targetOscMix - oscMix) * 100.0 * dt;
-            // filterMode.Update(dt);
-            filterCutoff += (targetFilterCutoff - filterCutoff) * 100.0 * dt;
-            filterResonance += (targetFilterResonance - filterResonance) * 100.0 * dt;
-            filterKeyTracking += (targetFilterKeyTracking - filterKeyTracking) * 100.0 * dt;
             masterVolume += (targetMasterVolume - masterVolume) * 100.0 * dt;
         }
 
@@ -2536,12 +2651,9 @@ class SynthImpl final : public PluginLockable, public SynthState {
     public:
         void onTransportChanged(bool bIsPlaying) {
             seq              = 1;
-            double lfo1Tempo = 1.0;
             double lfo2Tempo = 1.0 / 4.0;
-            lfo.initPhase(fmod(tempo.ppqPos * lfo1Tempo, 1.0), true);
             lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo, 1.0), true);
 
-            // log_lf(Log::L_DEBUG, "Reset LFO phases: at ppq/4 %f\n", fmod(tempo.ppqPos/4.0, 1.0));
             if (getSetting(Settings::LfoPhaseDriftEnabled)) {
                 lfoPhaseDrift = 0.8;
             } else {
@@ -2555,11 +2667,11 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 // });
             };
         }
+
         void ProcessSynth(float** inputs, float** outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
             // lockProcessing only locks VST2 versions of the plugin
             auto lock = this->lockProcessing();
 
-            double bpmHz                                     = math::max(tempo.bpm, 1.0) / 60.0;
             const auto bpmDiv4Hz                             = math::max(tempo.bpm / 4.0, 1.0) / 60.0;
             const auto mvInv                                 = sqrt(1.0 / math::max<double>(1.0, this->unisonVoiceCount));
             const auto voiceMode                             = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
@@ -2607,12 +2719,8 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 UpdateParameters(dt);
                 UpdateDrift(dt);
                 if (lfo2.Update(dt, bpmDiv4Hz)) {
-                    lfo.initPhase(0.0, false);
                 }
                 lfo2Value = 0.5 + 0.5 * lfo2.GetWaveform(Waveforms::Saw, true);
-                // calculate lfo freqency in Hz based on tempo
-                double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value() * bpmHz;
-                lfoValue         = lfo.Get(dt, lfoWave, lfoFreqHz, false);
 
                 VoiceList list{};
                 UpdateAllVoiceStates(dt, filterMode, list);
@@ -2652,7 +2760,10 @@ class SynthImpl final : public PluginLockable, public SynthState {
                     outL = -1.0;
                 }
                 auto outR = 0.0;
-
+                if (USE_THREADING) {
+                    resetBlock();
+                }
+                int taskIndex = 0;
                 for (int32_t polyIndex = list.polyVoiceIndexFirst; polyIndex < list.polyVoiceIndexLast; ++polyIndex) {
                     auto& uv = voices[polyIndex];
                     for (int32_t unisonIndex = 0; unisonIndex < maxUnisonVoice; ++unisonIndex) {
@@ -2660,26 +2771,50 @@ class SynthImpl final : public PluginLockable, public SynthState {
                         if (!v.bIsActive) {
                             continue;
                         }
-                        auto voiceVolume = GetModulatedParamVoice(v, Parameters::MasterVolume);
-                        // auto noise = (synthRand.rng_double()*2-1)*0.002;
-                        auto vData                = -1.0;
-                        double vVal               = GetVoiceImpl(dt, uv, v, filterMode, vData);
-                        auto voice                = vVal * mvInv * voiceVolume;
-                        auto panningMinusOneToOne = GetModulatedParamVoice(v, Parameters::Panning);
-                        auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
-                        constexpr bool autopan    = false;
-                        double pan                = panningUnipolar;
-                        if (autopan) {
-                            pan += (unisonVoiceCount == 2) ? (unisonIndex & 1) : (unisonIndex / (unisonVoiceCount - 1.0));
-                            pan *= 0.5;
-                        }
-                        outR += voice * sqrt(pan);
-                        if (bDiagnostic) {
-                            if (unisonIndex == 0/*  && uv.seqNr == 1 */) {
-                                outL = vData;
-                            }
+                        if (USE_THREADING) {
+                            auto& task = tasks[taskIndex];
+                            task.setTask(dt, uv, v, filterMode);
+                            threads[taskIndex%threadsRunningCount].pushTask(&task);
+                            taskIndex++;
                         } else {
-                            outL += voice * sqrt(1.0 - pan);
+                            auto voiceVolume = GetModulatedParamVoice(v, Parameters::MasterVolume);
+                            // auto noise = (synthRand.rng_double()*2-1)*0.002;
+                            auto vData                = -1.0;
+                            double vVal               = GetVoiceImpl(dt, uv, v, filterMode, vData);
+                            auto voice                = vVal * mvInv * voiceVolume;
+                            auto panningMinusOneToOne = GetModulatedParamVoice(v, Parameters::Panning);
+                            auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
+                            constexpr bool autopan    = false;
+                            double pan                = panningUnipolar;
+                            if (autopan) {
+                                pan += (unisonVoiceCount == 2) ? (unisonIndex & 1) : (unisonIndex / (unisonVoiceCount - 1.0));
+                                pan *= 0.5;
+                            }
+                            outR += voice * sqrt(pan);
+                            if (bDiagnostic) {
+                                if (unisonIndex == 0/*  && uv.seqNr == 1 */) {
+                                    outL = vData;
+                                }
+                            } else {
+                                outL += voice * sqrt(1.0 - pan);
+                            }
+                        }
+                    }
+                }
+                if (USE_THREADING) {
+                    for (int i = 0; i < taskIndex; i++) {
+                        auto& task = tasks[i];
+                        if (task.isInUse()) {
+                            task.wait();
+                            auto& v = task.getVoice();
+                            double vVal = task.getVoiceData();
+                            auto voiceVolume = GetModulatedParamVoice(v, Parameters::MasterVolume);
+                            auto voice                = vVal * mvInv * voiceVolume;
+                            auto panningMinusOneToOne = GetModulatedParamVoice(v, Parameters::Panning);
+                            auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
+                            outR += voice * sqrt(panningUnipolar);
+                            outL += voice * sqrt(1.0 - panningUnipolar);
+                            task.resetTask();
                         }
                     }
                 }
@@ -2759,13 +2894,6 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 case Parameters::Osc1Wave:
                     osc1Wave.Switch(value);
                     break;
-                // case Parameters::Osc1Coarse:
-                // case Parameters::Osc1Fine: {
-                //     auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
-                //     auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
-                //     osc1Tune    = pitchFactor(coarse + fine);
-                //     break;
-                // }
                 case Parameters::Osc1Split:
                     targetOsc1SplitMix = value != 0.0 ? 1.0 : 0.0;
                     osc1SplitFactorA   = pitchFactor(value);
@@ -2774,13 +2902,6 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 case Parameters::Osc2Wave:
                     osc2Wave.Switch(value);
                     break;
-                // case Parameters::Osc2Coarse:
-                // case Parameters::Osc2Fine: {
-                //     auto coarse = GetParamInt(Parameters::Osc2Coarse)->Value();
-                //     auto fine   = GetParamFloat(Parameters::Osc2Fine)->Value();
-                //     osc2Tune    = pitchFactor(coarse + fine);
-                //     break;
-                // }
                 case Parameters::Osc2Split:
                     targetOsc2SplitMix = value != 0.0 ? 1.0 : 0.0;
                     // osc2SplitFactorA   = pitchFactor(-value);
@@ -2798,18 +2919,6 @@ class SynthImpl final : public PluginLockable, public SynthState {
                     baseFmAmount  = fmCoarse + fmFine;
                     break;
                 }
-                // case Parameters::FilterMode:
-                //     filterMode.Switch(value);
-                //     break;
-                case Parameters::FilterCutoff:
-                    targetFilterCutoff = value;
-                    break;
-                case Parameters::FilterResonance:
-                    targetFilterResonance = value;
-                    break;
-                case Parameters::FilterKeyTracking:
-                    targetFilterKeyTracking = value;
-                    break;
                 case Parameters::VoiceMode:
                     switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
                         case VoiceModes::Mono:
@@ -3069,6 +3178,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             return impl;
         }
         void onPreUnload() override {
+            impl->stopThreads();
             log_lf(Log::L_WARN, "getStatsMaxVoiceCount: %d\n", impl->getStatsMaxVoiceCount());
         }
         samplecount_t getPluginLatency() override { return impl->getLatency(); }

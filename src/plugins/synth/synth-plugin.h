@@ -203,7 +203,6 @@ namespace PluginSynth {
         int filterMode = 0;
         int fmMode     = 0;
 
-        double lfoValue      = 0.0;
         double lfo2Value     = 0.0;
         double driftVelocity = 0.0;
         double driftPhase    = 0.0;
@@ -225,12 +224,6 @@ namespace PluginSynth {
         double targetOscMix            = 0.0;
         double oscMix                  = 0.0;
         double baseFmAmount            = 0.0;
-        double targetFilterCutoff      = 0.0;
-        double filterCutoff            = 0.0;
-        double targetFilterResonance   = 0.0;
-        double filterResonance         = 0.0;
-        double targetFilterKeyTracking = 0.0;
-        double filterKeyTracking       = 0.0;
         double glideLength             = 0.0;
         double targetMasterVolume      = 0.0;
         double masterVolume            = 0.0;
