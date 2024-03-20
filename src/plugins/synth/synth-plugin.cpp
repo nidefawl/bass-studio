@@ -2668,7 +2668,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             };
         }
 
-        void ProcessSynth(float** inputs, float** outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
+        void ProcessSynth(float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
             // lockProcessing only locks VST2 versions of the plugin
             auto lock = this->lockProcessing();
 
@@ -2698,7 +2698,6 @@ class SynthImpl final : public PluginLockable, public SynthState {
             synthOutputs[1]        = outputs[1];
             int nOversample        = 1;
             if (getSetting(Settings::Oversampling)) {
-                // oversampler.up(inputs, nFrames);
                 nOversample = 2;
                 nFrames *= nOversample;
                 synthOutputs[0] = this->oversampler[0];
@@ -3096,7 +3095,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             //     this->impl->onTransportChanged(timeinfo->flags & kVstTransportPlaying);
             // }
             out->clear();
-            this->impl->ProcessSynth(in->buf, out->buf, numSamples, host, tick, state);
+            this->impl->ProcessSynth(out->buf, numSamples, host, tick, state);
         }
 
         std::shared_ptr<std::vector<std::byte>> storePresetData() override {
@@ -3429,7 +3428,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             if (inputs)
                 dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
             dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
-            this->impl->ProcessSynth(inputs, outputs, sampleFrames, nullptr, tickPos, state);
+            this->impl->ProcessSynth(outputs, sampleFrames, nullptr, tickPos, state);
         }
     }
 }// namespace PluginSynth
