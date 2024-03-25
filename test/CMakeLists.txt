@@ -29,10 +29,10 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   source_group("src" FILES ${test_source_list})
   ADD_EXECUTABLE( ${test_name} "${test_source_list}")
   # SET_TESTS_PROPERTIES( ${test_name} PROPERTIES ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_CURRENT_BINARY_DIR}/${test_name}.profraw")
-  # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
   set_source_files_properties(${first_source_file} PROPERTIES
-    SKIP_UNITY_BUILD_INCLUSION ON
+  SKIP_UNITY_BUILD_INCLUSION ON
   )
+  # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
   set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
   set_target_properties(${test_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${ABS_WORKING_DIR})
   set_target_properties(${test_name} PROPERTIES OUTPUT_NAME "${test_name}-${BUILD_BINARY_SUFFIX}")
@@ -164,3 +164,5 @@ endif()
 DEFINE_TEST(test_audiofiles TRUE test_audiofiles.cpp common/test_common.cpp)
 DEFINE_TEST(test_timestretch TRUE test_timestretch.cpp common/test_common.cpp)
 DEFINE_TEST(test_oversampling TRUE test_oversampling.cpp common/test_common.cpp)
+
+DEFINE_TEST(test_vst3plugins TRUE test_vst3plugins.cpp)

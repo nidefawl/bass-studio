@@ -79,13 +79,6 @@ if(NOT "${SMTG_AAX_SDK_PATH}" STREQUAL "")
     )
 endif()
 
-# Add hosting examples, it includes the validator (must be done before any plug-ins to support running the validator after building)
-set(SDK_IDE_HOSTING_EXAMPLES_FOLDER FOLDER "HostingExamples")
-add_subdirectory(public.sdk/samples/vst-hosting)
-
-# Add utilities
-set(SDK_IDE_UTILITIES_FOLDER FOLDER "Utilities")
-add_subdirectory(public.sdk/samples/vst-utilities)
 
 #---Add VST 3 examples (plug-ins and hosting)-----
 if(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES)

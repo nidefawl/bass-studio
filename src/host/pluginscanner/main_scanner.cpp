@@ -227,6 +227,7 @@ int writeToIPC(IPC& ipcConnection, T& hdr) {
 struct pluginscanner_server_options {
     String clapPluginPath;
     String vstPlugPath;
+    String vst3PluginPath;
     bool dryRun             = false;
     bool fullRescan         = false;
     bool launchProcess      = true;
@@ -544,6 +545,11 @@ static int runScannerServer(const pluginscanner_server_options& options) {
 
         std::vector<FileFound> filesClap;
         std::vector<FileFound> filesVst_;
+        std::vector<FileFound> filesVst3;
+        if (!options.vst3PluginPath.empty()) {
+            findFilesWithExt(options.vst3PluginPath, PLATFORM_VST3_PLUGIN_EXT, true, filesVst3);
+            log_message("Found %u .%s files in %s", CtrSize(filesVst3), PLATFORM_VST3_PLUGIN_EXT, StringAsCStr(options.vst3PluginPath));
+        }
         if (!options.vstPlugPath.empty()) {
             findFilesWithExt(options.vstPlugPath, PLATFORM_PLUGIN_EXT, true, filesVst_);
             log_message("Found %u .%s files in %s", CtrSize(filesVst_), PLATFORM_PLUGIN_EXT, StringAsCStr(options.vstPlugPath));
@@ -553,12 +559,13 @@ static int runScannerServer(const pluginscanner_server_options& options) {
             log_message("Found %u .%s files in %s", CtrSize(filesClap), PLATFORM_CLAP_PLUGIN_EXT, StringAsCStr(options.clapPluginPath));
         }
 
-        if (filesVst_.empty() && filesClap.empty()) {
+        if (filesVst_.empty() && filesClap.empty() && filesVst3.empty()) {
             return 1;
         }
 
         auto& allFiles = filesClap;
         allFiles.insert(allFiles.end(), filesVst_.begin(), filesVst_.end());
+        allFiles.insert(allFiles.end(), filesVst3.begin(), filesVst3.end());
         String exeName = App::Platform::GetExecutablePath();
 
         ipc_server server;
@@ -605,7 +612,7 @@ static int runScannerServer(const pluginscanner_server_options& options) {
             bool forcedisable  = false;
             queryPlugin.reset();
             queryPlugin.bind(1, file.path);
-            String reason = "New plugin (or not a plugin .dll)";
+            String reason = "New plugin (or not a supported file)";
             if (queryPlugin.executeStep()) {
                 id            = queryPlugin.getColumn(0).getInt();
                 forcedisable  = queryPlugin.getColumn(2).getInt() > 0;
@@ -1014,6 +1021,7 @@ int main(int argc, char* argv[]) {
         options.unresponsiveTimeoutSeconds = PluginScannerImplementation::timeoutdefault;
         String vstPlugPath;
         String clapPluginPath;
+        String vst3PluginPath;
         for (int i = 2; i < argc; i++) {
             if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
                 if (!strcmp(argv[i], "-wait")) {
@@ -1042,6 +1050,10 @@ int main(int argc, char* argv[]) {
                     clapPluginPath = argv[i + 1];
                     i++;
                 }
+                if (!strcmp(argv[i], "-vst3path") && i + 1 < argc) {
+                    vst3PluginPath = argv[i + 1];
+                    i++;
+                }
             }
         }
         if (vstPlugPath.empty()) {
@@ -1054,18 +1066,27 @@ int main(int argc, char* argv[]) {
             clapPluginPath = tls.settings->pluginsettings.pathClap;
             log_message("settings.pluginsettings.pathClap '%s'", StringAsCStr(clapPluginPath));
         }
+        if (vst3PluginPath.empty()) {
+            loadSettings(*tls.settings);
+            vst3PluginPath = tls.settings->pluginsettings.pathVst3;
+            log_message("settings.pluginsettings.pathVst3 '%s'", StringAsCStr(vst3PluginPath));
+        }
         App::Platform::shellExpandPath(vstPlugPath);
         App::Platform::sanitizePathToDirectory(vstPlugPath);
         App::Platform::shellExpandPath(clapPluginPath);
         App::Platform::sanitizePathToDirectory(clapPluginPath);
-        if (clapPluginPath.empty() && vstPlugPath.empty()) {
-            log_lf(Log::L_ERROR, "Error: settings.pluginsettings.pathVst2 / settings.pluginsettings.pathClap not configured\n");
+        App::Platform::shellExpandPath(vst3PluginPath);
+        App::Platform::sanitizePathToDirectory(vst3PluginPath);
+        if (clapPluginPath.empty() && vstPlugPath.empty() && vst3PluginPath.empty()) {
+            log_lf(Log::L_ERROR, "Error: settings.pluginsettings.pathVst2 / settings.pluginsettings.pathClap / settings.pluginsettings.pathVst3 is empty\n");
             return EXIT_FAILURE;
         }
         log_message("vstPlugPath '%s'", StringAsCStr(vstPlugPath));
         options.vstPlugPath = vstPlugPath;
         log_message("clapPluginPath '%s'", StringAsCStr(clapPluginPath));
         options.clapPluginPath = clapPluginPath;
+        log_message("vst3PluginPath '%s'", StringAsCStr(vst3PluginPath));
+        options.vst3PluginPath = vst3PluginPath;
         runScannerServer(options);
 
         seqthreads::threadSleep(500);

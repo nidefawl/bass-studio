@@ -43,6 +43,7 @@
 #define PLATFORM_PLUGIN_EXT "vst"
 #endif
 #define PLATFORM_CLAP_PLUGIN_EXT "clap"
+#define PLATFORM_VST3_PLUGIN_EXT "vst3"
 
 class clip_notes_t;
 class effectbase;

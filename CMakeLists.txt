@@ -60,6 +60,9 @@ foreach (f ${HDR_ALL_FILES})
   if (f MATCHES "src/icon_resource\.h")
     continue()
   endif()
+  if (f MATCHES "src/thirdparty/vst3sdk/.*")
+    continue()
+  endif()
   if (UNIX AND f MATCHES "/platform/win/")
     continue()
   endif()
@@ -83,6 +86,9 @@ foreach (f ${CPP_ALL_FILES})
     continue()
   endif()
   if (f MATCHES "/vstsdk-plugin-2.4/vstplugmain\.cpp")
+    continue()
+  endif()
+  if (f MATCHES "src/thirdparty/vst3sdk/.*")
     continue()
   endif()
   if (UNIX AND f MATCHES "/platform/win/")
@@ -354,6 +360,7 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
   "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
 )
 
+
 target_link_libraries(${LINK_TARGET} PUBLIC glfw)
 target_link_libraries(${LINK_TARGET} PUBLIC SQLiteCpp)
 target_link_libraries(${LINK_TARGET} PUBLIC PortAudio::PortAudio)
@@ -376,6 +383,14 @@ endif()
 
 target_link_libraries(${LINK_TARGET} PUBLIC zlib)
 target_link_libraries(${LINK_TARGET} PUBLIC libarchive)
+
+# VST 3 SDK
+set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF)
+set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF)
+set(SMTG_ENABLE_VSTGUI_SUPPORT OFF)
+set(SMTG_RENAME_ASSERT OFF)
+add_subdirectory(src/thirdparty/vst3sdk)
+target_link_libraries(${LINK_TARGET} PUBLIC sdk_hosting)
 
 if (LINUX)
   target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)

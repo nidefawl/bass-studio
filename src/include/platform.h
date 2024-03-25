@@ -19,12 +19,15 @@
 #if defined(_WIN32)
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "C:\\Program Files\\Steinberg\\VstPlugins"
 #define DAW_PLATFORM_CLAP_PATH_DEFAULT "C:\\Program Files\\Common Files\\CLAP"
+#define DAW_PLATFORM_VST3_PATH_DEFAULT "C:\\Program Files\\Common Files\\VST3"
 #elif defined(__APPLE__)
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "/Library/Audio/Plug-Ins/VST"
 #define DAW_PLATFORM_CLAP_PATH_DEFAULT "/Library/Audio/Plug-Ins/CLAP"
+#define DAW_PLATFORM_VST3_PATH_DEFAULT "/Library/Audio/Plug-Ins/VST3"
 #else
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "~/.vst"
 #define DAW_PLATFORM_CLAP_PATH_DEFAULT "~/.clap"
+#define DAW_PLATFORM_VST3_PATH_DEFAULT "~/.vst3"
 #endif
 
 #define FILE_PATHSEP_FORWARD_CHAR '/'
