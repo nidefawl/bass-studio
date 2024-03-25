@@ -169,7 +169,7 @@ std::shared_ptr<guiplugin> clapplugin::createGuiPlugin(int32_t uuid) {
 }
 
 clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, String filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback)
-    : effectbase(name, MODULE_TYPE_CLAP, globalId, hostcallback), dawHandles{ new clapplugin::daw_handles_t{} },
+    : effectbase(name, globalId, hostcallback), dawHandles{ new clapplugin::daw_handles_t{} },
       _pluginMgr(pluginMgr),
       filePath(std::move(filePath)),
       clapPluginIndex(uId) {

@@ -407,7 +407,7 @@ struct macro_automation_src_param_t final : public automated_param_t {
         }
     }
     module_macros::module_macros(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internal_modulator("Macros", getModuleType(), _projectGlobalId, _hostCallback),
+        : internal_modulator("Macros", _projectGlobalId, _hostCallback),
         impl(new macro_impl_t{ this, { } })
     {
         initModChannels();

@@ -75,7 +75,7 @@ public:
     ~clapplugin() override;
 
     // effectbase
-    int getModuleType() override { return MODULE_TYPE_CLAP; };
+    ModuleType getModuleType() override { return MODULE_TYPE_CLAP; };
     int getModuleCategory() const { return pluginCategory; };
     void* getModuleHandle() { return dawHandles->library.module; }
     String getAutomatableName() override {

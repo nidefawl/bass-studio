@@ -27,7 +27,7 @@ namespace PluginLatency {
     static constexpr int32_t MAX_LATENCY = 16384;
 
     module_latency::module_latency(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internalplugin("Latency", getModuleType(), _projectGlobalId, _hostCallback)
+        : internalplugin("Latency", _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
             int32_t id;

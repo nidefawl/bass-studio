@@ -330,7 +330,7 @@ struct lfo_automation_src_param_t final : public automated_param_t {
     }
 
     module_lfo::module_lfo(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internal_modulator("LFO", getModuleType(), _projectGlobalId, _hostCallback),
+        : internal_modulator("LFO", _projectGlobalId, _hostCallback),
         impl(new lfo_impl_t{ DawInstance::getOptional(), this, DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC) })
     {
         initModChannels();

@@ -48,10 +48,12 @@ public:
     uint32_t uId            = 0;
     internal_plugin_window_client windowClient;
 
-    internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback);
+    internalplugin(String _sName, int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~internalplugin() override;
 
     samplecount_t getPluginLatency() override { return 0; };
+    ModuleType getModuleType() override { return MODULE_TYPE_INTERNAL_EFFECT; };
+    virtual PluginType getPluginType() = 0;
 
     std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
     void onEnable() override;
@@ -83,8 +85,8 @@ class internal_modulator : public internalplugin {
 protected:
     std::vector<DAW::modulation_channel_desc> outputModChannelsDesc;
 public:
-    internal_modulator(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
-    : internalplugin(_sName, _pluginType, _projectGlobalId, _hostCallback) {
+    internal_modulator(String _sName, int32_t _projectGlobalId, IHostCallback* _hostCallback)
+    : internalplugin(_sName, _projectGlobalId, _hostCallback) {
     }
     ~internal_modulator() override {
     }

@@ -56,7 +56,6 @@ public:
     sampleformat_t format;
     AudioBlock* blockInputs        = nullptr;
     AudioBlock* blockOutputs       = nullptr;
-    int32_t pluginType             = 0;
     int32_t projectGlobalId        = 0;
     int32_t localDbId              = -1;
     IHostCallback* hostCallback  = nullptr;
@@ -106,7 +105,7 @@ protected:
     void initMeters();
 
 public:
-    effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback);
+    effectbase(String _sName, int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~effectbase() override;
     
     std::shared_ptr<guiplugin> getPluginGui(int32_t uuid);
@@ -116,7 +115,6 @@ public:
     }
 
     SafeRef<effectbase> makeSafeRef();
-    PluginType getPluginType() const { return static_cast<PluginType>(pluginType); }
     String getName() const { return sName; };
     String getProductName() const { return sProductName; };
     void setProductName(String _name) {
@@ -141,7 +139,7 @@ public:
 
     virtual void onEnable(){};
     virtual void onDisable(){};
-    virtual int getModuleType()  = 0;
+    virtual ModuleType getModuleType()  = 0;
     virtual bool hasAutomationModulationOutput() const {
         return false;
     }
@@ -251,7 +249,7 @@ public:
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     samplecount_t getPluginLatency() override;
     String getInfo(std::vector<String>& list) override;
-    int getModuleType() override;
+    ModuleType getModuleType() override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;

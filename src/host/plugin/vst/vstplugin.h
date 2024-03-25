@@ -75,7 +75,7 @@ public:
     ~vstplugin() override;
     void onEnable() override;
     void onDisable() override;
-    int getModuleType() override { return internalModuleId >= 0 ? MODULE_TYPE_INTERNAL_EFFECT : MODULE_TYPE_VST2; };
+    ModuleType getModuleType() override { return MODULE_TYPE_VST2; };
 
     const char* getDir() const {
         return sDir.c_str();

@@ -2972,7 +2972,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
     public:
         using ThreadLock = std::lock_guard<std::recursive_mutex>;
         explicit module_synth(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-            : internalplugin("Synth", getModuleType(), _projectGlobalId, _hostCallback),
+            : internalplugin("Synth", _projectGlobalId, _hostCallback),
           impl(new SynthImpl(this)),
           vecParams(impl->vecParams)
         {
@@ -3031,7 +3031,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             delete impl;
         }
 
-        int getModuleType() override { return PLUGIN_TYPE_SYNTH; };
+        PluginType getPluginType() override { return PLUGIN_TYPE_SYNTH; };
         void getUiSnapshot(snapshot_t& snapshot);
         void setUiSnapshot(snapshot_t& snapshot);
 

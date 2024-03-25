@@ -21,7 +21,7 @@ public:
     explicit module_macros(int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~module_macros() override;
     void initModChannels() override;
-    int getModuleType() override { return PLUGIN_TYPE_MACROS; };
+    PluginType getPluginType() override { return PLUGIN_TYPE_MACROS; };
     std::shared_ptr<PluginViewContainer> createViewCtrInternal() override;
     const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) override;
     std::shared_ptr<std::vector<std::byte>> storePresetData() override;

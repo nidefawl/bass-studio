@@ -36,7 +36,7 @@ struct module_empty::internal_handles_t {
 };
 
 module_empty::module_empty(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-    : internalplugin("Empty", PLUGIN_TYPE_EMPTY, _projectGlobalId, _hostCallback),
+    : internalplugin("Empty", _projectGlobalId, _hostCallback),
       handle(new module_empty::internal_handles_t{ nullptr }) {
 }
 

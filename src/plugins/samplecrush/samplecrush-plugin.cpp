@@ -127,7 +127,7 @@ namespace PluginSampleCrush {
     static constexpr int32_t PARAM_CRUSH_MODE  = 2;
 
     module_samplecrush::module_samplecrush(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internalplugin("Sample Crush", getModuleType(), _projectGlobalId, _hostCallback)
+        : internalplugin("Sample Crush", _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
             int32_t id;

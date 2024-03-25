@@ -80,7 +80,7 @@ namespace PluginSampleDelay {
     static constexpr int32_t PARAM_DELAY = 1;
 
     module_sampledelay::module_sampledelay(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internalplugin("Sample Delay", getModuleType(), _projectGlobalId, _hostCallback)
+        : internalplugin("Sample Delay", _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
             int32_t id;

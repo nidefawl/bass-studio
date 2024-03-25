@@ -227,7 +227,7 @@ namespace PluginEQ {
     }
 
     module_eq::module_eq(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internalplugin("EQ", getModuleType(), _projectGlobalId, _hostCallback),
+        : internalplugin("EQ", _projectGlobalId, _hostCallback),
         impl(new impl_data_t)
     {
         struct effectgain_param_entry {

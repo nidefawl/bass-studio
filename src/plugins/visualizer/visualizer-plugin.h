@@ -10,7 +10,7 @@ class module_visualizer final : public internalplugin {
 public:
     explicit module_visualizer(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
-    int getModuleType() override { return PLUGIN_TYPE_VISUALIZER; };
+    PluginType getPluginType() override { return PLUGIN_TYPE_VISUALIZER; };
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     std::shared_ptr<PluginViewContainer> createViewCtrInternal() override;
     void enqueue(AudioBlock* buf);

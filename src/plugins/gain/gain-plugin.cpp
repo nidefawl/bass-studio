@@ -32,7 +32,7 @@ namespace PluginGain {
     };
 
     module_gain::module_gain(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internalplugin("Gain", getModuleType(), _projectGlobalId, _hostCallback),
+        : internalplugin("Gain", _projectGlobalId, _hostCallback),
         impl(new impl_data_t)
     {
         struct effectgain_param_entry {

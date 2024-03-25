@@ -25,7 +25,7 @@ namespace {
         ps.ioChannels.input  = plugin->inputChannelsDesc;
         ps.ioChannels.output = plugin->outputChannelsDesc;
         ps.uId               = plugin->getPluginType();
-        ps.moduleType        = MODULE_TYPE_INTERNAL_EFFECT;
+        ps.moduleType        = plugin->getModuleType();
         ps.name              = plugin->sName;
         if (opts.storePluginPreset) {
             ps.params.reserve(plugin->getNumParameters());
@@ -97,8 +97,8 @@ void internalplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProce
     meter.update(out, 1.0f);
 }
 
-internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
-    : effectbase(std::move(_sName), _pluginType, _projectGlobalId, _hostCallback),
+internalplugin::internalplugin(String _sName, int32_t _projectGlobalId, IHostCallback* _hostCallback)
+    : effectbase(std::move(_sName), _projectGlobalId, _hostCallback),
       handlesIntPlugin(new internalplugin_handles_t{}) {
     bSupportsWindowResize = true;
 }

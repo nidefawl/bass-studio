@@ -175,7 +175,7 @@ struct module_group::internal_handles_t {
 };
 
 module_group::module_group(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-    : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId, _hostCallback),
+    : internalplugin("Group", _projectGlobalId, _hostCallback),
       handle(new module_group::internal_handles_t{}),
       audio(nullptr)
 {

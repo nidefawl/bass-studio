@@ -28,6 +28,7 @@
 #include "host/plugin/internal/internal-plugin.h"
 #include "host/host_pluginmanager.h"
 #include "host/host.h"
+#include "host/plugin/modules.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "renderresources.h"
@@ -1255,12 +1256,12 @@ void gui_graph::updateList(bool resetPositions) {
             if (sel.pluginCtr->getSelected(out)) {
                 for (auto& plugin : out) {
                     auto p = plugin->getTrackLink()->owner;
-                    if (p && p->getModuleType() == PLUGIN_TYPE_GROUP) {
+                    if (p && p->getModuleType() == MODULE_TYPE_INTERNAL_EFFECT && static_cast<internalplugin*>(p)->getPluginType() == PLUGIN_TYPE_GROUP) {
                         groupSelected = static_cast<module_group*>(p);
                         break;
                     }
                 }
-                if (out.size() && out[0]->getModuleType() == PLUGIN_TYPE_GROUP) {
+                if (out.size() && out[0]->getModuleType() == MODULE_TYPE_INTERNAL_EFFECT && static_cast<internalplugin*>(out[0])->getPluginType() == PLUGIN_TYPE_GROUP) {
                     groupSelected = static_cast<module_group*>(out[0]);
                 }
             }
@@ -1518,12 +1519,12 @@ void guictr_nodes_editor::resetRouting() {
             if (sel.pluginCtr->getSelected(out)) {
                 for (auto& plugin : out) {
                     auto p = plugin->getTrackLink()->owner;
-                    if (p && p->getModuleType() == PLUGIN_TYPE_GROUP) {
+                    if (p && p->getModuleType() == MODULE_TYPE_INTERNAL_EFFECT && static_cast<internalplugin*>(p)->getPluginType() == PLUGIN_TYPE_GROUP) {
                         groupSelected = static_cast<module_group*>(p);
                         break;
                     }
                 }
-                if (out.size() && out[0]->getModuleType() == PLUGIN_TYPE_GROUP) {
+                if (out.size() && out[0]->getModuleType() == MODULE_TYPE_INTERNAL_EFFECT && static_cast<internalplugin*>(out[0])->getPluginType() == PLUGIN_TYPE_GROUP) {
                     groupSelected = static_cast<module_group*>(out[0]);
                 }
             }

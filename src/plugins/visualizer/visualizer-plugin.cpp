@@ -32,7 +32,7 @@ namespace DAW::UI {
 namespace PluginVisualizer {
 
     module_visualizer::module_visualizer(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internalplugin("Visualizer", getModuleType(), _projectGlobalId, _hostCallback)
+        : internalplugin("Visualizer", _projectGlobalId, _hostCallback)
     {
         allocRingBuffer(ringbuffer, 2);
     }

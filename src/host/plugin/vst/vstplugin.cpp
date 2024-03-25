@@ -937,7 +937,7 @@ void vst_onException(vstplugin* plugin)
     }
 }
 vstplugin::vstplugin(handles_t* _handle, int32_t globalId, IHostCallback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
-    : effectbase(std::move(sName), MODULE_TYPE_VST2, globalId, hostcallback),
+    : effectbase(std::move(sName), globalId, hostcallback),
       handle(_handle),
       internalModuleId(_moduleId),
       sDir(std::move(_sDir)),
