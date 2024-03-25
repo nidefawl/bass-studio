@@ -1172,7 +1172,7 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
     if ((flags & DAW::PluginLoadFlags::FLAG_DEFER_LOAD) == 0) {
          auto len = pluginsDeferred.size();
         for (size_t i = 0; i < len; i++) {
-            dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
+            dbgassert(pluginsDeferred[i]->getModuleType() == MODULE_TYPE_DEFERRED);
             auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
             effectbase* pluginLoaded = nullptr;
             tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);

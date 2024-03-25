@@ -30,7 +30,7 @@ public:
     std::vector<String> inputNames;
     std::vector<String> outputNames;
     auplugin(handles_t* _handle, int32_t globalId, IHostCallback* hostcallback, String sDir, String sName)
-        : effectbase(sName, PLUGIN_TYPE_AU, globalId, hostcallback), handle(_handle) {
+        : effectbase(sName, MODULE_TYPE_AU, globalId, hostcallback), handle(_handle) {
         this->sDir = sDir;
     }
     ~auplugin() override = default;
@@ -40,7 +40,7 @@ protected:
     void onDisable() override;
 
 public:
-    int getModuleType() override { return PLUGIN_TYPE_AU; };
+    int getModuleType() override { return MODULE_TYPE_AU; };
 
     bool hasWindowEditor() override {
         return false;

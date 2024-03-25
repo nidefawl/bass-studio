@@ -90,11 +90,11 @@ public:
         auto name              = pluginSnapshot.name;
         auto uId               = pluginSnapshot.uId;
         auto localId           = pluginSnapshot.localDbId;
-        auto pluginType        = pluginSnapshot.pluginType;
+        auto pluginType        = pluginSnapshot.moduleType;
         auto clapId            = pluginSnapshot.clapId;
         bool loadForceDisabled = (loadFlags & 1) != 0;
 
-        if (pluginType == PluginType::PLUGIN_TYPE_VST) {
+        if (pluginType == ModuleType::MODULE_TYPE_VST2) {
             auto it = remapVst2.find(uId);
             if (it != remapVst2.end()) {
                 uId = it->second;
@@ -111,10 +111,10 @@ public:
             if (i == BY_LOCALID_AND_UUID && localId <= 0) {
                 continue;
             }
-            if (i == BY_CLAP_UUID && pluginType == PluginType::PLUGIN_TYPE_VST) {
+            if (i == BY_CLAP_UUID && pluginType == ModuleType::MODULE_TYPE_VST2) {
                 continue;
             }
-            if (i == BY_VST_UUID && pluginType == PluginType::PLUGIN_TYPE_CLAP) {
+            if (i == BY_VST_UUID && pluginType == ModuleType::MODULE_TYPE_CLAP) {
                 continue;
             }
             String query = queries[i];
@@ -125,7 +125,7 @@ public:
             }
 
             SQLite::Statement queryPlugin(*db, query);
-            queryPlugin.bind(1, pluginType == PluginType::PLUGIN_TYPE_VST ? 0 : 1);
+            queryPlugin.bind(1, pluginType == ModuleType::MODULE_TYPE_VST2 ? 0 : 1);
             switch (i) {
                 case BY_LOCALID_AND_UUID:
                     queryPlugin.bind(2, localId);
@@ -155,7 +155,7 @@ public:
                 entry.localDbId    = queryPlugin.getColumn("id").getInt();
                 entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
                 entry.uid          = queryPlugin.getColumn("uid").getUInt();
-                entry.clapId       = pluginType == PluginType::PLUGIN_TYPE_CLAP ? queryPlugin.getColumn("productName").getString() : "";
+                entry.clapId       = pluginType == ModuleType::MODULE_TYPE_CLAP ? queryPlugin.getColumn("productName").getString() : "";
                 entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
                 entry.name         = queryPlugin.getColumn("name").getString();
                 entry.path         = queryPlugin.getColumn("path").getString();

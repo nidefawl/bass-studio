@@ -191,23 +191,23 @@ public:
         if (!parentCtrl || !dawCtrl) {
             return;
         }
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LFO, 0, "LFO", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_MACROS, 0, "Macros", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EMPTY, 0, "Empty", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EQ, 0, "EQ", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GAIN, 0, "Gain", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GROUP, 0, "Group", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LATENCY, 0, "Latency", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_CRUSH, 0, "Sample Crush", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_DELAY, 0, "Sample Delay", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_STEREO_WIDTH, 0, "Stereo Width", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SYNTH, 0, "Synth", true });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_VISUALIZER, 0, "Visualizer", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_LFO, "LFO", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_MACROS, "Macros", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_EMPTY, "Empty", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_EQ, "EQ", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_GAIN, "Gain", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_GROUP, "Group", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_LATENCY, "Latency", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SAMPLE_CRUSH, "Sample Crush", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SAMPLE_DELAY, "Sample Delay", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_STEREO_WIDTH, "Stereo Width", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH, "Synth", true });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_VISUALIZER, "Visualizer", false });
         auto daw = dawCtrl->getDaw();
         auto pluginMgr = daw->getPluginManager();
         std::vector<DAW::Host::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();
         for (auto& reg : vecReg) {
-            effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_INTERNAL_EFFECT, reg.id, reg.name, reg.isSynth });
+            effectEntries.push_back(module_desc_t{ MODULE_TYPE_VST2, reg.id, reg.name, reg.isSynth });
             break;
         }
     }

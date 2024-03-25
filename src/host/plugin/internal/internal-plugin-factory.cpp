@@ -35,74 +35,52 @@ namespace DAW::Host {
 effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
     effectbase* effect = nullptr;
     IHostCallback* hostcallback = getHostCallback();
-    switch (moduleType) {
-        case PLUGIN_TYPE_EMPTY:
-            effect = makeInstance<module_empty>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_GROUP:
-            effect = makeInstance<module_group>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_GAIN:
-            effect = makeInstance<PluginGain::module_gain>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_LATENCY:
-            effect = makeInstance<PluginLatency::module_latency>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_SAMPLE_DELAY:
-            effect = makeInstance<PluginSampleDelay::module_sampledelay>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_SAMPLE_CRUSH:
-            effect = makeInstance<PluginSampleCrush::module_samplecrush>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_STEREO_WIDTH:
-            effect = makeInstance<PluginStereoWidth::module_stereowidth>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_SYNTH:
-            effect = makeInstance<PluginSynth::module_synth>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_MACROS:
-            effect = makeInstance<PluginMacros::module_macros>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_LFO:
-            effect = makeInstance<PluginLFO::module_lfo>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_EQ:
-            effect = makeInstance<PluginEQ::module_eq>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_VISUALIZER:
-            effect = makeInstance<PluginVisualizer::module_visualizer>(getNextGlobalModuleId(globalid), hostcallback);
-            break;
-        case PLUGIN_TYPE_INTERNAL_EFFECT: {
-            LoadResultPlugin res = loadInternalPlugin(moduleId, globalid);
-            if (res.library.isSuccess()) {
-                effect = res.plugin;
-            }
-            break;
-        } 
-        default:
-            break;
-    }
-    switch (moduleType) {
-        case PLUGIN_TYPE_EMPTY:
-        case PLUGIN_TYPE_GROUP:
-        case PLUGIN_TYPE_GAIN:
-        case PLUGIN_TYPE_LATENCY:
-        case PLUGIN_TYPE_SAMPLE_DELAY:
-        case PLUGIN_TYPE_SAMPLE_CRUSH:
-        case PLUGIN_TYPE_STEREO_WIDTH:
-        case PLUGIN_TYPE_SYNTH:
-        case PLUGIN_TYPE_MACROS:
-        case PLUGIN_TYPE_LFO:
-        case PLUGIN_TYPE_EQ:
-        case PLUGIN_TYPE_VISUALIZER:
-            if (effect) {
-                effect->load(this);
-                pluginInstancesInternal.push_back(effect);
-                pluginInstances.push_back(effect);
-            }
-            break;
-        default:
-            break;
+    if (moduleType == MODULE_TYPE_INTERNAL_EFFECT) {
+        switch (moduleId) {
+            case PLUGIN_TYPE_EMPTY:
+                effect = makeInstance<module_empty>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_GROUP:
+                effect = makeInstance<module_group>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_GAIN:
+                effect = makeInstance<PluginGain::module_gain>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_LATENCY:
+                effect = makeInstance<PluginLatency::module_latency>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_SAMPLE_DELAY:
+                effect = makeInstance<PluginSampleDelay::module_sampledelay>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_SAMPLE_CRUSH:
+                effect = makeInstance<PluginSampleCrush::module_samplecrush>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_STEREO_WIDTH:
+                effect = makeInstance<PluginStereoWidth::module_stereowidth>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_SYNTH:
+                effect = makeInstance<PluginSynth::module_synth>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_MACROS:
+                effect = makeInstance<PluginMacros::module_macros>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_LFO:
+                effect = makeInstance<PluginLFO::module_lfo>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_EQ:
+                effect = makeInstance<PluginEQ::module_eq>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_VISUALIZER:
+                effect = makeInstance<PluginVisualizer::module_visualizer>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            default:
+                break;
+        }
+        if (effect) {
+            effect->load(this);
+            pluginInstancesInternal.push_back(effect);
+            pluginInstances.push_back(effect);
+        }
     }
     return effect;
 }

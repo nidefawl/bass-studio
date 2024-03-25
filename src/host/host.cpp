@@ -1303,7 +1303,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     
     PluginManager::UpdateVstTime(tmp.timeinfo, m_sampleFormatInternal, req.projectGlobals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
     for (effectbase* plugin : trackImpl->effects) {
-        if (plugin->pluginType == PLUGIN_TYPE_VST) {
+        if (plugin->pluginType == MODULE_TYPE_VST2) {
             auto* ptr = dynamic_cast<vstplugin*>(plugin)->getLocalTimeInfoPtr();
             if (ptr) {
                 *ptr = tmp.timeinfo;
@@ -1903,7 +1903,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
             if (effect) {
                 bool isBypass = effect->isBypass();
                 //TODO: this should be done in the vstplugin::process function
-                if (effect->pluginType == PLUGIN_TYPE_VST) {
+                if (effect->pluginType == MODULE_TYPE_VST2) {
                     VstTimeInfo timeinfo{};
                     PluginManager::UpdateVstTime(timeinfo, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
                     auto* ptr = static_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
@@ -1911,7 +1911,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                         *ptr = timeinfo;
                     }
                 }
-                if (effect->pluginType == PLUGIN_TYPE_CLAP) {
+                if (effect->pluginType == MODULE_TYPE_CLAP) {
                     clap_event_transport_t transport{};
                     UpdateClapTime(transport, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
                     auto& pluginLocalTransport = static_cast<clapplugin*>(effect)->getTransport();

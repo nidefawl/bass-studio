@@ -1,4 +1,5 @@
 #include "projectfile.h"
+#include "host/plugin/modules.h"
 #include "platform.h"
 #include "shapefile.h"
 
@@ -131,11 +132,26 @@ void serialize(Archive& archive, plugin_ui_snapshot_t& m) {
 template<class Archive>
 void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     m.version = version;
-    archive(
-        make_nvp("pluginType", m.pluginType),
-        make_nvp("name", m.name),
-        make_nvp("uId", m.uId)
-    );
+    if (version < 16) {
+        archive(
+            make_nvp("pluginType", m.moduleType),
+            make_nvp("name", m.name),
+            make_nvp("uId", m.uId)
+        );
+        if (m.moduleType == PLUGIN_TYPE_GROUP) {
+            m.uId = m.moduleType;
+            m.moduleType = MODULE_TYPE_INTERNAL_EFFECT;
+        } else if (m.moduleType >= PLUGIN_TYPE_GAIN) {
+            m.uId = m.moduleType;
+            m.moduleType = MODULE_TYPE_INTERNAL_EFFECT;
+        }
+    } else {
+        archive(
+            make_nvp("moduleType", m.moduleType),
+            make_nvp("name", m.name),
+            make_nvp("uId", m.uId)
+        );
+    }
     if (version >= 12) {
         archive(make_nvp("clapId", m.clapId));
     }
@@ -182,7 +198,7 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
 
 template<class Archive>
 void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t version) {
-    archive(make_nvp("pluginType", m.pluginType),
+    archive(make_nvp("moduleType", m.moduleType),
         make_nvp("name", m.name), 
         make_nvp("uId", m.uId), 
         make_nvp("clapId", m.clapId), 
@@ -688,7 +704,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(guictrlayout_entry_snapshot_t, 1);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 15);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 16);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);

@@ -1,5 +1,6 @@
 #include "appsettings.h"
 #include "fileio.h"
+#include "host/plugin/modules.h"
 #include "tls.h"
 #include "host/daw/mainctrl.h"
 
@@ -105,7 +106,7 @@ void generateDummyProject(DawCtrl* dawCtrl) {
                 track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                 track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                auto pluginHostInfo = dawInstance->getPluginManager()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_HOSTINFO, -1);
+                auto pluginHostInfo = dawInstance->getPluginManager()->makeModuleInstance(MODULE_TYPE_VST2, PLUGIN_TYPE_HOSTINFO, -1);
                 dbgassert(pluginHostInfo);
 
                 dawInstance->getPluginManager()->insertNewPlugin(track1->getStage(), pluginHostInfo, 0);

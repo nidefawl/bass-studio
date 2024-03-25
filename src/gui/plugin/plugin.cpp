@@ -606,7 +606,7 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
 }
 guipluginview::guipluginview(effectbase* _effect)
     : guiplugin(_effect), effect(_effect), dropdownProgram(_effect) {
-    params.setVisible(_effect->getModuleType() == PLUGIN_TYPE_VST || _effect->getModuleType() == PLUGIN_TYPE_CLAP);
+    params.setVisible(_effect->getModuleType() == MODULE_TYPE_VST2 || _effect->getModuleType() == MODULE_TYPE_CLAP);
     // this->isHorizontalTitle = !params.isVisible();
     params.setRowHeight(48);
     params.margin = 2;

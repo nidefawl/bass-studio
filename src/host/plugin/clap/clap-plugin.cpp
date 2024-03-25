@@ -61,7 +61,7 @@ namespace {
         ps.enabled           = plugin->bIsEnabled;
         ps.ioChannels.input  = plugin->inputChannelsDesc;
         ps.ioChannels.output = plugin->outputChannelsDesc;
-        ps.pluginType        = PLUGIN_TYPE_CLAP;
+        ps.moduleType        = MODULE_TYPE_CLAP;
         ps.vendorVersion     = 0;
         ps.uId               = plugin->getClapPluginIndex();
         ps.clapId            = plugin->getClapPluginId();
@@ -169,7 +169,7 @@ std::shared_ptr<guiplugin> clapplugin::createGuiPlugin(int32_t uuid) {
 }
 
 clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, String filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback)
-    : effectbase(name, PLUGIN_TYPE_CLAP, globalId, hostcallback), dawHandles{ new clapplugin::daw_handles_t{} },
+    : effectbase(name, MODULE_TYPE_CLAP, globalId, hostcallback), dawHandles{ new clapplugin::daw_handles_t{} },
       _pluginMgr(pluginMgr),
       filePath(std::move(filePath)),
       clapPluginIndex(uId) {

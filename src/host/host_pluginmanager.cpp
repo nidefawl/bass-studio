@@ -118,15 +118,15 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
     plugin->unload(this);
 
     switch (plugin->getModuleType()) {
-    case PLUGIN_TYPE_DEFERRED:
+    case MODULE_TYPE_DEFERRED:
         always_assert(removeEntry(pluginsDeferred, plugin));
         break;
-    case PLUGIN_TYPE_CLAP:
+    case MODULE_TYPE_CLAP:
         always_assert(removeEntry(pluginInstancesClap, plugin));
         always_assert(removeEntry(pluginInstances, plugin));
         break;
-    case PLUGIN_TYPE_INTERNAL_EFFECT:
-    case PLUGIN_TYPE_VST:
+    case MODULE_TYPE_INTERNAL_EFFECT:
+    case MODULE_TYPE_VST2:
         always_assert(removeEntry(pluginInstancesVST2, plugin));
         always_assert(removeEntry(pluginInstances, plugin));
         break;
@@ -136,13 +136,13 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
         break;
     }
     void* moduleHandleOpt = nullptr;
-    if (plugin->getModuleType() == PLUGIN_TYPE_VST || plugin->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
+    if (plugin->getModuleType() == MODULE_TYPE_VST2 || plugin->getModuleType() == MODULE_TYPE_INTERNAL_EFFECT) {
         vstplugin* vst = static_cast<vstplugin*>(plugin);
         if (vst->internalModuleId <= 0) {
             moduleHandleOpt = vst->handle->hmodule;
         }
     }
-    if (plugin->getModuleType() == PLUGIN_TYPE_CLAP) {
+    if (plugin->getModuleType() == MODULE_TYPE_CLAP) {
         moduleHandleOpt = static_cast<clapplugin*>(plugin)->getModuleHandle();
     }
     log_lf(Log::L_DEBUG, "Unload plugin %s\n", StringAsCStr(plugin->getName()));

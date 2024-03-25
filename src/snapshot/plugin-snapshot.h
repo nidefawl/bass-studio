@@ -35,7 +35,7 @@ struct plugin_snapshot_t {
     int32_t projectGlobalId = 0;
     bool enabled            = false;
     int32_t slot            = 0;
-    int32_t pluginType      = 0;
+    int32_t moduleType      = 0;
     int32_t localDbId       = 0;
     int32_t vendorVersion   = 0;
     uint32_t uId            = 0;

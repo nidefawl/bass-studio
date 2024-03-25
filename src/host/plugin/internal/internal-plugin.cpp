@@ -24,8 +24,8 @@ namespace {
         ps.enabled           = plugin->bIsEnabled;
         ps.ioChannels.input  = plugin->inputChannelsDesc;
         ps.ioChannels.output = plugin->outputChannelsDesc;
-        ps.uId               = plugin->uId;
-        ps.pluginType        = plugin->pluginType;
+        ps.uId               = plugin->getPluginType();
+        ps.moduleType        = MODULE_TYPE_INTERNAL_EFFECT;
         ps.name              = plugin->sName;
         if (opts.storePluginPreset) {
             ps.params.reserve(plugin->getNumParameters());

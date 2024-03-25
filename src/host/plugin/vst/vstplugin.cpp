@@ -5,6 +5,7 @@
 #include "host/automation/automation.h"
 #include "config.h"
 #include "host/plugin/base/base-plugin.h"
+#include "host/plugin/modules.h"
 #include "plugins/synth/IPlugMidi.h"
 #include "vstplugin.h"
 #include "host/vst2/vst_event.h"
@@ -401,11 +402,10 @@ namespace {
         ps.enabled           = plugin->bIsEnabled;
         ps.ioChannels.input  = plugin->inputChannelsDesc;
         ps.ioChannels.output = plugin->outputChannelsDesc;
+        ps.moduleType        = MODULE_TYPE_VST2;
         if (plugin->internalModuleId >= 0) {
-            ps.pluginType = PLUGIN_TYPE_INTERNAL_EFFECT;
             ps.uId        = static_cast<uint32_t>(plugin->internalModuleId);
         } else {
-            ps.pluginType    = PLUGIN_TYPE_VST;
             ps.vendorVersion = plugin->vendorVersion;
             ps.uId           = plugin->uId;
             ps.localDbId     = plugin->localDbId;
@@ -937,7 +937,7 @@ void vst_onException(vstplugin* plugin)
     }
 }
 vstplugin::vstplugin(handles_t* _handle, int32_t globalId, IHostCallback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
-    : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId, hostcallback),
+    : effectbase(std::move(sName), MODULE_TYPE_VST2, globalId, hostcallback),
       handle(_handle),
       internalModuleId(_moduleId),
       sDir(std::move(_sDir)),

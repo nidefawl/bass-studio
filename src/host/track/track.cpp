@@ -511,7 +511,7 @@ void project_t::copyFrom(project_snapshot_t& project) {
 namespace DAW {
     effectbase* loadEffectModule(Host::PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
         effectbase* effect      = nullptr;
-        if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST || pluginSnapshot.pluginType == PLUGIN_TYPE_CLAP) {
+        if (pluginSnapshot.moduleType == MODULE_TYPE_VST2 || pluginSnapshot.moduleType == MODULE_TYPE_CLAP) {
             log_printf("Loading Plugin '%s'\n", StringAsCStr(pluginSnapshot.name));
             plugindatabase_t* db = plugindatabase_t::getInstance();
             pluginentry_t resolvedPlugin;
@@ -527,7 +527,7 @@ namespace DAW {
                 log_printf("Failed loading: Unknown plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
             }
         } else {
-            effect = host->makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
+            effect = host->makeModuleInstance(pluginSnapshot.moduleType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
         }
         return effect;
     }
@@ -823,7 +823,7 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
             auto& atlRef = stSnapshot.atlRef;
             if (atlRef.type == AUTOMATABLE_EFFECT) {
                 effectbase* plugin = track->getStage()->getPluginById(atlRef.refId);
-                if (!plugin || plugin->getModuleType() == PLUGIN_TYPE_DEFERRED) {
+                if (!plugin || plugin->getModuleType() == MODULE_TYPE_DEFERRED) {
                     continue;
                 }
                 if (!assert_expr(plugin->getParam(atlRef.paramIdx))) {

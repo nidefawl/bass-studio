@@ -377,7 +377,7 @@ effect_deferred* effectbase::toDeferred() {
     def->projectGlobalId    = snapshot.projectGlobalId;
     def->bIsEnabled         = snapshot.enabled;
     def->mImpl->snapshot    = snapshot;
-    def->mImpl->moduleType  = snapshot.pluginType;
+    def->mImpl->moduleType  = snapshot.moduleType;
     def->inputChannelsDesc  = snapshot.ioChannels.input;
     def->outputChannelsDesc = snapshot.ioChannels.output;
     return def;
@@ -392,7 +392,7 @@ effect_deferred* PluginManager::loadPluginDeferred(const plugin_snapshot_t& snap
     def->projectGlobalId    = snapshot.projectGlobalId;
     def->bIsEnabled         = snapshot.enabled;
     def->mImpl->snapshot    = snapshot;
-    def->mImpl->moduleType  = snapshot.pluginType;
+    def->mImpl->moduleType  = snapshot.moduleType;
     if (snapshot.version >= 9) {
         def->inputChannelsDesc  = snapshot.ioChannels.input;
         def->outputChannelsDesc = snapshot.ioChannels.output;
@@ -404,14 +404,14 @@ effect_deferred* PluginManager::loadPluginDeferred(const plugin_snapshot_t& snap
 } // namespace DAW::Host
 
 effect_deferred::effect_deferred(int32_t _projectGlobalId, IHostCallback* _hostCallback) 
-: effectbase("Deferred", PLUGIN_TYPE_DEFERRED, _projectGlobalId, _hostCallback)
+: effectbase("Deferred", MODULE_TYPE_DEFERRED, _projectGlobalId, _hostCallback)
 {
     initDefaultIODesc();
 }
 
 void effect_deferred::loadSnapshot(const plugin_snapshot_t& snapshot) {
     this->mImpl->snapshot    = snapshot;
-    this->mImpl->moduleType  = snapshot.pluginType;
+    this->mImpl->moduleType  = snapshot.moduleType;
     if (snapshot.version >= 9) {
         this->inputChannelsDesc  = snapshot.ioChannels.input;
         this->outputChannelsDesc = snapshot.ioChannels.output;
@@ -427,7 +427,7 @@ String effect_deferred::getInfo(std::vector<String>& list) {
 }
 
 int effect_deferred::getModuleType() {
-    return PLUGIN_TYPE_DEFERRED;
+    return MODULE_TYPE_DEFERRED;
 }
 
 void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
