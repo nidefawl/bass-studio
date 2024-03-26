@@ -210,13 +210,13 @@ static bool fromCFStringRef (Steinberg::char8* dest, Steinberg::int32 destSize, 
 
 #if SMTG_OS_WINDOWS
 //-----------------------------------------------------------------------------
-static inline int stricmp16 (const Steinberg::tchar* s1, const Steinberg::tchar* s2)
+static inline int stricmp16 (const Steinberg::char16* s1, const Steinberg::char16* s2)
 {
 	return wcsicmp (Steinberg::wscast (s1), Steinberg::wscast (s2));
 }
 
 //-----------------------------------------------------------------------------
-static inline int strnicmp16 (const Steinberg::tchar* s1, const Steinberg::tchar* s2, size_t l)
+static inline int strnicmp16 (const Steinberg::char16* s1, const Steinberg::char16* s2, size_t l)
 {
 	return wcsnicmp (Steinberg::wscast (s1), Steinberg::wscast (s2), l);
 }

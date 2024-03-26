@@ -84,17 +84,19 @@ public:
             BY_NAME_AND_UUID,
             BY_CLAP_UUID,
             BY_VST_UUID,
+            BY_VST3_UUID,
             BY_NAME,
-            NUM_QUERY_TYPES = 5
+            NUM_QUERY_TYPES
         };
         auto name              = pluginSnapshot.name;
         auto uId               = pluginSnapshot.uId;
         auto localId           = pluginSnapshot.localDbId;
-        auto pluginType        = pluginSnapshot.moduleType;
+        auto moduleType        = pluginSnapshot.moduleType;
         auto clapId            = pluginSnapshot.clapId;
+        auto vst3uuid          = pluginSnapshot.clapId;
         bool loadForceDisabled = (loadFlags & 1) != 0;
 
-        if (pluginType == ModuleType::MODULE_TYPE_VST2) {
+        if (moduleType == ModuleType::MODULE_TYPE_VST2) {
             auto it = remapVst2.find(uId);
             if (it != remapVst2.end()) {
                 uId = it->second;
@@ -104,17 +106,21 @@ public:
         static const char* queryBy_LocalIdAndUUID = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and id == ? and uid == ? and __COND__";
         static const char* queryBy_NameAndUUID    = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and name == ? and uid == ? and __COND__ order by forcedisable ASC, version DESC, id DESC";
         static const char* queryBy_VST_UUID       = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and uid == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
+        static const char* queryBy_VST3_UUID      = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and productName == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         static const char* queryBy_CLAP_UUID      = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and productName == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         static const char* queryBy_Name           = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and name == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
-        const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_CLAP_UUID, queryBy_VST_UUID, queryBy_Name };
+        const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_CLAP_UUID, queryBy_VST_UUID, queryBy_VST3_UUID, queryBy_Name };
         for (size_t i = 0; i < NUM_QUERY_TYPES; i++) {
             if (i == BY_LOCALID_AND_UUID && localId <= 0) {
                 continue;
             }
-            if (i == BY_CLAP_UUID && pluginType == ModuleType::MODULE_TYPE_VST2) {
+            if (i == BY_CLAP_UUID && moduleType != ModuleType::MODULE_TYPE_CLAP) {
                 continue;
             }
-            if (i == BY_VST_UUID && pluginType == ModuleType::MODULE_TYPE_CLAP) {
+            if (i == BY_VST_UUID && moduleType != ModuleType::MODULE_TYPE_VST2) {
+                continue;
+            }
+            if (i == BY_VST3_UUID && moduleType != ModuleType::MODULE_TYPE_VST3) {
                 continue;
             }
             String query = queries[i];
@@ -125,7 +131,7 @@ public:
             }
 
             SQLite::Statement queryPlugin(*db, query);
-            queryPlugin.bind(1, pluginType == ModuleType::MODULE_TYPE_VST2 ? 0 : 1);
+            queryPlugin.bind(1, static_cast<int32_t>(moduleType) - 1);
             switch (i) {
                 case BY_LOCALID_AND_UUID:
                     queryPlugin.bind(2, localId);
@@ -143,6 +149,10 @@ public:
                     //TODO: let user pick if multiple
                     queryPlugin.bind(2, uId);
                     break;
+                case BY_VST3_UUID:
+                    //TODO: let user pick if multiple
+                    queryPlugin.bind(2, vst3uuid);
+                    break;
                 default:
                 case BY_NAME:
                     //TODO: let user pick if multiple
@@ -155,12 +165,20 @@ public:
                 entry.localDbId    = queryPlugin.getColumn("id").getInt();
                 entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
                 entry.uid          = queryPlugin.getColumn("uid").getUInt();
-                entry.clapId       = pluginType == ModuleType::MODULE_TYPE_CLAP ? queryPlugin.getColumn("productName").getString() : "";
                 entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
                 entry.name         = queryPlugin.getColumn("name").getString();
                 entry.path         = queryPlugin.getColumn("path").getString();
                 entry.relPath      = queryPlugin.getColumn("relPath").getString();
                 entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
+                entry.clapId       = "";
+                switch (static_cast<ModuleType>(entry.moduleFormat + 1)) {
+                    case ModuleType::MODULE_TYPE_CLAP:
+                    case ModuleType::MODULE_TYPE_VST3:
+                        entry.clapId = queryPlugin.getColumn("productName").getString();
+                        break;
+                    default:
+                        break;
+                }
                 _outResult = std::move(entry);
                 return true;
             }
@@ -194,6 +212,8 @@ public:
                     strSQLCond += " moduleFormat == 0 and ";
                 } else if (tag == "clap") {
                     strSQLCond += " moduleFormat == 1 and ";
+                } else if (tag == "vst3") {
+                    strSQLCond += " moduleFormat == 2 and ";
                 } else if (tag == "synth") {
                     strSQLCond += " isSynth == 1 and ";
                 } else if (tag == "fx") {
@@ -233,12 +253,20 @@ public:
             entry.localDbId    = queryPlugin.getColumn("id").getInt();
             entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
             entry.uid          = queryPlugin.getColumn("uid").getUInt();
-            entry.clapId       = entry.moduleFormat == 1 ? queryPlugin.getColumn("productName").getString() : "";
             entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
             entry.name         = queryPlugin.getColumn("name").getString();
             entry.path         = queryPlugin.getColumn("path").getString();
             entry.relPath      = queryPlugin.getColumn("relPath").getString();
             entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
+            entry.clapId       = "";
+            switch (static_cast<ModuleType>(entry.moduleFormat + 1)) {
+                case ModuleType::MODULE_TYPE_CLAP:
+                case ModuleType::MODULE_TYPE_VST3:
+                    entry.clapId = queryPlugin.getColumn("productName").getString();
+                    break;
+                default:
+                    break;
+            }
             _out.push_back(entry);
         }
     }

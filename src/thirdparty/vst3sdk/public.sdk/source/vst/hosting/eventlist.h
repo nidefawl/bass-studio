@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "pluginterfaces/base/ftypes.h"
 #include "pluginterfaces/vst/ivstevents.h"
 
 namespace Steinberg {
@@ -57,7 +58,7 @@ public:
 
 	void setMaxSize (int32 maxSize);
 	void clear () { fillCount = 0; }
-
+    int32 getMaxSize () const { return maxSize; }
 	Event* getEventByIndex (int32 index) const;
 
 //------------------------------------------------------------------------

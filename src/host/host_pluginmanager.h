@@ -15,6 +15,8 @@
 #include <map>
 
 #include <vstsdk-host-2.4/aeffectx.h>
+#include <public.sdk/source/vst/hosting/hostclasses.h>
+#include <public.sdk/source/vst/hosting/module.h>
 #include "note.h"
 #include "rand.h"
 #include "hires_timer.h"
@@ -49,6 +51,7 @@ class clip_notes_t;
 class effectbase;
 class effect_deferred;
 class vstplugin;
+class vst3plugin;
 class clapplugin;
 struct track_impl_t;
 struct audio_stage_t;
@@ -78,6 +81,8 @@ enum class SharedLibPluginType : int32_t {
     VST2 = 0,
     VST2_SHELL = 1,
     CLAP = 2,
+    VST3 = 3,
+    VST3_SHELL = 4,
 };
 
 enum class SharedLibState : int32_t {
@@ -94,11 +99,15 @@ struct LoadResultSharedLibrary {
     String error = "";
     void* module = nullptr;
     void* entryPoint = nullptr;
+    VST3::Hosting::Module::Ptr vst3Module{};
     static inline LoadResultSharedLibrary FromError(SharedLibState _state, const String& _error, SharedLibPluginType _type = SharedLibPluginType::UNKNOWN) {
         return {_type, _state, _error, nullptr, nullptr};
     }
     static inline LoadResultSharedLibrary FromSuccess(SharedLibPluginType _type, void* module, void* entryPoint) {
         return {_type, SharedLibState::SUCCESS, "", module, entryPoint};
+    }
+    static inline LoadResultSharedLibrary FromSuccessVST3(VST3::Hosting::Module::Ptr module) {
+        return {SharedLibPluginType::VST3, SharedLibState::SUCCESS, "", nullptr, nullptr, module};
     }
     bool isSuccess() const {
         return state >= SharedLibState::SUCCESS && type != SharedLibPluginType::UNKNOWN;
@@ -110,6 +119,7 @@ struct LoadResultPlugin {
     effectbase* plugin = nullptr;
     vstplugin* vstPlugin = nullptr;
     clapplugin* clapPlugin = nullptr;
+    vst3plugin* vst3Plugin = nullptr;
     handles_t* shellPluginHandle = nullptr;
     String path;
     String name;
@@ -117,6 +127,7 @@ struct LoadResultPlugin {
     LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin);
     LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name);
     LoadResultPlugin(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name);
+    LoadResultPlugin(LoadResultSharedLibrary _lib, vst3plugin* _plugin, String _path, String _name);
 };
 
 
@@ -152,6 +163,7 @@ struct PluginLoadParameters {
     int32_t globalId = 0;
     uint64_t bugfixFlags = 0;
     int32_t moduleFormat = -1;
+    String uIdVst3 = "";
 };
 class PluginManager {
 private:
@@ -178,12 +190,14 @@ private:
     ModuleManager* moduleMgr;
     std::vector<clapplugin*> pluginInstancesClap;
     std::vector<vstplugin*> pluginInstancesVST2;
+    std::vector<vst3plugin*> pluginInstancesVST3;
     std::vector<effectbase*> pluginInstancesInternal;
     std::vector<effectbase*> pluginInstances;
     std::vector<effectbase*> pluginsDeferred;
     std::vector<builtin_module_reg_t> builtinModules;
     SafeRefStorage<effectbase> safeRefs;
     std::shared_ptr<PluginHostCallback> pluginHostCallback;
+    std::shared_ptr<Steinberg::Vst::HostApplication> pluginHostVST3Context;
     LoadResultPlugin loadInternalPlugin(int32_t type, int32_t globalId = 0);
     /* These are currently not called */
     void updatePluginWindows();

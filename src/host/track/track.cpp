@@ -511,12 +511,14 @@ void project_t::copyFrom(project_snapshot_t& project) {
 namespace DAW {
     effectbase* loadEffectModule(Host::PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
         effectbase* effect      = nullptr;
-        if (pluginSnapshot.moduleType == MODULE_TYPE_VST2 || pluginSnapshot.moduleType == MODULE_TYPE_CLAP) {
+        if (pluginSnapshot.moduleType == MODULE_TYPE_VST2 
+            || pluginSnapshot.moduleType == MODULE_TYPE_VST3 
+            || pluginSnapshot.moduleType == MODULE_TYPE_CLAP) {
             log_printf("Loading Plugin '%s'\n", StringAsCStr(pluginSnapshot.name));
             plugindatabase_t* db = plugindatabase_t::getInstance();
             pluginentry_t resolvedPlugin;
             if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-                auto res = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat});
+                auto res = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat, pluginSnapshot.clapId});
                 if (res.library.isSuccess()) {
                     res.plugin->localDbId = resolvedPlugin.localDbId;
                     effect = res.plugin;

@@ -8,11 +8,18 @@
 #include "host/plugin/clap/clap-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
+#include "host/plugin/vst3/vst3plugin.h"
 #include "platform.h"
+#include "plugin/vst3/vst3plugin.h"
+#include "pluginterfaces/vst/ivstaudioprocessor.h"
+#include "public.sdk/source/vst/hosting/plugprovider.h"
+#include "public.sdk/source/vst/utility/uid.h"
 #include "str_util.h"
 #include "host/track/track_impl.h"
 #include <clap/clap.h>
 #include <memory>
+
+#include <public.sdk/source/vst/hosting/module.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -125,14 +132,20 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
         always_assert(removeEntry(pluginInstancesClap, plugin));
         always_assert(removeEntry(pluginInstances, plugin));
         break;
-    case MODULE_TYPE_INTERNAL_EFFECT:
     case MODULE_TYPE_VST2:
         always_assert(removeEntry(pluginInstancesVST2, plugin));
         always_assert(removeEntry(pluginInstances, plugin));
         break;
-    default:
+    case MODULE_TYPE_VST3:
+        always_assert(removeEntry(pluginInstancesVST3, plugin));
+        always_assert(removeEntry(pluginInstances, plugin));
+        break;
+    case MODULE_TYPE_INTERNAL_EFFECT:
         always_assert(removeEntry(pluginInstancesInternal, plugin));
         always_assert(removeEntry(pluginInstances, plugin));
+        break;
+    default:
+        dbgassert(0);
         break;
     }
     void* moduleHandleOpt = nullptr;
@@ -567,6 +580,14 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
     if (!FileExists(filepath)) {
         return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
+    if (moduleFmt == 2) {
+        String error;
+        VST3::Hosting::Module::Ptr vst3Module = VST3::Hosting::Module::create(filepath, error);
+        if (!vst3Module) {
+            return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, error);
+        }
+        return LoadResultSharedLibrary::FromSuccessVST3(vst3Module);
+    }
     HMODULE module = safeLoadLib(StringAsCStr(filepath));
     if (!module) {
         auto dwErr = GetLastError();
@@ -575,7 +596,7 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
     if (moduleFmt == -1 || moduleFmt == 1) {
         auto symbolClapEntry = reinterpret_cast<void*>(GetProcAddress(module, "clap_entry"));
         if (symbolClapEntry) {
-            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType ::CLAP, module, symbolClapEntry);
+            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::CLAP, module, symbolClapEntry);
         }
     }
     if (moduleFmt == -1 || moduleFmt == 0) {
@@ -602,6 +623,14 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
 LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
     if (!FileExists(filepath)) {
         return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
+    }
+    if (moduleFmt == 2) {
+        String error;
+        VST3::Hosting::Module::Ptr vst3Module = VST3::Hosting::Module::create(filepath, error);
+        if (!vst3Module) {
+            return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, error);
+        }
+        return LoadResultSharedLibrary::FromSuccessVST3(vst3Module);
     }
 #ifdef __APPLE__
     void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
@@ -664,6 +693,9 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     if (fileExt == "clap") {
         moduleFormat = 1;
     }
+    if (fileExt == "vst3") {
+        moduleFormat = 2;
+    }
     auto libResult = loadLib(filepath, moduleFormat);
     void* moduleHandle = libResult.module;
 #ifdef _WIN32
@@ -678,8 +710,56 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 #else
         void* moduleToClose;
 #endif
-        ~RAIIModuleDeleter() { if (moduleToClose) CLOSE_MODULE_HANDLE(moduleToClose);}
+        void closeNow() {
+            if (moduleToClose) CLOSE_MODULE_HANDLE(moduleToClose);
+            moduleToClose = nullptr;
+        }
+        ~RAIIModuleDeleter() { closeNow(); }
     } moduleCloser{hmodule};
+
+    if (libResult.state == SharedLibState::SUCCESS && libResult.type == SharedLibPluginType::VST3) {
+        dbgassert(libResult.vst3Module);
+        VST3::Hosting::PluginFactory factory = libResult.vst3Module->getFactory();
+        auto vst3Uid = VST3::UID::fromString(req.uIdVst3, true);
+        if (!vst3Uid) {
+            int32_t classCount = 0;
+            for (auto &classInfo : factory.classInfos()) {
+                if (classInfo.category() == kVstAudioEffectClass) {
+                    log_lf(Log::L_DEBUG, "VST3 %d: %s, %s, %s, %s, %s, %s, %s\n", classCount, StringAsCStr(classInfo.name()), classInfo.ID().toString(true).c_str(), classInfo.category().c_str(), classInfo.subCategoriesString().c_str(), classInfo.vendor().c_str(), classInfo.version().c_str(), classInfo.sdkVersion().c_str());
+                    classCount++;
+                }
+            }
+            if (classCount > 1) {
+                libResult.type = SharedLibPluginType::VST3_SHELL;
+                return {libResult, static_cast<vst3plugin*>(nullptr), filepath, nameWithoutExt};
+            } else if (classCount == 1) {
+                auto classInfo = factory.classInfos().at(0);
+                *vst3Uid = classInfo.ID();
+            } else {
+                libResult.state = SharedLibState::FAILED;
+                return LoadResultPlugin{libResult};
+            }
+        }
+        for (auto &classInfo : factory.classInfos()) {
+            if (classInfo.ID() == vst3Uid.value()) {
+                auto plugProvider = std::make_shared<Steinberg::Vst::PlugProvider>(factory, classInfo, true);
+                globalId = getNextGlobalModuleId(globalId);
+                auto plugin = new vst3plugin(vst3Uid.value(), libResult.vst3Module, plugProvider, globalId, getHostCallback(), path, req.bugfixFlags);
+                if (!plugin->loadVST3Plugin()) {
+                    delete plugin;
+                    libResult.state = SharedLibState::FAILED;
+                    return LoadResultPlugin{libResult};
+                }
+                pluginInstancesVST3.push_back(plugin);
+                pluginInstances.push_back(plugin);
+                plugin->load(this);
+                // libResult.vst3Module = nullptr;
+                return {libResult, plugin, filepath, nameWithoutExt};
+            }
+        }
+        libResult.state = SharedLibState::FAILED;
+        return LoadResultPlugin{libResult};
+    }
 
     if (libResult.state == SharedLibState::SUCCESS && libResult.type == SharedLibPluginType::CLAP) {
         globalId = getNextGlobalModuleId(globalId);
@@ -865,5 +945,7 @@ LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plu
     : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin), shellPluginHandle(_shellHandle), path(std::move(_path)), name(std::move(_name)){};
 LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name)
     : library(std::move(_lib)), plugin(_plugin), clapPlugin(_plugin), path(std::move(_path)), name(std::move(_name)){};
+LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vst3plugin* _plugin, String _path, String _name)
+    : library(std::move(_lib)), plugin(_plugin), vst3Plugin(_plugin), path(std::move(_path)), name(std::move(_name)){};
 LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin) : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin){};
 }// namespace DAW::Host

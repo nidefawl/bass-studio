@@ -78,9 +78,9 @@ PlugInterfaceSupport::PlugInterfaceSupport ()
 
 	//---VST 3.5----------------------------------
 	addPlugInterfaceSupported (IKeyswitchController::iid);
-	addPlugInterfaceSupported (IContextMenuTarget::iid);
+	addPlugInterfaceSupported (IContextMenuTarget::iid);*/
 	addPlugInterfaceSupported (IEditControllerHostEditing::iid);
-	addPlugInterfaceSupported (IXmlRepresentationController::iid);
+	/*addPlugInterfaceSupported (IXmlRepresentationController::iid);
 	addPlugInterfaceSupported (INoteExpressionController::iid);
 
 	//---VST 3.6.5--------------------------------

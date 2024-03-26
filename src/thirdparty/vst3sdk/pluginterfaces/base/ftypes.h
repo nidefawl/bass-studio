@@ -20,7 +20,7 @@
 
 #include <cstdint>
 
-//#define UNICODE_OFF 	// disable / enable unicode
+#define UNICODE_OFF 	// disable / enable unicode
 
 #ifdef UNICODE_OFF
 	#ifdef UNICODE

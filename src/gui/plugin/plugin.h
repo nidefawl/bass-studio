@@ -15,6 +15,7 @@
 
 class effectbase;
 class vstplugin;
+class vst3plugin;
 class clapplugin;
 class internalplugin;
 class BaseCtrl;
@@ -160,6 +161,13 @@ public:
     guiclapplugin(clapplugin* _clap);
     ~guiclapplugin() override;
     clapplugin* const clap;
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+};
+class guivst3plugin final : public guipluginview {
+public:
+    guivst3plugin(vst3plugin* _clap);
+    ~guivst3plugin() override;
+    vst3plugin* const vst3;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
 class guiinternalpluginview final : public guipluginview {

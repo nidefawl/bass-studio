@@ -4,7 +4,7 @@
 #include <nanovg.h>
 
 template<>
-void guitooltip<gui_vstpluginlist_entry>::setContent() {
+void guitooltip<gui_pluginlibrary_entry>::setContent() {
     auto ptr = getInstanceOrNull();
     if (!ptr) {
         return;
@@ -21,8 +21,8 @@ void guitooltip<gui_vstpluginlist_entry>::setContent() {
     }
 }
 
-guictxtmenu_base* gui_vstpluginlist_entry::getTooltip(AppCtrl* appctrl) {
-    auto tooltip = new guitooltip<gui_vstpluginlist_entry>(this);
+guictxtmenu_base* gui_pluginlibrary_entry::getTooltip(AppCtrl* appctrl) {
+    auto tooltip = new guitooltip<gui_pluginlibrary_entry>(this);
     return tooltip;
 }
 

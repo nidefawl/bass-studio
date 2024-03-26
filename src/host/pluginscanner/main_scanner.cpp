@@ -16,7 +16,17 @@
 #include "host/plugin/vst/vstplugin-handles.h"
 #include "host/host_pluginmanager.h"
 #include "host/host.h"
+#include "host/plugin/vst3/vst3plugin.h"
 #include "logging.h"
+#include <public.sdk/source/vst/hosting/plugprovider.h>
+#include <public.sdk/source/vst/hosting/module.h>
+#include <public.sdk/source/vst/hosting/hostclasses.h>
+#include <public.sdk/source/vst/hosting/eventlist.h>
+#include <public.sdk/source/vst/hosting/parameterchanges.h>
+#include <public.sdk/source/vst/hosting/processdata.h>
+#include <pluginterfaces/vst/ivsteditcontroller.h>
+#include <pluginterfaces/vst/ivstprocesscontext.h>
+#include <pluginterfaces/gui/iplugview.h>
 #include "seq_util.h"
 #include "threads/childprocessthread.h"
 #include "appsettings.h"
@@ -87,7 +97,10 @@ static int logPrefixIdx = PROC_SIDE_NONE;
 #define CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN 7
 #define CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_SHELL 8
 #define CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_PLUGIN 9
-#define CMD_PLUGIN_END_SUCCESS 10
+#define CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN 10
+#define CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_SHELL 11
+#define CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_PLUGIN 12
+#define CMD_PLUGIN_END_SUCCESS 13
 #define NUM_BUFS (16 * 1024)
 #define SCAN_IPC_PIPE_NAME "DAW1pipc"
 
@@ -142,6 +155,14 @@ struct response_type_clapplugin_t final : response_type_t {
     char szVendorName[256]{ 0 };
     char szProductName[256]{ 0 };
     char szEffectName[256]{ 0 };
+};
+struct response_type_vst3plugin_t final : response_type_t {
+    char vst3UUid[32]{ 0 };
+    uint32_t pluginCategory{ 0 };
+    bool isSynth{ false };
+    uint32_t version{ 0 };
+    uint32_t vstVersion{ 0 };
+    char szVendorName[256]{ 0 };
 };
 struct response_type_vst24_plugin_t final : response_type_vst24_t {
 };
@@ -270,6 +291,28 @@ static void getClapPluginData(DAW::Host::LoadResultPlugin& res, response_type_cl
     safe_strcpy(_out->szEffectName, clapPlugDesc.name);
     safe_strcpy(_out->szVersion, clapPlugDesc.version);
 }
+
+static void getVst3PluginData(DAW::Host::LoadResultPlugin& res, response_type_vst3plugin_t* _out) {
+    auto plugin = res.vst3Plugin;
+    auto classInfo = plugin->getClassInfo();
+    safe_strcpy(_out->vst3UUid, plugin->getUID());
+    _out->pluginCategory = 0;
+    safe_strcpy(_out->szName, plugin->sName);
+    safe_strcpy(_out->szPath, res.path);
+    _out->isSynth = plugin->isSynth;
+    String version = classInfo.version();
+    StrUtil::StringReplace(version, ".", "");
+    StrUtil::StringReplace(version, ",", "");
+    _out->version = atoi(version.c_str());
+    String vstVersion = classInfo.sdkVersion();
+    StrUtil::StringReplace(vstVersion, "VST", "");
+    StrUtil::StringReplace(vstVersion, ".", "");
+    StrUtil::StringReplace(vstVersion, ",", "");
+    StrUtil::StringReplace(vstVersion, " ", "");
+    _out->vstVersion = atoi(vstVersion.c_str());
+    safe_strcpy(_out->szVendorName, classInfo.vendor());
+}
+
 static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
     uint32_t notificationStep     = 0;
     while (true) {
@@ -408,6 +451,53 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
 
                 break;
             }
+            case CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN: {
+                response_type_vst3plugin_t respLoadSinglePlugin;
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
+                if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
+                    log_message("failed reading response_type_vst3plugin_t");
+                    return -3;
+                }
+
+                log_lf(Log::L_INFO, "Plugin '%s': Status: %s\n", respLoadSinglePlugin.szPath, "GOOD");
+                auto& data = respLoadSinglePlugin;
+                String relPath = file.name;
+                if (file.path.length() > options.vst3PluginPath.length()
+                    && file.path.find_first_of(options.vst3PluginPath) == 0) {
+                    relPath = file.path.substr(options.vst3PluginPath.length());
+                    replaceString(relPath, FILE_PATHSEP_STR, "/");
+                }
+                try {
+                    queryInsertPlugin.reset();
+                    int bndIdx = 1;
+                    queryInsertPlugin.bind(bndIdx++, data.isSynth);
+                    queryInsertPlugin.bind(bndIdx++, 2); // vst3 plugin
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    queryInsertPlugin.bind(bndIdx++, data.version);
+                    queryInsertPlugin.bind(bndIdx++, data.vstVersion);
+                    queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
+                    queryInsertPlugin.bind(bndIdx++, timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, 1);
+                    queryInsertPlugin.bind(bndIdx++, file.path);
+                    queryInsertPlugin.bind(bndIdx++, relPath);
+                    queryInsertPlugin.bind(bndIdx++, data.szName);
+                    queryInsertPlugin.bind(bndIdx++, data.szVendorName);
+                    queryInsertPlugin.bind(bndIdx++, data.vst3UUid);
+                    queryInsertPlugin.bind(bndIdx++, data.szName);
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    queryInsertPlugin.bind(bndIdx++, forcedisable ? 1 : 0);
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    /*int insertRowsAffected = */ queryInsertPlugin.exec();
+                    nPluginsScanned++;
+                } catch (SQLite::Exception& e) {
+                    log_message("queryInsertPlugin failed with SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
+                    return -5;
+                }
+
+                break;
+            }
             case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_SHELL: {
                 response_type_shell_plugin_begin_t respShellPlugin;
                 if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
@@ -436,7 +526,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, data)) {
-                    log_message("failed reading response_type_vst24_t");
+                    log_message("failed reading response_type_clapplugin_t");
                     return -3;
                 }
                 String relPath = file.name;
@@ -550,14 +640,14 @@ static int runScannerServer(const pluginscanner_server_options& options) {
             findFilesWithExt(options.vst3PluginPath, PLATFORM_VST3_PLUGIN_EXT, true, filesVst3);
             log_message("Found %u .%s files in %s", CtrSize(filesVst3), PLATFORM_VST3_PLUGIN_EXT, StringAsCStr(options.vst3PluginPath));
         }
-        if (!options.vstPlugPath.empty()) {
+        /* if (!options.vstPlugPath.empty()) {
             findFilesWithExt(options.vstPlugPath, PLATFORM_PLUGIN_EXT, true, filesVst_);
             log_message("Found %u .%s files in %s", CtrSize(filesVst_), PLATFORM_PLUGIN_EXT, StringAsCStr(options.vstPlugPath));
         }
         if (!options.clapPluginPath.empty()) {
             findFilesWithExt(options.clapPluginPath, PLATFORM_CLAP_PLUGIN_EXT, true, filesClap);
             log_message("Found %u .%s files in %s", CtrSize(filesClap), PLATFORM_CLAP_PLUGIN_EXT, StringAsCStr(options.clapPluginPath));
-        }
+        } */
 
         if (filesVst_.empty() && filesClap.empty() && filesVst3.empty()) {
             return 1;
@@ -755,7 +845,7 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
     auto host = std::make_unique<DAW::Host::Host>();
     auto pluginMgr = host.get();
     DAW::Host::PluginManager::assignMasterCallback(pluginMgr);
-    host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
+    host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(44100), 512, sampleformat_bits_t::FLOAT_32 });
     auto& tls = daw_tls::getTls();
     tls.host = host.get();
     tls.pluginManager = pluginMgr;
@@ -776,6 +866,8 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
             } else if (res.clapPlugin) {
                 response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN;
                 getClapPluginData(res, &respClapPlugin);
+            } else if (res.vst3Plugin) {
+                response = CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN;
             }
             pluginMgr->unloadPlugin(res.plugin);
         }
@@ -805,7 +897,7 @@ static int runScannerClient() {
     auto host = std::make_unique<DAW::Host::Host>();
     auto pluginMgr = host.get();
     DAW::Host::PluginManager::assignMasterCallback(pluginMgr);
-    host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
+    host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(44100), 512, sampleformat_bits_t::FLOAT_32 });
     auto& tls = daw_tls::getTls();
     tls.host = host.get();
     tls.pluginManager = pluginMgr;
@@ -950,6 +1042,9 @@ static int runScannerClient() {
                     if (res.clapPlugin) {
                         response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN;
                     }
+                    if (res.vst3Plugin) {
+                        response = CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN;
+                    }
                     writeToIPC(client, response);
                     if (res.vstPlugin) {
                         response_type_vst24_t resp;
@@ -958,6 +1053,10 @@ static int runScannerClient() {
                     } else if (res.clapPlugin) {
                         response_type_clapplugin_t resp;
                         getClapPluginData(res, &resp);
+                        writeToIPC(client, resp);
+                    } else if (res.vst3Plugin) {
+                        response_type_vst3plugin_t resp;
+                        getVst3PluginData(res, &resp);
                         writeToIPC(client, resp);
                     }
                     pluginMgr->unloadPlugin(res.plugin);
@@ -1009,8 +1108,20 @@ int main(int argc, char* argv[]) {
     }
 #endif
     auto& tls = daw_tls::initNewTls();
-
+    enum Mode {
+        SERVER,
+        CLIENT,
+        TEST
+    };
+    Mode mode = SERVER;
     if (argc == 1 || (argc > 1 && !strcmp("-server", argv[1]))) {
+        mode = SERVER;
+    } else if (argc > 2 && !strcmp("-test", argv[argc - 2])) {
+        mode = TEST;
+    } else if (argc > 0 && !strcmp("-client", argv[argc - 1])) {
+        mode = CLIENT;
+    }
+    if (mode == SERVER) {
         PluginScannerImplementation::logPrefixIdx = PROC_SIDE_SERVER;
         PluginScannerImplementation::pluginscanner_server_options options;
         options.launchProcess              = true;
@@ -1090,7 +1201,7 @@ int main(int argc, char* argv[]) {
         runScannerServer(options);
 
         seqthreads::threadSleep(500);
-    } else if (argc > 2 && !strcmp("-test", argv[argc - 2])) {
+    } else if (mode == TEST) {
         setExceptionHandler();
         seqthreads::threadSleep(120);
         PluginScannerImplementation::request_type_vst24_t req;
@@ -1100,13 +1211,15 @@ int main(int argc, char* argv[]) {
         PluginScannerImplementation::response_type_clapplugin_t respClap;
         int retCode = PluginScannerImplementation::runPluginTest(req, respPlugin, respClap);
         if (retCode == CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN) {
-            log_message("Vst Plugin %s: Good", StringAsCStr(fPath));
+            log_message("VST2 Plugin %s: Good", StringAsCStr(fPath));
         } else if (retCode == CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN) {
             log_message("Clap Plugin %s: Good", StringAsCStr(fPath));
+        } else if (retCode == CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN) {
+            log_message("VST3 Plugin %s: Good", StringAsCStr(fPath));
         } else {
             log_lf(Log::L_WARN, "Plugin %s: Failed %d\n", StringAsCStr(fPath), retCode);
         }
-    } else if (argc > 0 && !strcmp("-client", argv[argc - 1])) {
+    } else if (mode == CLIENT) {
         PluginScannerImplementation::logPrefixIdx = PROC_SIDE_CLIENT;
         setExceptionHandler();
         seqthreads::threadSleep(120);

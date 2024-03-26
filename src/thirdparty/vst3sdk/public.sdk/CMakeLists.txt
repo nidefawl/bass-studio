@@ -189,7 +189,7 @@ if(VST_SDK)
             source/vst/utility/versionparser.h
             source/vst/vstinitiids.cpp
             samples/vst-hosting/editorhost/source/platform/win32/platform.cpp
-            samples/vst-hosting/editorhost/source/platform/win32/window.h
+            # samples/vst-hosting/editorhost/source/platform/win32/window.h
             samples/vst-hosting/editorhost/source/platform/win32/window.cpp
             source/vst/hosting/module_win32.cpp
             source/vst/hosting/plugprovider.cpp

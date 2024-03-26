@@ -293,7 +293,7 @@ tresult PLUGIN_API HostAttributeList::setString (AttrID aid, const TChar* string
 	if (!aid)
 		return kInvalidArgument;
 	// + 1 for the null-terminate
-	auto length = tstrlen (string) + 1;
+	auto length = strlen16 (string) + 1;
 	list[aid] = Attribute (string, length);
 	return kResultTrue;
 }

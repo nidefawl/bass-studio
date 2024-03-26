@@ -18,6 +18,8 @@
 #include "math/seq_math.h"
 #include "host/plugin/modules.h"
 #include "note.h"
+#include "plugin/vst3/vst3plugin.h"
+#include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "seq_time.h"
@@ -121,6 +123,72 @@ void UpdateClapTime(clap_event_transport_t& timeinfo, const sampleformat_t& m_sa
         timeinfo.flags |= CLAP_TRANSPORT_IS_RECORDING;
     }
 }
+
+static double PPQ24TickToSample(double midiTickPPQ24, uint32_t bpm100, samplerate_t samplerate, uint32_t blocksize) {
+    double seconds = (midiTickPPQ24/(double)(bpm100*24.0)) * 100.0 * 60.0;
+    double samplePos = seconds * samplerate;
+    return samplePos;
+}
+
+void UpdateVst3Time(Steinberg::Vst::ProcessContext& timeinfo, const sampleformat_t& m_sampleFormatInternal, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) {
+    timeinfo.projectTimeSamples = samplePos;
+    timeinfo.continousTimeSamples = samplePos;
+    timeinfo.sampleRate = (double) m_sampleFormatInternal.sampleRate;
+    timeinfo.systemTime = getTimeMicros() * 1000.0;
+    timeinfo.projectTimeMusic = (dTickPos/(double)TICKS_QUARTER);
+    timeinfo.tempo = prjGlobals.tempo100/100.0;
+    timeinfo.barPositionMusic = floor(dTickPos / (double) TICKS_BAR) * 4;
+    timeinfo.cycleStartMusic = (prjGlobals.loopStart/(double)TICKS_QUARTER);
+    timeinfo.cycleEndMusic = ((prjGlobals.loopStart+prjGlobals.loopLen)/(double)TICKS_QUARTER);
+    timeinfo.timeSigNumerator = static_cast<VstInt32>(prjGlobals.signatureNum);
+    timeinfo.timeSigDenominator = 1 << prjGlobals.signatureDenom;
+
+    bool loopEnabed = state != playback_state::status_render && prjGlobals.loopEnabled;
+    if (!loopEnabed) {
+        timeinfo.cycleStartMusic = 0;
+        timeinfo.cycleEndMusic = 0;
+    }
+
+    {
+        double dPosSeconds = samplePos / timeinfo.sampleRate;
+        /* offset in fractions of a second   */
+        double dOffsetInSecond = dPosSeconds - floor(dPosSeconds);
+        timeinfo.frameRate.framesPerSecond = 24;
+        timeinfo.frameRate.flags = 0;
+        timeinfo.smpteOffsetSubframes = math::floordS32(dOffsetInSecond * timeinfo.frameRate.framesPerSecond * 80.);
+    }
+
+
+    double midiTickPPQ24 = timeinfo.projectTimeMusic*24.0;
+    double samplePosMidiTick = PPQ24TickToSample(midiTickPPQ24, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
+    double samplePosPrevMidiTick = PPQ24TickToSample(math::floord(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
+    double samplePosNextMidiTick = PPQ24TickToSample(math::ceild(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
+
+    double samplePosClosestPPQ24Tick = math::absMin(samplePosPrevMidiTick - samplePosMidiTick, samplePosNextMidiTick - samplePosMidiTick);
+    //TODO: assingn nearest clock (can be negative), not next aka soonest
+    timeinfo.samplesToNextClock = math::rounddS32(samplePosClosestPPQ24Tick);
+
+    timeinfo.state = 0;
+    if (DAW::isPlaybackState(state)) {
+        timeinfo.state |= Steinberg::Vst::ProcessContext::kPlaying;
+    }
+    if (prjGlobals.loopEnabled) {
+        timeinfo.state |= Steinberg::Vst::ProcessContext::kCycleActive;
+    }
+    if (prjGlobals.recordArmed) {
+        timeinfo.state |= Steinberg::Vst::ProcessContext::kRecording;
+    }
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kCycleValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kSystemTimeValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kContTimeValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kProjectTimeMusicValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kBarPositionValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kTempoValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kTimeSigValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kSmpteValid;
+    timeinfo.state |= Steinberg::Vst::ProcessContext::kClockValid;
+}
+
 struct Host::track_block_processing_task_t {
     audiostream_properties_t audioProp;
     project_globals_t projectGlobals;
@@ -1916,6 +1984,12 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     UpdateClapTime(transport, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
                     auto& pluginLocalTransport = static_cast<clapplugin*>(effect)->getTransport();
                     pluginLocalTransport = transport;
+                }
+                if (effect->getModuleType() == MODULE_TYPE_VST3) {
+                    Steinberg::Vst::ProcessContext procContext{};
+                    UpdateVst3Time(procContext, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
+                    auto& pluginLocalContext = static_cast<vst3plugin*>(effect)->getVst3ProcessContext();
+                    pluginLocalContext = procContext;
                 }
                 effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);
                 if (isBypass || bypassEffectProcessing) {

@@ -79,7 +79,7 @@ target_include_directories(base
 )
 
 # Compiler switches are PUBLIC and will be populated.
-target_compile_options(base 
+target_compile_definitions(base 
     PUBLIC
         "$<$<CONFIG:Debug>:-DDEVELOPMENT=1>"
         "$<$<CONFIG:Release>:-DRELEASE=1>"

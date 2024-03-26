@@ -29,10 +29,10 @@ public:
 
     void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset);
 };
-class gui_vstpluginlist_entry final : public gui_pluginlist_entry {
+class gui_pluginlibrary_entry final : public gui_pluginlist_entry {
     const pluginentry_t entry;
 public:
-    gui_vstpluginlist_entry(const pluginentry_t _entry) : gui_pluginlist_entry(), entry(_entry) {
+    gui_pluginlibrary_entry(const pluginentry_t _entry) : gui_pluginlist_entry(), entry(_entry) {
         icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
         label = _entry.name;
     }
@@ -60,7 +60,7 @@ class guictr_pluginlibrary final : public guictr_base {
     gui_textfield textField;
     gui_textfield textField2;
     gui_list pluginListCtr;
-    String curquery = "";
+    String curquery = ":vst3 ";
     std::vector<pluginentry_t> pluginsLibList;
 
 public:
@@ -92,7 +92,7 @@ public:
         try {
             dawCtrl->getDaw()->getPluginDatabase().query(curquery, pluginsLibList);
             for (pluginentry_t& entry : pluginsLibList) {
-                gui_pluginlist_entry* g = new gui_vstpluginlist_entry(entry);
+                gui_pluginlist_entry* g = new gui_pluginlibrary_entry(entry);
                 _newList.push_back(g);
             }
             textField2.setValue("");

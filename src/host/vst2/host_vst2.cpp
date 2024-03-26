@@ -6,6 +6,9 @@
 #include "host/daw/history.h"
 #include "host/track/track_impl.h"
 #include <vstsdk-host-2.4/aeffectx.h>
+#include <public.sdk/source/vst/hosting/plugprovider.h>
+#include <public.sdk/source/vst/hosting/module.h>
+#include <public.sdk/source/vst/hosting/hostclasses.h>
 
 namespace DAW::VST2 {
 
@@ -535,11 +538,17 @@ void PluginManager::destroy() {
     dbgassert(hostSlot > -1);
     dbgassert(DAW::VST2::g_hostslots[hostSlot].g_instance);
     DAW::VST2::g_hostslots[hostSlot].g_instance = nullptr;
+    if (Steinberg::Vst::PluginContextFactory::instance().getPluginContext() == pluginHostVST3Context.get()) {
+        Steinberg::Vst::PluginContextFactory::instance().setPluginContext(nullptr);
+    }
+    pluginHostVST3Context.reset();
 }
 
 bool PluginManager::assignMasterCallback(PluginManager* host)
 {
     host->pluginHostCallback = std::make_shared<::DAW::Host::PluginHostCallback>(host);
+    host->pluginHostVST3Context = std::make_shared<Steinberg::Vst::HostApplication>();
+    Steinberg::Vst::PluginContextFactory::instance().setPluginContext(host->pluginHostVST3Context.get());
     for (int i = 0; i < NUM_HOST_CB_SLOTS; i++) {
         if (DAW::VST2::g_hostslots[i].g_instance == nullptr) {
             DAW::VST2::g_hostslots[i].g_instance = host;

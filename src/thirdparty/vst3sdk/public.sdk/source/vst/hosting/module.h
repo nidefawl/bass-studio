@@ -189,7 +189,9 @@ public:
 	bool isBundle () const noexcept { return hasBundleStructure; }
 //------------------------------------------------------------------------
 protected:
-	virtual ~Module () noexcept = default;
+	virtual ~Module () noexcept {
+
+    };
 	virtual bool load (const std::string& path, std::string& errorDescription) = 0;
 
 	PluginFactory factory {nullptr};

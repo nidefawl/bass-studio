@@ -6,6 +6,7 @@
 #include "fileio.h"
 #include "guiglobals.h"
 #include "host/plugin/modules.h"
+#include "host/plugin/vst3/vst3plugin.h"
 #include "platform.h"
 #include "snapshot/snapshot.h"
 #include "str_util.h"
@@ -606,7 +607,9 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
 }
 guipluginview::guipluginview(effectbase* _effect)
     : guiplugin(_effect), effect(_effect), dropdownProgram(_effect) {
-    params.setVisible(_effect->getModuleType() == MODULE_TYPE_VST2 || _effect->getModuleType() == MODULE_TYPE_CLAP);
+    params.setVisible(_effect->getModuleType() == MODULE_TYPE_VST2 
+                      || _effect->getModuleType() == MODULE_TYPE_CLAP
+                      || _effect->getModuleType() == MODULE_TYPE_VST3);
     // this->isHorizontalTitle = !params.isVisible();
     params.setRowHeight(48);
     params.margin = 2;
@@ -960,6 +963,26 @@ guiclapplugin::~guiclapplugin() {
 }
 guictxtmenu_base* guiclapplugin::getTooltip(AppCtrl* appctrl) {
     auto tooltip = new guitooltip<guiclapplugin>(this);
+    return tooltip;
+}
+template<>
+void guitooltip<guivst3plugin>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
+    ptr->effect->addPropertiesTooltip(table);
+}
+
+guivst3plugin::guivst3plugin(vst3plugin* _effect) : guipluginview(_effect), vst3(_effect) {
+}
+guivst3plugin::~guivst3plugin() {
+    if (viewCtr) {
+        viewCtr->setFree();
+    }
+}
+guictxtmenu_base* guivst3plugin::getTooltip(AppCtrl* appctrl) {
+    auto tooltip = new guitooltip<guivst3plugin>(this);
     return tooltip;
 }
 guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {

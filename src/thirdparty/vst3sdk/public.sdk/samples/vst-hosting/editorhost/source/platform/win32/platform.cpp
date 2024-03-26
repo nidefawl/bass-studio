@@ -115,7 +115,7 @@ void Platform::quit ()
 void Platform::kill (int resultCode, const std::string& reason)
 {
 	auto str = VST3::StringConvert::convert (reason);
-	MessageBox (nullptr, reinterpret_cast<LPCWSTR> (str.data ()), nullptr, MB_OK);
+	MessageBox (nullptr, reinterpret_cast<LPCTSTR> (str.data ()), nullptr, MB_OK);
 	exit (resultCode);
 }
 

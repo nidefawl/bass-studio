@@ -320,7 +320,9 @@ bool host_plugin_window::init(effectbase* _plugin, const String& name, ivec2 siz
 void host_plugin_window::close() {
     SetActiveWindow(getMainHWND());
     storePosition();
+    // hide window first with winapi
     plugin->onClose();
+    ShowWindow(hwnd, SW_HIDE);
     destroy();
 }
 

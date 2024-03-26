@@ -541,7 +541,7 @@ public:
 
 std::shared_ptr<guiplugin> vstplugin::createGuiPlugin(int32_t uuid) {
     auto gui = std::make_shared<guivstplugin>(this);
-    gui->setTitle(StringFormat("%s (VST)", StringAsCStr(this->sName)));
+    gui->setTitle(StringFormat("%s (VST2)", StringAsCStr(this->sName)));
     if (handle->axEffect) {//only provided by internal vst2 instance (not a DLL)
         guiplugin* pGuiPlugin = gui.get();
         auto* pGuiVstPlugin   = dynamic_cast<guivstplugin*>(pGuiPlugin);
@@ -761,13 +761,6 @@ void vstplugin::recvProgramNameUpdate() {
         this->currentProgramNameStr = buf;
         this->currentProgramNameSet = true;
     }
-}
-
-automatable_param_ref_t vstplugin::toRef() const {
-    automatable_param_ref_t ref;
-    ref.type  = AUTOMATABLE_EFFECT;
-    ref.refId = this->projectGlobalId;
-    return ref;
 }
 
 bool vstplugin::hasWindowEditor() {

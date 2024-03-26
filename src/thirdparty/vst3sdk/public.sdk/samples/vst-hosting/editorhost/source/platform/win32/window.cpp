@@ -74,7 +74,7 @@ static void removeWindow (Window* window)
 } // anonymous
 
 //------------------------------------------------------------------------
-static const WCHAR* gWindowClassName = L"VSTSDK WindowClass";
+static const auto gWindowClassName = "VSTSDK WindowClass";
 
 //------------------------------------------------------------------------
 WindowPtr Window::make (const std::string& name, Size size, bool resizeable,

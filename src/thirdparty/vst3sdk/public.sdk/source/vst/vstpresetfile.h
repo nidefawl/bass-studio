@@ -297,6 +297,7 @@ public:
 	tresult PLUGIN_API seek (int64 pos, int32 mode, int64* result = nullptr) SMTG_OVERRIDE;
 	tresult PLUGIN_API tell (int64* pos) SMTG_OVERRIDE;
 
+    Buffer& getBuffer () { return mBuffer; }
 protected:
 	Buffer mBuffer;
 };

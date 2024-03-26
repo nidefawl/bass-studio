@@ -12,6 +12,7 @@
 #include <pluginterfaces/vst/ivsteditcontroller.h>
 #include <pluginterfaces/vst/vsttypes.h>
 #include <cstdio>
+#include <set>
 #include <windows.h>
 
 enum OpenFlags
@@ -361,13 +362,46 @@ int main(int, char*[]) {
     uint32_t flags {};
     VST3::Optional<VST3::UID> uid;
     auto pList = VST3::Hosting::Module::getModulePaths();
-    for (auto& path : pList) {
-        if (path.find("Serum.vst3") != std::string::npos || path.find("Diva") != std::string::npos) {
-            printf("%s\n", path.c_str());
-            if (testVst3(path, uid, flags)) {
-                break;
+    std::set<std::string> uniqueClasses;
+    std::set<std::string> uniqueCategories;
+    for (size_t i = 0; i < pList.size(); i++) {
+        auto path = pList[i];
+        std::string error;
+        auto module = Module::create (path, error);
+        if (!module)
+        {
+            std::string reason = "Could not create Module for file:";
+            reason += path;
+            reason += "\nError: ";
+            reason += error;
+        } else {
+            int32_t classCount = 0;
+            for (auto classInfo : module->getFactory().classInfos()) {
+                // std::printf("VST3 %d: %s %s %s\n",
+                //     classCount, 
+                //     classInfo.name().c_str(),
+                //     // classInfo.ID().toString(true).c_str(), 
+                //     classInfo.category().c_str(), 
+                //     classInfo.subCategoriesString().c_str() 
+                //     // classInfo.vendor().c_str(), classInfo.version().c_str(), 
+                //     // classInfo.sdkVersion().c_str()
+                // );
+                uniqueClasses.insert(classInfo.name());
+                for (auto& subCategory : classInfo.subCategories()) {
+                    uniqueCategories.insert(subCategory);
+                }
+                classCount++;
             }
         }
+        std::printf("Scanning VST3 plugins: %d/%d\n", i, pList.size());
+    }
+    std::printf("%d unique classes, %d unique categories\n",
+        uniqueClasses.size(), uniqueCategories.size());
+    for (auto& className : uniqueClasses) {
+        std::printf("Class: %s\n", className.c_str());
+    }
+    for (auto& categoryName : uniqueCategories) {
+        std::printf("Category: %s\n", categoryName.c_str());
     }
     return 0;
 }
