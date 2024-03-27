@@ -129,28 +129,30 @@ class vst3plugin final : public effectbase {
                     param.paramDisplayValState |= PARAM_FLAG_DIRTY;
                 });
             }
+            auto name = plugin->getName();
+            const char* szName = StringAsCStr(name);
             if (flags & Steinberg::Vst::RestartFlags::kReloadComponent)
-                log_lf(Log::L_WARN, "restartComponent called kReloadComponent\n");
+                log_lf(Log::L_WARN, "%s: kReloadComponent\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kIoChanged)
-                log_lf(Log::L_WARN, "restartComponent called kIoChanged\n");
+                log_lf(Log::L_WARN, "%s: kIoChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kParamValuesChanged)
-                log_lf(Log::L_WARN, "restartComponent called kParamValuesChanged\n");
+                log_lf(Log::L_WARN, "%s: kParamValuesChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kLatencyChanged)
-                log_lf(Log::L_WARN, "restartComponent called kLatencyChanged\n");
+                log_lf(Log::L_WARN, "%s: kLatencyChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kParamTitlesChanged)
-                log_lf(Log::L_WARN, "restartComponent called kParamTitlesChanged\n");
+                log_lf(Log::L_WARN, "%s: kParamTitlesChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kMidiCCAssignmentChanged)
-                log_lf(Log::L_WARN, "restartComponent called kMidiCCAssignmentChanged\n");
+                log_lf(Log::L_WARN, "%s: kMidiCCAssignmentChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kNoteExpressionChanged)
-                log_lf(Log::L_WARN, "restartComponent called kNoteExpressionChanged\n");
+                log_lf(Log::L_WARN, "%s: kNoteExpressionChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kIoTitlesChanged)
-                log_lf(Log::L_WARN, "restartComponent called kIoTitlesChanged\n");
+                log_lf(Log::L_WARN, "%s: kIoTitlesChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kPrefetchableSupportChanged)
-                log_lf(Log::L_WARN, "restartComponent called kPrefetchableSupportChanged\n");
+                log_lf(Log::L_WARN, "%s: kPrefetchableSupportChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kRoutingInfoChanged)
-                log_lf(Log::L_WARN, "restartComponent called kRoutingInfoChanged\n");
+                log_lf(Log::L_WARN, "%s: kRoutingInfoChanged\n", szName);
             if (flags & Steinberg::Vst::RestartFlags::kKeyswitchChanged)
-                log_lf(Log::L_WARN, "restartComponent called kKeyswitchChanged\n");
+                log_lf(Log::L_WARN, "%s: kKeyswitchChanged\n", szName);
             return Steinberg::kResultOk;
         }
 
