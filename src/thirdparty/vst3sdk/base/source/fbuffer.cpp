@@ -403,10 +403,10 @@ bool Buffer::grow (uint32 newSize)
 {
 	if (newSize > memSize)
 	{
-		if (delta == 0)
-			delta = defaultDelta;
-		uint32 s = ((newSize + delta - 1) / delta) * delta;
-		return setSize (s);
+		// if (delta == 0)
+		// 	delta = defaultDelta;
+		// uint32 s = ((newSize + delta - 1) / delta) * delta;
+		return setSize (newSize);
 	}
 	return true;
 }
