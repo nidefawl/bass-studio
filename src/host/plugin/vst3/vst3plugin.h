@@ -240,6 +240,27 @@ public:
 
     void unloadVst3Plugin() {
         checkForMainThread();
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        if (vst3Component) {
+            auto numInAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kInput);
+            auto numOutAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kOutput);
+            auto numInEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kInput);
+            auto numOutEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kOutput);
+            for (int i = 0; i < numInEventBuses; ++i) {
+                vst3Component->activateBus(kEvent, kInput, i, false);
+            }
+            for (int i = 0; i < numOutEventBuses; ++i) {
+                vst3Component->activateBus(kEvent, kOutput, i, false);
+            }
+            for (int i = 0; i < numInAudioBuses; ++i) {
+                vst3Component->activateBus(kAudio, kInput, i, false);
+            }
+            for (int i = 0; i < numOutAudioBuses; ++i) {
+                vst3Component->activateBus(kAudio, kOutput, i, false);
+            }
+        }
+		pluginProvider->releasePlugIn (vst3Component, editController);
         processData = {};
         processContext = {};
         editController = nullptr;
