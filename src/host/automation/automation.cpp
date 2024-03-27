@@ -175,24 +175,25 @@ float automation_t::getValueAtExact(double dTick) const {
 void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const {
     //TODO: write optimal version!
     for (samplecount_t i = 0; i < numSamples; ++i) {
-        const auto dTickOffset     = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
-        const auto valScaled = scale.min + getValueAtExact(dTickOffset) * (scale.max - scale.min);
+        const auto dTickOffset = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
+        const auto valScaled   = scale.min + getValueAtExact(dTickOffset) * (scale.max - scale.min);
         switch (scale.mode) {
             case DAW::ModulationMode::ADD:
-                *inOut++ += valScaled;
+                *inOut += valScaled;
                 break;
             case DAW::ModulationMode::MUL:
-                *inOut++ *= valScaled;
+                *inOut *= valScaled;
                 break;
             case DAW::ModulationMode::REPLACE:
-                *inOut++ = valScaled;
+                *inOut = valScaled;
                 break;
             default:
                 break;
-            if (scale.bClamp) {
-                *inOut = math::clamp(*inOut, 0.0f, 1.0f);
-            }
         }
+        if (scale.bClamp) {
+            *inOut = math::clamp(*inOut, 0.0f, 1.0f);
+        }
+        ++inOut;
     }
 }
 
