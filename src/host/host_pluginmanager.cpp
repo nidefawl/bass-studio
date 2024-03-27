@@ -149,7 +149,7 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
         break;
     }
     void* moduleHandleOpt = nullptr;
-    if (plugin->getModuleType() == MODULE_TYPE_VST2 || plugin->getModuleType() == MODULE_TYPE_INTERNAL_EFFECT) {
+    if (plugin->getModuleType() == MODULE_TYPE_VST2) {
         vstplugin* vst = static_cast<vstplugin*>(plugin);
         if (vst->internalModuleId <= 0) {
             moduleHandleOpt = vst->handle->hmodule;
