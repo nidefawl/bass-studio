@@ -114,7 +114,7 @@ IEditController* PLUGIN_API PlugProvider::getController ()
 IPluginFactory* PLUGIN_API PlugProvider::getPluginFactory ()
 {
 	if (auto f = factory.get ())
-		return f;
+		return f.get();
 	return nullptr;
 }
 
