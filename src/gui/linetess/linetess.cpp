@@ -1487,7 +1487,6 @@ void main(void) {
                                     break;
                                 }
                                 case 1: {
-                                    static constexpr size_t SIMD_WIDTH = 8;
                                     for (size_t i = 0; i < steps; i+=SIMD_WIDTH) {
                                         FPType envParamVals[SIMD_WIDTH]{};
                                         for (size_t j = 0; j < SIMD_WIDTH; j++) {

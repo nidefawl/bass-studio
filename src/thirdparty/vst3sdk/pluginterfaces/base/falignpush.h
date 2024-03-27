@@ -32,7 +32,9 @@
 	#endif
 	#pragma pack(push)
 	#if SMTG_PLATFORM_64
-    #pragma GCC diagnostic ignored "-Wpragma-pack"
+        #ifndef _MSC_VER
+            #pragma GCC diagnostic ignored "-Wpragma-pack"
+        #endif
 		#pragma pack(16)
 	#else
 		#pragma pack(8)

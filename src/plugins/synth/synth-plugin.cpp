@@ -3664,10 +3664,7 @@ class guicontainer_modulation_slot_source final : public guictr_base {
                                 MathExpr expr;
                                 expr.str        = value;
                                 expr.parsedExpr = nullptr;
-                                {
-                                    ThreadLock lock = synth->lock();
-                                    synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
-                                }
+                                synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
                             }
                         }
                     }

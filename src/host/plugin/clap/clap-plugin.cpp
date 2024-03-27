@@ -1582,7 +1582,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
                     if (mapModulations.count(automLane.paramIdx) > 0) {
                         continue;
                     }
-                    int32_t paramIdx = automLane.paramIdx;
+                    const auto paramIdx = automLane.paramIdx;
                     auto param = getParam(paramIdx);
                     if (!assert_expr(param) || param->internalIdx < 0) {
                         continue;
@@ -1593,7 +1593,6 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
                     }
                     auto* autLane = getRegisteredAutomation(paramIdx);
                     if (autLane && autLane->isActive()) {
-                        auto param = getParam(paramIdx);
                         while (dawHandles->paramAutomations.size() <= numAutomations) {
                             dawHandles->paramAutomations.emplace_back();
                         }

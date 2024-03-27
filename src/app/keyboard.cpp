@@ -26,9 +26,7 @@ String KeyCombo::toString() const {
         modKeys += "Super + ";
     if (!keyChar.empty()) {
         return modKeys + keyChar;
-    } else {
-        return modKeys + StringFormat("Keycode %d", static_cast<int32_t>(keyCode));
     }
-    return modKeys;
+    return modKeys + StringFormat("Keycode %d", static_cast<int32_t>(keyCode));
 }
 

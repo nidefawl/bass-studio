@@ -342,10 +342,10 @@ void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
         }
         if (bBeginEdit) {
             this->editingFade = fadeIdx;
-            auto& shapeEdit = createShapeEdit();
-            shapeEdit.setEditorCurve(&m_clip->getFade(editingFade).shape);
-            shapeEdit.layoutEditor(fadeLayout->size);
-            shapeEdit.onBeginDragCurveEditor(evtOffset);
+            auto& shapeEdit2 = createShapeEdit();
+            shapeEdit2.setEditorCurve(&m_clip->getFade(editingFade).shape);
+            shapeEdit2.layoutEditor(fadeLayout->size);
+            shapeEdit2.onBeginDragCurveEditor(evtOffset);
             editState->dataBefore = m_clip->audio;
             editor_view_selection_t view;
             DAW::GetClipboardView(m_trackentry->parent->guiMgr, dawCtrl->getCursor(), view, this);

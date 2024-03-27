@@ -53,7 +53,7 @@ int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, 
             coeffs = calcLPF(sampleRate, ft, ripple, bt, &lenCoeffs);
             lastSampleRate = sampleRate;
         }
-        samplecount_t nStep          = 1 << downsampleBits;
+        samplecount_t nStep          = static_cast<samplecount_t>(1) << downsampleBits;
         samplecount_t lenSamplesDown = numSamples >> downsampleBits;
         if (samplesOut.size() < size_t(lenSamplesDown)) {
             samplesOut.resize(lenSamplesDown);

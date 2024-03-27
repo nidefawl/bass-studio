@@ -535,9 +535,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             impl->timer2.reset();
             std::vector<path_t> paths;
             paths.resize(tesselatedWaveForms.size());
-            auto it = paths.begin();
+            auto itOut = paths.begin();
             for (auto& twf : tesselatedWaveForms) {
-                *it++ = path_t{std::move(twf), bakeOpt};
+                *itOut++ = path_t{std::move(twf), bakeOpt};
             }
             if (!paths.empty() && pathRenderer->isValid()) {
                 pathRenderer->bakePaths(paths, bakedPath);

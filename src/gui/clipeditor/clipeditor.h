@@ -910,8 +910,8 @@ public:
     bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         bool bHasAudioSample = false;
         for (auto& track : clip.clipboard->tracks) {
-            for (auto& clip : track->clips) {
-                if (clip->audio.id >= 0) {
+            for (auto& c : track->clips) {
+                if (c->audio.id >= 0) {
                     bHasAudioSample = true;
                     break;
                 }

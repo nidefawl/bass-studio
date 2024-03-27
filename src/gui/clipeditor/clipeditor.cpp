@@ -869,7 +869,6 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
             int32_t velClicked = screenToVel(imouse.y, size.y);
             int32_t velDist    = VEL_SELECT_DISTANCE * 127 / size.y;
-            auto clip = view.clip();
             note_t* contextNote = !clip ? nullptr : getMinDistNoteVel(clip->notes, mouseTick - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
             if (contextNote) {
                 nvgBeginPath(vg);
@@ -2159,7 +2158,6 @@ bool gui_clipcontent_control_data::handleEditorCommand(DAW::UI::CommandContext& 
                 shapeEdit.selectAll();
                 if (!tmpShape.pts.empty()) {
                     auto [tmMin, tmMax] = getMinMaxTimeShape(tmpShape.pts);
-                    auto& cursor = view.m_cursor;
                     cursor.start = tmMin;
                     cursor.end = tmMax;
                 }
