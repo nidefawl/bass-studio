@@ -1252,3 +1252,19 @@ void clip_t::updateNoteView() const {
         static_cast<clip_notes_t*>(&noteViewRenderFullClip)->copy(this->notes);
     }
 }
+
+void quantizeNoteEndTime(std::vector<note_t>& notesPtrs, tick_t quantize) {
+    for (auto& note : notesPtrs) {
+        auto newEnd = math::roundfS32(note.end() / static_cast<float>(quantize)) * quantize;
+        if (newEnd - note.time > 0) {
+            note.len = newEnd - note.time;
+        }
+    }
+}
+
+void quantizeNoteStartTime(std::vector<note_t>& notesPtrs, tick_t quantize) {
+    for (auto& note : notesPtrs) {
+        auto newTime = math::roundfS32(note.start() / static_cast<float>(quantize)) * quantize;
+        note.time    = newTime;
+    }
+}

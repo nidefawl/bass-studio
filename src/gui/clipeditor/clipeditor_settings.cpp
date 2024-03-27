@@ -434,7 +434,7 @@ void gui_quantize_clip::buttonClicked(guibase* button) {
         auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
         auto p = inputStarts.getSafeIntRef();
         if (p) {
-            settings.quantizeEnd = *p;
+            settings.quantizeStart = *p;
         }
     }
     if (&btnQuantize == button) {
