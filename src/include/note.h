@@ -160,14 +160,14 @@ inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t 
 template<typename T>
 inline void quantizeNoteStartTime(T& notesPtrs, tick_t quantize) {
     for (auto& note : notesPtrs) {
-        auto newTime = math::floorfS32(note.start() / static_cast<float>(quantize)) * quantize;
-        note.time = newTime;
+        auto newTime = math::roundfS32(note.start() / static_cast<float>(quantize)) * quantize;
+        note.time    = newTime;
     }
 }
 template<typename T>
 inline void quantizeNoteEndTime(T& notesPtrs, tick_t quantize) {
     for (auto& note : notesPtrs) {
-        auto newEnd = math::ceilfS32(note.end() / static_cast<float>(quantize)) * quantize;
+        auto newEnd = math::roundfS32(note.end() / static_cast<float>(quantize)) * quantize;
         if (assert_expr(newEnd - note.time > 0)) {
             note.len   = newEnd - note.time;
         }
