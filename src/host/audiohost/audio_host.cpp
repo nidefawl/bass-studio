@@ -202,7 +202,7 @@ class audiohost_callback {
             memset(outputs[i], 0, callbackNumSamples * sizeof(float));
         }
 
-        dsp_util::fillSaturate(outputs, stream->nOutputChannels, callbackNumSamples);
+        // dsp_util::fillSaturate(outputs, stream->nOutputChannels, callbackNumSamples);
 
         auto& ringbuffer      = stream->getRingbuffer();
         auto& writePos        = ringbuffer.writePos;
