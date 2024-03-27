@@ -99,6 +99,7 @@ class vst3plugin final : public effectbase {
             }
             return Steinberg::kResultOk;
         }
+
         tresult PLUGIN_API endEdit (ParamID id) override
         {
             if (paramEditing.paramIdx == id) {
@@ -118,6 +119,7 @@ class vst3plugin final : public effectbase {
             paramEditing = {};
             return Steinberg::kResultOk;
         }
+
         tresult PLUGIN_API restartComponent (Steinberg::int32 flags) override
         {
             if ((flags & Steinberg::Vst::RestartFlags::kParamValuesChanged) ||
@@ -166,13 +168,14 @@ class vst3plugin final : public effectbase {
         Steinberg::uint32 PLUGIN_API addRef () override { return 1000; }
         Steinberg::uint32 PLUGIN_API release () override { return 1000; }
     };
-    
+
     class PlugFrame : public Steinberg::IPlugFrame
     {
         vst3plugin* plugin;
     public:
         PlugFrame(vst3plugin* plugin) : plugin(plugin) {
         }
+
 	    tresult PLUGIN_API resizeView (Steinberg::IPlugView* view, Steinberg::ViewRect* newSize) override {
             if (plugin->windowHost && newSize)
                 plugin->windowHost->resize(ivec2(newSize->right - newSize->left, newSize->bottom - newSize->top));
@@ -190,6 +193,7 @@ class vst3plugin final : public effectbase {
         Steinberg::uint32 PLUGIN_API addRef () override { return 1000; }
         Steinberg::uint32 PLUGIN_API release () override { return 1000; }
     };
+
     ComponentHandler componentHandler;
     PlugFrame plugFrame;
     Steinberg::Vst::ParameterChanges inputParameterChanges;
@@ -203,11 +207,23 @@ public:
             componentHandler(this),
             plugFrame(this)
     {
+        processData.inputParameterChanges = &inputParameterChanges;
+        processData.outputParameterChanges = &outputParameterChanges;
     }
     ~vst3plugin() override {
         if (processData.inputEvents) delete[] dynamic_cast<Steinberg::Vst::EventList*>(processData.inputEvents);
         if (processData.outputEvents) delete[] dynamic_cast<Steinberg::Vst::EventList*>(processData.outputEvents);
+        if (processData.inputs) delete[] dynamic_cast<Steinberg::Vst::AudioBusBuffers*>(processData.inputs);
+        if (processData.outputs) delete[] dynamic_cast<Steinberg::Vst::AudioBusBuffers*>(processData.outputs);
+        processData.inputParameterChanges = nullptr;
+        processData.outputParameterChanges = nullptr;
+        processData.inputEvents = nullptr;
+        processData.outputEvents = nullptr;
+        processData.inputs = nullptr;
+        processData.outputs = nullptr;
+        processData.processContext = nullptr;
     }
+
     String getUID() const { return uid.toString(true); }
     VST3::Hosting::ClassInfo getClassInfo() const { return pluginProvider->getClassInfo(); }
     ModuleType getModuleType() override { return MODULE_TYPE_VST3; };
@@ -594,8 +610,6 @@ public:
         } else {
             processData.outputEvents = nullptr;
         }
-        processData.inputParameterChanges = &inputParameterChanges;
-        processData.outputParameterChanges = &outputParameterChanges;
     }
     
     void setSampleFormat(sampleformat_t sampleFormat) override {
