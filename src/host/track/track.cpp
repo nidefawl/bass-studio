@@ -746,7 +746,8 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
             host->insertNewPlugin(this, effect, pluginSnapshot.slot);
             dbgassert(effect->trackImpl == this);
             dbgassert(!effects.empty());
-            if (effect->getModuleStoredType() == PLUGIN_TYPE_GROUP) {
+            if (effect->getModuleStoredType() == MODULE_TYPE_INTERNAL_EFFECT
+                && effect->getSnapshot().uId == PLUGIN_TYPE_GROUP) {
                 host->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
         }
