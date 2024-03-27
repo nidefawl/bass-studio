@@ -759,12 +759,12 @@ public:
             }
         }
 
-        tresult result = vst3AudioProcessor->process(processData);
+        if (vst3AudioProcessor->process(processData) != kResultOk) {
 #ifndef NDEBUG
-        if (result != kResultOk) {
             log_lf(Log::L_ERROR, "VST3 plugin process failed (%s)\n", StringAsCStr(sName));
-        }
 #endif
+        }
+
         inputParameterChanges.clearQueue();
         outputParameterChanges.clearQueue();
     }
@@ -902,6 +902,15 @@ public:
         if (!editController) {
             return false;
         }
+#ifdef _WIN32
+        auto platformWindowType = Steinberg::kPlatformTypeHWND;
+#elif __linux__
+        auto platformWindowType = Steinberg::kPlatformTypeX11EmbedWindowID;
+#elif __APPLE__
+        auto platformWindowType = Steinberg::kPlatformTypeNSView;
+#else
+        return false;
+#endif
 
         if (view || windowHost) {
             return false;
@@ -917,13 +926,10 @@ public:
             return false;
         }
 
-#ifdef _WIN32
-        if (view->isPlatformTypeSupported(Steinberg::kPlatformTypeHWND) != Steinberg::kResultTrue) {
+        if (view->isPlatformTypeSupported(platformWindowType) != Steinberg::kResultTrue) {
             return false;
         }
-#else
-    #error "TODO: Implement for other platforms"
-#endif
+
         bSupportsWindowResize = false;// view->canResize();
 
         this->openWindow(bResetPosition, { viewRect.getWidth(), viewRect.getHeight() });
@@ -942,7 +948,8 @@ public:
             bEditOpen = true;
             this->updateFromMainThread();
             view->setFrame(&plugFrame);
-            if (view->attached(_window->getWindowHandle(), Steinberg::kPlatformTypeHWND) != Steinberg::kResultOk) {
+            auto voidWindowHandle = reinterpret_cast<void*>(_window->getWindowHandle());
+            if (view->attached(voidWindowHandle, Steinberg::kPlatformTypeHWND) != Steinberg::kResultOk) {
                 log_lf(Log::L_ERROR, "Failed to attach editor view to HWND\n");
                 return false;
             }

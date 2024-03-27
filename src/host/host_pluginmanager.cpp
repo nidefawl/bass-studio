@@ -630,7 +630,7 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
         if (!vst3Module) {
             return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, error);
         }
-        return LoadResultSharedLibrary::FromSuccessVST3(vst3Module);
+        return LoadResultSharedLibrary::FromSuccessVST3(std::move(vst3Module));
     }
 #ifdef __APPLE__
     void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);

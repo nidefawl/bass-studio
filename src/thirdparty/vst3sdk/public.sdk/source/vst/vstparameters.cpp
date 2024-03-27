@@ -124,7 +124,7 @@ void Parameter::toString (ParamValue normValue, String128 string) const
 //------------------------------------------------------------------------
 bool Parameter::fromString (const TChar* string, ParamValue& normValue) const
 {
-	UString wrapper (const_cast<TChar*> (string), tstrlen (string));
+	UString wrapper (const_cast<TChar*> (string), strlen16 (string));
 	return wrapper.scanFloat (normValue);
 }
 
@@ -192,7 +192,7 @@ void RangeParameter::toString (ParamValue _valueNormalized, String128 string) co
 //------------------------------------------------------------------------
 bool RangeParameter::fromString (const TChar* string, ParamValue& _valueNormalized) const
 {
-	UString wrapper (const_cast<TChar*> (string), tstrlen (string));
+	UString wrapper (const_cast<TChar*> (string), strlen16 (string));
 	if (info.stepCount > 1)
 	{
 		int64 plainValue;

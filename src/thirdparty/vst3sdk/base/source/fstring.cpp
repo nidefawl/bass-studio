@@ -1918,7 +1918,7 @@ int32 ConstString::wideStringToMultiByte (char8* dest, const char16* wideString,
 	{
 		if (dest == nullptr)
 		{
-			auto maxChars = charCount ? charCount : tstrlen (wideString);
+			auto maxChars = charCount ? charCount : strlen16 (wideString);
 			result = converterFacet ().max_length () * maxChars;
 		}
 		else
