@@ -49,6 +49,10 @@ using tresult = Steinberg::tresult;
 using ParamID = Steinberg::Vst::ParamID;
 using ParamValue = Steinberg::Vst::ParamValue;
 
+namespace DAW {
+    constexpr bool gVST3UseSampleAccurateModulation = true;
+}
+
 class vst3plugin final : public effectbase {
     VST3::UID uid{};
     VST3::Hosting::Module::Ptr module;
@@ -85,6 +89,7 @@ class vst3plugin final : public effectbase {
             }
             return Steinberg::kResultOk;
         }
+
         tresult PLUGIN_API performEdit (ParamID id, ParamValue valueNormalized) override
         {
             auto* effParam = plugin->getEffectParam(id);
@@ -198,6 +203,14 @@ class vst3plugin final : public effectbase {
     PlugFrame plugFrame;
     Steinberg::Vst::ParameterChanges inputParameterChanges;
     Steinberg::Vst::ParameterChanges outputParameterChanges;
+
+    struct ParamModulation {
+        int32_t index;
+        std::vector<float> values;
+    };
+
+    std::vector<ParamModulation> paramModulations;
+    std::vector<ParamModulation> paramAutomations;
 public:
     vst3plugin(VST3::UID uid, VST3::Hosting::Module::Ptr&& _module, std::shared_ptr<Steinberg::Vst::PlugProvider>&& _pluginProvider, int32_t globalId, IHostCallback* hostcallback, String _sDir, int32_t _bugfixFlags) 
         : effectbase(_pluginProvider->getClassInfo().name(), globalId, hostcallback),
@@ -238,11 +251,11 @@ public:
 
     void deactivate() {
         checkForMainThread();
+        vst3AudioProcessor->setProcessing(false);
         if (Steinberg::kResultOk != vst3Component->setActive(false)) {
             log_lf(Log::L_ERROR, "Failed to deactivate VST3 plugin\n");
             bIsEnabled = false;
         }
-        vst3AudioProcessor->setProcessing(false);
     }
 
     void activate() {
@@ -277,13 +290,9 @@ public:
             }
         }
 		pluginProvider->releasePlugIn (vst3Component, editController);
-        processData = {};
-        processContext = {};
         editController = nullptr;
         vst3AudioProcessor = nullptr;
         vst3Component = nullptr;
-        pluginProvider = nullptr;
-        module = nullptr;
     }
 
     bool loadVST3Plugin() {
@@ -616,7 +625,7 @@ public:
         effectbase::setSampleFormat(sampleFormat);
     }
 
-    void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override {
+    void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double dTick, double samplePos, int32_t numSamples, playback_state state) override {
         using namespace Steinberg;
         using namespace Steinberg::Vst;
         
@@ -629,6 +638,127 @@ public:
         dbgassert(out == blockOutputs);
 
         processData.numSamples = numSamples;
+
+        auto& automationLanes = getAutomationLanes();
+        // auto& inputChannelsModulation = getModulations();
+        auto& mapModulations = getModulationsMap();
+
+        auto tempo100 = host->prjGlobals.tempo100;
+        // auto samplesToTicks = sampleToTickConvert<double, roundmode::none>(1.0, tempo100, format.sampleRate);
+        auto ticksPerBlock = sampleToTickConvert<double, roundmode::none>(numSamples, tempo100, format.sampleRate);
+        auto dTickEnd = dTick + ticksPerBlock;
+
+        size_t numMods = 0;
+        size_t numAutomations = 0;
+        if (DAW::gVST3UseSampleAccurateModulation) {
+            for (const auto& entry : mapModulations) {
+                int32_t paramIdx = entry.first;
+                auto param = getParam(paramIdx);
+                if (!assert_expr(param) || param->internalIdx < 0) {
+                    continue;
+                }
+                ParameterInfo info{};
+                if (kResultOk != editController->getParameterInfo(param->internalIdx, info)) {
+                    log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter info\n");
+                    continue;
+                }
+                if (!(info.flags & ParameterInfo::kCanAutomate)
+                    || (info.flags & ParameterInfo::kIsReadOnly)) {
+                    continue;
+                }
+                while (paramModulations.size() <= numMods) {
+                    paramModulations.emplace_back();
+                }
+                auto& paramModulation = paramModulations[numMods++];
+                paramModulation.index = paramIdx;
+                auto& values = paramModulation.values;
+                values.resize(numSamples);
+                std::fill(values.begin(), values.end(), param->getValue());
+                auto* autLane = getRegisteredAutomation(paramIdx);
+                if (autLane && autLane->isActive() && DAW::isPlaybackState(state)) {
+                    autLane->sampleAutomation(dTick, dTickEnd, numSamples, param->getAutomationScale(), values.data());
+                }
+                auto& modulations = entry.second;
+                for (const auto* mod : modulations) {
+                    auto ch = DAW::ResolveModulationChannel(host, *mod);
+                    if (ch && ch->isActive()) {
+                        ch->sampleAutomation(dTick, dTickEnd, numSamples, mod->scale, values.data());
+                    }
+                }
+            }
+            if (DAW::isPlaybackState(state)) {
+                for (const auto& automLane : automationLanes) {
+                    if (automLane.isActive()) {
+                        if (mapModulations.count(automLane.paramIdx) > 0) {
+                            continue;
+                        }
+                        const auto paramIdx = automLane.paramIdx;
+                        auto param = getParam(paramIdx);
+                        if (!assert_expr(param) || param->internalIdx < 0) {
+                            continue;
+                        }
+                        ParameterInfo info{};
+                        if (kResultOk != editController->getParameterInfo(param->internalIdx, info)) {
+                            log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter info\n");
+                            continue;
+                        }
+                        if (!(info.flags & ParameterInfo::kCanAutomate)
+                            || (info.flags & ParameterInfo::kIsReadOnly)) {
+                            continue;
+                        }
+                        auto* autLane = getRegisteredAutomation(paramIdx);
+                        if (autLane && autLane->isActive()) {
+                            while (paramAutomations.size() <= numAutomations) {
+                                paramAutomations.emplace_back();
+                            }
+                            auto& paramAutomation = paramAutomations[numAutomations++];
+                            paramAutomation.index = automLane.paramIdx;
+                            auto& values = paramAutomation.values;
+                            values.resize(numSamples);
+                            std::fill(values.begin(), values.end(), param->getValue());
+                            autLane->sampleAutomation(dTick, dTickEnd, numSamples, param->getAutomationScale(), values.data());
+                        }
+                    }
+                }
+            }
+        }
+#ifndef NDEBUG
+        // assert that none of the parameters are in both paramModulations and paramAutomations
+        for (size_t i = 0; i < numMods; ++i) {
+            for (size_t j = 0; j < numAutomations; ++j) {
+                dbgassert(paramModulations[i].index != paramAutomations[j].index);
+            }
+        }
+#endif
+        int32_t queueIndex = 0;
+        for (size_t n = 0; n < numAutomations; ++n) {
+            auto& paramAutomation = paramAutomations[n];
+            auto dawparam = getParam(paramAutomation.index);
+            if (!assert_expr(dawparam) || dawparam->internalIdx < 0) {
+                continue;
+            }
+            auto& vecData = paramAutomation.values;
+            auto numPoints = samplecount_t(vecData.size());
+            auto queue = inputParameterChanges.addParameterData(dawparam->internalIdx, queueIndex);
+            for (samplecount_t s = 0; s < numSamples && s < numPoints; ++s) {
+                queue->addPoint(s, vecData[s], queueIndex);
+            }
+        }
+        queueIndex = 0;
+        for (size_t n = 0; n < numMods; ++n) {
+            auto& paramMod = paramModulations[n];
+            auto dawparam = getParam(paramMod.index);
+            if (!assert_expr(dawparam) || dawparam->internalIdx < 0) {
+                continue;
+            }
+            auto& vecData = paramMod.values;
+            auto numPoints = samplecount_t(vecData.size());
+            auto queue = inputParameterChanges.addParameterData(dawparam->internalIdx, queueIndex);
+            for (samplecount_t s = 0; s < numSamples && s < numPoints; ++s) {
+                queue->addPoint(s, vecData[s], queueIndex);
+            }
+        }
+
         tresult result = vst3AudioProcessor->process(processData);
 #ifndef NDEBUG
         if (result != kResultOk) {
@@ -799,12 +929,14 @@ public:
         this->openWindow(bResetPosition, { viewRect.getWidth(), viewRect.getHeight() });
         return true;
     }
+
     void onWindowResize(ivec2 size) override {
         if (view && view->canResize()) {
             Steinberg::ViewRect viewRect = { 0, 0, size.x, size.y };
             view->onSize(&viewRect);
         }
     }
+
     bool onShow(host_plugin_window* _window) override {
         if (this->windowHost == _window) {
             bEditOpen = true;
@@ -818,6 +950,7 @@ public:
         }
         return true;
     }
+
     bool onClose() override {
         if (this->windowHost != nullptr && bEditOpen) {
             if (view) {
@@ -831,6 +964,7 @@ public:
         bEditOpen = false;
         return true;
     }
+
     void processMidi(midi_data_processing_t& midiEvents) override {
         if (!bCanReceiveMidi) {
             return;
@@ -873,6 +1007,7 @@ public:
             }
         }
     }
+
     void sendNotesOff() override {
 
     }
