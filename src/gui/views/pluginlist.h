@@ -60,7 +60,7 @@ class guictr_pluginlibrary final : public guictr_base {
     gui_textfield textField;
     gui_textfield textField2;
     gui_list pluginListCtr;
-    String curquery = ":vst3 ";
+    String curquery = "";
     std::vector<pluginentry_t> pluginsLibList;
 
 public:
