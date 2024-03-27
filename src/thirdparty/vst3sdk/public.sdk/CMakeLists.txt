@@ -171,7 +171,7 @@ if(VST_SDK)
             source/vst/hosting/module_linux.cpp
         )
     endif()
-    if(SMTG_WINDOWS)
+    if(SMTG_WIN)
         set(SDK_PLATFORM_SRCS
             source/vst/hosting/module_win32.cpp
         )
