@@ -166,6 +166,16 @@ endif(SMTG_MAC AND XCODE AND SMTG_ENABLE_IOS_TARGETS)
 
 #--for hosting----------------
 if(VST_SDK)
+    if(SMTG_LINUX)
+        set(SDK_PLATFORM_SRCS
+            source/vst/hosting/module_linux.cpp
+        )
+    endif()
+    if(SMTG_WINDOWS)
+        set(SDK_PLATFORM_SRCS
+            source/vst/hosting/module_win32.cpp
+        )
+    endif()
     add_library(sdk_hosting 
         STATIC
             source/vst/hosting/connectionproxy.cpp
@@ -188,11 +198,8 @@ if(VST_SDK)
             source/vst/utility/uid.h
             source/vst/utility/versionparser.h
             source/vst/vstinitiids.cpp
-            samples/vst-hosting/editorhost/source/platform/win32/platform.cpp
-            # samples/vst-hosting/editorhost/source/platform/win32/window.h
-            samples/vst-hosting/editorhost/source/platform/win32/window.cpp
-            source/vst/hosting/module_win32.cpp
             source/vst/hosting/plugprovider.cpp
+            ${SDK_PLATFORM_SRCS}
     )
     # add dependencies
     target_link_libraries(sdk_hosting 
