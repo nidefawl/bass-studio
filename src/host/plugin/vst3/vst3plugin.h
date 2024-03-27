@@ -288,9 +288,9 @@ public:
 
         for (int i = 0; i < numOutEventBuses; ++i) {
             BusInfo info{};
-            if (kResultOk != vst3Component->getBusInfo(kEvent, kInput, i, info))
+            if (kResultOk != vst3Component->getBusInfo(kEvent, kOutput, i, info))
                 return false;
-            if (kResultOk != vst3Component->activateBus(kEvent, kInput, i, false))
+            if (kResultOk != vst3Component->activateBus(kEvent, kOutput, i, false))
                 return false;
             bCanSendMidi = false;
             // isSynth = true;
