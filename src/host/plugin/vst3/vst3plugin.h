@@ -195,11 +195,11 @@ class vst3plugin final : public effectbase {
     Steinberg::Vst::ParameterChanges inputParameterChanges;
     Steinberg::Vst::ParameterChanges outputParameterChanges;
 public:
-    vst3plugin(VST3::UID uid, VST3::Hosting::Module::Ptr _module, std::shared_ptr<Steinberg::Vst::PlugProvider> _pluginProvider, int32_t globalId, IHostCallback* hostcallback, String _sDir, int32_t _bugfixFlags) 
+    vst3plugin(VST3::UID uid, VST3::Hosting::Module::Ptr&& _module, std::shared_ptr<Steinberg::Vst::PlugProvider>&& _pluginProvider, int32_t globalId, IHostCallback* hostcallback, String _sDir, int32_t _bugfixFlags) 
         : effectbase(_pluginProvider->getClassInfo().name(), globalId, hostcallback),
             uid(uid),
-            module(std::move(_module)),
-            pluginProvider(std::move(_pluginProvider)),
+            module(_module),
+            pluginProvider(_pluginProvider),
             componentHandler(this),
             plugFrame(this)
     {
