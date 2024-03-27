@@ -132,7 +132,7 @@ class PluginFactory
 public:
 //------------------------------------------------------------------------
 	using ClassInfos = std::vector<ClassInfo>;
-	using PluginFactoryPtr = Steinberg::IPtr<Steinberg::IPluginFactory>;
+	using PluginFactoryPtr = Steinberg::IPluginFactory*;
 
 //------------------------------------------------------------------------
 	explicit PluginFactory (const PluginFactoryPtr& factory) noexcept;

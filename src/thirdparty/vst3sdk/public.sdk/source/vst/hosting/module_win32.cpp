@@ -250,7 +250,7 @@ public:
 			errorDescription = "Calling 'InitDll' failed";
 			return false;
 		}
-		auto f = Steinberg::FUnknownPtr<Steinberg::IPluginFactory> (owned (factoryProc ()));
+		auto f = static_cast<Steinberg::IPluginFactory*> (factoryProc ());
 		if (!f)
 		{
 			errorDescription = "Calling 'GetPluginFactory' returned nullptr";
