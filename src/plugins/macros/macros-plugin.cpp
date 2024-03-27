@@ -353,13 +353,13 @@ struct macro_automation_src_param_t final : public automated_param_t {
                     for (samplecount_t i = 0; i < numSamples; ++i) {
                         switch (scale.mode) {
                             case DAW::ModulationMode::ADD:
-                                inOut[i] += valScaled;
+                                *inOut += valScaled;
                                 break;
                             case DAW::ModulationMode::MUL:
-                                inOut[i] *= valScaled;
+                                *inOut *= valScaled;
                                 break;
                             case DAW::ModulationMode::REPLACE:
-                                inOut[i] = valScaled;
+                                *inOut = valScaled;
                                 break;
                             default:
                                 break;
@@ -367,6 +367,7 @@ struct macro_automation_src_param_t final : public automated_param_t {
                         if (scale.bClamp) {
                             *inOut = math::clamp(*inOut, 0.0f, 1.0f);
                         }
+                        ++inOut;
                     }
                 }
             }

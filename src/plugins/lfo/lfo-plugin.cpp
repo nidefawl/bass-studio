@@ -185,17 +185,17 @@ struct lfo_automation_src_param_t final : public automated_param_t {
             }
             void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const override {
                 for (samplecount_t i = 0; i < numSamples; ++i) {
-                    const auto dTickOffset     = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
-                    const auto valScaled = scale.min + sampleCurve(dTickOffset) * (scale.max - scale.min);
+                    const auto dTickOffset = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
+                    const auto valScaled   = scale.min + sampleCurve(dTickOffset) * (scale.max - scale.min);
                     switch (scale.mode) {
                         case DAW::ModulationMode::ADD:
-                            *inOut++ += valScaled;
+                            *inOut += valScaled;
                             break;
                         case DAW::ModulationMode::MUL:
-                            *inOut++ *= valScaled;
+                            *inOut *= valScaled;
                             break;
                         case DAW::ModulationMode::REPLACE:
-                            *inOut++ = valScaled;
+                            *inOut = valScaled;
                             break;
                         default:
                             break;
@@ -203,6 +203,7 @@ struct lfo_automation_src_param_t final : public automated_param_t {
                     if (scale.bClamp) {
                         *inOut = math::clamp(*inOut, 0.0f, 1.0f);
                     }
+                    ++inOut;
                 }
             }
             void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) override {
