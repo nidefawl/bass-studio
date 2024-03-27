@@ -106,7 +106,7 @@ struct LoadResultSharedLibrary {
     static inline LoadResultSharedLibrary FromSuccess(SharedLibPluginType _type, void* module, void* entryPoint) {
         return {_type, SharedLibState::SUCCESS, "", module, entryPoint};
     }
-    static inline LoadResultSharedLibrary FromSuccessVST3(VST3::Hosting::Module::Ptr module) {
+    static inline LoadResultSharedLibrary FromSuccessVST3(VST3::Hosting::Module::Ptr&& module) {
         return {SharedLibPluginType::VST3, SharedLibState::SUCCESS, "", nullptr, nullptr, module};
     }
     bool isSuccess() const {

@@ -586,7 +586,7 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
         if (!vst3Module) {
             return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, error);
         }
-        return LoadResultSharedLibrary::FromSuccessVST3(vst3Module);
+        return LoadResultSharedLibrary::FromSuccessVST3(std::move(vst3Module));
     }
     HMODULE module = safeLoadLib(StringAsCStr(filepath));
     if (!module) {
@@ -742,10 +742,19 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         }
         for (auto &classInfo : factory.classInfos()) {
             if (classInfo.ID() == vst3Uid.value()) {
-                auto plugProvider = std::make_shared<Steinberg::Vst::PlugProvider>(factory, classInfo, true);
                 globalId = getNextGlobalModuleId(globalId);
-                auto plugin = new vst3plugin(vst3Uid.value(), libResult.vst3Module, plugProvider, globalId, getHostCallback(), path, req.bugfixFlags);
-                if (!plugin->loadVST3Plugin()) {
+                auto plugin = new vst3plugin(
+                                    vst3Uid.value(), 
+                                    std::move(libResult.vst3Module),
+                                    std::make_shared<Steinberg::Vst::PlugProvider>(factory, classInfo, true),
+                                    globalId,
+                                    getHostCallback(),
+                                    path,
+                                    req.bugfixFlags
+                                );
+                libResult.vst3Module = nullptr;
+                if (!plugin->loadVST3Plugin()) 
+                {
                     delete plugin;
                     libResult.state = SharedLibState::FAILED;
                     return LoadResultPlugin{libResult};
@@ -753,7 +762,6 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
                 pluginInstancesVST3.push_back(plugin);
                 pluginInstances.push_back(plugin);
                 plugin->load(this);
-                // libResult.vst3Module = nullptr;
                 return {libResult, plugin, filepath, nameWithoutExt};
             }
         }
