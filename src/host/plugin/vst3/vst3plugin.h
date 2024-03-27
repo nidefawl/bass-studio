@@ -686,7 +686,6 @@ public:
             auto nonConst = const_cast<std::vector<uint8_t>&>(pluginSnapshot.dataChunk);
             stream.write(nonConst.data(), nonConst.size(), &bytesWritten);
             stream.seek(0, Steinberg::IBStream::IStreamSeekMode::kIBSeekSet);
-            stream.getBuffer().setSize(bytesWritten);
             if (Steinberg::kResultOk == vst3Component->setState(&stream)) {
                 bLoadProgramDataChunk = true;
             }
@@ -698,7 +697,6 @@ public:
                 nonConst = const_cast<std::vector<uint8_t>&>(pluginSnapshot.dataChunk2);
                 stream.write(nonConst.data(), nonConst.size(), &bytesWritten);
                 stream.seek(0, Steinberg::IBStream::IStreamSeekMode::kIBSeekSet);
-                stream.getBuffer().setSize(bytesWritten);
                 if (Steinberg::kResultOk == editController->setState(&stream)) {
                     bLoadProgramDataChunk = true;
                 }
