@@ -81,9 +81,9 @@ target_include_directories(base
 # Compiler switches are PUBLIC and will be populated.
 target_compile_definitions(base 
     PUBLIC
-        "$<$<CONFIG:Debug>:-DDEVELOPMENT=1>"
-        "$<$<CONFIG:Release>:-DRELEASE=1>"
-        "$<$<CONFIG:RelWithDebInfo>:-DRELEASE=1>"
+        "$<$<CONFIG:Debug>:DEVELOPMENT=1>"
+        "$<$<CONFIG:Release>:RELEASE=1>"
+        "$<$<CONFIG:RelWithDebInfo>:RELEASE=1>"
 )
 
 target_compile_features(base
