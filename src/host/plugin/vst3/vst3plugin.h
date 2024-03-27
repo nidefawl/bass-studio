@@ -686,9 +686,7 @@ public:
     }
 
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override {
-        vst3AudioProcessor->setProcessing(false);
         createSnapshot(ps, this, opts);
-        vst3AudioProcessor->setProcessing(true);
         for (auto& [uuid, gui] : uiInstances) {
             plugin_ui_snapshot_t uiSnapshot;
             gui->makeSnapshot(uiSnapshot, opts);
@@ -699,8 +697,6 @@ public:
     }
 
     void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override {
-        if (vst3AudioProcessor) vst3AudioProcessor->setProcessing(false);
-        vst3Component->setActive(false);
         this->bIsLoadingProgram = true;
         bool bLoadProgramDataChunk = false;
         if (pluginSnapshot.dataChunk.size() > 0) {
@@ -740,8 +736,6 @@ public:
             }
         }
         loadWindowLayoutSnapshot(pluginSnapshot.windowLayout);
-        vst3Component->setActive(true);
-        if (vst3AudioProcessor) vst3AudioProcessor->setProcessing(true);
     }
 
     samplecount_t getPluginLatency() override { 
