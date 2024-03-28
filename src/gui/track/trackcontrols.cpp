@@ -1145,8 +1145,7 @@ class ctxt_menu_entry_param final : public ctxtmenu_entry {
         if (autom) {
             std::vector<automatable_param_t*> paramsAutomated;
             std::vector<automatable_param_t*> paramsRest;
-            autom->getSortedParamsSeperate(paramsAutomated, paramsRest);
-            // paramsAutomated.insert(paramsAutomated.end(), paramsRest.cbegin(), paramsRest.cend());
+            autom->getSortedParamsSeperate(paramsAutomated, paramsRest, true);
             std::for_each(paramsAutomated.cbegin(), paramsAutomated.cend(), [this](const auto* param) {
                 addEntry(new ctxt_menu_entry_param(1 + param->idx, param->name, true));
             });

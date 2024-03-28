@@ -594,7 +594,7 @@ public:
 void guipluginview::updateParamList(const String& strParamNameFilter) {
     std::vector<automatable_param_t*> paramsAutomated;
     std::vector<automatable_param_t*> paramsRest;
-    effect->getSortedParamsSeperate(paramsAutomated, paramsRest);
+    effect->getSortedParamsSeperate(paramsAutomated, paramsRest, false);
     std::vector<gui_list_entry*> listEntries;
     paramsAutomated.insert(paramsAutomated.end(), paramsRest.cbegin(), paramsRest.cend());
     listEntries.reserve(paramsAutomated.size());

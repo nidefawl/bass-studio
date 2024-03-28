@@ -65,10 +65,16 @@ void AddContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int para
         }
         ctxt->addEntry(new ctxtmenu_entry("Delete Automation", AutomatableContextMenu::CMD_DELETE));
     }
-    ctxt->addEntry(new ctxtmenu_entry("Show Automation", AutomatableContextMenu::CMD_SHOW));
-    ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", AutomatableContextMenu::CMD_SHOW_NEW));
-    ctxt->addEntry(new ctxtmenu_entry("Copy Automation", AutomatableContextMenu::CMD_COPY));
-    ctxt->addEntry(new ctxtmenu_entry("Paste Automation", AutomatableContextMenu::CMD_PASTE));
+    auto param = atl->getParam(paramIdx);
+    if (!param) {
+        return;
+    }
+    if (param->isAutomatable) {
+        ctxt->addEntry(new ctxtmenu_entry("Show Automation", AutomatableContextMenu::CMD_SHOW));
+        ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", AutomatableContextMenu::CMD_SHOW_NEW));
+        ctxt->addEntry(new ctxtmenu_entry("Copy Automation", AutomatableContextMenu::CMD_COPY));
+        ctxt->addEntry(new ctxtmenu_entry("Paste Automation", AutomatableContextMenu::CMD_PASTE));
+    }
     ctxt->addEntry(new ctxtmenu_entry("Reset to default", AutomatableContextMenu::CMD_RESET_TO_DEFAULT));
     
 }

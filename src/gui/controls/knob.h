@@ -188,7 +188,6 @@ public:
     void handleRightClick(MouseEvent& evt) override;
     virtual bool isAutomated();
     virtual bool isModulated();
-    // void setColors();
 
     void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
     void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;

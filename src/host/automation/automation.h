@@ -251,6 +251,9 @@ struct automatable_param_properties_t {
     uint8_t paramValueState = 0; 
     bool inUse         = false;
     bool isBiPolar     = false;
+    bool isReadOnly    = false;
+    bool isAutomatable = true;
+    bool isHidden      = false;
 };
 
 struct automatable_param_t final : public automatable_param_properties_t {
@@ -404,7 +407,7 @@ public:
             return a->idx < b->idx;
         });
     }
-    void getSortedParamsSeperate(std::vector<automatable_param_t*>& _outAutomated, std::vector<automatable_param_t*>& _outRest) {
+    void getSortedParamsSeperate(std::vector<automatable_param_t*>& _outAutomated, std::vector<automatable_param_t*>& _outRest, bool bOnlyAutomatble) {
         _outAutomated.reserve(automationLanes.size());
         _outRest.reserve(mapParams.size());
         std::for_each(mapParams.begin(), mapParams.end(), [&](auto& mapEntry) {
@@ -412,7 +415,13 @@ public:
             auto it = std::find_if(automationLanes.cbegin(), automationLanes.cend(), [paramIdx](const auto& ap) {
                 return ap.paramIdx == paramIdx && ap.src.isAutomated();
             });
-            if (it == automationLanes.cend()) {
+            bool bIsAutomatedOrModulated = it != automationLanes.cend() || mapModulations.count(paramIdx) > 0;
+            if (!bIsAutomatedOrModulated) {
+                automatable_param_t& param = mapEntry.second;
+                if (param.isHidden)
+                    return;
+                if (bOnlyAutomatble && !param.isAutomatable)
+                    return;
                 _outRest.push_back(&mapEntry.second);
             } else {
                 _outAutomated.push_back(&mapEntry.second);

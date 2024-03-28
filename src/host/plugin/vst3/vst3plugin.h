@@ -64,6 +64,7 @@ class vst3plugin final : public effectbase {
     Steinberg::Vst::HostProcessData processData = {};
 	Steinberg::Vst::ProcessContext processContext = {};
 	Steinberg::IPtr<Steinberg::IPlugView> view = nullptr;
+    Steinberg::Vst::ParameterInfo programChangeParameter{};
     bool bIsPostInit       = false;
     bool bIsLoadingProgram = false;
     class ComponentHandler : public Steinberg::Vst::IComponentHandler
@@ -372,6 +373,25 @@ public:
                 log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter display value\n");
                 continue;
             }
+            automatable_param_t* param = registerParam(paramIdentifier);
+            if (info.flags & ParameterInfo::kIsProgramChange) {
+                programChangeParameter = info;
+                param->isHidden = true;
+            }
+            if (info.flags & ParameterInfo::kIsHidden) {
+                param->isHidden = true;
+            }
+            if (info.flags & ParameterInfo::kIsReadOnly) {
+                param->isReadOnly = true;
+            }
+            if (info.flags & ParameterInfo::kIsBypass) {
+                param->isHidden = true;
+            }
+            auto title = VST3::StringConvert::convert(info.title);
+            if (title.find("MIDI CC") != std::string::npos) {
+                param->isHidden = true;
+            }
+            param->isAutomatable = info.flags & ParameterInfo::kCanAutomate;
             param->internalIdx = info.id;
             param->name = VST3::StringConvert::convert(info.title);
             param->shortLabel = VST3::StringConvert::convert(info.shortTitle);
@@ -379,6 +399,7 @@ public:
             param->paramDisplayValState = PARAM_FLAG_SET;
             param->paramValueState = PARAM_FLAG_SET;
             param->unit = VST3::StringConvert::convert(info.units);
+            param->quantizationSteps = info.stepCount;
             String128 paramValueStr{};
             if (kResultOk != editController->getParamStringByValue(info.id, info.defaultNormalizedValue, paramValueStr)) {
                 log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter display value\n");
@@ -658,7 +679,7 @@ public:
                     continue;
                 }
                 ParameterInfo info{};
-                if (kResultOk != editController->getParameterInfo(param->internalIdx, info)) {
+                if (kResultOk != editController->getParameterInfo(param->idx - PARAM_OFFSET_EXTERNAL, info)) {
                     log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter info\n");
                     continue;
                 }
@@ -698,7 +719,7 @@ public:
                             continue;
                         }
                         ParameterInfo info{};
-                        if (kResultOk != editController->getParameterInfo(param->internalIdx, info)) {
+                        if (kResultOk != editController->getParameterInfo(param->idx - PARAM_OFFSET_EXTERNAL, info)) {
                             log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter info\n");
                             continue;
                         }
