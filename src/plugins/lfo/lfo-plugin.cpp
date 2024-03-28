@@ -26,7 +26,6 @@
 #include "host/plugin/plugin-lockable.h"
 #include "host/shape/shape.h"
 #include "str_util.h"
-#include "logging.h"
 #include "byte-buffer.h"
 #include <algorithm>
 #include <array>
@@ -133,8 +132,8 @@ namespace PluginLFO {
         int32_t syncFlags = false;
     };
 
-struct module_lfo::lfo_impl_t final : public PluginLockable {
-struct lfo_automation_src_param_t final : public automated_param_t {
+    struct module_lfo::lfo_impl_t final : public PluginLockable {
+        struct lfo_automation_src_param_t final : public automated_param_t {
             module_lfo* module = nullptr;
             DAW::Shape::shape_t shape;
             std::vector<SyncRatio> enabledSyncs;
@@ -447,7 +446,7 @@ struct lfo_automation_src_param_t final : public automated_param_t {
         return false;
     }
 
-class guictr_module_lfo final : public guictr_base {
+    class guictr_module_lfo final : public guictr_base {
         module_lfo* const module;
         std::vector<guiknob_pluginparam*> guiParams;
         std::vector<gui_slider_textfield*> guiParamsTextfields;
@@ -539,9 +538,7 @@ class guictr_module_lfo final : public guictr_base {
             add(&editfield);
         }
 
-
-
-class ctxtmenu_lfo_sync final : public ctxtmenu_entry {
+        class ctxtmenu_lfo_sync final : public ctxtmenu_entry {
             module_lfo* const module;
             int32_t channel;
 
@@ -649,12 +646,14 @@ class ctxtmenu_lfo_sync final : public ctxtmenu_entry {
                 return -1;
             }
         };
-class guictr_module_lfo_context_menu final : public guictxtmenu {
+
+        class guictr_module_lfo_context_menu final : public guictxtmenu {
             module_lfo* const module;
             int32_t channel;
         public:
             explicit guictr_module_lfo_context_menu(module_lfo* _module, int32_t _channel)
-            : guictxtmenu(), module(_module), channel(_channel) {
+                : guictxtmenu(), module(_module), channel(_channel) 
+            {
                 this->size.x   = 220;
                 maxHeight = 0;
                 this->fontSize = FONT_SIZE_CTXT_SMALL;
@@ -793,7 +792,6 @@ class guictr_module_lfo_context_menu final : public guictxtmenu {
             }
         }
     }
-
 
     param_converted_t module_lfo::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
         //TODO: use std::from_chars when floating point version arrives in libc++
