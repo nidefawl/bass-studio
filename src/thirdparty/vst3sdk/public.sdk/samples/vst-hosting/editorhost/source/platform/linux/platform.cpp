@@ -211,7 +211,7 @@ void Platform::eventLoop ()
 
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
-int main (int argc, char* argv[])
+/* int main (int argc, char* argv[])
 {
 	std::vector<std::string> cmdArgs;
 	for (int i = 1; i < argc; ++i)
@@ -220,4 +220,4 @@ int main (int argc, char* argv[])
 	Steinberg::Vst::EditorHost::Platform::instance ().run (cmdArgs);
 
 	return 0;
-}
+} */

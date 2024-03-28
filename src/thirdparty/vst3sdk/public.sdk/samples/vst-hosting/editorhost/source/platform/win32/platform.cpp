@@ -167,9 +167,9 @@ void Platform::run (LPWSTR lpCmdLine, HINSTANCE _hInstance)
 #endif
 
 //------------------------------------------------------------------------
-int APIENTRY wWinMain (_In_ HINSTANCE instance, _In_opt_ HINSTANCE /*prevInstance*/,
-                       _In_ LPWSTR lpCmdLine, _In_ int /*nCmdShow*/)
-{
+// int APIENTRY wWinMain (_In_ HINSTANCE instance, _In_opt_ HINSTANCE /*prevInstance*/,
+//                        _In_ LPWSTR lpCmdLine, _In_ int /*nCmdShow*/)
+/* {
 	HRESULT hr = CoInitialize (nullptr);
 	if (FAILED (hr))
 		return FALSE;
@@ -179,4 +179,4 @@ int APIENTRY wWinMain (_In_ HINSTANCE instance, _In_opt_ HINSTANCE /*prevInstanc
 	CoUninitialize ();
 
 	return 0;
-}
+} */
