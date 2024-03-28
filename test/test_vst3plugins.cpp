@@ -13,7 +13,6 @@
 #include <pluginterfaces/vst/vsttypes.h>
 #include <cstdio>
 #include <set>
-#include <windows.h>
 
 enum OpenFlags
 {
@@ -180,6 +179,11 @@ bool testVst3(const std::string& path, const VST3::Optional<VST3::UID>& effectID
 				if (*effectID != classInfo.ID ())
 					continue;
 			}
+            std::printf("VST3 %s %s %s\n",
+                classInfo.name().c_str(),
+                classInfo.category().c_str(), 
+                classInfo.subCategoriesString().c_str() 
+            );
 			plugProvider = owned (new PlugProvider (factory, classInfo, true));
 			if (plugProvider->initialize () == false)
 				plugProvider = nullptr;
@@ -364,6 +368,8 @@ int main(int, char*[]) {
     auto pList = VST3::Hosting::Module::getModulePaths();
     std::set<std::string> uniqueClasses;
     std::set<std::string> uniqueCategories;
+    srand(time(0));
+    auto randomIndex = rand() % pList.size();
     for (size_t i = 0; i < pList.size(); i++) {
         auto path = pList[i];
         std::string error;
@@ -377,24 +383,19 @@ int main(int, char*[]) {
         } else {
             int32_t classCount = 0;
             for (auto classInfo : module->getFactory().classInfos()) {
-                // std::printf("VST3 %d: %s %s %s\n",
-                //     classCount, 
-                //     classInfo.name().c_str(),
-                //     // classInfo.ID().toString(true).c_str(), 
-                //     classInfo.category().c_str(), 
-                //     classInfo.subCategoriesString().c_str() 
-                //     // classInfo.vendor().c_str(), classInfo.version().c_str(), 
-                //     // classInfo.sdkVersion().c_str()
-                // );
                 uniqueClasses.insert(classInfo.name());
                 for (auto& subCategory : classInfo.subCategories()) {
                     uniqueCategories.insert(subCategory);
                 }
                 classCount++;
             }
+            if (i == randomIndex) {
+                testVst3(path, uid, flags);
+            }
         }
         std::printf("Scanning VST3 plugins: %d/%d\n", i, pList.size());
     }
+    pluginContext = nullptr;
     std::printf("%d unique classes, %d unique categories\n",
         uniqueClasses.size(), uniqueCategories.size());
     for (auto& className : uniqueClasses) {

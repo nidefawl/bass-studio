@@ -165,6 +165,6 @@ DEFINE_TEST(test_audiofiles TRUE test_audiofiles.cpp common/test_common.cpp)
 DEFINE_TEST(test_timestretch TRUE test_timestretch.cpp common/test_common.cpp)
 DEFINE_TEST(test_oversampling TRUE test_oversampling.cpp common/test_common.cpp)
 
-if (WIN32)
+if (WIN32 OR LINUX)
   DEFINE_TEST(test_vst3plugins TRUE test_vst3plugins.cpp)
 endif()
