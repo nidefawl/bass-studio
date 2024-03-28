@@ -169,15 +169,11 @@ if(VST_SDK)
     if(SMTG_LINUX)
         set(SDK_PLATFORM_SRCS
             source/vst/hosting/module_linux.cpp
-            samples/vst-hosting/editorhost/source/platform/linux/platform.cpp
-            samples/vst-hosting/editorhost/source/platform/linux/window.cpp
         )
     endif()
     if(SMTG_WIN)
         set(SDK_PLATFORM_SRCS
             source/vst/hosting/module_win32.cpp
-            samples/vst-hosting/editorhost/source/platform/win32/platform.cpp
-            samples/vst-hosting/editorhost/source/platform/win32/window.cpp
         )
     endif()
     add_library(sdk_hosting 

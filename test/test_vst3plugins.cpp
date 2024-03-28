@@ -1,6 +1,8 @@
 #include <public.sdk/source/vst/hosting/hostclasses.h>
 #include <public.sdk/source/vst/hosting/module.h>
 #include <public.sdk/samples/vst-hosting/editorhost/source/platform/iplatform.h>
+#include <public.sdk/samples/vst-hosting/editorhost/source/platform/linux/window.h>
+#include <public.sdk/samples/vst-hosting/editorhost/source/platform/linux/runloop.h>
 #include <public.sdk/source/vst/hosting/plugprovider.h>
 #include <pluginterfaces/vst/ivsteditcontroller.h>
 #include <base/source/fcommandline.h>
@@ -118,6 +120,14 @@ private:
 
 WindowPtr window;
 std::shared_ptr<WindowController> windowController;
+
+#ifdef __linux__
+namespace Steinberg::Vst::EditorHost {
+  void setPlatformLinuxXDisplay (IPlatform* iplatform, Display* display);
+  void runEventLoopLinux (IPlatform* iplatform);
+}
+#endif
+
 //------------------------------------------------------------------------
 void createViewAndShow (IEditController* controller)
 {
@@ -136,6 +146,20 @@ void createViewAndShow (IEditController* controller)
 
 	auto viewRect = ViewRectToRect (plugViewSize);
 
+#if __linux__
+	// Connect to X server
+	std::string displayName (getenv ("DISPLAY"));
+	if (displayName.empty ())
+		displayName = ":0.0";
+	Display* xDisplay {nullptr};
+	if ((xDisplay = XOpenDisplay (displayName.data ())) == nullptr)
+	{
+		return;
+	}
+  Steinberg::Vst::EditorHost::setPlatformLinuxXDisplay (&IPlatform::instance (), xDisplay);
+#endif
+
+	RunLoop::instance ().setDisplay (xDisplay);
 	windowController = std::make_shared<WindowController> (view);
 	window = IPlatform::instance ().createWindow (
 	    "Editor", viewRect.size, view->canResize () == kResultTrue, windowController);
@@ -145,12 +169,19 @@ void createViewAndShow (IEditController* controller)
 	}
 
 	window->show ();
+#ifdef _WIN32
 	MSG msg;
 	while (GetMessage (&msg, nullptr, 0, 0))
 	{
 		TranslateMessage (&msg);
 		DispatchMessage (&msg);
 	}
+#elif __linux__
+
+	RunLoop::instance ().start ();
+
+	XCloseDisplay (xDisplay);
+#endif
 }
 
 bool testVst3(const std::string& path, const VST3::Optional<VST3::UID>& effectID, uint32_t flags) {
@@ -384,13 +415,17 @@ int main(int, char*[]) {
             int32_t classCount = 0;
             for (auto classInfo : module->getFactory().classInfos()) {
                 uniqueClasses.insert(classInfo.name());
+                if (classInfo.name().find("Vital") != std::string::npos) {
+                    testVst3(path, uid, flags);
+                    return 0;
+                }
                 for (auto& subCategory : classInfo.subCategories()) {
                     uniqueCategories.insert(subCategory);
                 }
                 classCount++;
             }
             if (i == randomIndex) {
-                testVst3(path, uid, flags);
+                // testVst3(path, uid, flags);
             }
         }
         std::printf("Scanning VST3 plugins: %d/%d\n", i, pList.size());

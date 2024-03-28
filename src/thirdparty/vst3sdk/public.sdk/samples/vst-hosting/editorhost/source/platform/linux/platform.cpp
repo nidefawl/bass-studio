@@ -88,6 +88,8 @@ public:
 
 	void run (const std::vector<std::string>& cmdArgs);
 
+  void setXDisplay (Display* display) { xDisplay = display; }
+
 	static const int kMinEventLoopRate = 16; // 60Hz
 private:
 	void onWindowClosed (X11Window* window);
@@ -99,6 +101,11 @@ private:
 
 	std::vector<std::shared_ptr<X11Window>> windows;
 };
+
+void setPlatformLinuxXDisplay (IPlatform* iplatform, Display* display)
+{
+    static_cast<Platform*>(iplatform)->setXDisplay(display);
+}
 
 //------------------------------------------------------------------------
 IPlatform& IPlatform::instance ()

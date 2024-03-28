@@ -166,5 +166,21 @@ DEFINE_TEST(test_timestretch TRUE test_timestretch.cpp common/test_common.cpp)
 DEFINE_TEST(test_oversampling TRUE test_oversampling.cpp common/test_common.cpp)
 
 if (WIN32 OR LINUX)
-  DEFINE_TEST(test_vst3plugins TRUE test_vst3plugins.cpp)
+  if(LINUX)
+    set(TEST_VST3_HOSTING_PLATFORM_FILES
+      ../src/thirdparty/vst3sdk/public.sdk/samples/vst-hosting/editorhost/source/platform/linux/platform.cpp
+      ../src/thirdparty/vst3sdk/public.sdk/samples/vst-hosting/editorhost/source/platform/linux/runloop.cpp
+      ../src/thirdparty/vst3sdk/public.sdk/samples/vst-hosting/editorhost/source/platform/linux/window.cpp
+    )
+  endif()
+  if(WIN32)
+    set(TEST_VST3_HOSTING_PLATFORM_FILES
+        ../src/thirdparty/vst3sdk/public.sdk/samples/vst-hosting/editorhost/source/platform/win32/platform.cpp
+        ../src/thirdparty/vst3sdk/public.sdk/samples/vst-hosting/editorhost/source/platform/win32/window.cpp
+    )
+  endif()
+  DEFINE_TEST(test_vst3plugins TRUE 
+      test_vst3plugins.cpp
+      ${TEST_VST3_HOSTING_PLATFORM_FILES}
+  )
 endif()
