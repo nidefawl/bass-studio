@@ -818,10 +818,10 @@ namespace PluginLFO {
             }
             case PARAM_LFO_MINIMUM:
             case PARAM_LFO_MAXIMUM: {
-                return {math::clamp(math::roundfS64(fTextFieldVal) * 0.5f + 0.5f, 0.0f, 1.0f), true};
+                return {math::clamp(fTextFieldVal * 0.5f + 0.5f, 0.0f, 1.0f), true};
             }
             case PARAM_LFO_PHASE: {
-                return {math::clamp(math::roundfS64(fTextFieldVal) / 360.0f, 0.0f, 1.0f), true};
+                return {math::clamp(fTextFieldVal / 360.0f, 0.0f, 1.0f), true};
             }
             default:
                 break;
