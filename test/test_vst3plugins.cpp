@@ -2,7 +2,6 @@
 #include <public.sdk/source/vst/hosting/module.h>
 #include <public.sdk/samples/vst-hosting/editorhost/source/platform/iplatform.h>
 #include <public.sdk/samples/vst-hosting/editorhost/source/platform/linux/window.h>
-#include <public.sdk/samples/vst-hosting/editorhost/source/platform/linux/runloop.h>
 #include <public.sdk/source/vst/hosting/plugprovider.h>
 #include <pluginterfaces/vst/ivsteditcontroller.h>
 #include <base/source/fcommandline.h>
@@ -15,6 +14,11 @@
 #include <pluginterfaces/vst/vsttypes.h>
 #include <cstdio>
 #include <set>
+#ifdef _WIN32
+#include <windows.h>
+#elif defined(__linux__)
+#include <public.sdk/samples/vst-hosting/editorhost/source/platform/linux/runloop.h>
+#endif
 
 enum OpenFlags
 {
@@ -156,10 +160,11 @@ void createViewAndShow (IEditController* controller)
 	{
 		return;
 	}
-  Steinberg::Vst::EditorHost::setPlatformLinuxXDisplay (&IPlatform::instance (), xDisplay);
-#endif
+    Steinberg::Vst::EditorHost::setPlatformLinuxXDisplay (&IPlatform::instance (), xDisplay);
 
 	RunLoop::instance ().setDisplay (xDisplay);
+#endif
+
 	windowController = std::make_shared<WindowController> (view);
 	window = IPlatform::instance ().createWindow (
 	    "Editor", viewRect.size, view->canResize () == kResultTrue, windowController);
@@ -176,7 +181,7 @@ void createViewAndShow (IEditController* controller)
 		TranslateMessage (&msg);
 		DispatchMessage (&msg);
 	}
-#elif __linux__
+#elif defined(__linux__)
 
 	RunLoop::instance ().start ();
 
@@ -415,7 +420,7 @@ int main(int, char*[]) {
             int32_t classCount = 0;
             for (auto classInfo : module->getFactory().classInfos()) {
                 uniqueClasses.insert(classInfo.name());
-                if (classInfo.name().find("Vital") != std::string::npos) {
+                if (classInfo.name().find("Diva") != std::string::npos) {
                     testVst3(path, uid, flags);
                     return 0;
                 }

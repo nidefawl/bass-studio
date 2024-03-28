@@ -904,9 +904,9 @@ public:
         }
 #ifdef _WIN32
         auto platformWindowType = Steinberg::kPlatformTypeHWND;
-#elif __linux__
+#elif defined(__linux__)
         auto platformWindowType = Steinberg::kPlatformTypeX11EmbedWindowID;
-#elif __APPLE__
+#elif defined(__APPLE__)
         auto platformWindowType = Steinberg::kPlatformTypeNSView;
 #else
         return false;
