@@ -254,7 +254,7 @@ public:
         checkForMainThread();
         vst3AudioProcessor->setProcessing(false);
         if (Steinberg::kResultOk != vst3Component->setActive(false)) {
-            log_lf(Log::L_ERROR, "Failed to deactivate VST3 plugin\n");
+            log_lf(Log::L_ERROR, "%s: Failed to deactivate VST3 plugin\n", StringAsCStr(sName));
             bIsEnabled = false;
         }
     }
@@ -262,7 +262,7 @@ public:
     void activate() {
         checkForMainThread();
         if (Steinberg::kResultOk != vst3Component->setActive(true)) {
-            log_lf(Log::L_ERROR, "Failed to activate VST3 plugin\n");
+            log_lf(Log::L_ERROR, "%s: Failed to activate VST3 plugin\n", StringAsCStr(sName));
             bIsEnabled = false;
         }
         vst3AudioProcessor->setProcessing(bIsEnabled);
@@ -367,10 +367,9 @@ public:
         auto count = !editController ? 0 : editController->getParameterCount();
         for (int32_t i = 0; i < count; ++i) {
             int32_t paramIdentifier    = PARAM_OFFSET_EXTERNAL + i;
-            automatable_param_t* param = registerParam(paramIdentifier);
             ParameterInfo info{};
             if (kResultOk != editController->getParameterInfo(i, info)) {
-                log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter display value\n");
+                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin parameter info\n", StringAsCStr(sName));
                 continue;
             }
             automatable_param_t* param = registerParam(paramIdentifier);
@@ -402,7 +401,7 @@ public:
             param->quantizationSteps = info.stepCount;
             String128 paramValueStr{};
             if (kResultOk != editController->getParamStringByValue(info.id, info.defaultNormalizedValue, paramValueStr)) {
-                log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter display value\n");
+                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin parameter info\n", StringAsCStr(sName));
                 continue;
             }
             param->paramDisplayValStr = VST3::StringConvert::convert(paramValueStr);
@@ -546,7 +545,7 @@ public:
         }
 
         if (kResultOk != vst3AudioProcessor->setupProcessing(processSetup)) {
-            log_lf(Log::L_ERROR, "Failed to setup VST3 plugin processing\n");
+            log_lf(Log::L_ERROR, "%s: Failed to setup VST3 plugin processing\n", StringAsCStr(sName));
             bIsEnabled = false;
         }
     }
@@ -564,7 +563,7 @@ public:
         for (channelnum_t i = 0; i < inputCount; ++i) {
             BusInfo info{};
             if (kResultOk != vst3Component->getBusInfo(kAudio, kInput, i, info)) {
-                log_lf(Log::L_ERROR, "Failed to get VST3 plugin input bus info\n");
+                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin input bus info\n", StringAsCStr(sName));
                 bIsEnabled = false;
                 return;
             }
@@ -579,7 +578,7 @@ public:
         for (channelnum_t i = 0; i < outputCount; ++i) {
             BusInfo info{};
             if (kResultOk != vst3Component->getBusInfo(kAudio, kOutput, i, info)) {
-                log_lf(Log::L_ERROR, "Failed to get VST3 plugin output bus info\n");
+                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin output bus info\n", StringAsCStr(sName));
                 bIsEnabled = false;
                 return;
             }
@@ -680,7 +679,7 @@ public:
                 }
                 ParameterInfo info{};
                 if (kResultOk != editController->getParameterInfo(param->idx - PARAM_OFFSET_EXTERNAL, info)) {
-                    log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter info\n");
+                    log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin parameter info\n", StringAsCStr(sName));
                     continue;
                 }
                 if (!(info.flags & ParameterInfo::kCanAutomate)
@@ -720,7 +719,7 @@ public:
                         }
                         ParameterInfo info{};
                         if (kResultOk != editController->getParameterInfo(param->idx - PARAM_OFFSET_EXTERNAL, info)) {
-                            log_lf(Log::L_ERROR, "Failed to get VST3 plugin parameter info\n");
+                            log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin parameter info\n", StringAsCStr(sName));
                             continue;
                         }
                         if (!(info.flags & ParameterInfo::kCanAutomate)
@@ -971,7 +970,7 @@ public:
             view->setFrame(&plugFrame);
             auto voidWindowHandle = reinterpret_cast<void*>(_window->getWindowHandle());
             if (view->attached(voidWindowHandle, Steinberg::kPlatformTypeHWND) != Steinberg::kResultOk) {
-                log_lf(Log::L_ERROR, "Failed to attach editor view to HWND\n");
+                log_lf(Log::L_ERROR, "%s: Failed to attach editor view to HWND\n", StringAsCStr(sName));
                 return false;
             }
             this->updateFromMainThread();
@@ -983,7 +982,7 @@ public:
         if (this->windowHost != nullptr && bEditOpen) {
             if (view) {
                 if (Steinberg::kResultOk != view->removed()) {
-                    log_lf(Log::L_ERROR, "Failed to remove editor view\n");
+                    log_lf(Log::L_ERROR, "%s: Failed to remove editor view\n", StringAsCStr(sName));
                 }
                 view->setFrame(nullptr);
             }
