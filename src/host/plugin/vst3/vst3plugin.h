@@ -872,26 +872,25 @@ public:
 
     void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override {
         this->bIsLoadingProgram = true;
-        bool bLoadProgramDataChunk = false;
         if (pluginSnapshot.dataChunk.size() > 0) {
             Steinberg::Vst::BufferStream stream;
             Steinberg::int32 bytesWritten = 0;
             auto nonConst = const_cast<std::vector<uint8_t>&>(pluginSnapshot.dataChunk);
             stream.write(nonConst.data(), nonConst.size(), &bytesWritten);
             stream.seek(0, Steinberg::IBStream::IStreamSeekMode::kIBSeekSet);
-            if (Steinberg::kResultOk == vst3Component->setState(&stream)) {
-                bLoadProgramDataChunk = true;
+            if (Steinberg::kResultOk != vst3Component->setState(&stream)) {
+                log_lf(Log::L_ERROR, "%s: Failed to load VST3 plugin state 0\n", StringAsCStr(sName));
             }
             if (editController) {
                 stream.seek(0, Steinberg::IBStream::IStreamSeekMode::kIBSeekSet);
                 if (Steinberg::kResultOk == editController->setComponentState(&stream)) {
-                    bLoadProgramDataChunk = true;
+                    log_lf(Log::L_ERROR, "%s: Failed to load VST3 plugin state 1\n", StringAsCStr(sName));
                 }
                 nonConst = const_cast<std::vector<uint8_t>&>(pluginSnapshot.dataChunk2);
                 stream.write(nonConst.data(), nonConst.size(), &bytesWritten);
                 stream.seek(0, Steinberg::IBStream::IStreamSeekMode::kIBSeekSet);
                 if (Steinberg::kResultOk == editController->setState(&stream)) {
-                    bLoadProgramDataChunk = true;
+                    log_lf(Log::L_ERROR, "%s: Failed to load VST3 plugin state 2\n", StringAsCStr(sName));
                 }
             }
 
