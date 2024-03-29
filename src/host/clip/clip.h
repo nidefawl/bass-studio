@@ -293,7 +293,7 @@ public:
     }
     int getInTimeRange(tick_t timeS, tick_t timeE, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& list);
     void getNotesView(tick_t timeS, tick_t timeE, clip_notes_t& notesView, bool forPlayback) const;
-    void applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note) const;
+    void applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note, note_t* nextNote) const;
     noteview_render_t& getNoteViewRender() const {
         updateNoteView();
         return this->noteViewRender;
