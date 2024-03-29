@@ -549,9 +549,16 @@ namespace DAW {
     void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
         const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
         uint32_t missingParams = 0;
+        uint32_t loadedParams = 0;
         for (const param_snapshot_t& param : pluginSnapshotParams) {
             automatable_param_t* atParam = effect->getParam(param.idx);
             if (atParam) {
+                if (atParam->isReadOnly) {
+                    continue;
+                }
+                if (atParam->isHidden) {
+                    continue;
+                }
                 auto paramVal = math::clamp(param.val, 0.0f, 1.0f);
                 dbgassert(paramVal >= 0.0f && paramVal <= 1.0f);
                 int flags = FLG_PAR_UPDATE_INIT;
@@ -567,7 +574,7 @@ namespace DAW {
             //TODO: notify users thru UI
             log_printf("Some parameters could not be mapped: %s has %d missing parameters\n", StringAsCStr(effect->getName()), missingParams);
         } else {
-            log_printf("%s: Loaded %zu params\n", StringAsCStr(effect->getName()), pluginSnapshotParams.size());
+            log_printf("%s: Loaded %u params\n", StringAsCStr(effect->getName()), loadedParams);
         }
         //const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
         //for (const param_snapshot_t& param : pluginHostSideParams) {
