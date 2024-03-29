@@ -293,7 +293,7 @@ public:
     }
     int getInTimeRange(tick_t timeS, tick_t timeE, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& list);
     void getNotesView(tick_t timeS, tick_t timeE, clip_notes_t& notesView, bool forPlayback) const;
-    void applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note, note_t* nextNote) const;
+    void applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note, const note_t* nextNote) const;
     noteview_render_t& getNoteViewRender() const {
         updateNoteView();
         return this->noteViewRender;
@@ -345,8 +345,8 @@ private:
     void updateNoteView() const;
 };
 
-note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time);
-note_t* getFirstBefore(std::vector<note_t>& v, int32_t pitch, tick_t time);
+const note_t* getFirstAfter(const std::vector<note_t>& v, int32_t pitch, tick_t time);
+const note_t* getFirstBefore(const std::vector<note_t>& v, int32_t pitch, tick_t time);
 void cutClipLeft(clip_t* c, tick_t len);
 void cutClipRight(clip_t* c, tick_t len);
 inline bool operator==(const clip_t& lhs, const clip_t& rhs) {

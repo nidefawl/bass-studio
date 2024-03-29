@@ -364,7 +364,7 @@ tick_t clip_t::getNumLoops() const {
     return (lenClipLoopSection + loopLen - 1) / loopLen;
 }
 
-void clip_t::applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note, note_t* nextNote) const {
+void clip_t::applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note, const note_t* nextNote) const {
     auto& groovePatternTiming = grooveData.timingData.timePoints;
     auto& groovePatternVelocity = grooveData.timingData.velocityPoints;
     if (groovePatternTiming.empty()) {
@@ -459,11 +459,11 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
             continue;
         auto localEndMin = math::min(localEnd, preLoopLen);
         note_t nnote = note;// copy
-        nnote.time -= offsetStart;
         if (grooveIdx >= 0) {
-            auto nextNote = getFirstAfter(listLoop, nnote.pitch, nnote.time);
+            auto nextNote = getFirstAfter(notes.m_list, nnote.pitch, nnote.time);
             applyNoteQuantizationGroove(groove, nnote, nextNote);
         }
+        nnote.time -= offsetStart;
         if (nnote.isIntersectTime(localStart, localEndMin)) {
             if (nnote.start() < localStart) {
                 /** cut pre-loop note on the left for render, ignore for playback */
@@ -499,11 +499,21 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
             const tick_t clipEnd         = math::min(posCurLoopEnd, localEnd);
             for (; itNote != itNoteEnd; itNote++) {
                 note_t note = *itNote;// copy
-                note.time -= loopStart;
-                note.time += posCurLoopStart;
                 if (grooveIdx >= 0) {
                     auto nextNote = getFirstAfter(listLoop, note.pitch, note.time);
+                    note.time -= loopStart;
+                    note.time += posCurLoopStart;
+                    note_t tmp{};
+                    if (nextNote) {
+                        tmp = *nextNote;
+                        tmp.time -= loopStart;
+                        tmp.time += posCurLoopStart;
+                        nextNote = &tmp;
+                    }
                     applyNoteQuantizationGroove(groove, note, nextNote);
+                } else {
+                    note.time -= loopStart;
+                    note.time += posCurLoopStart;
                 }
                 dbgassert(note.len >= 0);
                 if (note.end() > localStart && note.start() < localEnd) {
@@ -629,12 +639,12 @@ void clip_notes_t::updateBounds() {
     }
 }
 
-note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time) {
+const note_t* getFirstAfter(const std::vector<note_t>& v, int32_t pitch, tick_t time) {
     auto itStart     = v.begin();
     const auto itEnd = v.end();
-    note_t* closest  = nullptr;
+    const note_t* closest  = nullptr;
     while (itStart != itEnd) {
-        note_t& val = *itStart;
+        auto& val = *itStart;
         if (val.pitch == pitch)
             if (val.time > time && (closest == NULL || closest->time > val.time)) {
                 closest = &val;
@@ -644,12 +654,12 @@ note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time) {
     return closest;
 }
 
-note_t* getFirstBefore(std::vector<note_t>& v, int32_t pitch, tick_t time) {
+const note_t* getFirstBefore(const std::vector<note_t>& v, int32_t pitch, tick_t time) {
     auto itStart     = v.begin();
     const auto itEnd = v.end();
-    note_t* closest  = nullptr;
+    const note_t* closest  = nullptr;
     while (itStart != itEnd) {
-        note_t& val = *itStart;
+        auto& val = *itStart;
         if (val.pitch == pitch)
             if (val.end() < time && (closest == NULL || closest->end() < val.end())) {
                 closest = &val;

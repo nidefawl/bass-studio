@@ -1702,7 +1702,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
             while (it != itEnd) {
                 note_t& note = *it;
                 if (dragMode == drag_note_left) {
-                    note_t* before = getFirstBefore(notes.m_list, note.pitch, note.time);
+                    auto before = getFirstBefore(notes.m_list, note.pitch, note.time);
                     note.time      = math::min(note.end() - 1, note.start() + timeOffset);
                     note.len       = math::max(math::max(1, gridSize/4), note.len - timeOffset);
                     if (before) {
@@ -1711,7 +1711,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                         }
                     }
                 } else if (dragMode == drag_note_right) {
-                    note_t* after = getFirstAfter(notes.m_list, note.pitch, note.time);
+                    auto after = getFirstAfter(notes.m_list, note.pitch, note.time);
                     note.len      = math::max(math::max(1, gridSize/4), note.len + timeOffset);
                     if (after) {
                         if (note.end() > after->start()) {
