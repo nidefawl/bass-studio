@@ -115,9 +115,9 @@ class vst3plugin final : public effectbase {
                 } else {
                     auto newVal = effParam->getValue();
                     auto oldVal = paramEditing.valBefore;
-                    track_t* track                = plugin->trackImpl->getTrack();
+                    track_t* track              = plugin->trackImpl->getTrack();
                     automatable_param_ref_t ref = plugin->toRef();
-                    parameter_ref_t p             = { track->projectIdx, ref.type, plugin->projectGlobalId, effParam->idx };
+                    parameter_ref_t p           = { track->projectIdx, ref.type, plugin->projectGlobalId, effParam->idx };
                     auto daw = daw_tls::getTls().dawInstance;
                     daw->pushHist(new action_modify_effect_parameter("Modify parameter", p, oldVal, newVal));
                 }
@@ -130,11 +130,16 @@ class vst3plugin final : public effectbase {
         {
             if ((flags & Steinberg::Vst::RestartFlags::kParamValuesChanged) ||
                 (flags & Steinberg::Vst::RestartFlags::kParamTitlesChanged)) {
-                plugin->visitParams([](auto& mapEntry) {
+                plugin->visitParams([editController=plugin->editController](auto& mapEntry) {
                     automatable_param_t& param = mapEntry.second;
-                    param.paramNameState |= PARAM_FLAG_DIRTY;
-                    param.paramValueState |= PARAM_FLAG_DIRTY;
-                    param.paramDisplayValState |= PARAM_FLAG_DIRTY;
+                    if (param.internalIdx >= 0) {
+                        param.paramNameState |= PARAM_FLAG_DIRTY;
+                        param.paramDisplayValState |= PARAM_FLAG_DIRTY;
+                        if (editController) {
+                            param.setValue(editController->getParamNormalized(param.internalIdx));
+                            param.paramValueState = PARAM_FLAG_SET;
+                        }
+                    }
                 });
             }
             auto name = plugin->getName();
@@ -419,11 +424,16 @@ public:
         activate(); 
         if (!bIsPostInit) {
             bIsPostInit = true;
-            visitParams([](auto& mapEntry) {
+            visitParams([editController=this->editController](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
-                param.paramNameState |= PARAM_FLAG_DIRTY;
-                param.paramValueState |= PARAM_FLAG_DIRTY;
-                param.paramDisplayValState |= PARAM_FLAG_DIRTY;
+                if (param.internalIdx >= 0) {
+                    param.paramNameState |= PARAM_FLAG_DIRTY;
+                    param.paramDisplayValState |= PARAM_FLAG_DIRTY;
+                    if (editController) {
+                        param.setValue(editController->getParamNormalized(param.internalIdx));
+                        param.paramValueState = PARAM_FLAG_SET;
+                    }
+                }
             });
         }
     }
@@ -826,13 +836,13 @@ public:
         if (opts.storePluginPreset) {
             auto numParamsReserve = math::min<int32_t>(150, plugin->getNumParameters());
             ps.params.reserve(numParamsReserve);
-            plugin->visitParams([&ps, vstplugin = plugin, usesBinaryChunks](auto& mapEntry) {
+            plugin->visitParams([&ps, usesBinaryChunks](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
                 if (param.inUse || !usesBinaryChunks) {
                     float curValue = param.getValue();
                     int paramFlags = param.inUse ? 1 : 0;
-                    if (param.internalIdx >= 0) {
-                        curValue = vstplugin->editController->getParamNormalized(param.internalIdx);
+                    if (((param.paramValueState & PARAM_FLAG_DIRTY) || !(param.paramValueState & PARAM_FLAG_SET)) && param.internalIdx >= 0) {
+                        log_lf(Log::L_WARN, "VST3: Parameter %s is dirty\n", param.name.c_str());
                     }
                     ps.params.push_back(param_snapshot_t{ param.idx, curValue, paramFlags });
                 }
@@ -886,9 +896,7 @@ public:
             }
 
         }
-        if (!bLoadProgramDataChunk) {
-            DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
-        }
+        DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
         this->bIsLoadingProgram = false;
         for (auto& [uuid, snapshot] : pluginSnapshot.uiSnapshots) {
             auto gui = uiInstances.find(uuid);
