@@ -515,7 +515,8 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                     note.time -= loopStart;
                     note.time += posCurLoopStart;
                 }
-                dbgassert(note.len >= 0);
+                if (note.len <= 0)
+                    continue;
                 if (note.end() > localStart && note.start() < localEnd) {
                     if (note.start() < clipStart) {
                         //if (forPlayback) {
