@@ -300,6 +300,7 @@ enum GlobalCommandType {
     CMD_INSERT_TIME,
     CMD_EXPORT_AUDIO,
     CMD_RENDER_TO_AUDIO,
+    CMD_APPLY_GROOVE,
     NUM_COMMANDS
 };
 

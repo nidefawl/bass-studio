@@ -1958,6 +1958,40 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 handled = true;
                 edit    = true;
                 desc    = "Paste notes";
+            } else if (command == CMD_APPLY_GROOVE) {
+                clip_notes_t tmpClipboard;
+                view.draggedSelection.clear();
+                notes.clearSelection();
+                auto clipBefore = *clip;
+                auto applyGroove = [&](DawInstance* daw, clip_t* clip, clip_notes_t& notes) {
+                    auto& grooves = daw->getGrooveLibrary().getGrooves();
+                    auto groove = size_t(clip->selectedGroove);
+                    if (groove >= 0 && groove < grooves.size()) {
+                        auto minMax = getMinMaxTime(clip->notes.m_list);
+                        if (minMax.first && minMax.second) {
+                            tick_t start = minMax.first->start();
+                            tick_t end = minMax.second->end();
+                            if (end - start > 0) {
+                                clip->getNotesView(start, end, notes, false);
+                                cutSelfIntersecting(notes.m_list);
+                                notes.updateBounds();
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                };
+                if (applyGroove(daw, clip, tmpClipboard)) {
+                    clip->selectedGroove = -1;
+                    clip->notes = tmpClipboard;
+                    clip->setDirty();
+                }
+                // edit = true;
+                handled = true;
+                desc = "Apply groove";
+                dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+                clip->setDirty();
+                view.updateNotePitches(false);
             } else if (command == CMD_QUANTIZE && !notes.selection.empty()) {
                 auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
                 if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
@@ -2837,7 +2871,15 @@ void gui_clipsettings::determineSize(ivec2& prefSize) {
 
 void gui_clipgroove_settings::buttonClicked(guibase* button) {
     if (parent) {
-        parent->buttonClicked(button);
+        if (button == &btnApply) {
+            auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
+            if (!assert_expr(clipEditor)) {
+                return;
+            }
+            auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_APPLY_GROOVE};
+            clipEditor->handleEditorCommand(temp);
+            return;
+        }
         auto daw = dawCtrl->getDaw();
         auto lock = daw->lockPlayThread();
         auto& data = daw->getGrooves();

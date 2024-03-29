@@ -169,6 +169,7 @@ namespace DAW::UI {
         Add(CMD_MOVE_CURSOR, {"Move cursor", "Move the cursor position", ""}, {});
         Add(CMD_RESET_UI_DEFAULT_LAYOUT, {"Reset UI Layout", "Reset the UI layout to the default layout", ""}, {});
         Add(CMD_APPLY_PYTHON_SCRIPT, {"Apply Python Script", "Apply a python script", ""}, {});
+        Add(CMD_APPLY_GROOVE, {"Apply groove", "Apply groove to clip", ""}, {});
 
         auto cmdOpenView = Command{CMD_SWITCH_LAYOUT, {"Switch Layout", "Switch to Layout %d. Hold Shift Key to store", ""}, {}, 0, {}, {}, 0, 0, ""};
         for (int32_t i = 0; i < 10; i++) {
