@@ -95,21 +95,15 @@ void gui_scrollbar::setScrollOffset(float f) {
     if (fRange <= 0) {
         f = 0;
     }
-//    if (fRange == 0 && prevScrollRange == 0) {
-//        return;
-//    }
-    float _newOffset = f < 0 ? 0 : f > 1 ? 1
-                                         : f;
-//    if (_newOffset == 0 && prevSetOffset == 0) {
-//        return;
-//    }
-    bool canSkip = math::abs(fRange - prevScrollRange) < 1 && math::abs(scrollOffset - _newOffset) < 0.001f;
+    float newOffset = math::clamp(f, 0.0f, 1.0f);
+    ivec2 vcS = ctr.getScrollTotalSize();
+    bool canSkip = math::abs(fRange - prevScrollRange) < 1 && math::abs(scrollOffset - newOffset) * vcS[dir] < 1.0f;
     if (canSkip) {
         return;
     }
     prevScrollRange = fRange;
     prevSetOffset   = scrollOffset;
-    scrollOffset    = _newOffset;
+    scrollOffset    = newOffset;
     ctr.scrollOffsetChanged(dir, scrollOffset);
 }
 
