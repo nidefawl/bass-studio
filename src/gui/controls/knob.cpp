@@ -342,16 +342,11 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
                 renderRoundKnob(vg, cx, cy, radius-1.0f, start, range, param->isBiPolar, fScaledModulated, theme->getColor(GuiColor::COL_KNOB_MODULATED), lineThickness - 2.0f);
             }
         }
-        float fTextValue = 0.0f;
         if (parentCtrl->getGuiOverRef() == toRef()) {
-            fTextValue = getParamByType(param, 0);
             fScaled = getParamScaled(param, 0);
         } else {
-            fTextValue = getParamByType(param, type);
             fScaled = getParamScaled(param, type);
         }
-        auto paramUnit = paramAutomatable->convertParamValueToDisplay(paramIdx, fTextValue);
-        valueDisplay = paramUnit.unit.empty() ? paramUnit.value : paramUnit.value + " " + paramUnit.unit;
     } else{
         fScaled = math::clamp(value, bIsBipolar ? -1.0f : 0.0f, 1.0f);
         if (knobType == knobtype::SLIDER_LABELED) {
@@ -570,7 +565,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         nvgFill(vg);
     };
     float value = getValue();
-    valueDisplay = "N/A";
+    String valueDisplay = "N/A";
     if (m_layout.sKnob.x > 0 && m_layout.sKnob.y > 0) {
         renderButtonAt(vg, m_layout.pKnob, m_layout.sKnob, value);
     }
