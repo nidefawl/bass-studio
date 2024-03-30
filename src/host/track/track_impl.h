@@ -330,6 +330,18 @@ inline channel_ref_t ChannelAudioInput(channelnum_t idx, channelnum_t channelOff
         std::move(name)
     };
 }
+inline channel_ref_t ChannelAudioOutput(channelnum_t idx, channelnum_t channelOffset, String name, channel_pairing type) {
+    return channel_ref_t {
+        stage_type::INPUT_EXTERNAL_AUDIO, 
+        type,
+        { { TRACKID_INVALID_I32 }, stage_bufferpoint::OUTPUT }, 
+        0, 
+        idx,
+        0,
+        channelOffset,
+        std::move(name)
+    };
+}
 inline channel_ref_t ChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput, channelnum_t srcChannelOffset = 0, channelnum_t dstChannelOffset = 0) {
     dbgassert(stage);
     String str;

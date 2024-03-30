@@ -2,6 +2,7 @@
 
 #include "assert_dbg.h"
 #include "gui/automation/modulation.h"
+#include "host/audio_config.h"
 #include "host/clip/clip.h"
 #include "config.h"
 #include "gui/views/pluginlist.h"
@@ -376,10 +377,16 @@ public:
         return false;
     }
     channel_ref_t getEndpoint() override {
-        return DAW::ChannelAudioInput(channel.idx,
-                                      channel.offset,
-                                      "External " + getExternalIOName(channel.type, channel.idx, isInput),
-                                      channel.type);
+        if (isInput == stage_bufferpoint::INPUT)
+            return DAW::ChannelAudioInput(channel.idx,
+                                          channel.offset,
+                                          "External " + getExternalIOName(channel.type, channel.idx, isInput),
+                                          channel.type);
+        else
+            return DAW::ChannelAudioOutput(channel.idx,
+                                           channel.offset,
+                                           "External " + getExternalIOName(channel.type, channel.idx, isInput),
+                                           channel.type);
     }
 };
 class ctxtmenu_entry_stage_channel final : public ctxtmenu_entry_endpoint {

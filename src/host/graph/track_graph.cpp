@@ -463,7 +463,7 @@ namespace DAW {
                         trackCfg.parents.push_back(&trackDstCfg);
                     }
                 } else if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO && trackImpl->mixer.isEnabled()) {
-                    trackGraph->externalOutputRouting.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), AutomationNone(), AutomationNone(), 0, trackImpl->flags });
+                    trackGraph->externalOutputRouting.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST, outputChannel.srcChannelOffset, outputChannel.dstChannelOffset), AutomationNone(), AutomationNone(), 0, trackImpl->flags });
                 }
             }
             if (TRACKTYPE_TO_CTR(track->type) == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
