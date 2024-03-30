@@ -6,6 +6,7 @@
 #include "eq-plugin.h"
 #include "assert_dbg.h"
 #include "guiglobals.h"
+#include "host/audio_analyzer.h"
 #include "host/automation/automation.h"
 #include "dsp_util.h"
 #include "event.h"
@@ -141,7 +142,7 @@ namespace PluginEQ {
     const float DBFS_MUTE_POS = -101.0f;
     const float MTR_CEIL      = 24.0f;
     const float PLOT_DB_MAX = 24;
-    const float PLOT_DB_MIN = -48;
+    const float PLOT_DB_MIN = -48*2;
     const float PLOT_DB_GRID_STEP = 6;
     const float PLOT_DB_RANGE = PLOT_DB_MAX - PLOT_DB_MIN;
     const float PLOT_HZ_MIN = 10;
@@ -171,6 +172,9 @@ namespace PluginEQ {
         std::array<std::vector<std::shared_ptr<DAW::Filter>>, defaultBands.size()> filters;
         std::array<DAW::FilterCoeffs, defaultBands.size()> filterCoeffs;
         AudioBlock tmpBlock;
+        audioanaylzer audioAnalyzer;
+        audio_spectrum spectrum;
+        std::vector<float> freq{};
     };
 
     band_t GetBandParams(module_eq* moduleEq, int32_t bandIdx) {
@@ -295,6 +299,45 @@ namespace PluginEQ {
         return getParamValue(PARAMID_FIRST_BAND + bandIdx * PER_BAND_PARAMS + PARAM_OFFSET_ENABLE) > 0.5f;
     }
 
+    void module_eq::setSampleFormat(sampleformat_t sampleFormat) {
+        impl->audioAnalyzer.init(sampleFormat.blockSize, sampleFormat.sampleRate);
+        auto nBands = 1024;
+        impl->audioAnalyzer.analyzerHf->setNumBands(nBands);
+        impl->audioAnalyzer.analyzerLf->setNumBands(nBands);
+        impl->audioAnalyzer.analyzerHf->setFreqRange(F_MIN, F_MAX);
+        impl->audioAnalyzer.analyzerLf->setFreqRange(F_MIN, F_MAX);
+        impl->audioAnalyzer.analyzerHf->updateBands();
+        impl->audioAnalyzer.analyzerLf->updateBands();
+        impl->spectrum = *impl->audioAnalyzer.analyzerLf;
+        impl->freq = impl->audioAnalyzer.analyzerLf->freq;
+        dbgassert(impl->audioAnalyzer.analyzerHf->freq == impl->audioAnalyzer.analyzerLf->freq);
+        internalplugin::setSampleFormat(sampleFormat);
+    }
+
+    void module_eq::onTick(double since) {
+        internalplugin::onTick(since);
+        impl->audioAnalyzer.onTick();
+    }
+
+    void MixFFTSpectrumBands(const audio_spectrum* lf, const audio_spectrum* hf, audio_spectrum& out) {
+        constexpr float fstep = 0.22f;
+        for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
+            const auto& bandsA = lf->bands[i];
+            const auto& bandsB = hf->bands[i];
+            dbgassert(bandsA.size() == bandsB.size());
+            auto& bandsM = out.bands[i];
+            bandsM.resize(bandsA.size());
+            const float f = 1.0f / (lf->numBands - 1);
+            for (int j = 0; j < lf->numBands; ++j) {
+                float fInterp = smoothstep(fstep, 1.0f - fstep, f * j);
+                float mixedBand = lerpf32(bandsA[j], bandsB[j], fInterp);
+                float dbfs = dsp_util::dBFS(mixedBand);
+                bandsM[j] = (dbfs - PLOT_DB_MIN) / PLOT_DB_RANGE;
+            }
+        }
+                                
+        dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
+    }
     void module_eq::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
                 && out->samples == format.blockSize
@@ -358,11 +401,13 @@ namespace PluginEQ {
             } else {
                 /* fast path: fully muted */
             }
-            return;
+        } else {
+            const auto tickBegin = tick;
+            const auto tickEnd = tickBegin + host->getAudioStreamProperties().ticksPerBlock;
+            DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, bufEqd, out, autParGain, autParPan, tickBegin, tickEnd, state, MTR_CEIL, DBFS_MUTE_POS);
         }
-        const auto tickBegin = tick;
-        const auto tickEnd = tickBegin + host->getAudioStreamProperties().ticksPerBlock;
-        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, bufEqd, out, autParGain, autParPan, tickBegin, tickEnd, state, MTR_CEIL, DBFS_MUTE_POS);
+        impl->audioAnalyzer.processBlock(out, 1.0f);
+        MixFFTSpectrumBands(impl->audioAnalyzer.analyzerLf.get(), impl->audioAnalyzer.analyzerHf.get(), impl->spectrum);
     }
 
     param_converted_t module_eq::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
@@ -569,11 +614,37 @@ namespace PluginEQ {
                     handleColor = theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED);
                 }
                 nvgBeginPath(vg);
-                nvgCircleFastNDivs(vg, graphPos.x + posX, graphPos.y + graphSize.y - posY, radiusHandle, 16);
+                nvgCircleFastNDivs(vg, graphPos.x + posX, graphPos.y + graphSize.y - posY, radiusHandle, 24);
                 nvgFillColor(vg, handleColor);
                 nvgFillCustomPar(vg, -2);
                 nvgFill(vg);
             }
+
+            auto impl = moduleEq->getImpl();
+            auto& spectrum = impl->spectrum;
+            auto& spectrumBands = spectrum.bands[0];
+            nvgSave(vg);
+            nvgIntersectScissor(vg, graphPos.x, graphPos.y, graphSize.x, graphSize.y);
+            nvgBeginPath(vg);
+            auto outsetPos = 16;
+            nvgMoveTo(vg, graphPos.x - outsetPos, graphPos.y + graphSize.y + outsetPos);
+            for (int32_t bandIdx = 0; bandIdx < spectrum.numBands; ++bandIdx) {
+                auto bandValue = spectrumBands[bandIdx];
+                auto bandFreq = impl->freq[bandIdx];
+                float posX = (log10(bandFreq) - log10(PLOT_HZ_MIN)) / (log10(PLOT_HZ_MAX) - log10(PLOT_HZ_MIN)) * graphSize.x;
+                float posY = (bandValue) * graphSize.y;
+                nvgLineTo(vg, graphPos.x + posX, graphPos.y + graphSize.y - posY);
+            }
+            nvgLineTo(vg, graphPos.x + graphSize.x + outsetPos, graphPos.y + graphSize.y + outsetPos);
+            nvgClosePath(vg);
+            nvgStrokeColor(vg, rgbaToNvg(0xBBFFFFFF));
+            nvgStrokeWidth(vg, 2.0f);
+            nvgStroke(vg);
+            nvgFillColor(vg, rgbaToNvg(0x3F7f7f7f));
+            nvgFillCustomPar(vg, -1);
+            nvgFill(vg);
+            nvgSetShapeExtents(vg, graphPos.x - outsetPos, graphPos.y - outsetPos, graphSize.x + outsetPos * 2, graphSize.y + outsetPos * 2);
+            nvgRestore(vg);
         }
 
         hit_result getMouseHit(vec2 localPos) const {

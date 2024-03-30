@@ -9,7 +9,7 @@
 #include <kissfft/kiss_fftr.h>
 
 constexpr float MIN_FREQ = 20;
-constexpr float MAX_FREQ = 11000;
+constexpr float MAX_FREQ = 20000;
 // constexpr size_t INPUTLEN = 512*8;
 
 
@@ -88,7 +88,7 @@ public:
     audio_spectrum() = default;
     audio_spectrum(const audio_spectrum& ref)
         : samplerate(ref.samplerate), blocksize(ref.blocksize), fftlen(ref.fftlen), srOverFFT(ref.srOverFFT), numBands(ref.numBands),
-          minFreq(MIN_FREQ), maxFreq(MAX_FREQ) {
+          minFreq(ref.minFreq), maxFreq(ref.maxFreq) {
         for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
             mags[i]  = ref.mags[i];
             bands[i] = ref.bands[i];
@@ -238,7 +238,7 @@ public:
         }
     }
     fft_processor(const blocksize_t _blocksize, const samplerate_t _samplerate)
-        : audio_spectrum(_blocksize, _samplerate, INPUTLEN * T, 64),
+        : audio_spectrum(_blocksize, _samplerate, INPUTLEN * T, 128),
         fftctxt(new fft_ctxt_t<INPUTLEN>(fftlen, srOverFFT)),
         meter(meterData.data(), static_cast<uint8_t>(meterData.size()))
     {

@@ -21,6 +21,8 @@ public:
     std::shared_ptr<PluginViewContainer> createViewCtrInternal() override;
     impl_data_t* getImpl() const { return impl; }
     bool isBandEnabled(int32_t bandIdx);
+    void setSampleFormat(sampleformat_t sampleFormat) override;
+    void onTick(double since) override;
 };
 
 } // namespace PluginEQ
