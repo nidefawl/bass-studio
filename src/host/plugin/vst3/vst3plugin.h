@@ -18,6 +18,7 @@
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include <pluginterfaces/vst/ivsteditcontroller.h>
+#include <pluginterfaces/vst/ivstmidicontrollers.h>
 #include "pluginterfaces/vst/vsttypes.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
 #include "public.sdk/source/vst/hosting/parameterchanges.h"
@@ -59,6 +60,7 @@ class vst3plugin final : public effectbase {
     std::shared_ptr<Steinberg::Vst::PlugProvider> pluginProvider;
     Steinberg::Vst::IComponent* vst3Component = nullptr;
     Steinberg::Vst::IAudioProcessor* vst3AudioProcessor = nullptr;
+    Steinberg::Vst::IMidiMapping* vst3MidiMapping = nullptr;
     Steinberg::Vst::IEditController* editController = nullptr;
     Steinberg::Vst::IEditControllerHostEditing* editControllerHostEditing = nullptr;
     Steinberg::Vst::HostProcessData processData = {};
@@ -312,6 +314,7 @@ public:
         if (vst3AudioProcessor == nullptr) {
             return false;
         }
+        vst3MidiMapping = FUnknownPtr<IMidiMapping>(vst3Component);
         editController = pluginProvider->getController();
         if (editController)
             editController->setComponentHandler(&componentHandler);
@@ -1007,7 +1010,7 @@ public:
         const int32_t midiBusIndex = 0;
         Steinberg::Vst::EventList& eventList = dynamic_cast<Steinberg::Vst::EventList*>(processData.inputEvents)[midiBusIndex];
         eventList.clear();
-        auto numEvents = int32_t(midiEvents.noteEvents->size());
+        auto numEvents = int32_t(midiEvents.noteEvents->size() + midiEvents.ctrlEvents->size());
         if (numEvents) {
             if (eventList.getMaxSize() < numEvents) {
                 eventList.setMaxSize(math::max<int32_t>(eventList.getMaxSize() * 2, numEvents));
@@ -1038,6 +1041,74 @@ public:
                     noteOffEvent.tuning = 0.0f;
                 }
                 eventList.addEvent(evt);
+                this->midiEventsDispatched++;
+            }
+            if (vst3MidiMapping) {
+                for (auto& midiCtrlEvt : *midiEvents.ctrlEvents) {
+                    auto offsetInBlock = math::floordS32((midiCtrlEvt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
+                    if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
+                        log_lf(Log::L_WARN, "ctrl event out of range: %d\n", offsetInBlock);
+                        continue;
+                    }
+                    auto midi = IMidiMsg::FromU32AndTick(midiCtrlEvt.message, offsetInBlock);
+                    auto midiCannel = midi.Channel();
+                    switch (midi.StatusMsg()) {
+                        case IMidiMsg::kChannelAftertouch: {
+                            auto cc = Steinberg::Vst::ControllerNumbers::kAfterTouch;
+                            ParamID paramId = -1;
+                            if (Steinberg::kResultOk == vst3MidiMapping->getMidiControllerAssignment(midiBusIndex, midiCannel, cc, paramId)) {
+                                auto value = midi.mData1 / 127.0f;
+                                int32_t queueIndex = 0;
+                                auto queue = inputParameterChanges.addParameterData(paramId, queueIndex);
+                                always_assert(Steinberg::kResultOk == queue->addPoint(offsetInBlock, value, queueIndex));
+                            }
+                            break;
+                        }
+                        case IMidiMsg::kPitchWheel: {
+                            auto cc = Steinberg::Vst::ControllerNumbers::kPitchBend;
+                            ParamID paramId = -1;
+                            if (Steinberg::kResultOk == vst3MidiMapping->getMidiControllerAssignment(midiBusIndex, midiCannel, cc, paramId)) {
+                                auto value = midi.PitchWheel() * 0.5 + 0.5;
+                                int32_t queueIndex = 0;
+                                auto queue = inputParameterChanges.addParameterData(paramId, queueIndex);
+                                always_assert(Steinberg::kResultOk == queue->addPoint(offsetInBlock, value, queueIndex));
+                            }
+                            break;
+                        }
+                        case IMidiMsg::kControlChange: {
+                            auto cc = midi.mData1;
+                            ParamID paramId = -1;
+                            if (Steinberg::kResultOk == vst3MidiMapping->getMidiControllerAssignment(midiBusIndex, midiCannel, cc, paramId)) {
+                                auto value = midi.mData2 / 127.0f;
+                                int32_t queueIndex = 0;
+                                auto queue = inputParameterChanges.addParameterData(paramId, queueIndex);
+                                always_assert(Steinberg::kResultOk == queue->addPoint(offsetInBlock, value, queueIndex));
+                            }
+                            break;
+                        }
+                        case IMidiMsg::kPolyAftertouch: {
+                            Steinberg::Vst::Event evt{};
+                            evt.busIndex = midiBusIndex;
+                            evt.sampleOffset =  math::floordS32(offsetInBlock * tickToSamples);
+                            evt.ppqPosition = midiCtrlEvt.tick / double(TICKS_QUARTER);
+                            evt.flags = 0;
+                            evt.type = Steinberg::Vst::Event::EventTypes::kPolyPressureEvent;
+                            auto& polyPressureEvt = evt.polyPressure;
+                            polyPressureEvt.channel = midiCannel;
+                            polyPressureEvt.pitch = midi.mData1;
+                            polyPressureEvt.pressure = midi.mData2 / 127.0f;
+                            polyPressureEvt.noteId = -1;
+                            eventList.addEvent(evt);
+                            this->midiEventsDispatched++;
+                            break;
+                        }
+                        case IMidiMsg::kNone:
+                        case IMidiMsg::kNoteOff:
+                        case IMidiMsg::kNoteOn:
+                        case IMidiMsg::kProgramChange:
+                            break;
+                    }
+                }
             }
         }
     }
@@ -1046,14 +1117,32 @@ public:
 
     }
 
-    // param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
-    // param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
-
     // bool setCurrentProgram(uint32_t idx) override;
     // bool getCurrentProgram(uint32_t& idx) override;
     // bool getNumberOfPrograms(uint32_t& numPrograms) override;
     // bool getCurrentProgramName(String& out) override;
 
-    // void addPropertiesTooltip(Table::tbl& table) override;
-    // void addPropertiesParameterTooltip(Table::tbl& table, int idx) override;
+    void addPropertiesTooltip(Table::tbl& table) override {
+        using Table::tbl_row_t;
+        using Table::tblfloat;
+        using Table::tblint;
+        using Table::tblstr;
+        using Table::tblString;
+        table.tableWidth = 350;
+        table.colSizes.push_back(150);
+        table.rows.push_back({ { String( "projectGlobalId"), (int) this->projectGlobalId } });
+        table.rows.push_back({ { String( "isSynth"), (int) this->isSynth } });
+        table.rows.push_back({ { tblstr{ "UUID" }, getUID() } });
+        table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ this->bIsEnabled } } });
+        table.rows.push_back({ { String( "bCanReceiveMidi"), (int) this->bCanReceiveMidi } });
+        table.rows.push_back({ { String( "midiEventsDispatched"), (int) this->midiEventsDispatched } });
+        table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ this->getParamValue(PARAM_ENABLE) } } });
+        table.rows.push_back({ { tblstr{ "latency" }, tblint{ getPluginLatency() } } });
+        for (auto& in : this->inputChannelsDesc) {
+            table.rows.push_back({ { tblString{ StringFormat("input[%d,%d]", in.offset, in.count) }, tblstr{ StringAsCStr(in.name) } } });
+        }
+        for (auto& out : this->outputChannelsDesc) {
+            table.rows.push_back({ { tblString{ StringFormat("output[%d,%d]", out.offset, out.count) }, tblstr{ StringAsCStr(out.name) } } });
+        }
+    }
 };
