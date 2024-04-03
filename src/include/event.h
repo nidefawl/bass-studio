@@ -301,6 +301,7 @@ enum GlobalCommandType {
     CMD_EXPORT_AUDIO,
     CMD_RENDER_TO_AUDIO,
     CMD_APPLY_GROOVE,
+    CMD_APPLY_ARP,
     NUM_COMMANDS
 };
 

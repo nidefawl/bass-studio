@@ -1958,6 +1958,63 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 handled = true;
                 edit    = true;
                 desc    = "Paste notes";
+            } else if (command == CMD_APPLY_ARP) {
+                auto clipBefore = *clip;
+                auto track = view.track();
+                arp_snapshot snapshot;
+                tracksnapshot_store_opts_t opts;
+                opts.storeAutomation = false;
+                opts.storeClips = false;
+                opts.storeLayouts = false;
+                opts.storePluginPreset = true;
+                track->getStage()->arp->createSnapshot(snapshot, opts);
+                DAW::midiarp arpCopy(track->getStage());
+                arpCopy.loadSnapshot(snapshot);
+                auto begin = clip->start();
+                auto end = clip->end();
+                if (clip->isLoopEnabled()) {
+                    end = clip->start() + clip->loopStart + clip->loopLen;
+                }
+                std::vector<note_t> notes;
+                clip->getInTimeRange(begin, end, -1, -1, notes);
+                auto host = dawCtrl->getDaw()->getHost();
+                auto state = playback_state::status_playback;
+                std::vector<midievent_note_t> noteEvents;
+                for (auto& note : notes) {
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - begin, note.start(), true, false});
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.end() - begin, note.end(), false, false});
+                }
+                std::vector<midievent_note_t> noteEventsProcessed;
+                arpCopy.process(host, state, 0, noteEvents, begin, end + 1, -1, -1, noteEventsProcessed);
+                clip_notes_t tmpClipboard;
+                tmpClipboard.m_list.clear();
+                for (auto& note : noteEventsProcessed) {
+                    if (note.isNoteOn) {
+                        note_t n;
+                        n.pitch = note.pitch;
+                        n.velocity = note.velocity;
+                        n.time = note.tickOffsetInBlock;
+                        n.len = 0;
+                        tmpClipboard.m_list.push_back(n);
+                    } else {
+                        // find last note (reverse)
+                        for (auto it = tmpClipboard.m_list.rbegin(); it != tmpClipboard.m_list.rend(); ++it) {
+                            if (it->pitch == note.pitch) {
+                                it->len = note.tickOffsetInBlock - it->time;
+                                break;
+                            }
+                        }
+                    }
+                }
+                    // clip->selectedGroove = -1;
+                clip->notes = tmpClipboard;
+                clip->setDirty();
+                // edit = true;
+                handled = true;
+                desc = "Apply Arp";
+                dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+                clip->setDirty();
+                view.updateNotePitches(false);
             } else if (command == CMD_APPLY_GROOVE) {
                 clip_notes_t tmpClipboard;
                 view.draggedSelection.clear();
