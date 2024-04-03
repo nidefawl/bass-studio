@@ -39,6 +39,7 @@ protected:
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
 
+    String strValueDisplay = "N/A";
 public:
     std::function<float()> fnGetValue;
     std::function<void(float, int)> fnSetValue;

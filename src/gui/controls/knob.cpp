@@ -341,12 +341,16 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
             } else {
                 renderRoundKnob(vg, cx, cy, radius-1.0f, start, range, param->isBiPolar, fScaledModulated, theme->getColor(GuiColor::COL_KNOB_MODULATED), lineThickness - 2.0f);
             }
-        }
+        }        float fTextValue = 0.0f;
         if (parentCtrl->getGuiOverRef() == toRef()) {
+            fTextValue = getParamByType(param, 0);
             fScaled = getParamScaled(param, 0);
         } else {
+            fTextValue = getParamByType(param, type);
             fScaled = getParamScaled(param, type);
         }
+        auto paramUnit = paramAutomatable->convertParamValueToDisplay(paramIdx, fTextValue);
+        strValueDisplay = paramUnit.unit.empty() ? paramUnit.value : paramUnit.value + " " + paramUnit.unit;
     } else{
         fScaled = math::clamp(value, bIsBipolar ? -1.0f : 0.0f, 1.0f);
         if (knobType == knobtype::SLIDER_LABELED) {
@@ -565,12 +569,12 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         nvgFill(vg);
     };
     float value = getValue();
-    String valueDisplay = "N/A";
+    strValueDisplay = "N/A";
     if (m_layout.sKnob.x > 0 && m_layout.sKnob.y > 0) {
         renderButtonAt(vg, m_layout.pKnob, m_layout.sKnob, value);
     }
     if (fnOverrideGetDisplay) {
-        valueDisplay = fnOverrideGetDisplay(value);
+        strValueDisplay = fnOverrideGetDisplay(value);
     }
     if (m_layout.renderLabelBorder) {
         if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
@@ -603,7 +607,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
             }
         }
         if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
-            float x = renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, valueDisplay, theme, m_layout.valueHeight * m_layout.fontScaleValue, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            float x = renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, strValueDisplay, theme, m_layout.valueHeight * m_layout.fontScaleValue, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             float right = m_layout.sValue.x;
             if (x > right) {
                 if (m_layout.fontScaleValue > 0.5f) {
