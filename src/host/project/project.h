@@ -16,8 +16,8 @@ struct export_settings_t {
 };
 
 struct quantize_settings {
-    tick_t quantizeStart = 0;
-    tick_t quantizeEnd = 0;
+    tick_t quantizeStart = TICKS_16TH*2;
+    tick_t quantizeEnd = TICKS_16TH*2;
 };
 struct groove_timing_data_t {
     std::vector<double> timePoints;
