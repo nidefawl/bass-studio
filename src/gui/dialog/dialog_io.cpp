@@ -1306,8 +1306,10 @@ class guidialog_settings_plugins_path_config final : public guictr_base {
     guibutton scanNow;
     guibutton selectVstPlugPath;
     guibutton selectClapPlugPath;
+    guibutton selectVst3PlugPath;
     gui_textfield pathVstVal;
     gui_textfield pathClapVal;
+    gui_textfield pathVst3Val;
 public:
     void onDialogShow() { updateOptions(); }
 
@@ -1325,16 +1327,23 @@ public:
         selectClapPlugPath.id = 0x11;
         selectClapPlugPath.setLabel("Select Clap Plugin Directory");
         selectClapPlugPath.setText(selectClapPlugPath.getLabel());
-        scanNow.id = 0x12;
+        selectVst3PlugPath.id = 0x12;
+        selectVst3PlugPath.setLabel("Select VST3 Plugin Directory");
+        selectVst3PlugPath.setText(selectVst3PlugPath.getLabel());
+        scanNow.id = 0x13;
         scanNow.setLabel("Scan Plugins");
         scanNow.setText(scanNow.getLabel());
         pathVstVal.setEnabled(false);
         pathVstVal.setValue(settings.pluginsettings.pathVst2);
         pathClapVal.setEnabled(false);
         pathClapVal.setValue(settings.pluginsettings.pathClap);
+        pathVst3Val.setEnabled(false);
+        pathVst3Val.setValue(settings.pluginsettings.pathVst3);
         add(&pathVstVal);
+        add(&pathVst3Val);
         add(&pathClapVal);
         add(&selectVstPlugPath);
+        add(&selectVst3PlugPath);
         add(&selectClapPlugPath);
         add(&scanNow);
         setLabel("Plugins");
@@ -1350,8 +1359,12 @@ public:
         pathVstVal.pos    = ivec2(inset);
         selectVstPlugPath.size = ivec2(cs.x - inset * 2, height);
         selectVstPlugPath.pos  = ivec2(inset, pathVstVal.bottom() + inset);
+        pathVst3Val.size   = ivec2(cs.x - inset * 2, height);
+        pathVst3Val.pos    = ivec2(inset, selectVstPlugPath.bottom() + inset);
+        selectVst3PlugPath.size = ivec2(cs.x - inset * 2, height);
+        selectVst3PlugPath.pos  = ivec2(inset, pathVst3Val.bottom() + inset);
         pathClapVal.size   = ivec2(cs.x - inset * 2, height);
-        pathClapVal.pos    = ivec2(inset, selectVstPlugPath.bottom() + inset);
+        pathClapVal.pos    = ivec2(inset, selectVst3PlugPath.bottom() + inset);
         selectClapPlugPath.size = ivec2(cs.x - inset * 2, height);
         selectClapPlugPath.pos  = ivec2(inset, pathClapVal.bottom() + inset);
         scanNow.size      = ivec2(cs.x - inset * 2, height);
@@ -1362,7 +1375,7 @@ public:
         }
     }
     void buttonClicked(guibase* button) override {
-        if (button->id == 0x12) {
+        if (button->id == 0x13) {
             auto pluginMgr = daw->getPluginManager();
             if (!pluginMgr->isScanning()) {
                 pluginMgr->scanPlugins();
@@ -1375,13 +1388,29 @@ public:
 
             return;
         }
+        if (button->id == 0x10) {
+            // select vst folder
+            String out   = DAW_PLATFORM_VST2_PATH_DEFAULT;
+            String current = settings.pluginsettings.pathVst2;
+            App::Platform::sanitizePathToDirectory(current);
+
+            if (0 == browseForFolder(selectVstPlugPath.getLabel(), current, out)) {
+                settings.pluginsettings.pathVst2 = out;
+                try {
+                    saveSettings(settings);
+                } catch (std::exception& e) {
+                    log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
+                }
+            }
+            return;
+        }
         if (button->id == 0x11) {
             // select clap folder
             String out   = DAW_PLATFORM_CLAP_PATH_DEFAULT;
-            String curre = settings.pluginsettings.pathClap;
-            App::Platform::sanitizePathToDirectory(curre);
+            String current = settings.pluginsettings.pathClap;
+            App::Platform::sanitizePathToDirectory(current);
 
-            if (0 == browseForFolder(selectClapPlugPath.getLabel(), curre, out)) {
+            if (0 == browseForFolder(selectClapPlugPath.getLabel(), current, out)) {
                 settings.pluginsettings.pathClap = out;
                 try {
                     saveSettings(settings);
@@ -1391,14 +1420,14 @@ public:
             }
             return;
         }
-        if (button->id == 0x10) {
-            // select vst folder
-            String out   = DAW_PLATFORM_VST2_PATH_DEFAULT;
-            String curre = settings.pluginsettings.pathVst2;
-            App::Platform::sanitizePathToDirectory(curre);
+        if (button->id == 0x12) {
+            // select vst3 folder
+            String out   = DAW_PLATFORM_VST3_PATH_DEFAULT;
+            String current = settings.pluginsettings.pathVst3;
+            App::Platform::sanitizePathToDirectory(current);
 
-            if (0 == browseForFolder(selectVstPlugPath.getLabel(), curre, out)) {
-                settings.pluginsettings.pathVst2 = out;
+            if (0 == browseForFolder(selectVst3PlugPath.getLabel(), current, out)) {
+                settings.pluginsettings.pathVst3 = out;
                 try {
                     saveSettings(settings);
                 } catch (std::exception& e) {
@@ -1423,6 +1452,7 @@ public:
     }
     void onTick(AppCtrl* appctrl) override {
         pathVstVal.setValue(settings.pluginsettings.pathVst2);
+        pathVst3Val.setValue(settings.pluginsettings.pathVst3);
         pathClapVal.setValue(settings.pluginsettings.pathClap);
         updateOptions();
     }
