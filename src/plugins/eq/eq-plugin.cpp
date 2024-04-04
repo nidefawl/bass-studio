@@ -380,6 +380,13 @@ namespace PluginEQ {
         auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         eq->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
     }
+    auto InterpolateFilterCoeffs(const DAW::FilterCoeffs& oldCoeffs, const DAW::FilterCoeffs& newCoeffs, samplecount_t numSamples) -> DAW::FilterCoeffs {
+        DAW::FilterCoeffs coeffs;
+        for (size_t i = 0; i < coeffs.coefficients.size(); ++i) {
+            coeffs.coefficients[i] = lerpf32(oldCoeffs.coefficients[i], newCoeffs.coefficients[i], 1.0f / numSamples);
+        }
+        return coeffs;
+    };
     void module_eq::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
                 && out->samples == format.blockSize
@@ -414,7 +421,6 @@ namespace PluginEQ {
             bUseSampleAccurateModulation = false;
         }
         if (bUseSampleAccurateModulation) {
-            auto samplesPerTick = tickToSampleConvert<double, roundmode::none>(1.0, host->prjGlobals.tempo100, format.sampleRate);
             auto stepSizeSamples = samplecount_t(state == playback_state::status_render ? 1 : 8);
             for (samplecount_t i = 0; i < numSamples; i += stepSizeSamples) {
                 ReadAutomation(host, this, tick, state, i, numSamples, bOversampling ? 2 : 1);
@@ -428,9 +434,10 @@ namespace PluginEQ {
                     }
                     auto bandParams = GetBandParams(this, bandIdx);
                     auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
+                    impl->filterCoeffs[bandIdx] = InterpolateFilterCoeffs(impl->filterCoeffs[bandIdx], coefficients, state == playback_state::status_render ? 1 : 3);
                     for (channelnum_t ch = 0; ch < channelCount; ++ch) {
                         auto bufChannel = bufEqd->SubChannelsSamplesBlock(ch, 1, i, stepSizeSamples);
-                        filters[ch]->process(coefficients, bufChannel, bufChannel);
+                        filters[ch]->process(impl->filterCoeffs[bandIdx], bufChannel, bufChannel);
                     }
                 }
             }
@@ -445,9 +452,10 @@ namespace PluginEQ {
                 }
                 auto bandParams = GetBandParams(this, bandIdx);
                 auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
+                impl->filterCoeffs[bandIdx] = InterpolateFilterCoeffs(impl->filterCoeffs[bandIdx], coefficients, 3);
                 for (channelnum_t ch = 0; ch < channelCount; ++ch) {
                     auto bufChannel = bufEqd->SubChannelsBlock(ch, 1);
-                    filters[ch]->process(coefficients, bufChannel, bufChannel);
+                    filters[ch]->process(impl->filterCoeffs[bandIdx], bufChannel, bufChannel);
                 }
             }
         }
