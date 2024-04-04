@@ -44,6 +44,28 @@ public:
         }
         setBackgroundRendered(true);
     }
+
+    explicit guiknob_pluginparam(guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
+        : guiknob_labeled_base(_knobtype)
+    {
+        m_layout.inset = 6;
+        m_layout.renderLabelBorder = false;
+        if (_knobtype == guiknob::knobtype::KNOB_LABELED) {
+            setLabelsFontScale(0.9f, 0.9f);
+            setLabelsScale(0.2f, 0.2f);
+        }
+        if (_knobtype == guiknob::knobtype::SLIDER_LABELED) {
+            setLabelsFontScale(0.7f, 0.8f);
+            setLabelsScale(0.1f, 0.1f);
+        }
+        setBackgroundRendered(true);
+    }
+
+    void setParamIdx(int _paramIdx) {
+        paramIdx = _paramIdx;
+        clientParamIdx = _paramIdx;
+    }
+
     ~guiknob_pluginparam() override = default;
 
     float getQuantizationStep() const override {

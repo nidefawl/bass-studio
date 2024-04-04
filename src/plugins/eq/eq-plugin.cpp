@@ -119,15 +119,15 @@ namespace PluginEQ {
     };
 
     constexpr static std::array<band_t, 10> defaultBands = {{
-        { 1, 120.0, 0.0, 0.707, BandTypeLowShelf },
-        { 1, 200.0, 0.0, 0.707, BandTypePeak },
-        { 1, 350.0, 0.0, 0.707, BandTypePeak },
-        { 1, 500.0, 0.0, 0.707, BandTypePeak },
-        { 1, 800.0, 0.0, 0.707, BandTypePeak },
-        { 1, 1000.0, 0.0, 0.707, BandTypePeak },
-        { 1, 2000.0, 0.0, 0.707, BandTypePeak },
-        { 1, 4000.0, 0.0, 0.707, BandTypePeak },
-        { 1, 8000.0, 0.0, 0.707, BandTypePeak },
+        { 0, 120.0, 0.0, 0.707, BandTypeLowShelf },
+        { 0, 200.0, 0.0, 0.707, BandTypePeak },
+        { 0, 350.0, 0.0, 0.707, BandTypePeak },
+        { 0, 500.0, 0.0, 0.707, BandTypePeak },
+        { 0, 800.0, 0.0, 0.707, BandTypePeak },
+        { 0, 1000.0, 0.0, 0.707, BandTypePeak },
+        { 0, 2000.0, 0.0, 0.707, BandTypePeak },
+        { 0, 4000.0, 0.0, 0.707, BandTypePeak },
+        { 0, 8000.0, 0.0, 0.707, BandTypePeak },
         { 1, 16000.0, 0.0, 0.707, BandTypeHighShelf },
     }};
 
@@ -208,6 +208,12 @@ namespace PluginEQ {
     void SetBandQ(module_eq* moduleEq, int32_t bandIdx, const band_t& band, int32_t flags = FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH) {
         const auto bandParamBase = PARAMID_FIRST_BAND + bandIdx * PER_BAND_PARAMS;
         moduleEq->setParamValue(bandParamBase + PARAM_OFFSET_Q, GetParamValueForQ(band.q), flags);
+    }
+
+    void ToggleBandEnabled(module_eq* moduleEq, int32_t bandIdx) {
+        const auto bandParamBase = PARAMID_FIRST_BAND + bandIdx * PER_BAND_PARAMS;
+        auto bEnabled = moduleEq->getParamValue(bandParamBase + PARAM_OFFSET_ENABLE) > 0.5f;
+        moduleEq->setParamValue(bandParamBase + PARAM_OFFSET_ENABLE, bEnabled ? 0.0f : 1.0f, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     }
 
     DAW::FilterCoeffs GetFilterCoeffs(band_t bandParams, samplerate_t sampleRate) {
@@ -458,16 +464,64 @@ namespace PluginEQ {
 } // namespace PluginEQ
 
 namespace PluginEQ {
-    class guicontainer_plugin_eq_header final : public guictr_base {
+    class guicontainer_plugin_eq_params final : public guictr_base {
         module_eq* const moduleEq;
+        guiknob_pluginparam knobEnabled;
+        guiknob_pluginparam knobFrequency;
+        guiknob_pluginparam knobGain;
+        guiknob_pluginparam knobQ;
+        guiknob_pluginparam knobType;
+        int32_t bandIdx = -1;
     public:
-        explicit guicontainer_plugin_eq_header(module_eq* _synth)
-            : guictr_base(), moduleEq(_synth) {
+        explicit guicontainer_plugin_eq_params(module_eq* _synth)
+            : guictr_base(),
+            moduleEq(_synth),
+            knobEnabled(guiknob::knobtype::KNOB_LABELED),
+            knobFrequency(guiknob::knobtype::KNOB_LABELED),
+            knobGain(guiknob::knobtype::KNOB_LABELED),
+            knobQ(guiknob::knobtype::KNOB_LABELED),
+            knobType(guiknob::knobtype::KNOB_LABELED)
+        {
             (void)moduleEq;
             padding = 0;
             margin  = 0;
+            add(&knobEnabled);
+            add(&knobFrequency);
+            add(&knobGain);
+            add(&knobQ);
+            add(&knobType);
+            setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+            knobEnabled.setBackgroundRendered(false);
+            knobFrequency.setBackgroundRendered(false);
+            knobGain.setBackgroundRendered(false);
+            knobQ.setBackgroundRendered(false);
+            knobType.setBackgroundRendered(false);
+            setBackgroundRendered(true);
+            setCanMouseHit(true);
         }
-        ~guicontainer_plugin_eq_header() override {
+        void setBandIdx(int32_t band) {
+            if (bandIdx == band) {
+                return;
+            }
+            bandIdx = band;
+            if (bandIdx < 0 || bandIdx >= int32_t(defaultBands.size())) {
+                setVisible(false);
+                return;
+            }
+            knobEnabled.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_ENABLE);
+            knobFrequency.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_FREQ);
+            knobGain.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_GAIN);
+            knobQ.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_Q);
+            knobType.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_TYPE);
+            knobEnabled.setEffectInstance(moduleEq);
+            knobFrequency.setEffectInstance(moduleEq);
+            knobGain.setEffectInstance(moduleEq);
+            knobQ.setEffectInstance(moduleEq);
+            knobType.setEffectInstance(moduleEq);
+            setVisible(true);
+        }
+
+        ~guicontainer_plugin_eq_params() override {
             removeGuis();
         }
     };
@@ -483,16 +537,19 @@ namespace PluginEQ {
         };
 
         module_eq* const moduleEq;
+        guicontainer_plugin_eq_params params;
         hit_result dragged{};
         vec2 graphPos{};
         vec2 graphSize{};
         float radiusHandle = 2.0f;
     public:
-        explicit guicontainer_plugin_eq_editor(module_eq* _synth)
-            : guictr_base(), moduleEq(_synth) {
+        explicit guicontainer_plugin_eq_editor(module_eq* _module)
+            : guictr_base(), moduleEq(_module), params(_module) {
             padding = 0;
             margin  = 0;
             setCanMouseHit(true);
+            add(&params);
+            params.setVisible(false);
         }
         ~guicontainer_plugin_eq_editor() override {
             removeGuis();
@@ -508,13 +565,18 @@ namespace PluginEQ {
         }
 
         void layout() override {
-            guictr_base::layout();
             vec2 inset(this->padding, this->padding);
             graphPos = inset;
             // graphPos += vec2(14, 23);
             graphSize = vec2(size) - inset * 2.0f;
             // graphSize.y -= 20;
-            radiusHandle = math::clamp(math::floorfS32(graphSize.y / 75.0f) * 0.5f, 2.0f, 7.0f);
+            radiusHandle = math::clamp(math::floorfS32(graphSize.y / 30.0f) * 0.5f, 2.0f, 7.0f);
+
+            const float   gridStepY = float(PLOT_DB_GRID_STEP * size.y / PLOT_DB_RANGE);
+            float heightLegendBottom = gridStepY * 0.5f;
+            params.size = vec2(size.x * 0.5f, size.y * 0.2f);
+            params.pos = vec2(size.x * 0.5f - params.size.x * 0.5f, size.y - params.size.y - heightLegendBottom * 2.0f);
+            guictr_base::layout();
         }
 
         void plotBand(NVGcontext* vg,
@@ -547,7 +609,16 @@ namespace PluginEQ {
         }
 
         void render(NVGcontext* vg) override {
-            guictr_base::render(vg);
+            if (!isVisible()) {
+                log_printf("warning, skip rendering container with state !isVisible()\n");
+                return;
+            }
+            if (isBackgroundRendered()) {
+                renderBackground(vg);
+            }
+            if (!setScissorTransform(vg)) {
+                return;
+            }
             uint32_t BandColors[defaultBands.size()]{};
             int32_t i = 0;
             for (auto& col : BandColors) {
@@ -598,15 +669,15 @@ namespace PluginEQ {
             // Draw the handles
             const float pixelToDB = graphSize.y / PLOT_DB_RANGE;
             for (int32_t bandIdx = 0; bandIdx < int32_t(bandParams.size()); ++bandIdx) {
-                if (!moduleEq->isBandEnabled(bandIdx)) {
-                    continue;
-                }
 
                 // Draw the handle
                 float posX = (log10(bandParams[bandIdx].freq) - log10(PLOT_HZ_MIN)) / (log10(PLOT_HZ_MAX) - log10(PLOT_HZ_MIN)) * graphSize.x;
                 float magDb = math::max(bandParams[bandIdx].gainDb, PLOT_DB_MIN);
                 float posY = (magDb - PLOT_DB_MIN) * pixelToDB;
                 auto handleColor = theme->getColor(GuiColor::COL_GUI_HANDLE);
+                if (!moduleEq->isBandEnabled(bandIdx)) {
+                    handleColor = theme->getColor(GuiColor::COL_LABEL_INACTIVE);
+                }
                 if (hit.type == hittype::HIT_BAND && hit.idx == bandIdx) {
                     handleColor = theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED);
                 }
@@ -614,7 +685,7 @@ namespace PluginEQ {
                     handleColor = theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED);
                 }
                 nvgBeginPath(vg);
-                nvgCircleFastNDivs(vg, graphPos.x + posX, graphPos.y + graphSize.y - posY, radiusHandle, 24);
+                nvgCircleFastNDivs(vg, graphPos.x + posX, graphPos.y + graphSize.y - posY, radiusHandle, 16);
                 nvgFillColor(vg, handleColor);
                 nvgFillCustomPar(vg, -2);
                 nvgFill(vg);
@@ -645,6 +716,21 @@ namespace PluginEQ {
             nvgFill(vg);
             nvgSetShapeExtents(vg, graphPos.x - outsetPos, graphPos.y - outsetPos, graphSize.x + outsetPos * 2, graphSize.y + outsetPos * 2);
             nvgRestore(vg);
+            for (auto c : guis) {
+                if (!c->isVisible()) {
+                    //log_printf("warning, skip rendering child container with state !isVisible()\n");
+                    continue;
+                }
+                if (c->size.x <= 0 || c->size.y <= 0) {
+                    // log_printf("warning, skip rendering child container %s with size <= 0 0\n", StringAsCStr(c->getClassName()));
+                    continue;
+                }
+                {
+                    nvgSave(vg);
+                    c->render(vg);
+                    nvgRestore(vg);
+                }
+            }
         }
 
         hit_result getMouseHit(vec2 localPos) const {
@@ -659,9 +745,9 @@ namespace PluginEQ {
                 bandParams[bandIdx] = GetBandParams(moduleEq, bandIdx);
             }
             for (int32_t bandIdx = 0; bandIdx < int32_t(bandParams.size()); ++bandIdx) {
-                if (!moduleEq->isBandEnabled(bandIdx)) {
-                    continue;
-                }
+                // if (!moduleEq->isBandEnabled(bandIdx)) {
+                //     continue;
+                // }
                 // Calculate handle pos
                 float posX = (log10(bandParams[bandIdx].freq) - log10(PLOT_HZ_MIN)) / (log10(PLOT_HZ_MAX) - log10(PLOT_HZ_MIN)) * graphSize.x;
                 float magDb = math::max(bandParams[bandIdx].gainDb, PLOT_DB_MIN);
@@ -681,6 +767,9 @@ namespace PluginEQ {
         void handleDraggedBegin(MouseEvent& evt) override {
             guictr_base::handleDraggedBegin(evt);
             dragged = getMouseHit(vec2(evt.relMousepos) - graphPos);
+            if (evt.type == MouseEventType::M_EVT_DOUBLECLICK && dragged.type == hittype::HIT_BAND) {
+                ToggleBandEnabled(moduleEq, dragged.idx);
+            }
         }
         void handleUserMouseInput(MouseEvent& evt, bool isFinal) {
             auto mouseGraph = vec2(evt.relMousepos) - graphPos;
@@ -696,6 +785,9 @@ namespace PluginEQ {
                     flags |= FLG_PAR_UPDATE_FINISH;
                 }
                 SetBandFreqAndGain(moduleEq, dragged.idx, bandParams, flags);
+                params.setBandIdx(dragged.idx);
+            } else {
+                params.setBandIdx(-1);
             }
         }
         void handleDraggedMove(MouseEvent& evt) override {
@@ -852,12 +944,10 @@ namespace PluginEQ {
 
     class guicontainer_plugin_eq final : public guictr_base {
         guicontainer_plugin_eq_editor editor;
-        guicontainer_plugin_eq_header header;
     public:
-        explicit guicontainer_plugin_eq(module_eq* _module) : guictr_base(), editor(_module), header(_module) {
+        explicit guicontainer_plugin_eq(module_eq* _module) : guictr_base(), editor(_module) {
             padding = 0;
             margin  = 0;
-            // add(&header);
             add(&editor);
             setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         }
