@@ -757,8 +757,17 @@ namespace PluginEQ {
                 std::transform( bandMagnitudes.begin(), bandMagnitudes.end(),
                                 eqMagnitudes.begin(), eqMagnitudes.begin(),
                                 std::multiplies() );
-
             }
+
+            // apply global gain to eqMagnitudes
+            auto fGain = 0.0f;
+            dsp_util::getGainLvlWithRange(moduleEq->getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain);
+            std::transform( eqMagnitudes.begin(), eqMagnitudes.end(),
+                            eqMagnitudes.begin(),
+                            [fGain](double mag) {
+                                return mag * fGain;
+                            } );
+
             plotBand(vg, graphPos, graphSize, eqMagnitudes, 0xBBFFFFFF, 3.0);
 
 
