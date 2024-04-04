@@ -2709,9 +2709,9 @@ class SynthImpl final : public PluginLockable, public SynthState {
              * 1 is highest precission, automation is updated every sample
              * this can be lowered to lower CPU load
              */
-            int framesPerAutomationUpdate = 1;
+            int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
             for (int s = 0; s < nFrames; s++) {
-                if (host && moduleInstance && s % framesPerAutomationUpdate == 0) {
+                if (host && moduleInstance && (s % framesPerAutomationUpdate) == 0) {
                     ReadAutomation(host, tick, state, s, nFrames, nOversample);
                 }
                 FlushMidi(s);

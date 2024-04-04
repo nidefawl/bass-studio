@@ -42,7 +42,11 @@
 #include <nanovg.h>
 #include <vector>
 #include "filter-coeffs.h"
+#include <dsp/rates.h>
 
+namespace DAW {
+    extern bool gClapUseSampleAccurateModulation;
+}
 namespace PluginEQ {
 
     constexpr float F_MIN = 10;
@@ -138,6 +142,7 @@ namespace PluginEQ {
     constexpr static int PARAM_OFFSET_GAIN = 2;
     constexpr static int PARAM_OFFSET_FREQ = 3;
     constexpr static int PARAM_OFFSET_Q    = 4;
+    constexpr static int PARAMID_OVERSAMPLING = PARAMID_FIRST_BAND + 32 * PER_BAND_PARAMS;
 
     const float DBFS_MUTE_POS = -101.0f;
     const float MTR_CEIL      = 24.0f;
@@ -175,6 +180,8 @@ namespace PluginEQ {
         audioanaylzer audioAnalyzer;
         audio_spectrum spectrum;
         std::vector<float> freq{};
+        signalsmith::rates::Oversampler2xFIR<float> oversampler;
+        AudioBlock oversampledBlock;
     };
 
     band_t GetBandParams(module_eq* moduleEq, int32_t bandIdx) {
@@ -295,6 +302,15 @@ namespace PluginEQ {
                 GetParamValueForQ(band.q)
             });
         }
+        auto paramOversampling = registerParam(PARAMID_OVERSAMPLING);
+        paramOversampling->initValue(effectgain_param_entry{
+            PARAMID_OVERSAMPLING,
+            "Oversampling",
+            "",
+            float(1.0f)
+        });
+        paramOversampling->isAutomatable = false;
+        paramOversampling->quantizationSteps = 1;
     }
 
     module_eq::~module_eq() {
@@ -318,6 +334,21 @@ namespace PluginEQ {
         impl->freq = impl->audioAnalyzer.analyzerLf->freq;
         dbgassert(impl->audioAnalyzer.analyzerHf->freq == impl->audioAnalyzer.analyzerLf->freq);
         internalplugin::setSampleFormat(sampleFormat);
+    }
+
+    void module_eq::initBuffers() {
+        internalplugin::initBuffers();
+        auto numChannels = blockInputs->channels;
+        this->impl->oversampler.resize(numChannels, format.blockSize);
+        std::vector<float*> channelsOversampler(numChannels);
+        for (int i = 0; i < numChannels; ++i) {
+            channelsOversampler[i] = this->impl->oversampler[i];
+        }
+        impl->oversampledBlock = AudioBlock(channelsOversampler, format.blockSize * 2);
+    }
+
+    samplecount_t module_eq::getPluginLatency() {
+        return getParamValue(PARAMID_OVERSAMPLING) >= 0.5f ? format.blockSize : 0;
     }
 
     void module_eq::onTick(double since) {
@@ -344,31 +375,80 @@ namespace PluginEQ {
                                 
         dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
     }
+    void ReadAutomation(const DAW::Host::Host* const host, module_eq* eq, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {
+        auto bpm100 = host->prjGlobals.tempo100;
+        auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
+        eq->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
+    }
     void module_eq::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
                 && out->samples == format.blockSize
                 && format.blockSize > 0
                 && format.sampleRate > 0);
+
+        const bool bOversampling = getParamValue(PARAMID_OVERSAMPLING) >= 0.5f;
+
+        auto format = this->format;
+        if (bOversampling) {
+            impl->oversampler.up(in->buf, numSamples);
+            format.sampleRate *= 2;
+            format.blockSize *= 2;
+            numSamples *= 2;
+        }
+
         if (impl->tmpBlock.samples != format.blockSize || impl->tmpBlock.channels != out->channels) {
             impl->tmpBlock = AudioBlock(out->channels, format.blockSize);
         }
 
         auto* bufEqd = &impl->tmpBlock;
-        bufEqd->copyFrom(in);
+        auto* blockOut = out;
+        if (bOversampling) {
+            bufEqd->copyFrom(&impl->oversampledBlock);
+            blockOut = &impl->oversampledBlock;
+        } else {
+            bufEqd->copyFrom(in);
+        }
         const auto channelCount = bufEqd->channels;
-        for (int32_t bandIdx = 0; bandIdx < int32_t(defaultBands.size()); ++bandIdx) {
-            if (!isBandEnabled(bandIdx)) {
-                continue;
+        bool bUseSampleAccurateModulation = DAW::gClapUseSampleAccurateModulation;
+        if (getAutomationLanes().empty() && getModulationsMap().empty()) {
+            bUseSampleAccurateModulation = false;
+        }
+        if (bUseSampleAccurateModulation) {
+            auto samplesPerTick = tickToSampleConvert<double, roundmode::none>(1.0, host->prjGlobals.tempo100, format.sampleRate);
+            auto stepSizeSamples = samplecount_t(state == playback_state::status_render ? 1 : 8);
+            for (samplecount_t i = 0; i < numSamples; i += stepSizeSamples) {
+                ReadAutomation(host, this, tick, state, i, numSamples, bOversampling ? 2 : 1);
+                for (int32_t bandIdx = 0; bandIdx < int32_t(defaultBands.size()); ++bandIdx) {
+                    if (!isBandEnabled(bandIdx)) {
+                        continue;
+                    }
+                    auto& filters = impl->filters[bandIdx];
+                    while (filters.size() < out->channels) {
+                        filters.emplace_back(std::make_shared<DAW::Filter>());
+                    }
+                    auto bandParams = GetBandParams(this, bandIdx);
+                    auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
+                    for (channelnum_t ch = 0; ch < channelCount; ++ch) {
+                        auto bufChannel = bufEqd->SubChannelsSamplesBlock(ch, 1, i, stepSizeSamples);
+                        filters[ch]->process(coefficients, bufChannel, bufChannel);
+                    }
+                }
             }
-            auto& filters = impl->filters[bandIdx];
-            while (filters.size() < out->channels) {
-                filters.emplace_back(std::make_shared<DAW::Filter>());
-            }
-            auto bandParams = GetBandParams(this, bandIdx);
-            auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
-            for (channelnum_t ch = 0; ch < channelCount; ++ch) {
-                auto bufChannel = bufEqd->SubChannelsBlock(ch, 1);
-                filters[ch]->process(coefficients, bufChannel, bufChannel);
+        } else {
+            for (int32_t bandIdx = 0; bandIdx < int32_t(defaultBands.size()); ++bandIdx) {
+                if (!isBandEnabled(bandIdx)) {
+                    continue;
+                }
+                auto& filters = impl->filters[bandIdx];
+                while (filters.size() < out->channels) {
+                    filters.emplace_back(std::make_shared<DAW::Filter>());
+                }
+                auto bandParams = GetBandParams(this, bandIdx);
+                auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
+                for (channelnum_t ch = 0; ch < channelCount; ++ch) {
+                    auto bufChannel = bufEqd->SubChannelsBlock(ch, 1);
+                    filters[ch]->process(coefficients, bufChannel, bufChannel);
+                }
             }
         }
 
@@ -383,7 +463,7 @@ namespace PluginEQ {
 
         const auto autParGain = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_GAIN));
         const auto autParPan = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_PAN));
-        out->clear();
+        blockOut->clear();
         /* fast path: no sample accurate automation */
         if (autParGain.type <= DAW::automation_routing_type::ROUTING_CONSTANT 
             && (autParPan.type <= DAW::automation_routing_type::ROUTING_NONE 
@@ -400,9 +480,9 @@ namespace PluginEQ {
                 }
                 /* fast path: center pan */
                 if (math::abs(fPanTrack - 0.5f) < 0.005f) {
-                    out->addFromOp(bufEqd, AudioBlock::mix_op::ADD, fGain);
+                    blockOut->addFromOp(bufEqd, AudioBlock::mix_op::ADD, fGain);
                 } else {
-                    DAW::Panning::MultiplyConstant(bufEqd, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
+                    DAW::Panning::MultiplyConstant(bufEqd, blockOut, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
                 }
             } else {
                 /* fast path: fully muted */
@@ -410,7 +490,11 @@ namespace PluginEQ {
         } else {
             const auto tickBegin = tick;
             const auto tickEnd = tickBegin + host->getAudioStreamProperties().ticksPerBlock;
-            DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, bufEqd, out, autParGain, autParPan, tickBegin, tickEnd, state, MTR_CEIL, DBFS_MUTE_POS);
+            DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, bufEqd, blockOut, autParGain, autParPan, tickBegin, tickEnd, state, MTR_CEIL, DBFS_MUTE_POS);
+        }
+        if (bOversampling) {
+            numSamples /= 2;
+            impl->oversampler.down(out->buf, numSamples);
         }
         impl->audioAnalyzer.processBlock(out, 1.0f);
         MixFFTSpectrumBands(impl->audioAnalyzer.analyzerLf.get(), impl->audioAnalyzer.analyzerHf.get(), impl->spectrum);
@@ -454,12 +538,19 @@ namespace PluginEQ {
     }
 
     void module_eq::loadSnapshot(const plugin_snapshot_t& snapshot) {
+        if (snapshot.vendorVersion == 1) {
+            // enable all bands
+            for (int32_t i = 0; i < int32_t(defaultBands.size()); ++i) {
+                const auto bandParamBase = PARAMID_FIRST_BAND + i * PER_BAND_PARAMS;
+                this->setParamValue(bandParamBase + PARAM_OFFSET_ENABLE, 1.0f, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+            }
+        }
         internalplugin::loadSnapshot(snapshot);
     }
 
     void module_eq::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
         internalplugin::makeSnapshot(snapshot, opts);
-        snapshot.vendorVersion = 1;
+        snapshot.vendorVersion = 2;
     }
 } // namespace PluginEQ
 

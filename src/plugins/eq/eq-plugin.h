@@ -22,7 +22,9 @@ public:
     impl_data_t* getImpl() const { return impl; }
     bool isBandEnabled(int32_t bandIdx);
     void setSampleFormat(sampleformat_t sampleFormat) override;
+    void initBuffers() override;
     void onTick(double since) override;
+    samplecount_t getPluginLatency() override;
 };
 
 } // namespace PluginEQ
