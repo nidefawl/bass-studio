@@ -104,9 +104,20 @@ namespace PluginEQ {
         return float(type) / iNumBandTypes;
     }
 
+    bool BandTypeHasGain(BandType type) {
+        switch (type) {
+            case BandTypeLowShelf:
+            case BandTypeHighShelf:
+            case BandTypePeak:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     std::array<String, 7> FILTER_TYPE_NAMES = {
-        "Lowpass 12dB",
-        "Highpass 12dB",
+        "Lowpass",
+        "Highpass",
         "Bandpass",
         "Peak",
         "Lowshelf",
@@ -114,34 +125,69 @@ namespace PluginEQ {
         "Notch",
     };
 
+    enum SlopeType {
+        Slope12dB,
+        Slope24dB,
+        Slope48dB,
+        NumSlopeTypes
+    };
+
+    std::array<String, 3> SLOPE_TYPE_NAMES = {
+        "12dB/oct",
+        "24dB/oct",
+        "48dB/oct",
+    };
+
+    int32_t GetOrderForSlopeType(SlopeType type) {
+        switch (type) {
+            case Slope12dB: return 2;
+            case Slope24dB: return 4;
+            case Slope48dB: return 8;
+            default: return 4;
+        }
+    }
+
+    SlopeType GetScaledSlopeType(float paramValue) {
+        auto iNumSlopeTypes = static_cast<int>(NumSlopeTypes);
+        auto idxF          = iNumSlopeTypes * paramValue;
+        return static_cast<SlopeType>(math::clamp(math::floorfS32(idxF), 0, iNumSlopeTypes - 1));
+    }
+
+    float GetParamValueForSlopeType(SlopeType type) {
+        auto iNumSlopeTypes = static_cast<int>(NumSlopeTypes);
+        return float(type) / iNumSlopeTypes;
+    }
+
     struct band_t {
         int32_t state = 0;      // 0 = disabled, 1 = enabled
         float freq    = 1000.0; // Hz
         float gainDb    = 0.0;    // dB
         float q       = 1.0;    // Q
         BandType type = BandTypeLowPass;
+        SlopeType slope = Slope24dB;
     };
 
     constexpr static std::array<band_t, 10> defaultBands = {{
-        { 0, 120.0, 0.0, 0.707, BandTypeLowShelf },
-        { 0, 200.0, 0.0, 0.707, BandTypePeak },
-        { 0, 350.0, 0.0, 0.707, BandTypePeak },
-        { 0, 500.0, 0.0, 0.707, BandTypePeak },
-        { 0, 800.0, 0.0, 0.707, BandTypePeak },
-        { 0, 1000.0, 0.0, 0.707, BandTypePeak },
-        { 0, 2000.0, 0.0, 0.707, BandTypePeak },
-        { 0, 4000.0, 0.0, 0.707, BandTypePeak },
-        { 0, 8000.0, 0.0, 0.707, BandTypePeak },
-        { 1, 16000.0, 0.0, 0.707, BandTypeHighShelf },
+        { 0, 120.0, 0.0, 0.707, BandTypeLowShelf, Slope12dB },
+        { 0, 200.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 0, 350.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 0, 500.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 0, 800.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 0, 1000.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 0, 2000.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 0, 4000.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 0, 8000.0, 0.0, 0.707, BandTypePeak, Slope12dB },
+        { 1, 16000.0, 0.0, 0.707, BandTypeHighShelf, Slope12dB },
     }};
 
     constexpr static int PARAMID_FIRST_BAND = 16;
     constexpr static int PER_BAND_PARAMS = 16;
     constexpr static int PARAM_OFFSET_ENABLE = 0;
-    constexpr static int PARAM_OFFSET_TYPE = 1;
-    constexpr static int PARAM_OFFSET_GAIN = 2;
-    constexpr static int PARAM_OFFSET_FREQ = 3;
-    constexpr static int PARAM_OFFSET_Q    = 4;
+    constexpr static int PARAM_OFFSET_TYPE   = 1;
+    constexpr static int PARAM_OFFSET_GAIN   = 2;
+    constexpr static int PARAM_OFFSET_FREQ   = 3;
+    constexpr static int PARAM_OFFSET_Q      = 4;
+    constexpr static int PARAM_OFFSET_SLOPE  = 5;
     constexpr static int PARAMID_OVERSAMPLING = PARAMID_FIRST_BAND + 32 * PER_BAND_PARAMS;
 
     const float DBFS_MUTE_POS = -101.0f;
@@ -184,15 +230,32 @@ namespace PluginEQ {
         AudioBlock oversampledBlock;
     };
 
-    band_t GetBandParams(module_eq* moduleEq, int32_t bandIdx) {
+    float getParamValueApplyModulation(module_eq* moduleEq, int32_t idx, bool bApplyModulations) {
+        automatable_param_t* param = moduleEq->getParamUnchecked(idx);
+        dbgassert(param);
+        if (bApplyModulations) {
+            if (param->isModulated()) {
+                return param->getValueModulated();
+            }
+            auto autLane = moduleEq->getRegisteredAutomation(param->idx);
+            if (autLane && autLane->isActive()) {
+                return param->getValueAutomated();
+            }
+        }
+        return param->getValue();
+    }
+    band_t GetBandParams(module_eq* moduleEq, int32_t bandIdx, bool bApplyModulations = true) {
         const auto bandParamBase = PARAMID_FIRST_BAND + bandIdx * PER_BAND_PARAMS;
-        auto bEnabled = moduleEq->getParamValue(bandParamBase + PARAM_OFFSET_ENABLE) > 0.5f;
-        auto Q  = GetScaledQ(moduleEq->getParamValue(bandParamBase + PARAM_OFFSET_Q));
-        auto Fc = GetScaledCutoffFrequency(moduleEq->getParamValue(bandParamBase + PARAM_OFFSET_FREQ));
-        auto bandType = GetScaledBandType(moduleEq->getParamValue(bandParamBase + PARAM_OFFSET_TYPE));
+        auto bEnabled = getParamValueApplyModulation(moduleEq, bandParamBase + PARAM_OFFSET_ENABLE, bApplyModulations) > 0.5f;
+        auto Q  = GetScaledQ(getParamValueApplyModulation(moduleEq, bandParamBase + PARAM_OFFSET_Q, bApplyModulations));
+        auto Fc = GetScaledCutoffFrequency(getParamValueApplyModulation(moduleEq, bandParamBase + PARAM_OFFSET_FREQ, bApplyModulations));
+        auto bandType = GetScaledBandType(getParamValueApplyModulation(moduleEq, bandParamBase + PARAM_OFFSET_TYPE, bApplyModulations));
+        auto slopeType = GetScaledSlopeType(getParamValueApplyModulation(moduleEq, bandParamBase + PARAM_OFFSET_SLOPE, bApplyModulations));
         auto fGain = 0.0f;
-        if (dsp_util::getGainLvlWithRange(moduleEq->getParamValue(bandParamBase + PARAM_OFFSET_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
-            fGain = dsp_util::dBFS(fGain);
+        if (BandTypeHasGain(bandType)) {
+            if (dsp_util::getGainLvlWithRange(getParamValueApplyModulation(moduleEq, bandParamBase + PARAM_OFFSET_GAIN, bApplyModulations), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+                fGain = dsp_util::dBFS(fGain);
+            }
         }
         return {
             .state = bEnabled,
@@ -200,6 +263,7 @@ namespace PluginEQ {
             .gainDb = fGain,
             .q = float(Q),
             .type = bandType,
+            .slope = slopeType,
         };
     }
 
@@ -227,9 +291,9 @@ namespace PluginEQ {
         switch (bandParams.type) {
             default:
             case BandTypeLowPass:
-                return DAW::FilterCoeffs::CalculateLowPass(sampleRate, bandParams.freq, bandParams.q);
+                return DAW::FilterCoeffs::CalculateLowPass(sampleRate, bandParams.freq, bandParams.q, GetOrderForSlopeType(bandParams.slope));
             case BandTypeHighPass:
-                return DAW::FilterCoeffs::CalculateHighPass(sampleRate, bandParams.freq, bandParams.q);
+                return DAW::FilterCoeffs::CalculateHighPass(sampleRate, bandParams.freq, bandParams.q, GetOrderForSlopeType(bandParams.slope));
             case BandTypeBandPass:
                 return DAW::FilterCoeffs::CalculateBandPass(sampleRate, bandParams.freq, bandParams.q);
             case BandTypePeak:
@@ -301,6 +365,14 @@ namespace PluginEQ {
                 "",
                 GetParamValueForQ(band.q)
             });
+            auto paramSlope = registerParam(paramId + PARAM_OFFSET_SLOPE);
+            paramSlope->initValue(effectgain_param_entry{
+                paramId + PARAM_OFFSET_SLOPE,
+                String("Band ") + std::to_string(i + 1) + " Slope",
+                "",
+                GetParamValueForSlopeType(Slope24dB)
+            });
+            paramSlope->quantizationSteps = NumSlopeTypes - 1;
         }
         auto paramOversampling = registerParam(PARAMID_OVERSAMPLING);
         paramOversampling->initValue(effectgain_param_entry{
@@ -375,18 +447,23 @@ namespace PluginEQ {
                                 
         dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
     }
+
     void ReadAutomation(const DAW::Host::Host* const host, module_eq* eq, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {
         auto bpm100 = host->prjGlobals.tempo100;
         auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         eq->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
     }
+
     auto InterpolateFilterCoeffs(const DAW::FilterCoeffs& oldCoeffs, const DAW::FilterCoeffs& newCoeffs, samplecount_t numSamples) -> DAW::FilterCoeffs {
-        DAW::FilterCoeffs coeffs;
-        for (size_t i = 0; i < coeffs.coefficients.size(); ++i) {
-            coeffs.coefficients[i] = lerpf32(oldCoeffs.coefficients[i], newCoeffs.coefficients[i], 1.0f / numSamples);
+        DAW::FilterCoeffs coeffs = newCoeffs;
+        if (newCoeffs.order == oldCoeffs.order) {
+            for (size_t i = 0; i < coeffs.coefficients.size(); ++i) {
+                coeffs.coefficients[i] = lerpf32(oldCoeffs.coefficients[i], newCoeffs.coefficients[i], 1.0f / numSamples);
+            }
         }
         return coeffs;
     };
+
     void module_eq::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
                 && out->samples == format.blockSize
@@ -542,6 +619,10 @@ namespace PluginEQ {
             auto idx = math::clamp(math::floorfS32(FILTER_TYPE_NAMES.size() * value), 0, CtrSize(FILTER_TYPE_NAMES) - 1);
             return {FILTER_TYPE_NAMES[idx], param->unit};
         }
+        if ((idx - PARAMID_FIRST_BAND) % PER_BAND_PARAMS == PARAM_OFFSET_SLOPE) {
+            auto idx = math::clamp(math::floorfS32(SLOPE_TYPE_NAMES.size() * value), 0, CtrSize(SLOPE_TYPE_NAMES) - 1);
+            return {SLOPE_TYPE_NAMES[idx], param->unit};
+        }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
@@ -570,6 +651,7 @@ namespace PluginEQ {
         guiknob_pluginparam knobGain;
         guiknob_pluginparam knobQ;
         guiknob_pluginparam knobType;
+        guiknob_pluginparam knobSlope;
         int32_t bandIdx = -1;
     public:
         explicit guicontainer_plugin_eq_params(module_eq* _synth)
@@ -579,7 +661,8 @@ namespace PluginEQ {
             knobFrequency(guiknob::knobtype::KNOB_LABELED),
             knobGain(guiknob::knobtype::KNOB_LABELED),
             knobQ(guiknob::knobtype::KNOB_LABELED),
-            knobType(guiknob::knobtype::KNOB_LABELED)
+            knobType(guiknob::knobtype::KNOB_LABELED),
+            knobSlope(guiknob::knobtype::KNOB_LABELED)
         {
             (void)moduleEq;
             padding = 0;
@@ -589,12 +672,14 @@ namespace PluginEQ {
             add(&knobGain);
             add(&knobQ);
             add(&knobType);
+            add(&knobSlope);
             setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
             knobEnabled.setBackgroundRendered(false);
             knobFrequency.setBackgroundRendered(false);
             knobGain.setBackgroundRendered(false);
             knobQ.setBackgroundRendered(false);
             knobType.setBackgroundRendered(false);
+            knobSlope.setBackgroundRendered(false);
             setBackgroundRendered(true);
             setCanMouseHit(true);
         }
@@ -612,11 +697,13 @@ namespace PluginEQ {
             knobGain.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_GAIN);
             knobQ.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_Q);
             knobType.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_TYPE);
+            knobSlope.setParamIdx(PARAMID_FIRST_BAND + band * PER_BAND_PARAMS + PARAM_OFFSET_SLOPE);
             knobEnabled.setEffectInstance(moduleEq);
             knobFrequency.setEffectInstance(moduleEq);
             knobGain.setEffectInstance(moduleEq);
             knobQ.setEffectInstance(moduleEq);
             knobType.setEffectInstance(moduleEq);
+            knobSlope.setEffectInstance(moduleEq);
             setVisible(true);
         }
 
@@ -666,11 +753,8 @@ namespace PluginEQ {
         void layout() override {
             vec2 inset(this->padding, this->padding);
             graphPos = inset;
-            // graphPos += vec2(14, 23);
             graphSize = vec2(size) - inset * 2.0f;
-            // graphSize.y -= 20;
-            radiusHandle = math::clamp(math::floorfS32(graphSize.y / 30.0f) * 0.5f, 2.0f, 7.0f);
-
+            radiusHandle = math::clamp(graphSize.y / 50.0f, 2.0f, 12.0f);
             const float   gridStepY = float(PLOT_DB_GRID_STEP * size.y / PLOT_DB_RANGE);
             float heightLegendBottom = gridStepY * 0.5f;
             params.size = vec2(size.x * 0.5f, size.y * 0.2f);
@@ -777,26 +861,38 @@ namespace PluginEQ {
             // Draw the handles
             const float pixelToDB = graphSize.y / PLOT_DB_RANGE;
             for (int32_t bandIdx = 0; bandIdx < int32_t(bandParams.size()); ++bandIdx) {
+                bandParams[bandIdx] = GetBandParams(moduleEq, bandIdx, false);
 
                 // Draw the handle
                 float posX = (log10(bandParams[bandIdx].freq) - log10(PLOT_HZ_MIN)) / (log10(PLOT_HZ_MAX) - log10(PLOT_HZ_MIN)) * graphSize.x;
                 float magDb = math::max(bandParams[bandIdx].gainDb, PLOT_DB_MIN);
                 float posY = (magDb - PLOT_DB_MIN) * pixelToDB;
-                auto handleColor = theme->getColor(GuiColor::COL_GUI_HANDLE);
+                auto handleColor = GuiColor::COL_GUI_HANDLE;
                 if (!moduleEq->isBandEnabled(bandIdx)) {
-                    handleColor = theme->getColor(GuiColor::COL_LABEL_INACTIVE);
+                    handleColor = GuiColor::COL_LABEL_INACTIVE;
                 }
                 if (hit.type == hittype::HIT_BAND && hit.idx == bandIdx) {
-                    handleColor = theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED);
+                    handleColor = GuiColor::COL_GUI_HANDLE_FOCUSED;
                 }
                 if (dragged.type == hittype::HIT_BAND && dragged.idx == bandIdx) {
-                    handleColor = theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED);
+                    handleColor = GuiColor::COL_GUI_HANDLE_FOCUSED;
                 }
                 nvgBeginPath(vg);
                 nvgCircleFastNDivs(vg, graphPos.x + posX, graphPos.y + graphSize.y - posY, radiusHandle, 16);
-                nvgFillColor(vg, handleColor);
+                nvgFillColor(vg, theme->getColor(handleColor));
                 nvgFillCustomPar(vg, -2);
                 nvgFill(vg);
+
+                auto strLabel = StringFormat("%d", bandIdx + 1);
+                renderTextLabel(vg,
+                                vec2(graphPos.x + posX, graphPos.y + graphSize.y - posY),
+                                vec2(radiusHandle*2),
+                                strLabel,
+                                theme,
+                                radiusHandle * 2 - 2,
+                                theme->getContrastColor(handleColor),
+                                NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE
+                                );
             }
 
             auto impl = moduleEq->getImpl();
@@ -850,7 +946,7 @@ namespace PluginEQ {
             const float pixelToDB = graphSize.y / PLOT_DB_RANGE;
             std::array<band_t, defaultBands.size()> bandParams{};
             for (int32_t bandIdx = 0; bandIdx < int32_t(bandParams.size()); ++bandIdx) {
-                bandParams[bandIdx] = GetBandParams(moduleEq, bandIdx);
+                bandParams[bandIdx] = GetBandParams(moduleEq, bandIdx, false);
             }
             for (int32_t bandIdx = 0; bandIdx < int32_t(bandParams.size()); ++bandIdx) {
                 // if (!moduleEq->isBandEnabled(bandIdx)) {
@@ -885,7 +981,7 @@ namespace PluginEQ {
                 // calculate new Hz and dB
                 float newHz = PLOT_HZ_MIN * powf(10.0f, mouseGraph.x / graphSize.x * log10(PLOT_HZ_MAX / PLOT_HZ_MIN));
                 float newDb = PLOT_DB_MIN + (graphSize.y - mouseGraph.y) / graphSize.y * PLOT_DB_RANGE;
-                auto bandParams = GetBandParams(moduleEq, dragged.idx);
+                auto bandParams = GetBandParams(moduleEq, dragged.idx, false);
                 bandParams.freq = newHz;
                 bandParams.gainDb = newDb;
                 int32_t flags = FLG_PAR_UPDATE_USER;
@@ -911,7 +1007,7 @@ namespace PluginEQ {
             guictr_base::handleMouseScroll(evt, xoffset, yoffset);
             auto hit = getMouseHit(vec2(evt.relMousepos) - graphPos);
             if (hit.type == hittype::HIT_BAND) {
-                auto bandParams = GetBandParams(moduleEq, hit.idx);
+                auto bandParams = GetBandParams(moduleEq, hit.idx, false);
                 float newQ = bandParams.q + float(yoffset) * 0.1f;
                 bandParams.q = newQ;
                 SetBandQ(moduleEq, hit.idx, bandParams, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
