@@ -640,14 +640,14 @@ static int runScannerServer(const pluginscanner_server_options& options) {
             findFilesWithExt(options.vst3PluginPath, PLATFORM_VST3_PLUGIN_EXT, true, filesVst3);
             log_message("Found %u .%s files in %s", CtrSize(filesVst3), PLATFORM_VST3_PLUGIN_EXT, StringAsCStr(options.vst3PluginPath));
         }
-        /* if (!options.vstPlugPath.empty()) {
+        if (!options.vstPlugPath.empty()) {
             findFilesWithExt(options.vstPlugPath, PLATFORM_PLUGIN_EXT, true, filesVst_);
             log_message("Found %u .%s files in %s", CtrSize(filesVst_), PLATFORM_PLUGIN_EXT, StringAsCStr(options.vstPlugPath));
         }
         if (!options.clapPluginPath.empty()) {
             findFilesWithExt(options.clapPluginPath, PLATFORM_CLAP_PLUGIN_EXT, true, filesClap);
             log_message("Found %u .%s files in %s", CtrSize(filesClap), PLATFORM_CLAP_PLUGIN_EXT, StringAsCStr(options.clapPluginPath));
-        } */
+        }
 
         if (filesVst_.empty() && filesClap.empty() && filesVst3.empty()) {
             return 1;
