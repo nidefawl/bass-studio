@@ -37,6 +37,7 @@ enum ICON : int32_t {
     ICON_SYNTH_SMALL,
     ICON_WARNING,
     ICON_MODULATION,
+    ICON_LOADING,
     NUM_IMGS,
 };
 #define MAX_FONTS 256

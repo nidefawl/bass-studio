@@ -31,6 +31,7 @@
 #include "types.h"
 #include <array>
 #include <cstdint>
+#include <nanovg.h>
 #include <utility>
 #include <portaudio.h>
 #include <portmidi.h>
@@ -1300,6 +1301,32 @@ class gui_listentry_settings_other_bool final : public gui_list_entry {
         }
     }
 };
+
+
+void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
+    int32_t inset = 3;
+    int32_t extImg = 0;
+    int32_t iconW  = math::min(size.x, size.y);
+    ivec2 offset   = ivec2(math::max(0, (size.x - iconW)), math::max(0, (size.y - iconW) / 2));
+    ivec2 iconPos  = pos + inset + offset;
+    iconW -= inset * 2;
+    auto time = getTimeMillisF();
+    // 2 iterations per second
+    float t = fmod(time, 2000.0f) / 2000.0f;
+    float a = 2.0f * M_PI * t;
+    RenderResources::NvgImageTexture& image = RenderResources::imgIcons[drawParm];
+    NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image.perContextId[vg], 1.0f);
+    nvgSave(vg);
+    nvgTranslate(vg, iconPos.x + iconW*0.5f, iconPos.y + iconW*0.5f);
+    nvgRotate(vg, a);
+    nvgTranslate(vg, -iconW*0.5f, -iconW*0.5f);
+    nvgBeginPath(vg);
+    nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);
+    nvgFillPaint(vg, paintIcon);
+    nvgFill(vg);
+    nvgRestore(vg);
+}
+
 class guidialog_settings_plugins_path_config final : public guictr_base {
     DawInstance* const daw;
     appsettings& settings;
@@ -1333,6 +1360,8 @@ public:
         scanNow.id = 0x13;
         scanNow.setLabel("Scan Plugins");
         scanNow.setText(scanNow.getLabel());
+        scanNow.drawFn   = nullptr;
+        scanNow.drawParm = ICON_LOADING;
         pathVstVal.setEnabled(false);
         pathVstVal.setValue(settings.pluginsettings.pathVst2);
         pathClapVal.setEnabled(false);
@@ -1367,7 +1396,8 @@ public:
         pathClapVal.pos    = ivec2(inset, selectVst3PlugPath.bottom() + inset);
         selectClapPlugPath.size = ivec2(cs.x - inset * 2, height);
         selectClapPlugPath.pos  = ivec2(inset, pathClapVal.bottom() + inset);
-        scanNow.size      = ivec2(cs.x - inset * 2, height);
+
+        scanNow.size      = ivec2(cs.x - inset * 2, height * 1.5);
         scanNow.pos       = ivec2(inset, selectClapPlugPath.bottom() + inset);
 
         for (auto gui : guis) {
@@ -1380,10 +1410,12 @@ public:
             if (!pluginMgr->isScanning()) {
                 pluginMgr->scanPlugins();
                 scanNow.setText("Cancel Scanning");
+                scanNow.drawFn = drawLoadingIcon;
             } else {
                 pluginMgr->checkScanner();
                 pluginMgr->stopScanner();
                 scanNow.setText("Scan Plugins");
+                scanNow.drawFn = nullptr;
             }
 
             return;
@@ -1446,8 +1478,10 @@ public:
         auto pluginMgr = daw->getPluginManager();
         if (!pluginMgr->isScanning()) {
             scanNow.setText("Scan Plugins");
+            scanNow.drawFn = nullptr;
         } else {
             scanNow.setText("Cancel Scanning");
+            scanNow.drawFn = drawLoadingIcon;
         }
     }
     void onTick(AppCtrl* appctrl) override {
