@@ -721,7 +721,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         dbgassert(libResult.vst3Module);
         VST3::Hosting::PluginFactory factory = libResult.vst3Module->getFactory();
         auto vst3Uid = VST3::UID::fromString(req.uIdVst3, true);
-        if (!vst3Uid) {
+        if (!vst3Uid) { // only the plugin scanner will reach this branch
             int32_t classCount = 0;
             for (auto &classInfo : factory.classInfos()) {
                 if (classInfo.category() == kVstAudioEffectClass) {
@@ -729,12 +729,9 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
                     classCount++;
                 }
             }
-            if (classCount > 1) {
-                libResult.type = SharedLibPluginType::VST3_SHELL;
+            if (classCount >= 1 && req.uIdVst3.empty()) {
+                libResult.type = classCount > 1 ? SharedLibPluginType::VST3_SHELL : SharedLibPluginType::VST3;
                 return {libResult, static_cast<vst3plugin*>(nullptr), filepath, nameWithoutExt};
-            } else if (classCount == 1) {
-                auto classInfo = factory.classInfos().at(0);
-                *vst3Uid = classInfo.ID();
             } else {
                 libResult.state = SharedLibState::FAILED;
                 return LoadResultPlugin{libResult};

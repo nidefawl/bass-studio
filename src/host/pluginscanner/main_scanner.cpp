@@ -129,8 +129,8 @@ struct pipe_msg_hdr {
     uint32_t cmd;
 };
 struct response_type_t {
-    char szPath[1024]{ 0 };
-    char szName[256]{ 0 };
+    char szPath[1025]{ 0 };
+    char szName[257]{ 0 };
 };
 struct request_type_vst24_t final : response_type_t {
     uint32_t uniqueID{ 0 };
@@ -142,27 +142,27 @@ struct response_type_vst24_t : response_type_t {
     uint32_t vstVersion{ 0 };
     uint32_t pluginCategory{ 0 };
     bool isSynth{ false };
-    char szVendorName[256]{ 0 };
-    char szProductName[256]{ 0 };
-    char szEffectName[256]{ 0 };
-    char szShellPluginName[256]{ 0 };
+    char szVendorName[257]{ 0 };
+    char szProductName[257]{ 0 };
+    char szEffectName[257]{ 0 };
+    char szShellPluginName[257]{ 0 };
 };
 struct response_type_clapplugin_t final : response_type_t {
     uint32_t pluginIndex{ 0 };
     uint32_t pluginCategory{ 0 };
     bool isSynth{ false };
-    char szVersion[256]{ 0 };
-    char szVendorName[256]{ 0 };
-    char szProductName[256]{ 0 };
-    char szEffectName[256]{ 0 };
+    char szVersion[257]{ 0 };
+    char szVendorName[257]{ 0 };
+    char szProductName[257]{ 0 };
+    char szEffectName[257]{ 0 };
 };
 struct response_type_vst3plugin_t final : response_type_t {
-    char vst3UUid[32]{ 0 };
+    char vst3UUid[33]{ 0 };
     uint32_t pluginCategory{ 0 };
     bool isSynth{ false };
     uint32_t version{ 0 };
     uint32_t vstVersion{ 0 };
-    char szVendorName[256]{ 0 };
+    char szVendorName[257]{ 0 };
 };
 struct response_type_vst24_plugin_t final : response_type_vst24_t {
 };
@@ -292,14 +292,18 @@ static void getClapPluginData(DAW::Host::LoadResultPlugin& res, response_type_cl
     safe_strcpy(_out->szVersion, clapPlugDesc.version);
 }
 
-static void getVst3PluginData(DAW::Host::LoadResultPlugin& res, response_type_vst3plugin_t* _out) {
-    auto plugin = res.vst3Plugin;
-    auto classInfo = plugin->getClassInfo();
-    safe_strcpy(_out->vst3UUid, plugin->getUID());
+static void getVst3PluginDataFromClassInfo(const String& path, const VST3::Hosting::ClassInfo& classInfo, response_type_vst3plugin_t* _out) {
+    safe_strcpy(_out->vst3UUid, classInfo.ID().toString(true));
     _out->pluginCategory = 0;
-    safe_strcpy(_out->szName, plugin->sName);
-    safe_strcpy(_out->szPath, res.path);
-    _out->isSynth = plugin->isSynth;
+    safe_strcpy(_out->szName, classInfo.name());
+    safe_strcpy(_out->szPath, path);
+    _out->isSynth = false;
+    for (auto& subcat : classInfo.subCategories()) {
+        if (subcat == "Instrument" || subcat == "Synth" || subcat == "Sampler" || subcat == "Drum") {
+            _out->isSynth = true;
+            break;
+        }
+    }
     String version = classInfo.version();
     StrUtil::StringReplace(version, ".", "");
     StrUtil::StringReplace(version, ",", "");
@@ -509,6 +513,64 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                 }
                 break;
             } break;
+            case CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_SHELL: {
+                response_type_shell_plugin_begin_t respShellPlugin;
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
+                if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
+                    log_message("failed reading response_type_shell_plugin_begin_t");
+                    return -3;
+                }
+                break;
+            } break;
+            case CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_PLUGIN: {
+                response_type_vst3plugin_t respLoadSinglePlugin;
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
+                if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
+                    log_message("failed reading response_type_vst3plugin_t");
+                    return -3;
+                }
+
+                log_lf(Log::L_INFO, "Plugin '%s': Status: %s\n", respLoadSinglePlugin.szPath, "GOOD");
+                auto& data = respLoadSinglePlugin;
+                String relPath = file.name;
+                if (file.path.length() > options.vst3PluginPath.length()
+                    && file.path.find_first_of(options.vst3PluginPath) == 0) {
+                    relPath = file.path.substr(options.vst3PluginPath.length());
+                    replaceString(relPath, FILE_PATHSEP_STR, "/");
+                }
+                try {
+                    queryInsertPlugin.reset();
+                    int bndIdx = 1;
+                    queryInsertPlugin.bind(bndIdx++, data.isSynth);
+                    queryInsertPlugin.bind(bndIdx++, 2); // vst3 plugin
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    queryInsertPlugin.bind(bndIdx++, data.version);
+                    queryInsertPlugin.bind(bndIdx++, data.vstVersion);
+                    queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
+                    queryInsertPlugin.bind(bndIdx++, timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, 1);
+                    queryInsertPlugin.bind(bndIdx++, file.path);
+                    queryInsertPlugin.bind(bndIdx++, relPath);
+                    queryInsertPlugin.bind(bndIdx++, data.szName);
+                    queryInsertPlugin.bind(bndIdx++, data.szVendorName);
+                    queryInsertPlugin.bind(bndIdx++, data.vst3UUid);
+                    queryInsertPlugin.bind(bndIdx++, data.szName);
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    queryInsertPlugin.bind(bndIdx++, forcedisable ? 1 : 0);
+                    queryInsertPlugin.bind(bndIdx++, 1);
+                    /*int insertRowsAffected = */ queryInsertPlugin.exec();
+                    nPluginsScanned++;
+                } catch (SQLite::Exception& e) {
+                    log_message("queryInsertPlugin failed with SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
+                    return -5;
+                }
+
+                break;
+            }
             case CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_SHELL: {
                 response_type_shell_plugin_begin_t respShellPlugin;
                 if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
@@ -1036,31 +1098,60 @@ static int runScannerClient() {
                     log_message("-- end of shell plugin list --");
                     response = CMD_PLUGIN_END_SUCCESS;
                     writeToIPC(client, response);
-                } else if (res.library.state == DAW::Host::SharedLibState::SUCCESS) {
-                    dbgassert(res.plugin);
-                    int response = CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN;
-                    if (res.clapPlugin) {
-                        response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN;
-                    }
-                    if (res.vst3Plugin) {
-                        response = CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN;
-                    }
+                } else  if (res.library.type == DAW::Host::SharedLibPluginType::VST3_SHELL) {
+                    VST3::Hosting::PluginFactory factory = res.library.vst3Module->getFactory();
+                    String nameShellPlugin = res.name;
+                    log_printf("loading shell plugin: %s\n", StringAsCStr(nameShellPlugin));
+                    response_type_shell_plugin_begin_t respShellPlugin;
+                    safe_strcpy(respShellPlugin.szName, res.name);
+                    int32_t response = CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_SHELL;
                     writeToIPC(client, response);
+                    respShellPlugin.numPlugins = 0; // not used anymore
+                    writeToIPC(client, respShellPlugin);
+                    // loop over all shell plugin entries
+                    int32_t classCount = 0;
+                    response = CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_PLUGIN;
+                    for (auto &classInfo : factory.classInfos()) {
+                        if (classInfo.category() == kVstAudioEffectClass) {
+                            log_lf(Log::L_DEBUG, "VST3 %d: %s, %s, %s, %s, %s, %s, %s\n", classCount, StringAsCStr(classInfo.name()), classInfo.ID().toString(true).c_str(), classInfo.category().c_str(), classInfo.subCategoriesString().c_str(), classInfo.vendor().c_str(), classInfo.version().c_str(), classInfo.sdkVersion().c_str());
+                            classCount++;
+                            response_type_vst3plugin_t respShellPluginEntry;
+                            getVst3PluginDataFromClassInfo(req.szPath, classInfo, &respShellPluginEntry);
+                            writeToIPC(client, response);
+                            writeToIPC(client, respShellPluginEntry);
+                        }
+                    }
+                    response = CMD_PLUGIN_END_SUCCESS;
+                    writeToIPC(client, response);
+                } else if (res.library.state == DAW::Host::SharedLibState::SUCCESS) {
                     if (res.vstPlugin) {
                         response_type_vst24_t resp;
                         getVSTPluginData(res, &resp);
+                        int response = CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN;
+                        writeToIPC(client, response);
                         writeToIPC(client, resp);
                     } else if (res.clapPlugin) {
                         response_type_clapplugin_t resp;
                         getClapPluginData(res, &resp);
+                        int response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN;
+                        writeToIPC(client, response);
                         writeToIPC(client, resp);
-                    } else if (res.vst3Plugin) {
-                        response_type_vst3plugin_t resp;
-                        getVst3PluginData(res, &resp);
-                        writeToIPC(client, resp);
+                    } else if (res.library.vst3Module) {
+                        VST3::Hosting::PluginFactory factory = res.library.vst3Module->getFactory();
+                        for (auto &classInfo : factory.classInfos()) {
+                            if (classInfo.category() == kVstAudioEffectClass) {
+                                log_lf(Log::L_DEBUG, "VST3: %s, %s, %s, %s, %s, %s, %s\n", StringAsCStr(classInfo.name()), classInfo.ID().toString(true).c_str(), classInfo.category().c_str(), classInfo.subCategoriesString().c_str(), classInfo.vendor().c_str(), classInfo.version().c_str(), classInfo.sdkVersion().c_str());
+                                response_type_vst3plugin_t resp;
+                                getVst3PluginDataFromClassInfo(req.szPath, classInfo, &resp);
+                                int response = CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN;
+                                writeToIPC(client, response);
+                                writeToIPC(client, resp);
+                            }
+                        }
                     }
-                    pluginMgr->unloadPlugin(res.plugin);
-                    response = CMD_PLUGIN_END_SUCCESS;
+                    if (res.plugin)
+                        pluginMgr->unloadPlugin(res.plugin);
+                    int response = CMD_PLUGIN_END_SUCCESS;
                     writeToIPC(client, response);
                 }
             }
@@ -1133,7 +1224,7 @@ int main(int argc, char* argv[]) {
         String vstPlugPath;
         String clapPluginPath;
         String vst3PluginPath;
-        for (int i = 2; i < argc; i++) {
+        for (int i = 1; i < argc; i++) {
             if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
                 if (!strcmp(argv[i], "-wait")) {
                     options.launchProcess = false;
