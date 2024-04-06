@@ -233,52 +233,6 @@ void showPluginView(DawCtrl* dawCtrl, String pluginName) {
         }
     }
 }
-void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t trackIdx) {
-    DawInstance* dawInstance = dawCtrl->getDaw();
-    auto* project = dawInstance->getProject();
-    auto* pluginMgr = dawInstance->getPluginManager();
-    auto trackList = project->getTracksFlatVec();
-
-    if (CtrSize(trackList) < trackIdx) {
-        dbgassert(0);
-        return;
-    }
-
-    auto loadRes = pluginMgr->loadPlugin({modulePath, 0, 0, 0, -1});
-
-    if (loadRes.library.isSuccess()) {
-        dbgassert(0);
-        return;
-    }
-
-    audio_stage_t* trImpl1 = trackList[trackIdx]->getStage();
-    pluginMgr->insertNewPlugin(trImpl1, loadRes.plugin, 0);
-    dawInstance->onPluginsChanged();
-    loadRes.plugin->onEnable();
-
-
-#if 0
-    // example cloning plugin
-    auto defEffect = loadRes.plugin->toDeferred();
-    if (!defEffect) {
-        dbgassert(0);
-        return;
-    }
-    if (!host->addDeferredEffect(defEffect)) {
-        log_printf("Failed loading effect\n");
-        delete defEffect;
-        dbgassert(0);
-        return;
-    }
-    audio_stage_t* trImpl2 = trackList[1]->getStage();
-
-    defEffect->getSnapshot().projectGlobalId = -1;
-    defEffect->load(host);
-    host->insertNewPlugin(trImpl2, defEffect, 0);
-    dbgassert(defEffect->trackImpl == trImpl2);
-    dbgassert(trImpl2->effects.size());
-#endif
-}
 
 void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsinstance& tls) {
     if (tls.settings->dawsettings.debugMode) {
@@ -297,21 +251,19 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
                 setSelection(dawMainCtrl, 0, 1, 177.0f, 64.0f);
             }
 
+            auto mainCtrl = daw->getMainControl();
+            auto project = daw->getProject();
             /**
             * Code for inserting a plugin on track at index 0, then placing a deferred copy instance of the same plugin on track at index 1
             */
-            const bool dbgLoadPlugins = false;
-            if (dbgLoadPlugins) {
-                loadPluginAndInsertOnTrack(dawMainCtrl, "C:/PluginManager/configs/default/hosts/Ableton/categories/melda/MPowerSynth.dll", 0);
+            if (project->trackReturnCtr.size()) {
+                mainCtrl->setSelectedTrack(project->trackReturnCtr.front());
             }
-            // // daw->getMainControl()->setViewMode(view_mode_t::NODE_EDITOR);
-            // if (daw->getProject()->trackReturnCtr.size()) {
-            //     daw->setSelectedTrack(daw->getProject()->trackReturnCtr.front());
-            //     daw->getMainControl()->showPluginView();
-            // }
-            if (daw->getProject()->trackMidiAudioCtr.size()>0) {
-                dawMainCtrl->setSelectedTrack(daw->getProject()->trackMidiAudioCtr[0]);
+            if (project->trackMidiAudioCtr.size()>0) {
+                dawMainCtrl->setSelectedTrack(project->trackMidiAudioCtr[0]);
             }
+            mainCtrl->setViewMode(view_mode_t::NODE_EDITOR);
+            mainCtrl->showPluginView();
             loadAllInstances(dawMainCtrl, "Macro");
             //     auto tr = daw->getProject()->trackMidiAudioCtr[1];
                 
@@ -379,7 +331,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
-    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_PREFERENCES, 0));
+    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_PREFERENCES, 2));
     // generateDummyProject(dawMainCtrl);
     }
 }
