@@ -1,8 +1,10 @@
 #pragma once
+#include "gui/container/container_layout_types.h"
 #include "logging.h"
 #include "nanovg/nanovg.h"
 #include "host/daw/mainctrl.h"
 #include "gui/gui.h"
+#include "saferef.h"
 #include "str_util.h"
 #include "guicolors.h"
 #include "exceptions.h"
@@ -14,6 +16,7 @@
 #include "host/plugin/modules.h"
 #include "gui/tooltip/tooltip.h"
 #include "host/host_pluginmanager.h"
+#include <vector>
 
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
@@ -55,13 +58,23 @@ public:
 
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
+
 class guictr_pluginlibrary final : public guictr_base {
+public:
+    enum GroupBy {
+        GROUP_BY_FORMAT,
+        GROUP_BY_VENDOR,
+        GROUP_BY_NONE
+    };
+private:
+    GroupBy groupBy = GROUP_BY_FORMAT;
     const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
     gui_textfield textField;
     gui_textfield textField2;
     gui_list pluginListCtr;
     String curquery = "";
     std::vector<pluginentry_t> pluginsLibList;
+    std::map<String, bool> isFolderOpen;
 
 public:
     guictr_pluginlibrary() : guictr_base() {
@@ -78,7 +91,9 @@ public:
         });
         textField.setPlaceholder("Search");
         textField2.setPlaceholder("SQL error");
+        setCanMouseHit(true);
     }
+
     ~guictr_pluginlibrary() override {
         std::vector<gui_list_entry*> _newList;
         pluginListCtr.setList(_newList);
@@ -86,25 +101,22 @@ public:
         remove(&textField);
         remove(&textField2);
     }
-    void update() {
-        std::vector<gui_list_entry*> _newList;
-        pluginsLibList.clear();
-        try {
-            dawCtrl->getDaw()->getPluginDatabase().query(curquery, pluginsLibList);
-            for (pluginentry_t& entry : pluginsLibList) {
-                gui_pluginlist_entry* g = new gui_pluginlibrary_entry(entry);
-                _newList.push_back(g);
-            }
-            textField2.setValue("");
-        } catch (std::exception& e) {
-            log_lf(Log::L_ERROR, "Error: %s\n", e.what());
-            String strValue = e.what();
-            textField2.setValue(strValue);
-        }
 
-        pluginListCtr.setList(_newList);
-        layout();
+    GroupBy getGroupBy() const {
+        return groupBy;
     }
+
+    void setGroupBy(GroupBy _groupBy) {
+        if (groupBy != _groupBy) {
+            groupBy = _groupBy;
+            update();
+        }
+    }
+
+    void update();
+
+    void buttonClicked(guibase* button) override;
+
     void layout() override {
         pluginListCtr.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
         textField2.setVisible(!textField2.value().empty());
@@ -134,6 +146,19 @@ public:
             textField2.render(vg);
         }
         pluginListCtr.render(vg);
+    }
+    void handleRightClick(MouseEvent& evt) override;
+
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (guictr_base::mouseHitTest(mpos, evt)) {
+            if (evt.type == MouseHitType::MOUSE_RIGHT) {
+                if (evt.getGuiHit() == &pluginListCtr || (evt.getGuiHit() && evt.getGuiHit()->parent == &pluginListCtr)) {
+                    evt.requestFocus(this);
+                }
+            }
+            return true;
+        }
+        return false;
     }
 };
 struct module_desc_t {

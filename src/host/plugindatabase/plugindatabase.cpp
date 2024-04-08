@@ -171,6 +171,7 @@ public:
                 entry.relPath      = queryPlugin.getColumn("relPath").getString();
                 entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
                 entry.clapId       = "";
+                entry.vendorName   = queryPlugin.getColumn("vendorName").getString();
                 switch (static_cast<ModuleType>(entry.moduleFormat + 1)) {
                     case ModuleType::MODULE_TYPE_CLAP:
                     case ModuleType::MODULE_TYPE_VST3:
@@ -259,6 +260,7 @@ public:
             entry.relPath      = queryPlugin.getColumn("relPath").getString();
             entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
             entry.clapId       = "";
+            entry.vendorName   = queryPlugin.getColumn("vendorName").getString();
             switch (static_cast<ModuleType>(entry.moduleFormat + 1)) {
                 case ModuleType::MODULE_TYPE_CLAP:
                 case ModuleType::MODULE_TYPE_VST3:

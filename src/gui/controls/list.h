@@ -3,6 +3,7 @@
 #include <nanovg.h>
 #include "gui/gui.h"
 #include "gui/container/container.h"
+#include "renderresources.h"
 #include "scrollbar.h"
 #include "seq_util.h"
 
@@ -11,8 +12,9 @@ class gui_list_entry : public guibase {
     friend class gui_list;
 
 protected:
-    int icon      = 0;
-    bool selected = false;
+    int32_t icon       = 0;
+    bool selected      = false;
+    int32_t entryDepth = 0;
 
 public:
     gui_list_entry() : guibase() {
@@ -29,7 +31,39 @@ public:
     bool isDragMoveable() override {
         return true;
     }
+    void setDepth(int32_t depth) {
+        entryDepth = depth;
+    
+    }
 };
+
+class gui_list_folder_entry : public gui_list_entry {
+    const String string;
+    bool bIsOpened = false;
+public:
+    gui_list_folder_entry(const String& str) : gui_list_entry(), string(str) {
+        setGuiType(gui_type::GUI_TYPE_LIST_FOLDER);
+        label = string;
+        setBackgroundRendered(true);
+        icon = ICON_FOLDER;
+        setDragRendered(false);
+    }
+    void dragMoveOn(guibase* target, ivec2 mousepos) override {
+    }
+    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
+    }
+    String getText() override {
+        return string;
+    }
+    bool isOpened() const {
+        return bIsOpened;
+    }
+    void setIsOpened(const bool opened) {
+        bIsOpened = opened;
+        icon = opened ? ICON_FOLDER_OPEN : ICON_FOLDER;
+    }
+};
+
 class gui_list : public guictr_base, public gui_scrollcontainer {
 protected:
     gui_scrollbar scrollbar;
@@ -40,11 +74,21 @@ protected:
     ivec4 rowMargin     = { 0, 0, 0, 0 };
     bool renderHR       = false;
     int32_t selectedIdx = -1;
-
+    bool bOwnsListEntries = true;
 public:
     gui_list() : guictr_base(), scrollbar(1, 0.0f, *this) {
         add(&scrollbar);
         setBackgroundRendered(true);
+    }
+    ~gui_list() override {
+        remove(&scrollbar);
+        if (bOwnsListEntries)
+            destroyGuis();
+        else 
+            removeGuis();
+    }
+    void setOwnsListEntries(bool _bOwnsListEntries) {
+        bOwnsListEntries = _bOwnsListEntries;
     }
     template<typename Comparator>
     void sort(Comparator comparator) {
@@ -62,10 +106,6 @@ public:
     }
     void setRenderHR(bool _renderHR) {
         renderHR = _renderHR;
-    }
-    ~gui_list() override {
-        remove(&scrollbar);
-        destroyGuis();
     }
     void setRowHeight(int h) {
         rowHeight = h;
@@ -96,18 +136,21 @@ public:
         //remove all existing from that copy
         removeAll(listGuisDelete, _newList);
 
-        //remove exisiting from new list
-        removeAll(_newList, listGuis);
-
         removeAll(listGuis, listGuisDelete);
         //delete entries that are gone
         for (gui_list_entry* g : listGuisDelete) {
             remove(g);
-            delete g;
+            if (bOwnsListEntries)
+                delete g;
         }
 
-        //add entries that are new
-        addAll(listGuis, _newList);
+        // remove all entries
+        for (gui_list_entry* g : listGuis) {
+            remove(g);
+        }
+
+        // add all entries
+        listGuis = _newList;
         for (gui_list_entry* g : _newList) {
             add(g);
         }

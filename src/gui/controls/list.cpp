@@ -1,5 +1,6 @@
 #include <nanovg.h>
 #include <algorithm>
+#include "guiglobals.h"
 #include "math/vec.h"
 #include "list.h"
 #include "gui/gui.h"
@@ -33,14 +34,14 @@ void gui_list_entry::render(NVGcontext* vg) {
         nvgFillColor(vg, color);
         nvgFill(vg);
     }
-    nvgTranslate(vg, pos.x, pos.y);
+    nvgTranslate(vg, pos.x + (INSET_TITLE * entryDepth), pos.y);
     if (icon > -1) {
         RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
         drawIcon(vg, size, &image);
         x += rowHeight + spacing;
     }
     renderText(vg, vec2(x, rowHeight*0.5f), size, getText());
-    nvgTranslate(vg, -pos.x, -pos.y);
+    nvgTranslate(vg, -(pos.x + (INSET_TITLE * entryDepth)), -pos.y);
 }
 
 void gui_list_entry::handleDraggedBegin(MouseEvent& evt) {
