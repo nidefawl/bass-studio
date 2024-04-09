@@ -16,14 +16,11 @@
  * @ingroup IPlugStructs
  */
 
-#include <cassert>
+#include "assert_dbg.h"
 #include "str_util.h"
 #include "types.h"
-#include <cstdint>
 #include <cstdio>
 #include <algorithm>
-#include <string>
-
 #include "logging.h"
 
 /** Encapsulates a MIDI message and provides helper functions
@@ -305,8 +302,8 @@ struct IMidiMsg {
     }
 
     /** @return [0, 1], -1 if NA.*/
-    double ControlChange(EControlChangeMsg idx) const {
-        if (StatusMsg() == kControlChange && ControlChangeIdx() == idx) {
+    double ControlChange() const {
+        if (StatusMsg() == kControlChange) {
             return (double) mData2 / 127.0;
         }
         return -1.0;
@@ -382,7 +379,7 @@ struct IMidiMsg {
         if (StatusMsg() == kControlChange) {
             info += ControlName(ControlChangeIdx());
             info += " ";
-            info += StringFormat("%d", int(ControlChange(ControlChangeIdx())));
+            info += StringFormat("%d", int(ControlChange()));
         }
         return StringFormat("%08d Midi %s Ch %d %s %02X %02X", mOffset, StatusMsgStr(StatusMsg()), Channel(), StringAsCStr(info), mData1, mData2);
     }

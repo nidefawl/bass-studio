@@ -1395,10 +1395,18 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     int32_t midiProcessFlags = 0;
     switch (playbackState) {
         case playback_state::status_playback:
-            midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
+            if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
+                midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
+            } else {
+                midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
+            }
             break;
         case playback_state::status_render:
-            midiProcessFlags = MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
+            if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
+                midiProcessFlags = MidiFlags::PROCESS_ARP;
+            } else {
+                midiProcessFlags = MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
+            }
             break;
         case playback_state::status_stop:
             midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;

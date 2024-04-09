@@ -138,6 +138,7 @@ struct clip_control_data_t {
 
 namespace DAW {
 void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, const clip_control_data_channel_t& src, tick_t readPos, tick_t len, tick_t offsetStart,  tick_t loopStart, tick_t loopLen);
+void CopyControlData(const clip_control_data_t& src, clip_control_data_t& dst, tick_t readPos, tick_t writePos, tick_t readLen);
 }
 
 class clip_notes_t {

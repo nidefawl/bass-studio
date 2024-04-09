@@ -1315,8 +1315,8 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT);
             }
         }
-        if (isSet(this->flags, audiostageflags_t::RECORD_ARMED)) {
-            recorder.recordNoteEvents(state, blockStart, blockEnd, noteEvents);
+        if (isSet(this->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
+            recorder.recordNoteEvents(state, blockStart, blockEnd, noteEvents, ctrlEvents);
         }
 
         tmr.reset();
@@ -1921,10 +1921,12 @@ void clip_recorder::finishRecordingClip() {
             recordingClip->notes.addSingle(noteCopy);
         }
     }
+
     clip_t* cloned = recordingClip->clone();
     cloned->loopEnabled = false;
     cloned->loopLen = ((math::max(1, cloned->getLen() / (TICKS_BAR * 4))) * (TICKS_BAR * 4));
     cloned->notes.updateBounds();
+    DAW::CopyControlData(controlDataProcessed, cloned->controlData, cloned->time, 0, cloned->getLen());
     cloned->setDirty();
     std::swap(recordDataProcessed, cloned);
     delete cloned;
@@ -1932,8 +1934,10 @@ void clip_recorder::finishRecordingClip() {
     hasNewRecordedData = true;
     delete recordingClip;
     recordingClip = nullptr;
+    controlDataProcessed = {};
 }
-void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, int trackType, const std::vector<note_t>& m_list) {
+
+void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, int trackType) {
     if (recordingClip == nullptr) {
         isRecording = true;
         firstRecordedSample = samplePosBlockStart;
@@ -1960,7 +1964,7 @@ void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, sampl
     }
     samplesRecorded += samplePosBlockEnd - samplePosBlockStart;
     if (recordingClip && tickBlockEnd - recordingClip->time > TICKS_QUARTER) {
-        for (auto& note : m_list) {
+        for (auto& note : this->midiProcessedInput.m_list) {
             if (!note.isHeld()) {
                 auto noteCopy = note;
                 noteCopy.time -= recordingClip->start();
@@ -1969,12 +1973,14 @@ void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, sampl
                 recordingClip->notes.addSingle(noteCopy);
             }
         }
+
         clip_t* cloned = recordingClip->clone();
         cloned->lenSamples = samplePosBlockEnd - firstRecordedSample;
         cloned->setLen(tickBlockEnd - recordingClip->time);
         cloned->loopEnabled = false;
         cloned->loopLen     = ((math::max(1, cloned->getLen() / (TICKS_BAR * 4))) * (TICKS_BAR * 4));
         cloned->notes.updateBounds();
+        DAW::CopyControlData(controlDataProcessed, cloned->controlData, cloned->time, 0, cloned->getLen());
         cloned->setDirty();
         std::swap(recordDataProcessed, cloned);
         delete cloned;
@@ -1986,8 +1992,11 @@ void clip_recorder::update(playback_state state, samplecount_t samplePosBlockSta
     bool bIsPlayingAndRecording = DAW::isPlaybackState(state) && bRecordArmed;
     if (notesProcessed || bIsPlayingAndRecording) {
         midiProcessedInput.updateBounds();
+        controlDataProcessed.sort();
+        controlDataProcessed.eraseDuplicates();
+        controlDataProcessed.updateBounds();
         if (bIsPlayingAndRecording) {
-            updateRecordingClip(samplePosBlockStart, samplePosBlockEnd, tickBlockStart, tickBlockEnd, trackType, midiProcessedInput.m_list);
+            updateRecordingClip(samplePosBlockStart, samplePosBlockEnd, tickBlockStart, tickBlockEnd, trackType);
         }
     }
 
@@ -1996,7 +2005,7 @@ void clip_recorder::update(playback_state state, samplecount_t samplePosBlockSta
     }
     notesProcessed = false;
 }
-void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<midievent_note_t>& noteEventsProcessed) {
+void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<midievent_note_t>& noteEventsProcessed, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvtsProcessed) {
     bool notesProcessed = false;
     if (!midiProcessedInput.m_list.empty()) {
         auto it = midiProcessedInput.m_list.begin();
@@ -2072,9 +2081,40 @@ void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart
             notesProcessed = true;
         }
     }
-    this->notesProcessed |= notesProcessed;
-
+    bool eventsProcessed = false;
+    if (!ctrlEvtsProcessed.empty()) {
+        for (const auto evt : ctrlEvtsProcessed) {
+            //log_printf("Control event %s\n", evt.ToString());
+            auto msg = IMidiMsg::FromU32AndTick(evt.message, evt.tick);
+            switch (msg.StatusMsg()) {
+                case IMidiMsg::kPitchWheel: {
+                    double pb = msg.PitchWheel() * 0.5 + 0.5;
+                    this->controlDataProcessed.pitchBend.shape.pts.push_back({ vec2(evt.tick, pb), 0.5f });
+                    log_lf(Log::L_DEBUG, "PitchWheel %f\n", pb);
+                    eventsProcessed = true;
+                    break;
+                }
+                case IMidiMsg::kControlChange: {
+                    auto cc = msg.ControlChangeIdx();
+                    auto val = msg.ControlChange();
+                    auto& channel = controlDataProcessed.getOrCreateChannel(cc);
+                    channel.shape.pts.push_back({ vec2(evt.tick, val), 0.5f });
+                    eventsProcessed = true;
+                    break;
+                }
+                case IMidiMsg::kNone:
+                case IMidiMsg::kNoteOff:
+                case IMidiMsg::kNoteOn:
+                case IMidiMsg::kPolyAftertouch:
+                case IMidiMsg::kProgramChange:
+                case IMidiMsg::kChannelAftertouch:
+                    break;
+            }
+        }
+    }
+    this->notesProcessed |= notesProcessed || eventsProcessed;
 }
+
 automatable_t* track_impl_t::getAutomatableByType(const automatable_param_ref_t& ref) {
     if (ref.type == AUTOMATABLE_MODULATOR_OUTPUT) {
         return nullptr;

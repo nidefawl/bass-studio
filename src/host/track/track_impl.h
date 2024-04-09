@@ -90,6 +90,7 @@ struct clip_recorder {
     std::atomic<bool> hasNewRecordedData{};
     clip_t* recordDataProcessed = nullptr;
     clip_notes_t midiProcessedInput;
+    clip_control_data_t controlDataProcessed;
     bool notesProcessed = false;
     samplecount_t firstRecordedSample = 0;
     samplecount_t samplesWritten = 0;
@@ -97,14 +98,14 @@ struct clip_recorder {
     int32_t audioSampleId = -1;
     store_sample_req_t ssr;
     void updateRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, int 
-    trackType, const std::vector<note_t>& m_list);
+    trackType);
     void finishRecordingClip();
     public:
     clip_t* getRecordingClip() {
         return recordingClip;
     }
     void update(playback_state state, samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickBlockStart, tick_t tickBlockEnd, int trackType, bool bRecordArmed);
-    void recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<midievent_note_t>& noteEventsProcessed);
+    void recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<midievent_note_t>& noteEventsProcessed, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvtsProcessed);
     bool writeRecordedData(project_controller_t* project, track_impl_t* trImpl, audiocache* cache, DawInstance* daw);
 };
 struct audio_stage_t : public IDelayLineStorage {

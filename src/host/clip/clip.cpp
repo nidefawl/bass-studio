@@ -1130,6 +1130,25 @@ void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, c
         t += loopLen;
     }
 }
+
+void CopyControlData(const clip_control_data_t& src, clip_control_data_t& dst, tick_t readPos, tick_t writePos, tick_t readLen) {
+    for (auto& pt : src.pitchBend.shape.pts) {
+        auto& pitchBend = dst.pitchBend;
+        if (pt.pos.x >= readPos && pt.pos.x <= readPos + readLen) {
+            pitchBend.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
+        }
+    }
+    for (auto& it : src.ccChannels) {
+        auto& cc = dst.getOrCreateChannel(it.first);
+        for (auto& pt : it.second.shape.pts) {
+            if (pt.pos.x >= readPos && pt.pos.x <= readPos + readLen) {
+                cc.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
+            }
+        }
+    }
+    dst.eraseDuplicates();
+    dst.updateBounds();
+}
 }
 
 void clip_control_data_t::updateBounds() {
