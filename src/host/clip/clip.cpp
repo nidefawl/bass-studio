@@ -997,6 +997,15 @@ void clip_control_data_t::createCCChannel(int32_t cc) {
     updateBounds();
 }
 
+clip_control_data_channel_t& clip_control_data_t::getOrCreateChannel(int32_t cc) {
+    auto it = ccChannels.find(cc);
+    if (it == ccChannels.end()) {
+        createCCChannel(cc);
+        return ccChannels[cc];
+    }
+    return it->second;
+}
+
 float clip_control_data_channel_t::sampleAtTick(clip_t* clip, tick_t tOffset) {
     if (shape.pts.empty()) {
         return defaultValue;
@@ -1136,6 +1145,13 @@ void clip_control_data_t::eraseDuplicates() {
     for (auto& cc : ccChannels) {
         cc.second.shape.assertSorted();
         cc.second.shape.eraseDuplicates();
+    }
+}
+
+void clip_control_data_t::sort() {
+    pitchBend.shape.sort();
+    for (auto& cc : ccChannels) {
+        cc.second.shape.sort();
     }
 }
 

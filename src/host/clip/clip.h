@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <list>
 #include <map>
 #include <vector>
@@ -114,6 +115,7 @@ struct clip_control_data_t {
     clip_control_data_t();
     void updateBounds();
     void eraseDuplicates();
+    void sort();
     void clear();
     void createCCChannel(int32_t cc);
     bool hasData() const {
@@ -127,6 +129,7 @@ struct clip_control_data_t {
         }
         return false;
     }
+    clip_control_data_channel_t& getOrCreateChannel(int32_t cc);
     int getInTimeRange(clip_t* clip, tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<DAW::Host::midievent_ctrl_t>& list);
     void copyRangeFrom(clip_t* clip, tick_t writePos, tick_t tickBegin, tick_t len);
     void cutLeft(tick_t time);

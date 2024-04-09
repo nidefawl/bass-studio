@@ -30,7 +30,6 @@ public:
 class appexception final : public std::runtime_error {
 public:
     explicit appexception(const String& str) : runtime_error(str) {
-        dbgassert(0);
     }
 };
 

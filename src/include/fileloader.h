@@ -14,8 +14,8 @@ class LoadMidiTask final : public WorkerThread::ThreadTask {
     void loadFile();
 
 public:
-    explicit LoadMidiTask(String& _path) : ThreadTask() { this->path = _path; }
-    void run() override { loadFile(); }
+    explicit LoadMidiTask(const String& _path) : ThreadTask(), path(_path) {}
+    void run() override;
 
 public:
     std::shared_ptr<clip_clipboard> getClipboard() { return clipboard; }
