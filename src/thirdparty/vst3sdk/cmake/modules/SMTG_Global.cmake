@@ -19,7 +19,7 @@ endif()
 #
 # Call macros/functions which setup the SDK's basics.
 smtg_detect_platform()
-smtg_configure_cmake_generator()
+# smtg_configure_cmake_generator()
 smtg_detect_xcode_version()
 
 #------------------------------------------------------------------------
@@ -27,7 +27,7 @@ smtg_detect_xcode_version()
 #
 # This macro should be called from a 3rd party's plug-in CMakeLists.txt file.
 macro(smtg_enable_vst3_sdk)
-    smtg_configure_cmake_generator()
+    # smtg_configure_cmake_generator()
     smtg_setup_platform_toolset()
     smtg_setup_symbol_visibility()
     
