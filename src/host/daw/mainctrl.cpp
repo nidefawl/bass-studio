@@ -2616,34 +2616,37 @@ void DawInstance::updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& 
     }
 }
 
-bool convertClipboardToGrooveData(const clip_clipboard& clipboard, groove_data_t& grooveData) {
+bool convertClipboardToGrooveData(const clip_clipboard& clipboard, std::vector<groove_data_t>& grooves) {
     if (clipboard.tracks.empty()) {
         return false;
     }
-    const std::shared_ptr<track_clipboard_t>& trackEntry = clipboard.tracks.front();
-    if (!trackEntry || trackEntry->clips.empty()) {
-        return false;
+    for (const auto& trackEntry : clipboard.tracks) {
+        if (!trackEntry || trackEntry->clips.empty()) {
+            continue;
+        }
+        const std::shared_ptr<clip_t>& clipEntry = trackEntry->clips.front();
+        if (!clipEntry) {
+            continue;
+        }
+        const auto& clipNotes = clipEntry->notes;
+        if (clipNotes.isEmpty()) {
+            continue;
+        }
+        auto& notes = clipNotes.m_list;
+        groove_data_t grooveData{};
+        grooveData.timingData.timePoints.clear();
+        grooveData.timingData.velocityPoints.clear();
+        grooveData.name = clipEntry->name;
+        grooveData.timingData.timePoints.reserve(notes.size());
+        grooveData.timingData.velocityPoints.reserve(notes.size());
+        for (const auto& note : notes) {
+            grooveData.timingData.timePoints.push_back(note.start() / double(TICKS_QUARTER));
+            grooveData.timingData.velocityPoints.push_back(note.velocity);
+        }
+        // determine loop length, rounded up to next bar
+        grooveData.timingData.loopLength = math::ceildS64(grooveData.timingData.timePoints.back());
+        grooves.push_back(grooveData);
     }
-    const std::shared_ptr<clip_t>& clipEntry = trackEntry->clips.front();
-    if (!clipEntry) {
-        return false;
-    }
-    const auto& clipNotes = clipEntry->notes;
-    if (clipNotes.isEmpty()) {
-        return false;
-    }
-    auto& notes = clipNotes.m_list;
-    grooveData.timingData.timePoints.clear();
-    grooveData.timingData.velocityPoints.clear();
-    grooveData.name = "clipboard";
-    grooveData.timingData.timePoints.reserve(notes.size());
-    grooveData.timingData.velocityPoints.reserve(notes.size());
-    for (const auto& note : notes) {
-        grooveData.timingData.timePoints.push_back(note.start() / double(TICKS_QUARTER));
-        grooveData.timingData.velocityPoints.push_back(note.velocity);
-    }
-    // determine loop length, rounded up to next bar
-    grooveData.timingData.loopLength = math::ceildS64(grooveData.timingData.timePoints.back());
     return true;
 }
 
@@ -2737,6 +2740,7 @@ void GrooveLibrary::loadGrooves() {
             this->grooves.push_back(*shrdPtrGroove.get());
         }
     }
+    filesFound.clear();
     findFilesWithExt(path, "mid", true, filesFound);
     for (auto& file : filesFound) {
         LoadMidiTask task(file.path);
@@ -2746,10 +2750,6 @@ void GrooveLibrary::loadGrooves() {
             log_lf(Log::L_WARN, "Failed to load groove from file %s\n", file.path.c_str());
             continue;
         }
-        groove_data_t groove{};
-        if (convertClipboardToGrooveData(*clipboard, groove)) {
-            groove.name = file.name;
-            this->grooves.push_back(groove);
-        }
+        convertClipboardToGrooveData(*clipboard, this->grooves);
     }
 }
