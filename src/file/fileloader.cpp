@@ -84,6 +84,7 @@ void LoadMidiTask::loadFile() {
                     note.time  = (((start * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
                     note.len   = ((((end - start) * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
                     note.pitch = key;
+                    note.velocity = evt.getVelocity();
                     notes.m_list.push_back(note);
                     continue;
                 }
