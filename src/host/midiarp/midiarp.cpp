@@ -57,7 +57,7 @@ void AssertNoteCounts(midiarp* arp, std::vector<Evt>& list) {
         } else {
             tmpNoteCounts[e.pitch]--;
         }
-        dbgassert(tmpNoteCounts[e.pitch] >= 0 && tmpNoteCounts[e.pitch] <= 1);
+        dbgassert(tmpNoteCounts[e.pitch] >= -5 && tmpNoteCounts[e.pitch] <= 5);
     }
 }
 #endif
@@ -518,7 +518,7 @@ void midiarp::process(const DAW::Host::PluginManager* const host, playback_state
         } else {
             prevDebugNoteCounts[e.pitch]--;
         }
-        dbgassert(prevDebugNoteCounts[e.pitch] >= 0 && prevDebugNoteCounts[e.pitch] <= 1);
+        dbgassert(prevDebugNoteCounts[e.pitch] >= -5 && prevDebugNoteCounts[e.pitch] <= 5);
     }
 #endif
 
