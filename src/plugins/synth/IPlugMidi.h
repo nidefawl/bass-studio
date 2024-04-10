@@ -354,13 +354,111 @@ struct IMidiMsg {
         log_printf("midi:(%s:%d:%d:%d)\n", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
     }
     static inline String ControlName(int32_t control) {
-        switch(control) {
+        if (control < 0)
+            return "None";
+        switch(static_cast<EControlChangeMsg>(control)) {
             case kModWheel:
                 return "Mod Wheel";
             case kBreathController:
                 return "Breath Controller";
             case kAllNotesOff:
                 return "All Notes Off";
+            case kUndefined003:
+                break;
+            case kFootController:
+                return "Foot Controller";
+            case kPortamentoTime:
+                return "Portamento";
+            case kChannelVolume:
+                return "Volume";
+            case kBalance:
+                return "Balance";
+            case kUndefined009:
+                break;
+            case kPan:
+                return "Pan";
+            case kExpressionController:
+                return "Expression";
+            case kEffectControl1:
+            case kEffectControl2:
+            case kUndefined014:
+            case kUndefined015:
+            case kGeneralPurposeController1:
+            case kGeneralPurposeController2:
+            case kGeneralPurposeController3:
+            case kGeneralPurposeController4:
+            case kUndefined020:
+            case kUndefined021:
+            case kUndefined022:
+            case kUndefined023:
+            case kUndefined024:
+            case kUndefined025:
+            case kUndefined026:
+            case kUndefined027:
+            case kUndefined028:
+            case kUndefined029:
+            case kUndefined030:
+            case kUndefined031:
+                break;
+            case kSustainOnOff:
+                return "Sustain";
+            case kPortamentoOnOff:
+                return "Portamento On/Off";
+            case kSustenutoOnOff:
+                return "Sustenuto";
+            case kSoftPedalOnOff:
+                return "Soft Pedal";
+            case kLegatoOnOff:
+                return "Legato";
+            case kHold2OnOff:
+                return "Soft Pedal";
+            case kSoundVariation:
+                return "Sound Variation";
+            case kResonance:
+                return "Resonance";
+            case kReleaseTime:
+                return "Release Time";
+            case kAttackTime:
+                return "Attack Time";
+            case kCutoffFrequency:
+                return "Cutoff Frequency";
+            case kDecayTime:
+                return "Decay Time";
+            case kVibratoRate:
+                return "Vibrato Rate";
+            case kVibratoDepth:
+                return "Vibrato Depth";
+            case kVibratoDelay:
+                return "Vibrato Delay";
+            case kSoundControllerUndefined:
+            case kUndefined085:
+            case kUndefined086:
+            case kUndefined087:
+            case kUndefined088:
+            case kUndefined089:
+            case kUndefined090:
+            case kTremoloDepth:
+            case kChorusDepth:
+            case kPhaserDepth:
+            case kUndefined102:
+            case kUndefined103:
+            case kUndefined104:
+            case kUndefined105:
+            case kUndefined106:
+            case kUndefined107:
+            case kUndefined108:
+            case kUndefined109:
+            case kUndefined110:
+            case kUndefined111:
+            case kUndefined112:
+            case kUndefined113:
+            case kUndefined114:
+            case kUndefined115:
+            case kUndefined116:
+            case kUndefined117:
+            case kUndefined118:
+            case kUndefined119:
+                break;
         }
         return StringFormat("Midi CC%03d", control);
     }

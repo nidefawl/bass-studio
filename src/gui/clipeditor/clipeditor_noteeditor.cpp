@@ -418,6 +418,7 @@ guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_v
       content(m_grid, _view, *this),
       velocities(m_grid, _view, *this),
       ctrlData(m_grid, _view, *this),
+      dropdownSelectControlData(&ctrlData),
       splitterVel(0, 0.75f)
 {
     padding = 2;
@@ -435,18 +436,6 @@ guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_v
     btnToggleFold.setStateRef(&bFoldNotes);
     btnShowVelocities.setStateRef(&bShowVelocity);
     btnShowControlData.setStateRef(&bShowControlData);
-    dropdownSelectControlData.fnOptionSelected = [this](int32_t option, String& str) {
-        ctrlData.setSelectedData(option);
-        return str;
-    };
-    std::vector<String> options = {
-        "Pitch Bend" };
-    for (int32_t i = 1; i < 127; ++i) {
-        String s = IMidiMsg::ControlName(i);
-        options.push_back(s);
-    }
-    dropdownSelectControlData.setOptions(options);
-    dropdownSelectControlData.setSelectedIndex(ctrlData.getSelectedData());
     content.showRange(CLIPEDITOR_DEFAULT_MIN, CLIPEDITOR_DEFAULT_MAX);
     btnToggleFold.setButtonColor(GuiColor::COL_FOLD_BUTTON);
     btnShowArp.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);

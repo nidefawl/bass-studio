@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <list>
 #include <memory>
+#include <string>
 #include <vector>
 #include "assert_dbg.h"
 #include "basectrl.h"
@@ -822,6 +823,83 @@ public:
     virtual void updateCopiedClipData() { };
 };
 
+class guidropdown_popup_sel_control_data final : public guictxtmenu {
+    gui_clipcontent_control_data* const m_ctrlData;
+public:
+    class ctxt_menu_entry_data final : public ctxtmenu_entry {
+        bool m_hasData;
+    public:
+        ctxt_menu_entry_data(int32_t _id, const String& name, bool automated)
+            : ctxtmenu_entry(name, _id),
+            m_hasData(automated)
+        {
+            if (m_hasData) {
+                setIcon(&RenderResources::imgIcons[ICON_AUTOMATION], GuiColor::COL_AUTOMATED);
+            }
+            bGrayedOut = !m_hasData;
+            if (_id > 0) {
+                this->rightTitle = std::to_string(_id);
+            }
+        }
+        ~ctxt_menu_entry_data() override = default;
+        void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+            ctxtmenu_entry::render(ctxtSize, vg, idx, mouse);
+            
+        }
+    };
+    explicit guidropdown_popup_sel_control_data(DawCtrl* _dawCtrl, gui_clipcontent_control_data* const ctrlData) : m_ctrlData(ctrlData) {
+        this->dawCtrl  = _dawCtrl;
+        this->size.x   = 120;
+        this->fontSize = FONT_SIZE_CTXT_SMALL;
+        this->paddingV = 0;
+
+        auto clip = ctrlData->view.clip();
+        bool bHasData = false;
+        if (clip) {
+            bHasData = clip->controlData.pitchBend.hasData();
+        }
+        addEntry(new ctxt_menu_entry_data(0, "Pitch Bend", bHasData));
+        for (int32_t i = 1; i < 127; ++i) {
+            String name = IMidiMsg::ControlName(i);
+            bHasData = false;
+            if (clip) {
+                auto it = clip->controlData.ccChannels.find(i);
+                if (it != clip->controlData.ccChannels.end()) {
+                    bHasData = it->second.hasData();
+                }
+            }
+            addEntry(new ctxt_menu_entry_data(i, name, bHasData));
+        }
+    }
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
+        m_ctrlData->setSelectedData(_id);
+        closeContextMenu();
+        return true;
+    }
+};
+
+class guidropdown_midi_control_data final : public guidropdownbase {
+    gui_clipcontent_control_data* const m_ctrlData;
+
+public:
+    explicit guidropdown_midi_control_data(gui_clipcontent_control_data* const ctrlData)
+        : guidropdownbase(),
+          m_ctrlData(ctrlData) {
+    }
+    String getString() override {
+        auto control = m_ctrlData->getSelectedData();
+        if (control == 0) {
+            return "Pitch Bend";
+        }
+        return IMidiMsg::ControlName(control);
+    }
+    void handleDraggedRelease(MouseEvent& evt) override {
+        guictxtmenu_base* popup = new guidropdown_popup_sel_control_data(dawCtrl, m_ctrlData);
+        popup->size.x           = 250;
+        m_ctrlData->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+    }
+};
+
 class guictr_clipeditor;
 class guictr_noteeditor 
     : public guictr_editor_base,
@@ -838,7 +916,7 @@ public:
     guibuttonstate btnShowVelocities;
     guibuttonstate btnShowControlData;
     guibuttonstate btnToggleFold;
-    guidropdown_generic<String> dropdownSelectControlData;
+    guidropdown_midi_control_data dropdownSelectControlData;
     Splitter splitterVel;
     int32_t velHeight = 120;
     int32_t pianoWidth = 100;

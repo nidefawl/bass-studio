@@ -1124,7 +1124,7 @@ public:
 class guidropdown_popup_sel_automation_param final : public guictxtmenu {
     track_gui_entry_t* const m_trackentry;
 public:
-class ctxt_menu_entry_param final : public ctxtmenu_entry {
+    class ctxt_menu_entry_param final : public ctxtmenu_entry {
         bool m_automated;
     public:
         ctxt_menu_entry_param(int32_t _id, const String& name, bool automated)
