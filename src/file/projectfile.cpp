@@ -977,12 +977,12 @@ std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
     return nullptr;
 }
 
-bool saveGrooveFile(const groove_data_t& groove, const String& path) {
+bool saveGrooveFile(const std::vector<groove_data_t>& allGrooves, const String& path) {
     try {
         Stringstream sstream;
         {
             JSONOutputArchive ar(sstream);
-            ar(make_nvp("groove", groove));
+            ar(make_nvp("grooves", allGrooves));
         }
         sstream.flush();
         writeStringStream(path, sstream);
@@ -995,21 +995,21 @@ bool saveGrooveFile(const groove_data_t& groove, const String& path) {
     return false;
 }
 
-std::shared_ptr<groove_data_t> loadGrooveFile(const String& path) {
+std::vector<groove_data_t> loadGrooveFile(const String& path) {
+    std::vector<groove_data_t> allGrooves;
     try {
         std::vector<uint8_t> vec;
         ReadFileVector(path, vec);
         Stringstream sstream(std::string(vec.begin(), vec.end()));
-        std::shared_ptr<groove_data_t> groove = std::make_shared<groove_data_t>();
         {
             JSONInputArchive ar(sstream);
-            ar(make_nvp("groove", *groove.get()));
+            ar(make_nvp("grooves", allGrooves));
         }
-        return groove;
+        return allGrooves;
     } catch (const FileIOException& e) {
         log_printf("loadGrooveFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     } catch (const std::exception& e) {
         log_printf("loadGrooveFile exception: %s\n", e.what());
     }
-    return nullptr;
+    return allGrooves;
 }

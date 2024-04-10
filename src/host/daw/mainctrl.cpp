@@ -2663,9 +2663,9 @@ void GrooveLibrary::loadGrooves() {
     this->grooves.clear();
     for (auto& file : filesFound) {
         String groovePath = file.path;
-        auto shrdPtrGroove = loadGrooveFile(groovePath);
-        if (shrdPtrGroove) {
-            this->grooves.push_back(*shrdPtrGroove.get());
+        auto vectorGrooves = loadGrooveFile(groovePath);
+        if (!vectorGrooves.empty()) {
+            this->grooves.insert(this->grooves.end(), vectorGrooves.begin(), vectorGrooves.end());
         }
     }
     filesFound.clear();
@@ -2680,4 +2680,11 @@ void GrooveLibrary::loadGrooves() {
         }
         convertClipboardToGrooveData(*clipboard, this->grooves);
     }
+    std::sort(this->grooves.begin(), this->grooves.end(), [](const groove_data_t& a, const groove_data_t& b) {
+        return a.grooveName < b.grooveName;
+    });
+    // String samplePath = App::Platform::toUserdataPath("grooves/sample.groove");
+    // if (!FileExists(samplePath)) {
+    //     saveGrooveFile(this->grooves, samplePath);
+    // }
 }
