@@ -135,6 +135,10 @@ namespace DAW::Shape {
         if (pts.size() == 1) {
             return pts[0].pos.y;
         }
+        if (posX >= pts.back().pos.x)
+            return pts.back().pos.y;
+        if (posX <= pts.front().pos.x)
+            return pts.front().pos.y;
         float pX = posX;
         size_t idx = 0;
         for (size_t i = 0; i < pts.size(); i++) {
