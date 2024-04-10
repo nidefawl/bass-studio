@@ -42,10 +42,10 @@ void guidropdownbase::select(dropdown_field_selectitem req, int32_t idxOffset) {
             setSelectedIndex(idxOffset);
             break;
         case SELECT_NEXT:
-            setSelectedIndex(math::min<uint32_t>(getLastIndex(), index + idxOffset));
+            setSelectedIndex(math::min<int32_t>(getLastIndex(), index + idxOffset));
             break;
         case SELECT_PREVIOUS:
-            setSelectedIndex(math::max<uint32_t>(0, index - idxOffset));
+            setSelectedIndex(math::max<int32_t>(0, index - idxOffset));
             break;
         case SELECT_FIRST:
             setSelectedIndex(0);

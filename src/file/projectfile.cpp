@@ -565,14 +565,26 @@ void serialize(Archive& archive, groove_timing_data_t& m) {
 
 template<class Archive>
 void serialize(Archive& archive, groove_data_t& m) {
-    archive(make_nvp("timingData", m.timingData),
-            make_nvp("name", m.name),
-            make_nvp("lenQuantization", m.lenQuantization),
-            make_nvp("strengthQuantization", m.strengthQuantization),
-            make_nvp("strengthGroove", m.strengthGroove),
-            make_nvp("strengthVelocity", m.strengthVelocity),
-            make_nvp("randomTiming", m.randomTiming),
-            make_nvp("randomVelocity", m.randomVelocity));
+    try {
+        archive(make_nvp("timingData", m.timingData),
+                make_nvp("presetName", m.presetName),
+                make_nvp("grooveName", m.grooveName),
+                make_nvp("lenQuantization", m.lenQuantization),
+                make_nvp("strengthQuantization", m.strengthQuantization),
+                make_nvp("strengthGroove", m.strengthGroove),
+                make_nvp("strengthVelocity", m.strengthVelocity),
+                make_nvp("randomTiming", m.randomTiming),
+                make_nvp("randomVelocity", m.randomVelocity));
+    } catch (const std::exception& e) {
+        archive(make_nvp("timingData", m.timingData),
+                make_nvp("name", m.presetName),
+                make_nvp("lenQuantization", m.lenQuantization),
+                make_nvp("strengthQuantization", m.strengthQuantization),
+                make_nvp("strengthGroove", m.strengthGroove),
+                make_nvp("strengthVelocity", m.strengthVelocity),
+                make_nvp("randomTiming", m.randomTiming),
+                make_nvp("randomVelocity", m.randomVelocity));
+    }
 }
 
 template<class Archive>

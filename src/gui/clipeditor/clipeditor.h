@@ -287,10 +287,22 @@ public:
         after        = newD;
     }
     void undo(DawInstance* daw) override {
-        // daw->getProject()->grooveData = before;
-        //TODO: implement
+        auto& grooves = daw->getGrooves();
+        auto it = std::find_if(grooves.begin(), grooves.end(), [&](const groove_data_t& g) {
+            return g.presetName == before.presetName;
+        });
+        if (it != grooves.end()) {
+            *it = before;
+        }
     }
     void redo(DawInstance* daw) override {
+        auto& grooves = daw->getGrooves();
+        auto it = std::find_if(grooves.begin(), grooves.end(), [&](const groove_data_t& g) {
+            return g.presetName == before.presetName;
+        });
+        if (it != grooves.end()) {
+            *it = after;
+        }
     }
 };
 inline bool isSharp(int n) {
@@ -480,11 +492,12 @@ class gui_clipgroove_settings final : public guictr_base {
 public:
     clip_view_t& view;
     gui_timeinput lenQuantization;
-    gui_numberinput_float strengthQuantization;
-    gui_numberinput_float strengthGroove;
-    gui_numberinput_float strengthVelocity;
-    gui_numberinput_float randomTiming;
-    gui_numberinput_float randomVelocity;
+    gui_numberinput_field_percentage strengthQuantization;
+    gui_numberinput_field_percentage strengthGroove;
+    gui_numberinput_field_percentage strengthVelocity;
+    gui_numberinput_field_percentage randomTiming;
+    gui_numberinput_field_percentage randomVelocity;
+    guidropdownbase* dropdownSelectPreset;
     guidropdownbase* dropdownSelectGroove;
     guibutton btnApply;
     groove_data_t grooveData;

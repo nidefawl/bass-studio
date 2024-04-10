@@ -3,6 +3,7 @@
 #include "gui/container/container.h"
 #include "gui/controls/button.h"
 #include "keyboard.h"
+#include "str_util.h"
 #include "textfield.h"
 
 class gui_numberinput_field_base : public guibutton {
@@ -106,6 +107,25 @@ using gui_numberinput_i32 = gui_numberinput_field_generic<int32_t>;
 using gui_numberinput_u32 = gui_numberinput_field_generic<uint32_t>;
 using gui_numberinput_double = gui_numberinput_field_generic<double>;
 using gui_numberinput_float = gui_numberinput_field_generic<float>;
+
+class gui_numberinput_field_percentage : public gui_numberinput_field_generic<float> {
+public:
+    explicit gui_numberinput_field_percentage(float* _number) : gui_numberinput_field_generic<float>(_number) {
+    }
+    float parseLiteral(const char* szNumber) override {
+        String str = szNumber;
+        if (StrEndsWith(str, "%")) {
+            str = str.substr(0, str.size() - 1);
+        }
+        if (StrEndsWith(str, " ")) {
+            str = str.substr(0, str.size() - 1);
+        }
+        return atof(szNumber) / 100.0f;
+    }
+    String valueToStringLiteral(float val) override {
+        return StringFormat(strFormat ? strFormat : "%.2f%%", val * 100.0f);
+    }
+};
 
 class gui_input_filtered final : public guibutton {
     uint32_t* number;

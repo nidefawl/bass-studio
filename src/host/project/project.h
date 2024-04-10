@@ -26,11 +26,12 @@ struct groove_timing_data_t {
 };
 struct groove_data_t {
     groove_timing_data_t timingData;
-    String name;
+    String presetName;
+    String grooveName;
     tick_t lenQuantization = TICKS_16TH;
     float strengthQuantization = 0.0f;
     float strengthGroove = 1.0f;
-    float strengthVelocity = 1.0f;
+    float strengthVelocity = 0.4f;
     float randomTiming = 0.0f;
     float randomVelocity = 0.0f;
 };

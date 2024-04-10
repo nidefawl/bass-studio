@@ -274,10 +274,6 @@ struct autosave_state_t {
 
 class GrooveLibrary {
     public:
-    struct groove_entry_t {
-        String file;
-        groove_data_t data;
-    };
     std::vector<groove_data_t> grooves;
     GrooveLibrary() = default;
     void loadGrooves();
@@ -286,6 +282,14 @@ class GrooveLibrary {
     }
     const std::vector<groove_data_t>& getGrooves() const {
         return grooves;
+    }
+    const groove_data_t* findGroove(const String& name) const {
+        for (auto& entry : grooves) {
+            if (entry.grooveName == name) {
+                return &entry;
+            }
+        }
+        return nullptr;
     }
 };
 

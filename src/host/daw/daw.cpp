@@ -410,6 +410,7 @@ void DawInstance::unloadProject() {
 
     tls.host->unload();
     tls.audioCache->unloadAll();
+    projectGlobals.grooveData.clear();
 
     /** reset maximum stage id and determine new maximum stage id */
     tls.host->updateMaximumStageId();

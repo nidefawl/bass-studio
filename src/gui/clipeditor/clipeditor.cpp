@@ -2941,7 +2941,7 @@ void gui_clipgroove_settings::buttonClicked(guibase* button) {
         auto lock = daw->lockPlayThread();
         auto& data = daw->getGrooves();
         // find by name and update
-        auto grooveIdx = std::distance(data.begin(), std::find_if(data.begin(), data.end(), [name = grooveData.name](const auto& groove) { return groove.name == name; }));
+        auto grooveIdx = std::distance(data.begin(), std::find_if(data.begin(), data.end(), [name = grooveData.presetName](const auto& groove) { return groove.presetName == name; }));
         if (grooveIdx >= 0 && grooveIdx < int32_t(data.size())) {
             data[grooveIdx] = this->grooveData;
         }
@@ -2974,7 +2974,7 @@ public:
     guictxtmenu_add_groove(DawCtrl* _dawCtrl, clip_view_t& view) : dawCtrl(_dawCtrl), view(view) {
         grooveList = dawCtrl->getDaw()->getGrooveLibrary().getGrooves();
         for (int i = 0; i < int32_t(grooveList.size()); ++i) {
-            addEntry(new ctxtmenu_entry(grooveList[i].name, i));
+            addEntry(new ctxtmenu_entry(grooveList[i].grooveName, i));
         }
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
@@ -2986,13 +2986,15 @@ public:
             groove_data_t groove{};
             // find unique name
             auto grooveTemplate = grooveList[_id];
-            String nameGroove = grooveTemplate.name;
+            String nameGroove = "Groove #" + std::to_string(projectGrooves.size() + 1);
             int32_t idx = 1;
-            while (std::any_of(projectGrooves.begin(), projectGrooves.end(), [&nameGroove](const auto& groove) { return groove.name == nameGroove; })) {
-                nameGroove = grooveTemplate.name + " " + std::to_string(idx);
+            while (std::any_of(projectGrooves.begin(), projectGrooves.end(), [&nameGroove](const auto& groove) { return groove.presetName == nameGroove; })) {
+                nameGroove = "Groove #" + std::to_string(idx);
                 idx++;
             }
-            groove.name = nameGroove;
+            groove = grooveTemplate;
+            groove.presetName = nameGroove;
+            groove.grooveName = grooveTemplate.grooveName;
             groove.timingData = grooveTemplate.timingData;
             projectGrooves.push_back(groove);
             auto grooveIdx = projectGrooves.size() - 1;
@@ -3021,17 +3023,17 @@ public:
         return true;
     }
 };
-class guictxtmenu_select_groove final : public guictxtmenu {
+class guictxtmenu_select_groove_preset final : public guictxtmenu {
     DawCtrl* dawCtrl;
     clip_view_t& view;
 public:
-    guictxtmenu_select_groove(DawCtrl* _dawCtrl, clip_view_t& view) : dawCtrl(_dawCtrl), view(view) {
+    guictxtmenu_select_groove_preset(DawCtrl* _dawCtrl, clip_view_t& view) : dawCtrl(_dawCtrl), view(view) {
         auto& projectGrooves = dawCtrl->getDaw()->getGrooves();
         addEntry(new ctxtmenu_entry("Add New Groove", 0));
         addEntry(new ctxtmenu_entry("None", 1));
         for (int i = 0; i < int32_t(projectGrooves.size()); ++i) {
             auto& groove = projectGrooves[i];
-            addEntry(new ctxtmenu_entry(groove.name, i + 2));
+            addEntry(new ctxtmenu_entry(groove.presetName, i + 2));
         }
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
@@ -3077,10 +3079,200 @@ public:
     }
 };
 
-class guidropdown_groove final : public guidropdownbase {
+class guictxtmenu_select_groove_pattern final : public guictxtmenu {
+    DawCtrl* dawCtrl;
     clip_view_t& view;
 public:
-    explicit guidropdown_groove(clip_view_t& view)
+    guictxtmenu_select_groove_pattern(DawCtrl* _dawCtrl, clip_view_t& view) : dawCtrl(_dawCtrl), view(view) {
+        auto& groovePatterns = dawCtrl->getDaw()->getGrooveLibrary().getGrooves();
+        for (int i = 0; i < int32_t(groovePatterns.size()); ++i) {
+            auto& groove = groovePatterns[i];
+            addEntry(new ctxtmenu_entry(groove.grooveName, i));
+        }
+    }
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
+        if (_id >= 0) {
+            auto& groovePatterns = dawCtrl->getDaw()->getGrooveLibrary().getGrooves();
+            if (groovePatterns.empty()) {
+                return false;
+            }
+            if (_id >= int32_t(groovePatterns.size())) {
+                _id = 0;
+            }
+            auto& projectGrooves = dawCtrl->getDaw()->getGrooves();
+            auto daw = dawCtrl->getDaw();
+            clip_t* clip = view.clip();
+            auto lock = dawCtrl->getDaw()->lockPlayThread();
+            if (view.isAbsoluteTimeMode()) {
+                for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+                    for (clip_t* viewClip : vecClips) {
+                        if (trackEntry.track->getClips().hasClip(viewClip)) {
+                            if (viewClip->selectedGroove >= 0 && viewClip->selectedGroove < int32_t(projectGrooves.size())) {
+                                projectGrooves[viewClip->selectedGroove].grooveName = groovePatterns[_id].grooveName;
+                                projectGrooves[viewClip->selectedGroove].timingData = groovePatterns[_id].timingData;
+                            }
+                            viewClip->setDirty();
+                            daw->updateClipViews(viewClip);
+                        }
+                    }
+                }
+                // TODO: history
+            } else if (clip) {
+                if (clip->selectedGroove >= 0 && clip->selectedGroove < int32_t(projectGrooves.size())) {
+                    projectGrooves[clip->selectedGroove].grooveName = groovePatterns[_id].grooveName;
+                    projectGrooves[clip->selectedGroove].timingData = groovePatterns[_id].timingData;
+                }
+                clip->setDirty();
+                daw->updateClipViews(clip);
+            }
+            daw->updateVisibleTrackContents();
+            closeContextMenu();
+        }
+        return true;
+    }
+
+    guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override {
+        if (e->id == 0) {
+            return new guictxtmenu_add_groove(dawCtrl, view);
+        }
+        return nullptr;
+    }
+};
+class guidropdown_groove_pattern final : public guidropdownbase {
+    clip_view_t& view;
+public:
+    explicit guidropdown_groove_pattern(clip_view_t& view)
+        : guidropdownbase(), view(view) {
+    }
+    String getString() override {
+        auto& projectGrooves = dawCtrl->getDaw()->getGrooves();
+        auto clip = view.clip();
+        if (!clip) {
+            return "-";
+        }
+        if (clip->selectedGroove < 0 || clip->selectedGroove >= int32_t(projectGrooves.size())) {
+            return "-";
+        }
+        return projectGrooves[clip->selectedGroove].grooveName;
+    }
+    void handleDraggedRelease(MouseEvent& evt) override {
+        auto popup = new guictxtmenu_select_groove_pattern(dawCtrl, view);
+        parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+    }
+    int32_t getSelectIndex() override {
+        // copy next grooves timing data to clips current groove
+        auto& projectGrooves = dawCtrl->getDaw()->getGrooves();
+        auto clip = view.clip();
+        if (!clip) {
+            return -1;
+        }
+        if (clip->selectedGroove < 0 || clip->selectedGroove >= int32_t(projectGrooves.size())) {
+            return -1;
+        }
+        auto& projectClipGroove = projectGrooves[clip->selectedGroove];
+        // check for groove with identical name in groove library
+        auto& grooveLibrary = dawCtrl->getDaw()->getGrooveLibrary();
+        const groove_data_t* grooveFound = nullptr;
+        int32_t idx = 0;
+        auto& grooves = grooveLibrary.getGrooves();
+        for (auto& g : grooves) {
+            if (g.grooveName == projectClipGroove.grooveName) {
+                grooveFound = &g;
+                break;
+            }
+            idx++;
+        }
+        return grooveFound ? idx : -1;
+    }
+    void setSelectedIndex(int32_t idx) override {
+        auto daw = dawCtrl->getDaw();
+        auto& projectGrooves = daw->getGrooves();
+        auto& groovePatterns = daw->getGrooveLibrary().getGrooves();
+        if (groovePatterns.empty())
+            return;
+        auto clip = view.clip();
+        if (!clip) {
+            return;
+        }
+        idx = idx % int32_t(groovePatterns.size());
+        while (idx < 0) {
+            idx += int32_t(groovePatterns.size());
+        }
+        auto* newGroove = &groovePatterns[idx];
+        auto lock = daw->lockPlayThread();
+        if (view.isAbsoluteTimeMode()) {
+            int32_t modifyGrooveIdx = -1;
+            for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+                for (clip_t* viewClip : vecClips) {
+                    if (trackEntry.track->getClips().hasClip(viewClip)) {
+                        if (modifyGrooveIdx < 0) {
+                            modifyGrooveIdx = viewClip->selectedGroove;
+                        }
+                        if (modifyGrooveIdx >= 0 && viewClip->selectedGroove == modifyGrooveIdx) {
+                            auto& projectClipGroove = projectGrooves[modifyGrooveIdx];
+                            projectClipGroove.grooveName = newGroove->grooveName;
+                            projectClipGroove.timingData = newGroove->timingData;
+                            viewClip->setDirty();
+                            daw->updateClipViews(viewClip);
+                        }
+                    }
+                }
+            }
+            // TODO: history
+        } else if (clip) {
+            if (!newGroove) {
+                auto histTask = new action_modify_clip_groove_setting("Edit clip groove", view, clip->selectedGroove);
+                clip->selectedGroove = -1;
+                daw->pushHist(histTask);
+            } else {
+                if (clip->selectedGroove < 0) {
+                    return;
+                }
+                auto& projectClipGroove = projectGrooves[clip->selectedGroove];
+                projectClipGroove.grooveName = newGroove->grooveName;
+                projectClipGroove.timingData = newGroove->timingData;
+                clip->setDirty();
+                daw->updateClipViews(clip);
+            }
+            clip->setDirty();
+            daw->updateClipViews(clip);
+        }
+        daw->updateVisibleTrackContents();
+    }
+    int32_t getLastIndex() override {
+        auto& grooveLibrary = dawCtrl->getDaw()->getGrooveLibrary();
+        auto& grooves = grooveLibrary.getGrooves();
+        return grooves.size() - 1;
+    }
+    void select(dropdown_field_selectitem req, int32_t idxOffset) override {
+        auto index = getSelectIndex();
+        if (index == -1)
+            return;
+
+        switch (req) {
+            case SELECT_IDX:
+                setSelectedIndex(idxOffset);
+                break;
+            case SELECT_NEXT:
+                setSelectedIndex(math::min<int32_t>(getLastIndex() + 1, index + idxOffset));
+                break;
+            case SELECT_PREVIOUS:
+                setSelectedIndex(math::max<int32_t>(-1, index - idxOffset));
+                break;
+            case SELECT_FIRST:
+                setSelectedIndex(0);
+                break;
+            case SELECT_LAST:
+                setSelectedIndex(getLastIndex());
+                break;
+        }
+    }
+};
+
+class guidropdown_groove_preset final : public guidropdownbase {
+    clip_view_t& view;
+public:
+    explicit guidropdown_groove_preset(clip_view_t& view)
         : guidropdownbase(), view(view) {
     }
     String getString() override {
@@ -3092,14 +3284,63 @@ public:
         if (clip->selectedGroove < 0 || clip->selectedGroove >= int32_t(projectGrooves.size())) {
             return "Select Groove";
         }
-        return projectGrooves[clip->selectedGroove].name;
+        return projectGrooves[clip->selectedGroove].presetName;
     }
     void handleDraggedRelease(MouseEvent& evt) override {
-        auto popup = new guictxtmenu_select_groove(dawCtrl, view);
+        auto popup = new guictxtmenu_select_groove_preset(dawCtrl, view);
         parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
+    int32_t getSelectIndex() override {
+        // copy next grooves timing data to clips current groove
+        auto& projectGrooves = dawCtrl->getDaw()->getGrooves();
+        auto clip = view.clip();
+        if (!clip) {
+            return -1;
+        }
+        if (clip->selectedGroove < 0 || clip->selectedGroove >= int32_t(projectGrooves.size())) {
+            return 0;
+        }
+        return clip->selectedGroove + 1;
+    }
+    void setSelectedIndex(int32_t idx) override {
+        idx -= 1;
+        auto daw = dawCtrl->getDaw();
+        auto& projectGrooves = daw->getGrooves();
+        auto clip = view.clip();
+        if (!clip) {
+            return;
+        }
+        if (idx < 0 || idx >= int32_t(projectGrooves.size())) {
+            idx = -1;
+        }
+        auto* newGroove = idx >= 0 ? &projectGrooves[idx] : nullptr;
+        auto newGrooveIdx = newGroove ? idx : -1;
+        auto lock = daw->lockPlayThread();
+        if (view.isAbsoluteTimeMode()) {
+            for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+                for (clip_t* viewClip : vecClips) {
+                    if (trackEntry.track->getClips().hasClip(viewClip)) {
+                        viewClip->selectedGroove = newGrooveIdx;
+                        viewClip->setDirty();
+                        daw->updateClipViews(viewClip);
+                    }
+                }
+            }
+            // TODO: history
+        } else if (clip) {
+            auto histTask = new action_modify_clip_groove_setting("Edit clip groove", view, clip->selectedGroove);
+            clip->selectedGroove = newGrooveIdx;
+            daw->pushHist(histTask);
+            clip->setDirty();
+            daw->updateClipViews(clip);
+        }
+        daw->updateVisibleTrackContents();
+    }
+    int32_t getLastIndex() override {
+        auto& grooves = dawCtrl->getDaw()->getGrooves();
+        return grooves.size();
+    }
 };
-
 gui_clipgroove_settings::gui_clipgroove_settings(gui_clipsettings& parent, clip_view_t& _view)
     : guictr_base(),
       parentClipSettings(parent),
@@ -3110,7 +3351,8 @@ gui_clipgroove_settings::gui_clipgroove_settings(gui_clipsettings& parent, clip_
       strengthVelocity(nullptr),
       randomTiming(nullptr),
       randomVelocity(nullptr),
-      dropdownSelectGroove(new guidropdown_groove(view))
+      dropdownSelectPreset(new guidropdown_groove_preset(view)),
+      dropdownSelectGroove(new guidropdown_groove_pattern(view))
 {
     lenQuantization.setRef(toRef(), &grooveData.lenQuantization);
     strengthQuantization.setRef(&grooveData.strengthQuantization);
@@ -3122,7 +3364,8 @@ gui_clipgroove_settings::gui_clipgroove_settings(gui_clipsettings& parent, clip_
     setBackgroundRendered(true);
     setBackgroundRenderedInset(true);
     setFlag(FLG_RENDER_LABEL, true);
-    dropdownSelectGroove->setLabel("Selected Groove");
+    dropdownSelectPreset->setLabel("Groove");
+    dropdownSelectGroove->setLabel("Pattern");
     lenQuantization.setLabel("Quantization Length");
     strengthQuantization.setLabel("Strength Quantization");
     strengthGroove.setLabel("Strength Groove");
@@ -3130,6 +3373,7 @@ gui_clipgroove_settings::gui_clipgroove_settings(gui_clipsettings& parent, clip_
     randomTiming.setLabel("Random Timing");
     randomVelocity.setLabel("Random Velocity");
     btnApply.setText("Apply");
+    add(dropdownSelectPreset);
     add(dropdownSelectGroove);
     add(&lenQuantization);
     add(&strengthQuantization);
@@ -3150,6 +3394,7 @@ void gui_clipgroove_settings::setSelectedGroove(const int32_t& _selectedGroove) 
         grooveData = data[_selectedGroove];
     }
     // hide all controls if groove is not selected
+    dropdownSelectGroove->setVisible(_selectedGroove >= 0);
     lenQuantization.setVisible(_selectedGroove >= 0);
     strengthQuantization.setVisible(_selectedGroove >= 0);
     strengthGroove.setVisible(_selectedGroove >= 0);
@@ -3193,4 +3438,5 @@ void gui_clipgroove_settings::render(NVGcontext* vg) {
 gui_clipgroove_settings::~gui_clipgroove_settings() {
     removeGuis();
     delete dropdownSelectGroove;
+    delete dropdownSelectPreset;
 }
