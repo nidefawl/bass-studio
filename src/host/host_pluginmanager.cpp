@@ -678,9 +678,11 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
 }
 
 #endif
+
 #ifdef _WIN32
 int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& filepath, HMODULE* hmodule, AEffect** aeffect, uint64_t bugfixFlags);
 #endif //_WIN32
+
 LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     dbgassert(masterCallBackSlot);
     const auto& filepath = req.filepath;
@@ -793,6 +795,10 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         dbgassert(libResult.entryPoint);
         VSTPluginMain_t* fn = reinterpret_cast<VSTPluginMain_t*>(libResult.entryPoint);
         aeffect = fn(masterCallBackSlot);
+        if (!aeffect) {
+            libResult.state = SharedLibState::FAILED;
+            return LoadResultPlugin{libResult};
+        }
 #ifdef _WIN32
     } else if (libResult.state == SharedLibState::DL_OPEN_FAILED && moduleFormat <= 0) {
         auto ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, req.bugfixFlags);
