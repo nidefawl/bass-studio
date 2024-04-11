@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <map>
+#include "str_util.h"
 #include "types.h"
 
 struct track_id_snapshot_t {
@@ -14,7 +15,7 @@ struct io_midi_snapshot_t {
     int32_t type                = 0;
     int32_t stageId             = -1;
     int32_t stageEndPointType   = 0;
-    int32_t externalInputIdx    = 0;
+    String inputName;
 };
 struct io_configuration_snapshot_t {
     int32_t type                = 0;
@@ -29,7 +30,7 @@ struct io_configuration_snapshot_t {
 struct track_io_configuration_snapshot_t {
     io_configuration_snapshot_t input;
     io_configuration_snapshot_t output;
-    io_midi_snapshot_t midiInput;
+    std::vector<io_midi_snapshot_t> midiInputs;
 };
 struct track_effect_routing_snapshot_t {
     int32_t routingState = 0;

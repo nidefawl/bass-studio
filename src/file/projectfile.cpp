@@ -10,6 +10,7 @@
 #include "snapshot/project-snapshot.h"
 #include "gui/container/container_layout_types.h"
 
+#include <exception>
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -264,16 +265,22 @@ template<class Archive>
 void serialize(Archive& archive, io_midi_snapshot_t& m) {
     archive(
         make_nvp("stageId", m.stageId),
-        make_nvp("stageEndPointType", m.stageEndPointType)
+        make_nvp("stageEndPointType", m.stageEndPointType),
+        make_nvp("type", m.type)
     );
-    make_optional_nvp(archive, "type", m.type);
-    make_optional_nvp(archive, "externalInputIdx", m.externalInputIdx);
+    make_optional_nvp(archive, "inputName", m.inputName);
 }
 
 template<class Archive>
 void serialize(Archive& archive, track_io_configuration_snapshot_t& m) {
-    archive(make_nvp("input", m.input), make_nvp("output", m.output));
-    make_optional_nvp(archive, "midiInput", m.midiInput);
+    try {
+        archive(make_nvp("input", m.input), make_nvp("output", m.output), make_nvp("midiInputs", m.midiInputs));
+    } catch (const std::exception& e) {
+        archive(make_nvp("input", m.input), make_nvp("output", m.output));
+        io_midi_snapshot_t tmp;
+        make_optional_nvp(archive, "midiInput", tmp);
+        m.midiInputs.push_back(tmp);
+    }
 }
 
 template<class Archive>

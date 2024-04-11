@@ -492,7 +492,9 @@ public:
         String inputName = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "External input" : "External output";
         addEntry(new ctxtmenu_entry_stage_channel(idx++, "None", AudioChannelRefNULL()));
         addEntry(new ctxtmenu_entry_default_channel(idx++, "Default"));
+        addEntry(new ctxtmenu_splitter());
         addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
+        addEntry(new ctxtmenu_splitter());
 
         project_t* project = dawCtrl->getDaw()->getProject();
         dbgassert(project);
@@ -504,11 +506,6 @@ public:
                 idx++;
             }
         }
-    }
-
-    void addEntry(ctxtmenu_entry* entry) = delete;
-    void addEntry(ctxtmenu_entry_track_io* entry) {
-        guictxtmenu::addEntry(entry);
     }
 
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
@@ -707,10 +704,12 @@ public:
         this->dawCtrl = _dawCtrl;
         int32_t idx      = 0;
         String inputName = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "External input" : "External output";
-        addEntry(new ctxtmenu_entry_stage_midi_channel(idx++, "None", AudioChannelRefNULL()));
-        addEntry(new ctxtmenu_entry_default_midi_channel(idx++, "Default"));
-        addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
-
+        addEntry(new ctxtmenu_entry_stage_midi_channel(0, "None", AudioChannelRefNULL()));
+        addEntry(new ctxtmenu_entry_default_midi_channel(1, "Default"));
+        addEntry(new ctxtmenu_entry_default_midi_channel(3, "Custom"));
+        addEntry(new ctxtmenu_splitter());
+        addEntry(new ctxtmenu_entry_bus_external(2, inputName, stageEndpoint));
+        addEntry(new ctxtmenu_splitter());
         project_t* project = dawCtrl->getDaw()->getProject();
         dbgassert(project);
         if (project) {
@@ -723,12 +722,11 @@ public:
         }
     }
 
-    void addEntry(ctxtmenu_entry* entry) = delete;
-    void addEntry(ctxtmenu_entry_track_io* entry) {
-        guictxtmenu::addEntry(entry);
-    }
-
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
+        if (e->id == 3) {
+            dawCtrl->closeAllContextMenus();
+            return true;
+        }
         auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
         if (ctxtEndpointEntry->isBus()) {
             return false;
@@ -744,7 +742,9 @@ public:
             return true;
         if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
             auto ep = entry->getEndpoint();
-            trImpl->midiChannel = ep;
+            auto lock = dawCtrl->lockPlayThread();
+            trImpl->midiInputChannels.clear();
+            trImpl->midiInputChannels.push_back(ep);
         } else {
             // trImpl->outputChannel = entry->getEndpoint();
         }
@@ -783,20 +783,8 @@ public:
     String getString() override {
         track_impl_t* trImpl = track->audio;
         dbgassert(trImpl);
-        if (trImpl) {
-            auto& channel      = isInput ? trImpl->midiChannel : trImpl->midiChannel;
-            // project_t* project = dawCtrl->getDaw()->getProject();
-            // dbgassert(project);
-            // if (project) {
-            //     if (channel.type == DAW::stage_type::INPUT_DEFAULT) {
-            //         DAW::channel_ref_t out;
-            //         if (DAW::resolveDefaultConnection(dawCtrl->getDaw()->getPluginManager(), project, trImpl, isInput, out)) {
-            //             return out.name;
-            //         }
-            //         return "Default";
-            //     }
-            // }
-            return channel.name;
+        if (trImpl && trImpl->midiInputChannels.size()) {
+            return trImpl->midiInputChannels.front().name;
         }
         return "<Invalid Track>";
     }

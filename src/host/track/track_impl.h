@@ -406,7 +406,7 @@ struct track_impl_t final : public audio_stage_t {
     std::vector<note_t> m_heldNotes;
     DAW::channel_ref_t inputChannel;
     DAW::channel_ref_t outputChannel;
-    DAW::midichannel_ref_t midiChannel;
+    std::vector<DAW::midichannel_ref_t> midiInputChannels;
     std::vector<track_gui_entry_t*> guiInstances;
     std::vector<midievent_note_t> noteEventsProcessed;
     clip_notes_t* midiValidation = nullptr;

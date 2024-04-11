@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include "clip/clip.h"
 #include "host/clip/clip.h"
 #include "config.h"
 #include "host/plugin/modules.h"
@@ -72,8 +73,15 @@ struct thread_stats_process_timings_t {
 
 Host* getInstance();
 
+
+struct note_miditime_t : public note_t {
+    int32_t midiTime = 0;
+};
+struct midi_realtime_notes_t {
+    std::vector<note_miditime_t> m_list;
+};
 struct midi_data_t {
-    clip_notes_t notes;
+    midi_realtime_notes_t notes;
     midi_input_events_t events;
 };
 

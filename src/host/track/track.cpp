@@ -608,13 +608,13 @@ namespace DAW {
         cfg.type              = static_cast<int32_t>(channel.type);
         cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
         cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
-        cfg.externalInputIdx  = channel.externalInputIdx;
+        cfg.inputName = channel.name;
     }
     void loadMidiChannelRefSnapshot(const io_midi_snapshot_t& cfg, midichannel_ref_t& channel) {
         channel.type                   = static_cast<midistage_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
-        channel.externalInputIdx       = cfg.externalInputIdx;
+        channel.name = cfg.inputName;
     }
 }
 
@@ -726,7 +726,11 @@ void track_impl_t::createIOSnapshot(track_io_configuration_snapshot_t& snapshot)
         io_configuration_snapshot_t& cfg = i == 0 ? snapshot.input : snapshot.output;
         createDawChannelRefSnapshot(channel, cfg);
     }
-    createMidiChannelRefSnapshot(midiChannel, snapshot.midiInput);
+    auto numInputs = midiInputChannels.size();
+    snapshot.midiInputs.resize(numInputs);
+    for (size_t i = 0; i < numInputs; i++) {
+        createMidiChannelRefSnapshot(midiInputChannels[i], snapshot.midiInputs[i]);
+    }
 }
 
 void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& snapshot) {
@@ -735,7 +739,13 @@ void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& 
         io_configuration_snapshot_t cfg = i == 0 ? snapshot.input : snapshot.output;
         loadDawChannelRefSnapshot(cfg, channel);
     }
-    loadMidiChannelRefSnapshot(snapshot.midiInput, midiChannel);
+    // loadMidiChannelRefSnapshot(snapshot.midiInput, midiChannel);
+    midiInputChannels.clear();
+    midiInputChannels.resize(snapshot.midiInputs.size());
+    auto numInputs = midiInputChannels.size();
+    for (size_t i = 0; i < numInputs; i++) {
+        loadMidiChannelRefSnapshot(snapshot.midiInputs[i], midiInputChannels[i]);
+    }
 }
 
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList) {
@@ -989,9 +999,9 @@ track_impl_t::track_impl_t(DAW::Host::PluginManager* const _host, audio_stage_id
       arp(new DAW::midiarp(this)), track(_track),
       inputChannel(_track->type != TRACK_TYPE_MIDI ? DAW::ChannelDefaultNone() : DAW::ChannelNone()),
       outputChannel(DAW::ChannelDefaultNone()),
-      midiChannel(_track->type == TRACK_TYPE_MIDI ? DAW::MidiChannelDefault() : DAW::MidiChannelNone()),
       midiValidation(new clip_notes_t())
 {
+      midiInputChannels.push_back(_track->type == TRACK_TYPE_MIDI ? DAW::MidiChannelDefault() : DAW::MidiChannelNone());
 }
 
 const std::vector<DAW::arp_note_t>& track_impl_t::getArpHeldNotes() {
@@ -1088,7 +1098,7 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const std::map<String
             lastNoteStart = note.start();
 #endif
             if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
-                auto noteCopy = note;
+                note_t noteCopy = note;
                 int32_t ret = cutIntersectingNotesFindDupe(list, noteCopy);
                 if (ret == -1) {
                     continue;
@@ -1124,12 +1134,11 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const std::map<String
             ctrlEvts.insert(it, ctrlEvt);
         }
         constexpr bool logProcessedNotes = false;
-        if (logProcessedNotes && !data.notes.isEmpty()) {
+        if (logProcessedNotes && !data.notes.m_list.empty()) {
             // print absStart to absEnd range we looked at
             // and print the min, max and number of events in data.notes
             log_lf(Log::L_DEBUG, "Notes in input: %zd. Notes copied: %zd\n", data.notes.m_list.size(), list.size());
             log_lf(Log::L_DEBUG, "absStart: %d, absEnd: %d\n", absStart, absEnd);
-            log_lf(Log::L_DEBUG, "min note : %d, max note: %d\n", data.notes.minNote.start(), data.notes.maxNote.end());
         } 
     }
 }
@@ -1197,19 +1206,23 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 
     updateProfilingTime(procMidiStats.tm0InputClips, tmr.getTimeReset());
 
-    if ((flags & MidiFlags::PROCESS_REALTIME) 
-                                && (midiChannel.getType() == midistage_type::INPUT_EXTERNAL_MIDI
-                                    || (this->midiChannel.getType() == midistage_type::INPUT_DEFAULT 
-                                        && isSet(this->flags, audiostageflags_t::RECORD_ARMED)))) {
-        CopyMidiEventsInRange(blockStart, blockEnd, midiRealtimeDeviceInputs, midiChannel, notes, ctrlEvents);
-        if (midiChannel.dstChannel > -1) {
-            auto dstChannel = uint8_t(midiChannel.dstChannel);
-            for (auto& note : noteEvents) {
-                note.channel = dstChannel;
-            }
-            for (auto& ctrl : ctrlEvents) {
-                ctrl.message &= ~0x0F;
-                ctrl.message |= dstChannel & 0x0F;
+    if (flags & MidiFlags::PROCESS_REALTIME) {
+        for (auto& midiChannel : midiInputChannels) {
+            if ((midiChannel.getType() == midistage_type::INPUT_EXTERNAL_MIDI
+                                    || (midiChannel.getType() == midistage_type::INPUT_DEFAULT 
+                                        && isSet(this->flags, audiostageflags_t::RECORD_ARMED))))
+            {
+                CopyMidiEventsInRange(blockStart, blockEnd, midiRealtimeDeviceInputs, midiChannel, notes, ctrlEvents);
+                if (midiChannel.dstChannel > -1) {
+                    auto dstChannel = uint8_t(midiChannel.dstChannel);
+                    for (auto& note : noteEvents) {
+                        note.channel = dstChannel;
+                    }
+                    for (auto& ctrl : ctrlEvents) {
+                        ctrl.message &= ~0x0F;
+                        ctrl.message |= dstChannel & 0x0F;
+                    }
+                }
             }
         }
     }
@@ -1327,24 +1340,27 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         notesPre.update(blockStart, noteEvents, ctrlEvents);
         updateProfilingTime(procMidiStats.tm4SortEvents, tmr.getTimeReset());
         
-        if (midiChannel.type == midistage_type::INPUT_AUDIOSTAGE) {
-            auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
-            if (stageMidiInput) {
-                noteEvents.clear();
-                ctrlEvents.clear();
-                stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT);
-                if (midiChannel.dstChannel > -1) {
-                    auto dstChannel = uint8_t(midiChannel.dstChannel);
-                    for (auto& note : noteEvents) {
-                        note.channel = dstChannel;
-                    }
-                    for (auto& ctrl : ctrlEvents) {
-                        ctrl.message &= ~0x0F;
-                        ctrl.message |= dstChannel & 0x0F;
+        for (auto& midiChannel : midiInputChannels) {
+            if (midiChannel.type == midistage_type::INPUT_AUDIOSTAGE) {
+                auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
+                if (stageMidiInput) {
+                    noteEvents.clear();
+                    ctrlEvents.clear();
+                    stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT);
+                    if (midiChannel.dstChannel > -1) {
+                        auto dstChannel = uint8_t(midiChannel.dstChannel);
+                        for (auto& note : noteEvents) {
+                            note.channel = dstChannel;
+                        }
+                        for (auto& ctrl : ctrlEvents) {
+                            ctrl.message &= ~0x0F;
+                            ctrl.message |= dstChannel & 0x0F;
+                        }
                     }
                 }
             }
         }
+
         if (isSet(this->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
             recorder.recordNoteEvents(state, blockStart, blockEnd, noteEvents, ctrlEvents);
         }

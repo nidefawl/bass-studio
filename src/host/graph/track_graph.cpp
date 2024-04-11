@@ -28,79 +28,80 @@ namespace DAW {
         size_t numRemoved = 0;
         for (track_t* track : tracksFlat) {
             track_impl_t* trackImpl  = track->getStage();
-            const auto midiInputChannel  = trackImpl->midiChannel;
-            if (isMidiChannelConnected(midiInputChannel)) {
-                if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
-                    auto* stage = host->getAudioStage(midiInputChannel.stage.stageRef);
+            for (auto& midiInputChannel : trackImpl->midiInputChannels) {
+                if (isMidiChannelConnected(midiInputChannel)) {
+                    if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
+                        auto* stage = host->getAudioStage(midiInputChannel.stage.stageRef);
+                        if (!stage) {
+                            log_lf(Log::L_WARN, "Input midistage with id %d not found\n", static_cast<int32_t>(midiInputChannel.stage.stageRef.stageId));
+                            midiInputChannel = MidiChannelNone();
+                            numRemoved++;
+                        } else {
+                            midiInputChannel = MidiChannelStage(stage, midiInputChannel.stage.buffer, midiInputChannel.srcChannel, midiInputChannel.dstChannel);
+                        }
+                    } else if (midiInputChannel.getType() == midistage_type::INPUT_EXTERNAL_MIDI) {
+                        // auto& settings = daw_tls::getSettings();
+                        // auto& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
+                        // String labelAll = "All Inputs";
+                        // String name = labelAll;
+                        // if (midiInputChannel.externalInputIdx != 255) {
+                        //     if (CtrSize(midiSettings.inputs) > midiInputChannel.externalInputIdx) {
+                        //         auto& device = midiSettings.inputs[midiInputChannel.externalInputIdx];
+                        //         name = device.deviceName;
+                        //     } else {
+                        //         name = StringFormat("Missing Device %d", midiInputChannel.externalInputIdx+1);
+                        //     }
+                        // }
+                        // midiInputChannel = MidiChannelExternal(midiInputChannel.externalInputIdx, name, midiInputChannel.srcChannel, midiInputChannel.dstChannel);
+                    } else if (midiInputChannel.getType() == midistage_type::INPUT_DEFAULT) {
+                        midiInputChannel = MidiChannelDefault();
+                    } else if (midiInputChannel.getType() == midistage_type::INPUT_EMPTY) {
+                        midiInputChannel = MidiChannelNone();
+                    } else {
+                        log_lf(Log::L_WARN, "Unknown midi input channel type %d\n", static_cast<int32_t>(midiInputChannel.getType()));
+                        midiInputChannel = MidiChannelNone();
+                        numRemoved++;
+                    }
+                } else {
+                    midiInputChannel = MidiChannelNone();
+                }
+                const auto inputChannel  = trackImpl->inputChannel;
+                const auto outputChannel = trackImpl->outputChannel;
+                if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
+                    String name = "External " + AudioIO::getExternalIOName(inputChannel.externalInputType, inputChannel.externalInputIdx, stage_bufferpoint::INPUT);
+                    trackImpl->inputChannel = ChannelAudioInput(inputChannel.externalInputIdx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
+                } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
+                    auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
                     if (!stage) {
-                        log_lf(Log::L_WARN, "Input midistage with id %d not found\n", static_cast<int32_t>(midiInputChannel.stage.stageRef.stageId));
-                        trackImpl->midiChannel = MidiChannelNone();
+                        log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", static_cast<int32_t>(inputChannel.stage.stageRef.stageId));
+                        trackImpl->inputChannel = ChannelNone();
                         numRemoved++;
                     } else {
-                        trackImpl->midiChannel = MidiChannelStage(stage, midiInputChannel.stage.buffer, midiInputChannel.srcChannel, midiInputChannel.dstChannel);
+                        trackImpl->inputChannel = ChannelStage(stage, stage_bufferpoint::OUTPUT_POST);
                     }
-                } else if (midiInputChannel.getType() == midistage_type::INPUT_EXTERNAL_MIDI) {
-                    auto& settings = daw_tls::getSettings();
-                    auto& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
-                    String labelAll = "All Inputs";
-                    String name = labelAll;
-                    if (midiInputChannel.externalInputIdx != 255) {
-                        if (CtrSize(midiSettings.inputs) > midiInputChannel.externalInputIdx) {
-                            auto& device = midiSettings.inputs[midiInputChannel.externalInputIdx];
-                            name = device.deviceName;
-                        } else {
-                            name = StringFormat("Missing Device %d", midiInputChannel.externalInputIdx+1);
-                        }
-                    }
-                    trackImpl->midiChannel = MidiChannelExternal(midiInputChannel.externalInputIdx, name, midiInputChannel.srcChannel, midiInputChannel.dstChannel);
-                } else if (midiInputChannel.getType() == midistage_type::INPUT_DEFAULT) {
-                    trackImpl->midiChannel = MidiChannelDefault();
-                } else if (midiInputChannel.getType() == midistage_type::INPUT_EMPTY) {
-                    trackImpl->midiChannel = MidiChannelNone();
                 } else {
-                    log_lf(Log::L_WARN, "Unknown midi input channel type %d\n", static_cast<int32_t>(midiInputChannel.getType()));
-                    trackImpl->midiChannel = MidiChannelNone();
-                    numRemoved++;
+                    dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
+                    //inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
                 }
-            } else {
-                trackImpl->midiChannel = MidiChannelNone();
-            }
-            const auto inputChannel  = trackImpl->inputChannel;
-            const auto outputChannel = trackImpl->outputChannel;
-            if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-                String name = "External " + AudioIO::getExternalIOName(inputChannel.externalInputType, inputChannel.externalInputIdx, stage_bufferpoint::INPUT);
-                trackImpl->inputChannel = ChannelAudioInput(inputChannel.externalInputIdx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
-            } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
-                auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
-                if (!stage) {
-                    log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", static_cast<int32_t>(inputChannel.stage.stageRef.stageId));
-                    trackImpl->inputChannel = ChannelNone();
-                    numRemoved++;
-                } else {
-                    trackImpl->inputChannel = ChannelStage(stage, stage_bufferpoint::OUTPUT_POST);
-                }
-            } else {
-                dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
-                //inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
-            }
-            if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-                int32_t idx = outputChannel.externalInputIdx;
-                String name = "External " + AudioIO::getExternalIOName(outputChannel.externalInputType, idx, stage_bufferpoint::OUTPUT_POST);
+                if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
+                    int32_t idx = outputChannel.externalInputIdx;
+                    String name = "External " + AudioIO::getExternalIOName(outputChannel.externalInputType, idx, stage_bufferpoint::OUTPUT_POST);
 
-                trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.srcChannelOffset, name, outputChannel.externalInputType);
-            } else if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
-                auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
-                if (!stage) {
-                    log_lf(Log::L_WARN, "Output audiostage with id %d not found\n", static_cast<int32_t>(outputChannel.stage.stageRef.stageId));
-                    trackImpl->outputChannel = ChannelNone();
-                    numRemoved++;
+                    trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.srcChannelOffset, name, outputChannel.externalInputType);
+                } else if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
+                    auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
+                    if (!stage) {
+                        log_lf(Log::L_WARN, "Output audiostage with id %d not found\n", static_cast<int32_t>(outputChannel.stage.stageRef.stageId));
+                        trackImpl->outputChannel = ChannelNone();
+                        numRemoved++;
+                    } else {
+                        //TODO: validate dstChannelOffset
+                        trackImpl->outputChannel = ChannelStage(stage, stage_bufferpoint::INPUT, outputChannel.srcChannelOffset, outputChannel.dstChannelOffset); 
+                    }
                 } else {
-                    //TODO: validate dstChannelOffset
-                    trackImpl->outputChannel = ChannelStage(stage, stage_bufferpoint::INPUT, outputChannel.srcChannelOffset, outputChannel.dstChannelOffset); 
+                    dbgassert(outputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
+                    //outputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
                 }
-            } else {
-                dbgassert(outputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
-                //outputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
             }
         }
         if (numRemoved) {
@@ -395,7 +396,6 @@ namespace DAW {
 
             auto inputChannel  = trackImpl->inputChannel;
             auto outputChannel = trackImpl->outputChannel;
-            auto midiInputChannel  = trackImpl->midiChannel;
 
             if (inputChannel.type == stage_type::INPUT_DEFAULT) {
                 channel_ref_t tmp;
@@ -413,22 +413,24 @@ namespace DAW {
                     //log_printf("Default output of stage #%d cannot be mapped\n", stageId);
                 }
             }
-            if (isMidiChannelConnected(midiInputChannel)) {
-                if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
-                    audio_stage_t* src = host->getAudioStage(midiInputChannel.stage.stageRef);
-                    if (!src) {
-                        log_lf(Log::L_ERROR, "Stage missing for midi input routing on track %s\n", StringAsCStr(track->name));
-                        continue;
+            for (auto& midiInputChannel : trackImpl->midiInputChannels) {
+                if (isMidiChannelConnected(midiInputChannel)) {
+                    if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
+                        audio_stage_t* src = host->getAudioStage(midiInputChannel.stage.stageRef);
+                        if (!src) {
+                            log_lf(Log::L_ERROR, "Stage missing for midi input routing on track %s\n", StringAsCStr(track->name));
+                            continue;
+                        }
+                        dbgassert(src);
+                        auto srcStageId = src->stageId.stageId;
+                        if (!map.count(srcStageId)) {
+                            map[srcStageId] = makeTrackNode(srcStageId, src->getInternalLatency());
+                        }
+                        track_node_t& trackSrcCfg = getNode(map, srcStageId);
+                        trackCfg.dependencies.push_back(srcStageId);
+                        trackCfg.children.push_back(&trackSrcCfg);
+                        trackSrcCfg.parents.push_back(&trackCfg);
                     }
-                    dbgassert(src);
-                    auto srcStageId = src->stageId.stageId;
-                    if (!map.count(srcStageId)) {
-                        map[srcStageId] = makeTrackNode(srcStageId, src->getInternalLatency());
-                    }
-                    track_node_t& trackSrcCfg = getNode(map, srcStageId);
-                    trackCfg.dependencies.push_back(srcStageId);
-                    trackCfg.children.push_back(&trackSrcCfg);
-                    trackSrcCfg.parents.push_back(&trackCfg);
                 }
             }
             if (isChannelConnected(inputChannel)) {
