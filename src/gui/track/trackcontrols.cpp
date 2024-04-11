@@ -456,7 +456,7 @@ public:
         } else {
             addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }, 0));
         }
-        auto host = _dawCtrl->getDaw()->getPluginManager();
+        /* auto host = _dawCtrl->getDaw()->getPluginManager();
         auto stage = host->getAudioStage(_busStage);
         if (stage) {
             auto track =  stage->getTrack();
@@ -468,7 +468,7 @@ public:
                     idx++;
                 }
             }
-        }
+        } */
     }
     guidropdown_select_bus_ctxt(DawCtrl * _dawCtrl, const io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
         : busStage(AudioStageRefNULL()),
