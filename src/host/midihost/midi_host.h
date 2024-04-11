@@ -50,6 +50,9 @@ public:
         });
     }
     std::vector<MidiIOEvent> getInputMessages();
+    std::vector<opened_device_t>& getDevicesInput() {
+        return devicesInput;
+    }
     void reopenAllConfiguredDevices(bool forceClose);
     bool initPm();
     void deinitPm();

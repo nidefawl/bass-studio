@@ -37,7 +37,7 @@ namespace DAW {
                         trackImpl->midiChannel = MidiChannelNone();
                         numRemoved++;
                     } else {
-                        trackImpl->midiChannel = MidiChannelStage(stage, midiInputChannel.stage.buffer);
+                        trackImpl->midiChannel = MidiChannelStage(stage, midiInputChannel.stage.buffer, midiInputChannel.srcChannel, midiInputChannel.dstChannel);
                     }
                 } else if (midiInputChannel.getType() == midistage_type::INPUT_EXTERNAL_MIDI) {
                     auto& settings = daw_tls::getSettings();
@@ -52,7 +52,7 @@ namespace DAW {
                             name = StringFormat("Missing Device %d", midiInputChannel.externalInputIdx+1);
                         }
                     }
-                    trackImpl->midiChannel = MidiChannelExternal(midiInputChannel.externalInputIdx, name);
+                    trackImpl->midiChannel = MidiChannelExternal(midiInputChannel.externalInputIdx, name, midiInputChannel.srcChannel, midiInputChannel.dstChannel);
                 } else if (midiInputChannel.getType() == midistage_type::INPUT_DEFAULT) {
                     trackImpl->midiChannel = MidiChannelDefault();
                 } else if (midiInputChannel.getType() == midistage_type::INPUT_EMPTY) {

@@ -52,6 +52,8 @@ namespace DAW {
         midistage_type type = midistage_type::INPUT_EMPTY;
         audio_channel_ref_t stage{ { TRACKID_INVALID_I32 }, stage_bufferpoint::OUTPUT_POST };
         channelnum_t externalInputIdx = 0;
+        int32_t srcChannel = -1;
+        int32_t dstChannel = -1;
         String name = "None";
         midistage_type getType() const {
             return type;

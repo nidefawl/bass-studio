@@ -57,6 +57,8 @@ public:
     int32_t pluginCategory = 0;
     int32_t vstVersion     = 0;
     int32_t vendorVersion  = 0;
+    int32_t numMidiInputChannels = 0;
+    int32_t numMidiOutputChannels = 0;
     uint32_t uId           = 0;
     bool isInSuspend   = true;
     uint64_t bugfixFlags = 0;

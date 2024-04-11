@@ -11,14 +11,15 @@ struct MidiIOEvent {
 };
 
 struct midievent_note_t {
-    int32_t pitch    = 0;
-    int32_t velocity = 127;
+    int32_t pitch      = 0;
+    int32_t velocity   = 127;
     tick_t tickOffsetInBlock = 0; // TODO: should be float/double for sub-tick precision
     tick_t globalTick  = 0;
+    int8_t channel     = 0;
     bool isNoteOn      = false;
     bool isLoopNoteOff = false;
-    midievent_note_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2)
-        : pitch(p), velocity(v), tickOffsetInBlock(math::max(0, t)), globalTick(gt), isNoteOn(b), isLoopNoteOff(b2) {
+    midievent_note_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2, int8_t ch = 0)
+        : pitch(p), velocity(v), tickOffsetInBlock(math::max(0, t)), globalTick(gt), channel(ch), isNoteOn(b), isLoopNoteOff(b2) {
     }
     String ToString() const;
 };

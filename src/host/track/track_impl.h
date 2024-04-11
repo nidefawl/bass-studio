@@ -284,9 +284,9 @@ inline midichannel_ref_t MidiChannelNone() {
     return midichannel_ref_t{midistage_type::INPUT_EMPTY};
 }
 inline midichannel_ref_t MidiChannelDefault() {
-    return midichannel_ref_t{midistage_type::INPUT_DEFAULT, {}, 0, "Default"};
+    return midichannel_ref_t{midistage_type::INPUT_DEFAULT, {}, 0, -1, -1, "Default"};
 }
-inline midichannel_ref_t MidiChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput) {
+inline midichannel_ref_t MidiChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput, int32_t srcChannel = -1, int32_t dstChannel = -1) {
     dbgassert(stage);
     String str;
     auto track = stage->getTrack();
@@ -302,14 +302,18 @@ inline midichannel_ref_t MidiChannelStage(const audio_stage_t* stage, stage_buff
         midistage_type::INPUT_AUDIOSTAGE,
         { stage->toRef(), isInput },
         0,
+        srcChannel,
+        dstChannel,
         str
     };
 }
-inline midichannel_ref_t MidiChannelExternal(channelnum_t idx, String name) {
+inline midichannel_ref_t MidiChannelExternal(channelnum_t idx, String name, int32_t srcChannel = -1, int32_t dstChannel = -1) {
     return midichannel_ref_t {
         midistage_type::INPUT_EXTERNAL_MIDI, 
         {},
         idx,
+        srcChannel,
+        dstChannel,
         std::move(name)
     };
 }
@@ -415,7 +419,7 @@ struct track_impl_t final : public audio_stage_t {
     void onStartPlayback() override;
     void onStopPlayback() override;
     void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;
-    void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency, const DAW::Host::midi_data_t& midiRealtimeInput);
+    void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency, const std::map<String, DAW::Host::midi_data_t>& midiRealtimeDeviceInputs);
     void validateProcessedMidi(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
     void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t readPos, samplecount_t readLen, AudioBlock& outBuffer);
     void addAudio(const AudioBlock& src, float fGain);

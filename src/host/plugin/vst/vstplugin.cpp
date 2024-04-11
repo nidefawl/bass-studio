@@ -272,6 +272,12 @@ void vstplugin::load(DAW::Host::PluginManager* mgr) {
     this->bCanReceiveMidi = this->isSynth;
     this->vstVersion    = dispatch(effGetVstVersion);
     this->vendorVersion = dispatch(effGetVendorVersion);
+    this->numMidiInputChannels = dispatch(effGetNumMidiInputChannels);
+    if (this->numMidiInputChannels == 0 && this->bCanReceiveMidi) {
+        this->numMidiInputChannels = 1;
+    }
+    this->numMidiOutputChannels = dispatch(effGetNumMidiOutputChannels);
+    this->bCanReceiveMidi |= this->numMidiInputChannels > 0;
 // this->dispatch(effIdentify, 0, 0, nullptr, 0);
     this->pluginCategory  = this->dispatch(effGetPlugCategory);
 
@@ -886,7 +892,7 @@ void vstplugin::sendNotesOff() {
     handle->heldNotes.clear();
 }
 void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
-    if (bCanReceiveMidi) {
+    if (this->numMidiInputChannels > 0) {
         size_t numEvents = midiEvents.noteEvents->size()+midiEvents.ctrlEvents->size();
         if (numEvents) {
             const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
@@ -896,23 +902,28 @@ void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
 #endif
             VstEvent_t* midiEventsBuf = handle->midiEventsBuf;
             for (auto& evt : *midiEvents.noteEvents) {
-                midiEventsBuf->writeVstNoteEvent(evt, tickToSamples, format.blockSize);
+                if (this->numMidiInputChannels > evt.channel) {
+                    midiEventsBuf->writeVstNoteEvent(evt, tickToSamples, format.blockSize);
 #ifdef VST_PLUGIN_TRACK_NOTES
-                bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
-                if (evt.isNoteOn && !bContained) {
-                    insertSorted(heldNotes, evt.pitch);
-                } else if (!evt.isNoteOn && bContained) {
-                    removeEntry(heldNotes, evt.pitch);
-                }
+                    bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
+                    if (evt.isNoteOn && !bContained) {
+                        insertSorted(heldNotes, evt.pitch);
+                    } else if (!evt.isNoteOn && bContained) {
+                        removeEntry(heldNotes, evt.pitch);
+                    }
 #endif
+                }
             }
             for (auto& evt : *midiEvents.ctrlEvents) {
-                auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
-                if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
-                    log_lf(Log::L_WARN, "VST: ctrl event out of range: %d\n", offsetInBlock);
-                    continue;
+                auto midiChannel = int32_t(evt.message & 0x0F);
+                if (this->numMidiInputChannels > midiChannel) {
+                    auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
+                    if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
+                        log_lf(Log::L_WARN, "VST: ctrl event out of range: %d\n", offsetInBlock);
+                        continue;
+                    }
+                    midiEventsBuf->writeMidiMessage(evt.message, offsetInBlock);
                 }
-                midiEventsBuf->writeMidiMessage(evt.message, offsetInBlock);
             }
             this->midiEventsDispatched += handle->midiEventsBuf->vstEvents->numEvents;
             this->dispatch(effProcessEvents, 0, 0, handle->midiEventsBuf->vstEvents);

@@ -121,7 +121,7 @@ private:
     host_processing_stats_t processing{ 0 };
 
     audiothread_ringbuffer_t ringbuffer;
-    midi_data_t midiRealtimeInput;
+    std::map<String, midi_data_t> midiRealtimeDeviceInputs;
 
 private:
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
@@ -167,7 +167,6 @@ public:
     void onStopPlayback(project_controller_t* ctrl);
     void onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
 
-    std::vector<note_t> getRealtimeNotes();
     bool writeRecordedData(project_controller_t* ctrl);
     void sendNotesOff(effectbase* plugin);
 

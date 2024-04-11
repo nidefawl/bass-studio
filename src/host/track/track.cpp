@@ -1070,60 +1070,70 @@ void sortControlEvents(std::vector<midievent_ctrl_t>& ctrlEvents) {
     });
 }
 
-void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi_data_t& data, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
+void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const std::map<String, DAW::Host::midi_data_t>& midiRealtimeDeviceInputs, DAW::midichannel_ref_t midiChannel, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
 #ifndef NDEBUG
     tick_t lastNoteStart = -1;
 #endif
-    for (auto& note : data.notes.m_list) {
-#ifndef NDEBUG
-        dbgassert(lastNoteStart == -1 || note.start() >= lastNoteStart);
-        lastNoteStart = note.start();
-#endif
-        if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
-            auto noteCopy = note;
-            int32_t ret = cutIntersectingNotesFindDupe(list, noteCopy);
-            if (ret == -1) {
-                continue;
+    for (auto& device : midiRealtimeDeviceInputs) {
+        if (midiChannel.type == midistage_type::INPUT_EXTERNAL_MIDI) {
+            if (midiChannel.externalInputIdx != 255) {
+                if (midiChannel.name != device.first)
+                    continue;
             }
-            if (ret != 0) {
-                log_lf(Log::L_DEBUG, "note cut: %d\n", ret);
-                continue;
-            }
-            if (!list.capacity()) {
-                list.reserve(4);
-            }
-            auto it = std::find_if(list.begin(), list.end(), [&note](const auto& n) {
-                return n.time > note.time;
-            });
-            list.insert(it, note);
         }
+        const auto& data = device.second;
+        for (auto& note : data.notes.m_list) {
+#ifndef NDEBUG
+            dbgassert(lastNoteStart == -1 || note.start() >= lastNoteStart);
+            lastNoteStart = note.start();
+#endif
+            if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
+                auto noteCopy = note;
+                int32_t ret = cutIntersectingNotesFindDupe(list, noteCopy);
+                if (ret == -1) {
+                    continue;
+                }
+                if (ret != 0) {
+                    log_lf(Log::L_DEBUG, "note cut: %d\n", ret);
+                    continue;
+                }
+                if (!list.capacity()) {
+                    list.reserve(4);
+                }
+                auto it = std::find_if(list.begin(), list.end(), [&note](const auto& n) {
+                    return n.time > note.time;
+                });
+                list.insert(it, note);
+            }
+        }
+        // for (auto& evt : data.events.m_list) {
+        //     if (evt.tick >= absStart && evt.tick < absEnd) {
+        //         if (!ctrlEvts.capacity()) {
+        //             ctrlEvts.reserve(4);
+        //         }
+        //         auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&evt](const auto& n) {
+        //             return n.tick > evt.tick;
+        //         });
+        //         ctrlEvts.insert(it, evt);
+        //     }
+        // }
+        for (auto& ctrlEvt : data.events.m_list) {
+            auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&ctrlEvt](const auto& n) {
+                return n.tick > ctrlEvt.tick;
+            });
+            ctrlEvts.insert(it, ctrlEvt);
+        }
+        constexpr bool logProcessedNotes = false;
+        if (logProcessedNotes && !data.notes.isEmpty()) {
+            // print absStart to absEnd range we looked at
+            // and print the min, max and number of events in data.notes
+            log_lf(Log::L_DEBUG, "Notes in input: %zd. Notes copied: %zd\n", data.notes.m_list.size(), list.size());
+            log_lf(Log::L_DEBUG, "absStart: %d, absEnd: %d\n", absStart, absEnd);
+            log_lf(Log::L_DEBUG, "min note : %d, max note: %d\n", data.notes.minNote.start(), data.notes.maxNote.end());
+        } 
     }
-    // for (auto& evt : data.events.m_list) {
-    //     if (evt.tick >= absStart && evt.tick < absEnd) {
-    //         if (!ctrlEvts.capacity()) {
-    //             ctrlEvts.reserve(4);
-    //         }
-    //         auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&evt](const auto& n) {
-    //             return n.tick > evt.tick;
-    //         });
-    //         ctrlEvts.insert(it, evt);
-    //     }
-    // }
-    for (auto& ctrlEvt : data.events.m_list) {
-        auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&ctrlEvt](const auto& n) {
-            return n.tick > ctrlEvt.tick;
-        });
-        ctrlEvts.insert(it, ctrlEvt);
-    }
-    constexpr bool logProcessedNotes = false;
-    if (logProcessedNotes && !data.notes.isEmpty()) {
-        // print absStart to absEnd range we looked at
-        // and print the min, max and number of events in data.notes
-        log_lf(Log::L_DEBUG, "Notes in input: %zd. Notes copied: %zd\n", data.notes.m_list.size(), list.size());
-        log_lf(Log::L_DEBUG, "absStart: %d, absEnd: %d\n", absStart, absEnd);
-        log_lf(Log::L_DEBUG, "min note : %d, max note: %d\n", data.notes.minNote.start(), data.notes.maxNote.end());
-    } 
 }
+
 } // namespace DAW::Host
 
 /**
@@ -1135,7 +1145,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                              tick_t loopStart, tick_t loopEnd,
                              project_globals_t& prjGlobals,
                              samplecount_t inputLatency,
-                             const DAW::Host::midi_data_t& midiRealtimeInput) {
+                             const std::map<String, DAW::Host::midi_data_t>& midiRealtimeDeviceInputs) {
     using namespace DAW;
     using namespace DAW::Host;
 
@@ -1191,7 +1201,17 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                                 && (midiChannel.getType() == midistage_type::INPUT_EXTERNAL_MIDI
                                     || (this->midiChannel.getType() == midistage_type::INPUT_DEFAULT 
                                         && isSet(this->flags, audiostageflags_t::RECORD_ARMED)))) {
-        CopyMidiEventsInRange(blockStart, blockEnd, midiRealtimeInput, notes, ctrlEvents);
+        CopyMidiEventsInRange(blockStart, blockEnd, midiRealtimeDeviceInputs, midiChannel, notes, ctrlEvents);
+        if (midiChannel.dstChannel > -1) {
+            auto dstChannel = uint8_t(midiChannel.dstChannel);
+            for (auto& note : noteEvents) {
+                note.channel = dstChannel;
+            }
+            for (auto& ctrl : ctrlEvents) {
+                ctrl.message &= ~0x0F;
+                ctrl.message |= dstChannel & 0x0F;
+            }
+        }
     }
 
     updateProfilingTime(procMidiStats.tm1InputRT, tmr.getTimeReset());
@@ -1313,6 +1333,16 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 noteEvents.clear();
                 ctrlEvents.clear();
                 stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT);
+                if (midiChannel.dstChannel > -1) {
+                    auto dstChannel = uint8_t(midiChannel.dstChannel);
+                    for (auto& note : noteEvents) {
+                        note.channel = dstChannel;
+                    }
+                    for (auto& ctrl : ctrlEvents) {
+                        ctrl.message &= ~0x0F;
+                        ctrl.message |= dstChannel & 0x0F;
+                    }
+                }
             }
         }
         if (isSet(this->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
