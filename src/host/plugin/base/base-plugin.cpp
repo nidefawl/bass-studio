@@ -146,9 +146,9 @@ void effectbase::processMidi(midi_data_processing_t& midiEvents) {
         messages.emplace_back();
         IMidiMsg& msg = messages.back();
         if (evt.isNoteOn) {
-            msg.MakeNoteOnMsg(evt.pitch, evt.velocity, deltaFrames);
+            msg.MakeNoteOnMsg(evt.pitch, evt.velocity, deltaFrames, evt.channel);
         } else {
-            msg.MakeNoteOffMsg(evt.pitch, deltaFrames);
+            msg.MakeNoteOffMsg(evt.pitch, deltaFrames, evt.channel);
         }
     }
     for (auto& evt : *midiEvents.ctrlEvents) {

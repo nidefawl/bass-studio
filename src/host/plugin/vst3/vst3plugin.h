@@ -1025,7 +1025,7 @@ public:
                 if (noteEvent.isNoteOn) {
                     evt.type = Steinberg::Vst::Event::EventTypes::kNoteOnEvent;
                     auto& noteOnEvent = evt.noteOn;
-                    noteOnEvent.channel = 0;
+                    noteOnEvent.channel = noteEvent.channel;
                     noteOnEvent.pitch = noteEvent.pitch;
                     noteOnEvent.tuning = 0.0f;
                     noteOnEvent.velocity = noteEvent.velocity / 127.0f;
@@ -1034,7 +1034,7 @@ public:
                 } else {
                     evt.type = Steinberg::Vst::Event::EventTypes::kNoteOffEvent;
                     auto& noteOffEvent = evt.noteOff;
-                    noteOffEvent.channel = 0;
+                    noteOffEvent.channel = noteEvent.channel;
                     noteOffEvent.pitch = noteEvent.pitch;
                     noteOffEvent.velocity = noteEvent.velocity / 127.0f;
                     noteOffEvent.noteId = -1;

@@ -79,7 +79,7 @@ struct VstEvent_t {
         auto* buf = reinterpret_cast<unsigned char*>(evt.midiData);
         if (nevt.isNoteOn) {
             numOns++;
-            buf[0] = 0x90;
+            buf[0] = 0x90 | uint8_t(nevt.channel & 0x0F);
             buf[1] = math::clamp<unsigned char>(nevt.pitch, 0, 0x7F);
             buf[2] = math::clamp<unsigned char>(nevt.velocity, 0, 0x7F);
             buf[3] = 0;
@@ -87,7 +87,7 @@ struct VstEvent_t {
             // evt.flags |= kVstMidiEventIsRealtime;
         } else {
             numOffs++;
-            buf[0] = 0x80;
+            buf[0] = 0x80 | uint8_t(nevt.channel & 0x0F);
             buf[1] = math::clamp<unsigned char>(nevt.pitch, 0, 0x7F);
             buf[2] = 0x40;
             buf[3] = 0;

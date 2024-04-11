@@ -34,6 +34,7 @@ public:
     tick_t time      = 0;
     tick_t len       = 0;
     int32_t flags    = NoteFlags::ENABLED;
+    int8_t channel   = 0;
     inline void setEnabled(bool bIsEnabled) {
         if (bIsEnabled) {
             flags |= NoteFlags::ENABLED;

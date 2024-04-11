@@ -1236,7 +1236,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                     if (logProcessedNotes) {
                         log_lf(Log::L_DEBUG, "Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
                     }
-                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - blockStart, note.start(), true, false});
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - blockStart, note.start(), true, false, note.channel});
                     m_heldNotes.push_back(note);
                 }
             } else if (chaseNotes && note.start() < blockLoopStart && note.end() > blockLoopStart) {
@@ -1253,7 +1253,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                     }
                     if (logProcessedNotes)
                         log_lf(Log::L_DEBUG, "Block %d-%d: %s CHASE ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), minStartTime-blockStart, note.time, note.len);
-                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, minStartTime-blockStart, minStartTime, true, false});
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, minStartTime-blockStart, minStartTime, true, false, note.channel});
                     m_heldNotes.push_back(note);
                 }
             }
@@ -1264,7 +1264,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                         log_lf(Log::L_DEBUG, "Block %d-%d: %s OFF at %d/%f (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart, ticksPerBlock, note.time, note.len);
                     auto tickOffsetInBlock = note.end() - blockStart;
                     dbgassert(tickOffsetInBlock >= 0);
-                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, tickOffsetInBlock, note.end(), false, false});
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, tickOffsetInBlock, note.end(), false, false, note.channel});
                 } else if (note.end() > blockLoopStart) {
                     log_lf(Log::L_WARN, "Block %d-%d: %s OFF WAS NOT HELD at %d/%f (abs time: %d len: %d) \n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart, ticksPerBlock, note.time, note.len);
                 }
@@ -1281,7 +1281,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 auto tickOffsetInBlockEnd = math::min(blockEnd - blockStart - 1, loopEnd - blockStart - 1);
                 if (logProcessedNotes)
                     log_lf(Log::L_INFO, "Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart + tickOffsetInBlockEnd);
-                InsertMidiEventSorted(noteEvents, {noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart + tickOffsetInBlockEnd, false, true});
+                InsertMidiEventSorted(noteEvents, {noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart + tickOffsetInBlockEnd, false, true, noteHeld.channel});
                 it = m_heldNotes.erase(it);
             }
         }
@@ -1303,7 +1303,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             if (!found) {
                 if (logProcessedNotes)
                     log_lf(Log::L_INFO, "Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), blockEnd - 1);
-                InsertMidiEventSorted(noteEvents, {noteHeld.pitch, noteHeld.velocity, math::floordS32(ticksPerBlock) - 1, blockEnd - 1, false, false});
+                InsertMidiEventSorted(noteEvents, {noteHeld.pitch, noteHeld.velocity, math::floordS32(ticksPerBlock) - 1, blockEnd - 1, false, false, noteHeld.channel});
                 it = m_heldNotes.erase(it);
                 continue;
             }

@@ -1981,8 +1981,8 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 auto state = playback_state::status_playback;
                 std::vector<midievent_note_t> noteEvents;
                 for (auto& note : notes) {
-                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - begin, note.start(), true, false});
-                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.end() - begin, note.end(), false, false});
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - begin, note.start(), true, false, note.channel});
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.end() - begin, note.end(), false, false, note.channel});
                 }
                 std::vector<midievent_note_t> noteEventsProcessed;
                 arpCopy.process(host, state, 0, noteEvents, begin, end + 1, -1, -1, noteEventsProcessed);

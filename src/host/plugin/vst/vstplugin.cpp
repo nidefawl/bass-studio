@@ -272,12 +272,6 @@ void vstplugin::load(DAW::Host::PluginManager* mgr) {
     this->bCanReceiveMidi = this->isSynth;
     this->vstVersion    = dispatch(effGetVstVersion);
     this->vendorVersion = dispatch(effGetVendorVersion);
-    this->numMidiInputChannels = dispatch(effGetNumMidiInputChannels);
-    if (this->numMidiInputChannels == 0 && this->bCanReceiveMidi) {
-        this->numMidiInputChannels = 1;
-    }
-    this->numMidiOutputChannels = dispatch(effGetNumMidiOutputChannels);
-    this->bCanReceiveMidi |= this->numMidiInputChannels > 0;
 // this->dispatch(effIdentify, 0, 0, nullptr, 0);
     this->pluginCategory  = this->dispatch(effGetPlugCategory);
 
@@ -309,8 +303,18 @@ void vstplugin::load(DAW::Host::PluginManager* mgr) {
         this->dispatch(effMainsChanged, 0, false);
         this->dispatch(effStopProcess);
         this->bCanSendMidi    |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoSendVstMidiEvent) > 0;
-        this->bCanReceiveMidi |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoReceiveVstMidiEvent) > 0;
         this->bMPESupport     |= this->dispatch(effCanDo, 0, 0, (void*) "MPE") > 0;
+        bool bCanReceiveVstMidiEvents = this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoReceiveVstMidiEvent) > 0;
+        this->bCanReceiveMidi |= bCanReceiveVstMidiEvents;
+        this->numMidiInputChannels = dispatch(effGetNumMidiInputChannels);
+        if (this->numMidiInputChannels == 0 && (handle->aeffect->flags & effFlagsIsSynth)) {
+            this->numMidiInputChannels = 16;
+        }
+        if (this->numMidiInputChannels == 0 && bCanReceiveVstMidiEvents) {
+            this->numMidiInputChannels = 1;
+        }
+        this->numMidiOutputChannels = dispatch(effGetNumMidiOutputChannels);
+        this->bCanReceiveMidi |= this->numMidiInputChannels > 0;
 
         configureIOChannels();  
     #endif

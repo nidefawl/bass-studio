@@ -521,6 +521,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
                 note.setIsHeld(true);
                 note.time = tickEvtDelay;
                 note.len = lenTicksInfinite;
+                note.channel = int8_t(msg.message & 0x0F);
                 note.pitch = MidiMsgData1(msg.message);
                 note.velocity = MidiMsgData2(msg.message);
                 midiData.notes.m_list.push_back(note);
@@ -528,12 +529,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
                 if (logProcessedNotes) {
                     log_lf(Log::L_DEBUG, "%f note START %s %d\n", dTickPosBlockStart, noteName(note.pitch), note.start());
                 }
-            }
-
-            if (command == MIDI_BEND || command == MIDI_CTRL) {
-                midiData.events.addMidiEvent(tickEvtDelay, msg.message, msg.timestamp);
-            }
-            if ((command == MIDI_ON_NOTE && MidiMsgData2(msg.message) == 0) || command == MIDI_OFF_NOTE) {
+            } else if ((command == MIDI_ON_NOTE && MidiMsgData2(msg.message) == 0) || command == MIDI_OFF_NOTE) {
                 int32_t pitch = MidiMsgData1(msg.message);
                 // kill oldest (first) note
                 bool fnd = false;
@@ -567,6 +563,8 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
                     log_lf(Log::L_WARN, "MIDI_OFF_NOTE note not found %s tickEvtDelay %d\n", noteName(pitch), tickEvtDelay);
                 }
 
+            } else if (command != MIDI_ON_NOTE && command != MIDI_OFF_NOTE) {
+                midiData.events.addMidiEvent(tickEvtDelay, msg.message, msg.timestamp);
             }
         }
         device.midiMsgs.clear();
