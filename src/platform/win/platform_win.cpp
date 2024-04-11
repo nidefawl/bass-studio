@@ -211,7 +211,7 @@ extern volatile bool fatalError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
     DWORD excCode = pExceptionInfo && pExceptionInfo->ExceptionRecord ? pExceptionInfo->ExceptionRecord->ExceptionCode : 0;
-    log_out("Fatal exception: %s (0x%08X)\n", exc_as_str(excCode), (int) excCode);
+    log_lf(Log::L_ERROR, "Fatal exception: %s (0x%08X)\n", exc_as_str(excCode), (int) excCode);
 #ifndef PROJECT_UNITTEST
     logStackTrace();
 #endif
