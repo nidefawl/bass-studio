@@ -416,6 +416,10 @@ namespace DAW {
             if (isMidiChannelConnected(midiInputChannel)) {
                 if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
                     audio_stage_t* src = host->getAudioStage(midiInputChannel.stage.stageRef);
+                    if (!src) {
+                        log_lf(Log::L_ERROR, "Stage missing for midi input routing on track %s\n", StringAsCStr(track->name));
+                        continue;
+                    }
                     dbgassert(src);
                     auto srcStageId = src->stageId.stageId;
                     if (!map.count(srcStageId)) {
@@ -430,6 +434,10 @@ namespace DAW {
             if (isChannelConnected(inputChannel)) {
                 if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                     audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
+                    if (!src) {
+                        log_lf(Log::L_ERROR, "stage missing for audio input routing on track %s\n", StringAsCStr(track->name));
+                        continue;
+                    }
                     dbgassert(src);
                     auto srcStageId = src->stageId.stageId;
                     if (!map.count(srcStageId)) {
@@ -443,25 +451,25 @@ namespace DAW {
                 } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
                     trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, audiostageflags_t::NONE });
                 } else if (inputChannel.type != stage_type::INPUT_DEFAULT) {
-                    log_lf(Log::L_ERROR, "missing track input routing on track %s\n", StringAsCStr(track->name));
+                    log_lf(Log::L_ERROR, "missing audio input routing on track %s\n", StringAsCStr(track->name));
                 }
             }
             if (isChannelConnected(outputChannel)) {
                 if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE && trackImpl->mixer.isEnabled()) {
                     audio_stage_t* dst = host->getAudioStage(outputChannel.stage.stageRef);
                     if (!dst) {
-                        log_lf(Log::L_ERROR, "missing track output routing on track %s\n", StringAsCStr(track->name));
-                    } else {
-                        auto dstStageId = dst->stageId.stageId;
-                        if (!map.count(dstStageId)) {
-                            map[dstStageId] = makeTrackNode(dstStageId, dst->getInternalLatency());
-                        }
-                        track_node_t& trackDstCfg = getNode(map, dstStageId);
-                        trackDstCfg.dependencies.push_back(stageId);
-                        trackDstCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST, outputChannel.srcChannelOffset, outputChannel.dstChannelOffset), AutomationNone(), AutomationNone(), 0, trackImpl->flags });
-                        trackDstCfg.children.push_back(&trackCfg);
-                        trackCfg.parents.push_back(&trackDstCfg);
+                        log_lf(Log::L_ERROR, "missing audio output routing on track %s\n", StringAsCStr(track->name));
+                        continue;
                     }
+                    auto dstStageId = dst->stageId.stageId;
+                    if (!map.count(dstStageId)) {
+                        map[dstStageId] = makeTrackNode(dstStageId, dst->getInternalLatency());
+                    }
+                    track_node_t& trackDstCfg = getNode(map, dstStageId);
+                    trackDstCfg.dependencies.push_back(stageId);
+                    trackDstCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST, outputChannel.srcChannelOffset, outputChannel.dstChannelOffset), AutomationNone(), AutomationNone(), 0, trackImpl->flags });
+                    trackDstCfg.children.push_back(&trackCfg);
+                    trackCfg.parents.push_back(&trackDstCfg);
                 } else if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO && trackImpl->mixer.isEnabled()) {
                     trackGraph->externalOutputRouting.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST, outputChannel.srcChannelOffset, outputChannel.dstChannelOffset), AutomationNone(), AutomationNone(), 0, trackImpl->flags });
                 }
