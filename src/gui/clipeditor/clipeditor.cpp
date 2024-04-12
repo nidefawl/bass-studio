@@ -1995,11 +1995,12 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                         n.velocity = note.velocity;
                         n.time = note.tickOffsetInBlock;
                         n.len = 0;
+                        n.channel = note.channel;
                         tmpClipboard.m_list.push_back(n);
                     } else {
                         // find last note (reverse)
                         for (auto it = tmpClipboard.m_list.rbegin(); it != tmpClipboard.m_list.rend(); ++it) {
-                            if (it->pitch == note.pitch) {
+                            if (it->pitch == note.pitch && it->channel == note.channel) {
                                 it->len = note.tickOffsetInBlock - it->time;
                                 break;
                             }

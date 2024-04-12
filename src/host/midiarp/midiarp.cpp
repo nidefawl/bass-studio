@@ -53,11 +53,11 @@ void AssertNoteCounts(midiarp* arp, std::vector<Evt>& list) {
     tmpNoteCounts = arp->prevDebugNoteCounts;
     for (auto& e : list) {
         if (e.isNoteOn) {
-            tmpNoteCounts[e.pitch]++;
+            tmpNoteCounts[e.pitch * 16 + e.channel]++;
         } else {
-            tmpNoteCounts[e.pitch]--;
+            tmpNoteCounts[e.pitch * 16 + e.channel]--;
         }
-        dbgassert(tmpNoteCounts[e.pitch] >= -5 && tmpNoteCounts[e.pitch] <= 5);
+        dbgassert(tmpNoteCounts[e.pitch * 16 + e.channel] >= -5 && tmpNoteCounts[e.pitch * 16 + e.channel] <= 5);
     }
 }
 #endif
@@ -514,11 +514,11 @@ void midiarp::process(const DAW::Host::PluginManager* const host, playback_state
 #ifdef DAW_DEBUG_ARP
     for (auto& e : noteEventsProcessed) {
         if (e.isNoteOn) {
-            prevDebugNoteCounts[e.pitch]++;
+            prevDebugNoteCounts[e.pitch * 16 + e.channel]++;
         } else {
-            prevDebugNoteCounts[e.pitch]--;
+            prevDebugNoteCounts[e.pitch * 16 + e.channel]--;
         }
-        dbgassert(prevDebugNoteCounts[e.pitch] >= -5 && prevDebugNoteCounts[e.pitch] <= 5);
+        dbgassert(prevDebugNoteCounts[e.pitch * 16 + e.channel] >= -5 && prevDebugNoteCounts[e.pitch * 16 + e.channel] <= 5);
     }
 #endif
 
@@ -660,7 +660,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
             // process note off event (even when arp is disabled)
             if (!evt.isNoteOn) {
                 auto it = std::find_if(heldInput.begin(), heldInput.end(), [&evt](const auto& heldArpIn) {
-                    return evt.pitch == heldArpIn.pitch;
+                    return evt.pitch == heldArpIn.pitch && evt.channel == heldArpIn.channel;
                 });
                 if (it == heldInput.end()) {
                     // arp received a note off with the corresponding note_on missing
@@ -683,7 +683,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
             // process note on event (even when arp is disabled)
             if (evt.isNoteOn) {
                 auto it = std::find_if(heldInput.begin(), heldInput.end(), [&evt](const auto& heldArpIn) {
-                    return evt.pitch == heldArpIn.pitch;
+                    return evt.pitch == heldArpIn.pitch && evt.channel == heldArpIn.channel;
                 });
                 if (it != heldInput.end()) {
                     log_lf(Log::L_ERROR, "Arp received double note on event %s\n", StringAsCStr(noteNameAndNumber(evt.pitch)));
@@ -705,6 +705,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                     arpInputNote.velocity = evt.velocity;
                     arpInputNote.len      = TICKS_QUARTER * 2;
                     arpInputNote.len      = 0;
+                    arpInputNote.channel  = evt.channel;
                     arpInputNote.setIsHeld(!enable);
                     arpInputNote.setEnabled(true);
                     arpInputNote.arpNoteUid = this->arpNoteUidCounter++;
@@ -846,7 +847,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                     if constexpr (logProcessedNotes) {
                         if (noteArpStep.isHeld()) {
                             for (const auto& note : heldOutputNotes) {
-                                if (note.pitch == noteArpStep.pitch && note.end() == noteArpStep.start()) {
+                                if (note.pitch == noteArpStep.pitch && note.channel == noteArpStep.channel && note.end() == noteArpStep.start()) {
                                     bHasSamePitchNoteEndingOnSameTick = true;
                                     break;
                                 }

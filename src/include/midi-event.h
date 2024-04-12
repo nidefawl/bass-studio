@@ -38,11 +38,11 @@ void InsertMidiEventSortedCopy(std::vector<Evt>& list, const Evt& evt) {
 
 namespace DAW::Host {
     struct note_event_validator_t {
-        std::array<int32_t, 128> prevNoteCounts{};
+        std::array<int32_t, 128*16> prevNoteCounts{};
         int32_t numValidationErrors = 0;
         void validate(const std::vector<midievent_note_t>& evts) {
             for (const auto& note : evts) {
-                auto& count = prevNoteCounts[note.pitch];
+                auto& count = prevNoteCounts[note.pitch * 16 + note.channel];
                 if (note.isNoteOn) {
                     count++;
                 } else {
@@ -87,6 +87,6 @@ namespace DAW::Host {
             noteEvts.clear();
             ctrlEvts.clear();
         }
-        void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut);
+        void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut, int32_t midiChannelMatch, int32_t midiChannelRewrite);
     };
 }

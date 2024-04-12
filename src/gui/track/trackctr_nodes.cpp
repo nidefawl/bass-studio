@@ -1,13 +1,19 @@
+#include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <functional>
 #include <glm/geometric.hpp>
 #include <nanovg.h>
+#include <nanovg_min.h>
+#include <numeric>
 #include <splines/natural_spline.h>
 #include <type_traits>
 #include <utility>
 #include <glm/vec2.hpp>
 #include <glm/gtx/norm.hpp>
 
+#include "gui/controls/textfield.h"
+#include "guicolors.h"
 #include "host/automation/automation.h"
 #include "basectrl.h"
 #include "color_util.h"
@@ -185,15 +191,15 @@ void gui_graph_entry::render(NVGcontext* vg) {
         gui->render(vg);
         nvgRestore(vg);
     }
-    nvgSave(vg);
-    int32_t i2                      = padding * 2;
-    const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-    int32_t h                       = TRACK_HEIGHT_STEP - i2;
-    setFont(vg, G_FONT_SCALE(h), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-    for (guibase* gui : guis) {
-        renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5f), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
-    }
-    nvgRestore(vg);
+    // nvgSave(vg);
+    // int32_t i2                      = padding * 2;
+    // const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+    // int32_t h                       = TRACK_HEIGHT_STEP - i2;
+    // setFont(vg, G_FONT_SCALE(h), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    // for (guibase* gui : guis) {
+    //     renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5f), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
+    // }
+    // nvgRestore(vg);
 }
 
 void gui_graph_entry::handleDraggedBegin(MouseEvent& evt) {
@@ -256,35 +262,22 @@ namespace DAW {
     }
 }// namespace DAW
 class gui_graph_n;
-class gui_graph_port final : public guibase {
+class gui_graph_port : public guibase {
     friend class gui_graph::guictr_graph_impl;
     gui_graph_n* parentGraphNode;
-    stage_bufferpoint stageBufferPoint;
-    DAW::channel_desc channelDesc; 
     edge_spline spline;
     SafeRef<guibase> lastSnapPort;
 public:
-    gui_graph_port(gui_graph_n* _parentGraphNode, stage_bufferpoint _stageBufferPoint, DAW::channel_desc _channelDesc)
+    gui_graph_port(gui_graph_n* _parentGraphNode)
         : guibase(),
-          parentGraphNode(_parentGraphNode),
-          stageBufferPoint(_stageBufferPoint),
-          channelDesc(_channelDesc) {
+          parentGraphNode(_parentGraphNode) {
         setCanMouseHit(true);
         spline.setPerPixelSegments(1.0f/4.0f);
     }
-    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
-        return new guitooltip<gui_graph_port>(this);
-    }
-    void addPropertiesTooltip(Table::tbl& table) {
-        table.rows.push_back({ {channelDesc.name} });
-        determine_string_width strw(parentCtrl, theme);
-        auto widthLabel = strw.getStringWidth(channelDesc.name, table.rowHeight, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        table.tableWidth = widthLabel + INSET_TABLE_CELL_PADDING * 3;
-    }
 
-    stage_bufferpoint getBufferPoint() const {
-        return stageBufferPoint;
-    }
+    virtual bool isInput() = 0;
+    virtual int32_t getChannelIdx() const = 0;
+    virtual bool isMidi() = 0;
 
     vec2 getCenterPos2f() const {
         return vec2(pos) + vec2(size) * 0.5f;
@@ -298,12 +291,8 @@ public:
         return this->parentGraphNode;
     }
 
-    DAW::channel_desc getChannelDesc() const {
-        return this->channelDesc;
-    }
-
     vec2 getPortPos() {
-        return parent->toParentSpace(getCenterPos2f());
+        return parent->parent->toParentSpace2f(parent->toParentSpace2f(getCenterPos2f()));
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
@@ -326,19 +315,6 @@ public:
     void dragReleaseOn(guibase* target, ivec2 mousepos) override;
     gui_graph_port* findClosestPort(guibase* target, ivec2 mousepos);
 
-    virtual String getText() {
-        switch (stageBufferPoint) {
-            case stage_bufferpoint::INPUT:
-                return "INPUT";
-            case stage_bufferpoint::OUTPUT:
-                return "OUTPUT";
-            case stage_bufferpoint::OUTPUT_POST:
-                return "OUTPUT_POST";
-        }
-        dbgassert(0);
-        return "INVALID";
-    }
-
     void render(NVGcontext* vg) override {
         if (!isRenderableSizeAndContext(vg))
             return;
@@ -356,32 +332,31 @@ public:
 
     void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override {
         if (parent->parent) {
-            dbgassert(parent->parent->parent);
+            auto graph = parent->parent->parent;
+            dbgassert(graph);
             // render without editor scaling
             // convert to container space of parent of graph (graph applies scale + translate)
-            ivec2 posSS = parent->toParentSpace(getCenterPos2f());
-            posSS       = parent->parent->toParentSpace(posSS);
+            ivec2 posSS = getPortPos();
 
-            ivec2 destPos  = toControlsObjectSpace(mousepos, parent->parent->parent);
+            ivec2 destPos  = toControlsObjectSpace(mousepos, graph);
 
 
             auto guiPortSnap = dynamic_cast<gui_graph_port*>(safeRefGet(lastSnapPort));
-            if (guiPortSnap && guiPortSnap->parent && guiPortSnap->parent->parent) {
-                ivec2 posPortSnap = guiPortSnap->parent->toParentSpace(guiPortSnap->getCenterPos2f());
-                posPortSnap       = guiPortSnap->parent->parent->toParentSpace(posPortSnap);
+            if (guiPortSnap) {
+                ivec2 posPortSnap = guiPortSnap->getPortPos();
                 destPos     = posPortSnap;
             }
 
-            ivec2 editorPosSS = parent->parent->parent->toScreenSpace(ivec2(0));
+            // ivec2 graphPos = graph->toScreenSpace(ivec2(0));
 
-            if (getBufferPoint() == stage_bufferpoint::INPUT) {
+            if (isInput()) {
                 std::swap(destPos, posSS);
             }
-            std::vector<vec2>& pts = spline.calculateSplineVectors(destPos, posSS);
+            std::vector<vec2>& pts = spline.calculateSplineVectors(graph->toScreenSpace(destPos), graph->toScreenSpace(posSS));
             if (pts.empty())
                 return;
             nvgSave(vg);
-            nvgTranslate(vg, editorPosSS.x, editorPosSS.y);
+            // nvgTranslate(vg, graphPos.x, graphPos.y);
             nvgBeginPath(vg);
             auto it = pts.cbegin();
             nvgMoveTo(vg, (*it).x, (*it).y);
@@ -398,8 +373,129 @@ public:
     
 };
 
+class gui_graph_port_audio : public gui_graph_port {
+    friend class gui_graph::guictr_graph_impl;
+    stage_bufferpoint stageBufferPoint;
+    DAW::channel_desc channelDesc;
+public:
+    gui_graph_port_audio(gui_graph_n* _parentGraphNode, stage_bufferpoint _stageBufferPoint, DAW::channel_desc _channelDesc)
+        : gui_graph_port(_parentGraphNode),
+          stageBufferPoint(_stageBufferPoint),
+          channelDesc(_channelDesc) {
+    }
+
+    void addPropertiesTooltip(Table::tbl& table) {
+        table.rows.push_back({ {channelDesc.name} });
+        determine_string_width strw(parentCtrl, theme);
+        auto widthLabel = strw.getStringWidth(channelDesc.name, table.rowHeight, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        table.tableWidth = widthLabel + INSET_TABLE_CELL_PADDING * 3;
+    }
+
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
+        return new guitooltip<gui_graph_port_audio>(this);
+    }
+
+    stage_bufferpoint getBufferPoint() const {
+        return stageBufferPoint;
+    }
+
+    DAW::channel_desc getChannelDesc() const {
+        return this->channelDesc;
+    }
+
+    bool isInput() override {
+        return getBufferPoint() == stage_bufferpoint::INPUT;
+    }
+
+    int32_t getChannelIdx() const override {
+        return channelDesc.offset;
+    }
+
+    bool isMidi() override {
+        return false;
+    }
+};
+
+class gui_graph_port_midi : public gui_graph_port {
+    const bool bIsInput;
+    const int32_t channelIdx;
+    friend class gui_graph::guictr_graph_impl;
+public:
+    gui_graph_port_midi(gui_graph_n* _parentGraphNode, bool isInput, int32_t _channelIdx)
+        : gui_graph_port(_parentGraphNode),
+            bIsInput(isInput),
+            channelIdx(_channelIdx) {
+    }
+
+    bool isInput() override {
+        return bIsInput;
+    }
+
+    int32_t getChannelIdx() const override {
+        return channelIdx;
+    }
+
+    bool isMidi() override {
+        return true;
+    }
+
+    void addPropertiesTooltip(Table::tbl& table) {
+        auto str = StringFormat("Midi Channel %d", channelIdx);
+        if (channelIdx < 0) {
+            str = "Midi Channel All";
+        }
+        if (bIsInput) {
+            str = "Input " + str;
+        } else {
+            str = "Output " + str;
+        }
+        table.rows.push_back({ {str} });
+        determine_string_width strw(parentCtrl, theme);
+        auto widthLabel = strw.getStringWidth(str, table.rowHeight, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        table.tableWidth = widthLabel + INSET_TABLE_CELL_PADDING * 3;
+    }
+
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
+        return new guitooltip<gui_graph_port_midi>(this);
+    }
+    void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
+        auto centerPos = getCenterPos2f();
+        nvgBeginPath(vg);
+        nvgCircle(vg, centerPos.x, centerPos.y, nodePortRadius);
+        nvgFillColor(vg, NVGcolor{0.1f, 0.1f, 0.6f, 1.0f});
+        nvgFill(vg);
+        nvgBeginPath(vg);
+        nvgCircle(vg, centerPos.x, centerPos.y, nodePortRadius);
+        nvgStrokeColor(vg, theme->getFrameColorOutline());
+        nvgStrokeWidth(vg, 2.0);
+        nvgStroke(vg);
+        auto tl = toScreenSpace(getLeftTop());
+        auto br = toScreenSpace(getRightBottom());
+        auto widthHeight = br - tl;
+        auto fontsize = GRAPH_FONT_SIZE;
+        while (fontsize > widthHeight.x && fontsize > 4) {
+            fontsize -= 1;
+        }
+        if (widthHeight.x >= fontsize) {
+            auto str = channelIdx == -1 ? "A" : StringFormat("%d", channelIdx);
+            centerPos.x += 0.5f;
+            renderTextLabel(
+                vg, centerPos, widthHeight, str, theme, fontsize, THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        }
+    }
+};
 template<>
-void guitooltip<gui_graph_port>::setContent() {
+void guitooltip<gui_graph_port_audio>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
+    ptr->addPropertiesTooltip(table);
+}
+template<>
+void guitooltip<gui_graph_port_midi>::setContent() {
     auto ptr = getInstanceOrNull();
     if (!ptr) {
         return;
@@ -464,17 +560,303 @@ public:
     }
 };
 
+class gui_graph_node_bus : public guictr_base {
+protected:
+    const bool bIsInput = false;
+    guibuttontoggle fold;
+    bool bIsFolded = false;
+public:
+    std::vector<gui_graph_port*> guiPorts;
+    explicit gui_graph_node_bus(bool _bIsInput, bool _bIsFolded) : guictr_base(), bIsInput(_bIsInput), bIsFolded(_bIsFolded) {
+        padding = 0;
+        margin = 0;
+        setBackgroundRendered(false);
+        setBackgroundRenderedInset(false);
+        fold.setRadius(nodePortRadius);
+        fold.setStateRef(&bIsFolded);
+        fold.getIcon = [this] { return bIsFolded ? (this->isInput() ? ICON_ARR_LEFT : ICON_ARR_RIGHT) : ICON_ARR_DOWN; };
+        add(&fold);
+        setLabel("Bus");
+        setBackgroundRendered(true);
+        setBackgroundRenderedInset(false);
+    }
+    ~gui_graph_node_bus() override {
+        removeGuis();
+    }
+
+    bool isInput() {
+        return bIsInput;
+    }
+    template<class T>
+    void setPorts(std::vector<T> _guiPorts) {
+        for (auto port : guiPorts) {
+            remove(port);
+            delete port;
+        }
+        guiPorts.clear();
+        for (auto port : _guiPorts) {
+            guiPorts.push_back(port);
+            add(port);
+        }
+        updatePortList();
+    }
+    void determineSize(ivec2& prefSize) override {
+        auto visiblePorts = std::count_if(guiPorts.begin(), guiPorts.end(), [](auto port) { return port->isVisible(); });
+        prefSize.y = nodePortRadius * 3;
+        if (visiblePorts > 0) {
+            prefSize.y += nodePortRadius * 0.5f + visiblePorts * nodePortRadius * 3;
+        }
+        prefSize.x = 64;
+    }
+    void layout() override {
+        fold.size = ivec2(nodePortRadius * 3, nodePortRadius * 3);
+        fold.pos = ivec2(-fold.size.x/2, 0);
+        if (!bIsInput) {
+            fold.pos.x = getSizeContent().x - fold.size.x/2;
+        }
+
+        auto pos = fold.getLeftBottom();
+        pos.y += nodePortRadius * 0.5f;
+        int32_t i = 0;
+        for (auto port : guiPorts) {
+            port->size = ivec2(nodePortRadius * 2, nodePortRadius * 2);
+            if (!bIsFolded) {
+                port->pos = pos + ivec2(nodePortRadius * 0.5f, i * nodePortRadius * 3.0f + nodePortRadius * 0.5f);
+            } else {
+                port->pos = fold.pos + ivec2(nodePortRadius * 0.5f, nodePortRadius * 0.5f);
+            }
+            i++;
+        }
+        for (auto port : guis) {
+            port->layout();
+        }
+    }
+    bool setScissorTransform(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg)) {
+            return false;
+        }
+        ivec2 posInset  = getPosContent();
+        nvgTranslate(vg, posInset.x, posInset.y);
+        nvgTranslateZ(vg, -4.0f);
+        return true;
+    }
+    bool contains(ivec2 mpos) const override {
+        if (mpos.x >= pos.x &&
+            mpos.y >= pos.y &&
+            mpos.x < pos.x + size.x &&
+            mpos.y < pos.y + size.y)
+            return true;
+        ivec2 localPos = toContainerSpace(mpos);
+        for (auto* gui : guis) {
+            if (gui->isVisible() && gui->contains(localPos))
+                return true;
+        }
+        return false;
+    }
+
+    void render(NVGcontext* vg) override {
+        guictr_base::render(vg);
+        const auto bgColor = getOuterBackgroundColorFromState(getStateFlags());
+        auto cs   = getSizeContent();
+        auto sizeText = vec2(cs.x - fold.size.x*0.5, nodePortRadius * 3);
+        auto posInset = fold.getLeftTop() - ivec2(sizeText.x - 4, 0);
+        if (bIsInput) {
+            posInset = fold.getRightTop() - ivec2(4, 0);
+        }
+        // nvgBeginPath(vg);
+        // nvgRect(vg, posInset.x, posInset.y, sizeText.x, sizeText.y);
+        // nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
+        // nvgFill(vg);
+        // nvgStrokeColor(vg, theme->getFrameColorOutline());
+        // nvgStrokeWidth(vg, 2.0);
+        // nvgStroke(vg);
+
+        renderTextLabel(vg,
+                        vec2(posInset) + sizeText * 0.5f,
+                        sizeText,
+                        label,
+                        theme,
+                        int(nodePortRadius * 1.8f),
+                        theme->getContrastColor(bgColor),
+                        NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE); 
+    }
+    void updatePortList() {
+        for (auto port : guiPorts) {
+            port->setVisible(!bIsFolded);
+        }
+    }
+
+    void buttonClicked(guibase* button) override {
+        if (button == &fold) {
+            bIsFolded = !bIsFolded;
+            updatePortList();
+        }
+        if (parent) parent->buttonClicked(this);
+    }
+};
+
+void renderBusPortMeter(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, const vec2 &size, DAW::rmsmeter *meter) {
+    const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
+    const auto NCHANNELS = meter->getNumChannels();
+    vec2 mtrPos  = pos;
+    vec2 mtrSize = {size.x - CONST_PADDING_TRACK_CONTROLS, size.y};
+    const auto scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+
+    const auto hZero = (1.0f - scaledZero) * mtrSize.x;
+    const auto xZero = mtrPos.x + mtrSize.x - hZero;
+    auto lvls         = meter->getLevels();
+    auto y           = mtrPos.y;
+    auto channelH    = (mtrSize.y - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
+
+    float mixedlevels[3]    = { 0, 0, 0 };
+    for (channelnum_t i = 0; i < NCHANNELS; i++) {
+        auto& chLvl     = lvls[i];
+        float fMax      = chLvl.fMax;
+        float fRms      = chLvl.fLvl;
+        float fPeak     = chLvl.fPeak;
+        mixedlevels[0]  = math::max(mixedlevels[0], fMax);
+        mixedlevels[1]  = fRms;
+        mixedlevels[2]  = math::max(mixedlevels[2], fPeak);
+        float levels[3] = { fMax, fRms, fPeak };
+        //    float levels[3] = {fMax, fRms, fPeak};
+        if (mtrSize.x > 4 && channelH >= 1.0f) {
+            nvgBeginPath(vg);
+            nvgRect(vg, mtrPos.x, y, mtrSize.x, channelH);
+            nvgFillColor(vg, theme->getFrameColorOutline());
+            nvgFill(vg);
+            NVGcolor colGainLvl[6] = {
+                G_GREEN_DRK,
+                G_YELLOW_DRK,
+                G_GREEN,
+                G_YELLOW,
+                G_GREEN_DRKER,
+                G_YELLOW_DRKER,
+            };
+            for (int j = 0; j < 3; j++) {
+                auto fLvl = levels[j];
+                if (fLvl < math::F_MIN) {
+                    continue;
+                }
+                auto scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+                auto hVal = (1.0f - scale) * mtrSize.x;
+                auto x = mtrPos.x;
+                if (j == 2) {
+                    nvgBeginPath(vg);
+                    nvgMoveTo(vg, x + hVal, y);
+                    nvgLineTo(vg, x + hVal, y + channelH);
+                    //int32_t col = fLvl >= 1.0f ? 1 : 0;
+                    int32_t col = x < xZero ? 1 : 0;
+                    nvgStrokeColor(vg, colGainLvl[j * 2 + col]);
+                    nvgStrokeWidth(vg, 1.5f);
+                    nvgStroke(vg);
+                    continue;
+                }
+                if (hVal > 0.5) {
+                    auto hOvershoot = math::max(0.0f, hVal - hZero);
+                    nvgBeginPath(vg);
+                    nvgRect(vg, x, y, math::min(hVal, hZero), channelH);
+                    nvgFillColor(vg, colGainLvl[j * 2 + 0]);
+                    nvgFillCustomPar(vg, -3);
+                    nvgFill(vg);
+                    if (hOvershoot > 0) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, hZero, y, hOvershoot, channelH);
+                        nvgFillCustomPar(vg, -3);
+                        nvgFillColor(vg, colGainLvl[j * 2 + 1]);
+                        nvgFill(vg);
+                    }
+                }
+            }
+        }
+
+
+        y += channelH;
+        y += CONST_PADDING_TRACK_CONTROLS;
+    }
+}
+
+class gui_graph_node_bus_audio : public gui_graph_node_bus {
+    DAW::rmsmeter* meter = nullptr;
+public:
+    gui_graph_node_bus_audio(DAW::processing_track_node_t* node, bool _bIsInput, bool _bIsFolded)
+        : gui_graph_node_bus(_bIsInput, _bIsFolded) {
+        if (node->trackOptional) {
+            meter = bIsInput ? &node->trackOptional->audio->meterInput : &node->trackOptional->audio->meter;
+        }
+        if (node->effectOptional) {
+            meter = bIsInput ? &node->effectOptional->meterIn : &node->effectOptional->meter;
+        }
+        if (node->stage) {
+            if (node->stageId == node->stage->stageId.inputStageId) {
+                meter = &node->stage->meterInput;
+            } else {
+                meter = &node->stage->meter;
+            }
+        }
+    }
+    void render(NVGcontext* vg) override {
+        gui_graph_node_bus::render(vg);
+        if (meter) {
+            auto meterPos = vec2{};
+            auto meterSize = vec2{};
+            if (!bIsFolded && guiPorts.size() > 0) {
+                // auto posFirstPort = guiPorts.front()->getLeftTop();
+                // auto posLastPort  = guiPorts.back()->getRightBottom();
+
+                // meterSize = vec2(size.x - nodePortRadius * 2.0f, posLastPort.y - posFirstPort.y);
+                // if (bIsInput) {
+                //     meterPos = vec2(guiPorts.front()->getRightTop());
+                //     meterPos.x += nodePortRadius * 0.5f;
+                // } else {
+                //     meterPos = vec2(guiPorts.front()->getLeftTop()) - vec2(meterSize.x, 0);
+                //     meterPos.x -= nodePortRadius * 0.5f;
+                // }
+                // meterPos -= vec2(0, nodePortRadius * 0.5f);
+                // meterSize.y += nodePortRadius * 1.0f;
+                // nvgBeginPath(vg);
+                // int inset = 2;
+                // nvgRect(vg, meterPos.x + inset, meterPos.y + inset, meterSize.x - inset * 2, meterSize.y - inset * 2);
+                // auto c = theme->getColor(GuiColor::COL_TEXT);
+                // c.a = 0.5f;
+                // nvgFillColor(vg, c);
+                // nvgFill(vg);
+                // nvgStrokeColor(vg, theme->getFrameColorOutline());
+                // nvgStrokeWidth(vg, 2.0);
+                // nvgStroke(vg);
+                // renderBusPortMeter(vg, theme, meterPos, meterSize, meter);
+
+                meterSize = vec2(size.x - nodePortRadius * 2.0f, nodePortRadius * 2.5f);
+                for (auto port : guiPorts) {
+                    meterPos = vec2(port->getCenterPos2f()) - vec2(0, meterSize.y * 0.5f);
+                    if (bIsInput) {
+                        meterPos.x += nodePortRadius * 1.5f;
+                    } else {
+                        meterPos.x -= meterSize.x + nodePortRadius * 1.5f;
+                    }
+                    auto desc = static_cast<gui_graph_port_audio*>(port)->getChannelDesc();
+                    auto subMeter = meter->getSubChannelMeter(desc.offset, desc.count);
+                    renderBusPortMeter(vg, theme, meterPos, meterSize, &subMeter);
+                }
+            }
+        }
+    }
+};
+
 class gui_graph_n final : public gui_graph_entry {
     friend class gui_graph;
     friend class gui_graph_port;
     gui_graph::guictr_graph_impl* const graphImpl;
     DAW::processing_track_node_t* node;
-    std::vector<gui_graph_port*> guiPorts;
-    std::vector<gui_graph_port*> portsInput;
-    std::vector<gui_graph_port*> portsOutput;
+    std::vector<gui_graph_node_bus*> guiBusses;
+    std::vector<gui_graph_port_audio*> portsInput;
+    std::vector<gui_graph_port_audio*> portsOutput;
+    std::vector<gui_graph_port_midi*> portsMidiInput;
+    std::vector<gui_graph_port_midi*> portsMidiOutput;
+    gui_graph_node_bus_audio busInput;
+    gui_graph_node_bus_audio busOutput;
+    gui_graph_node_bus busMidiInput;
+    gui_graph_node_bus busMidiOutput;
     std::shared_ptr<PluginViewContainer> viewCtr;
-    gui_trackmeter* meterIn = nullptr;
-    gui_trackmeter* meterOut = nullptr;
     guinodeinfo_text guiText;
     /* holds guictrs of internal vstplugins with custom gui (non-steinberg api) */
     std::vector<guictr_base*> viewCtrs;
@@ -482,52 +864,87 @@ class gui_graph_n final : public gui_graph_entry {
 
 private:
     void setPorts() {
-        dbgassert(guiPorts.empty());
+        portsInput.clear();
+        portsOutput.clear();
+        portsMidiInput.clear();
+        portsMidiOutput.clear();
+
         if (node->type == DAW::track_node_type_t::EFFECT) {
             for (auto& desc : node->effectOptional->inputChannelsDesc) {
-                portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, desc});
+                portsInput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::INPUT, desc});
             }
             for (auto& desc : node->effectOptional->outputChannelsDesc) {
-                portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT_POST, desc});
+                portsOutput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::OUTPUT_POST, desc});
             }
         } else if (node->type == DAW::track_node_type_t::TRACK) {
-            portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Input 0"}});
-            portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{2, 2, "Stereo Input 1"}});
-            portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT_POST, DAW::channel_desc{0, 2, "Stereo Output 0"} });
+            portsInput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Input 0"}});
+            portsInput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::INPUT, DAW::channel_desc{2, 2, "Stereo Input 1"}});
+            portsOutput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::OUTPUT_POST, DAW::channel_desc{0, 2, "Stereo Output 0"} });
+            portsMidiInput.push_back(new gui_graph_port_midi{ this, true, -1 });
+            for (int32_t i = 0; i < 16;  ++i) {
+                portsMidiInput.push_back(new gui_graph_port_midi{ this, true, i });
+            }
+            portsMidiOutput.push_back(new gui_graph_port_midi{ this, false, -1 });
+            for (int32_t i = 0; i < 16;  ++i) {
+                portsMidiOutput.push_back(new gui_graph_port_midi{ this, false, i });
+            }
         } else if (node->type == DAW::track_node_type_t::AUDIOSTAGE) {
             if (node->stageId == node->stage->stageId.inputStageId) {
-                portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT, DAW::channel_desc{0, 2, "Stereo Input 0"}});
-                portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT, DAW::channel_desc{2, 2, "Stereo Input 1"}});
+                portsOutput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::OUTPUT, DAW::channel_desc{0, 2, "Stereo Input 0"}});
+                portsOutput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::OUTPUT, DAW::channel_desc{2, 2, "Stereo Input 1"}});
             } else {
-                portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Output 0"} });
+                portsInput.push_back(new gui_graph_port_audio{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Output 0"} });
             }
         }
-        addAll(guiPorts, portsInput);
-        addAll(guiPorts, portsOutput);
-        for (auto guiPort : guiPorts) {
-            add(guiPort);
-        }
+        busMidiInput.setPorts(portsMidiInput);
+        busMidiOutput.setPorts(portsMidiOutput);
+        busInput.setPorts(portsInput);
+        busOutput.setPorts(portsOutput);
     }
 
 public:
-    gui_graph_n(gui_graph::guictr_graph_impl* _graphImpl, DAW::processing_track_node_t* _node) 
-    : gui_graph_entry(),
-      graphImpl(_graphImpl),
-      node(_node),
-      guiText(_node)
-    {
+    gui_graph_n(gui_graph::guictr_graph_impl* _graphImpl, DAW::processing_track_node_t* _node)
+        : gui_graph_entry(),
+          graphImpl(_graphImpl),
+          node(_node),
+          busInput(_node, true, false),
+          busOutput(_node, false, false),
+          busMidiInput(true, true),
+          busMidiOutput(false, true),
+          guiText(_node) {
         add(&guiText);
         setPorts();
         (void)graphImpl;
+        busInput.setLabel("Audio");
+        busOutput.setLabel("Audio");
+        busMidiInput.setLabel("Midi");
+        busMidiOutput.setLabel("Midi");
+        guiBusses.push_back(&busInput);
+        guiBusses.push_back(&busOutput);
+        guiBusses.push_back(&busMidiInput);
+        guiBusses.push_back(&busMidiOutput);
+        for (auto port : guiBusses) {
+            add(port);
+        }
     }
 
     ~gui_graph_n() override {
+        for (auto bus : guiBusses) {
+            bus->removeGuis();
+            remove(bus);
+        }
+        for (auto bus : {&busMidiInput, &busMidiOutput}) {
+            for (auto port : bus->guiPorts) {
+                delete port;
+            }
+        }
+        for (auto bus : {&busInput, &busOutput}) {
+            for (auto port : bus->guiPorts) {
+                delete port;
+            }
+        }
         for (auto ctr : viewCtrs) {
             remove(ctr);
-        }
-        for (auto port : guiPorts) {
-            remove(port);
-            delete port;
         }
         remove(&guiText);
         destroyGuis();
@@ -548,62 +965,35 @@ public:
     void setNode(DAW::processing_track_node_t* _node) {
         node = _node;
         guiText.setNode(_node);
-        for (auto port : guiPorts) {
-            remove(port);
-            delete port;
-        }
-        guiPorts.clear();
-        portsInput.clear();
-        portsOutput.clear();
         setPorts();
     }
 
     void layout() override {
         const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-        vec2 pos  = -vec2(paddingTL(padding));
-        int inputIndex = 0;
-        int outputIndex   = 0;
-        for (auto port : guiPorts) {
-            port->size = { nodePortRadius * 2, nodePortRadius * 2 };
-            
-            float topOffsetInputs = portsInput.size() > 1 ? (hpt + nodePortRadius * 1.5f) : (hpt * 0.5f - nodePortRadius);
-            float topOffsetOutputs = portsOutput.size() > 1 ? (hpt + nodePortRadius * 1.5f) : (hpt * 0.5f - nodePortRadius);
-            switch (port->getBufferPoint()) {
-                case stage_bufferpoint::INPUT:
-                    port->pos = pos + vec2(0, topOffsetInputs) + vec2(-nodePortRadius, inputIndex * nodePortRadius * 3);
-                    ++inputIndex;
-                    break;
-                default:
-                    port->pos = pos + vec2(size.x, topOffsetOutputs) + vec2(-nodePortRadius, outputIndex * nodePortRadius * 3);
-                    ++outputIndex;
-                    break;
-            }
-        }
+        auto overlap = busInput.size.x - nodePortRadius;
+        busInput.pos = ivec2(-padding + overlap, 0) + ivec2(0 - busInput.size.x, hpt);
+        busOutput.pos = ivec2(-padding - overlap, 0) + ivec2(size.x, hpt);
+        busMidiInput.pos = busInput.getLeftBottom() + ivec2(0, padding);
+        busMidiOutput.pos = busOutput.getLeftBottom() + ivec2(0, padding);
 
         for (guibase* gui : guis) {
             gui->layout();
         }
     }
+
     void determineSize(ivec2& prefSize) override {
+        prefSize.y = math::max<int32_t>(prefSize.y, theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT));
+        for (auto bus : guiBusses) {
+            bus->size = { 0, 0};
+            bus->determineSize(bus->size);
+        }
+        auto overlap = busInput.size.x - nodePortRadius;
         const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
         const auto ctrPadding = (paddingTL(padding) + paddingBR(padding));
         auto ecs = prefSize - ctrPadding;
-
-        const auto scale      = theme->getFloat(GuiConstant::CONST_NODES_SCALE);
-        const auto meterWidth = GRAPH_NODE_METER_WIDTH * scale;
-        guiText.size = { ecs.x, ecs.y - hpt };
-        guiText.pos  = { 0, hpt };
-        if (meterIn) {
-            meterIn->size = { meterWidth, ecs.y - hpt };
-            meterIn->pos  = { 0, hpt };
-            guiText.size.x -= meterIn->size.x;
-            guiText.pos.x += meterIn->size.x;
-        }
-        prefSize.x = math::max(prefSize.x, ctrPadding.x+guiText.right());
-        if (meterOut) {
-            meterOut->size = { meterWidth, ecs.y - hpt };
-            guiText.size.x -= meterOut->size.x;
-        }
+        guiText.size = { 140, ecs.y - hpt };
+        guiText.pos  = { overlap, hpt };
+        prefSize.x = math::max<int32_t>(prefSize.x, overlap + guiText.right() + ctrPadding.x);
         if (viewCtr) {
             ivec2 sizeCtr(0);
             viewCtr->getFixedSize(&sizeCtr.x, &sizeCtr.y);
@@ -615,11 +1005,11 @@ public:
                 prefSize.x = math::max(prefSize.x, ctrPadding.x+viewCtrChild->right());
             }
         }
-        if (meterOut) {
-            ecs = prefSize - ctrPadding;
-            meterOut->pos  = { ecs.x, hpt };
-            prefSize.x = math::max(prefSize.x, ctrPadding.x+meterOut->right());
+        for (auto bus : guiBusses) {
+            bus->layout();
+            prefSize.y = math::max<int32_t>(prefSize.y, bus->getRightBottom().y);
         }
+        prefSize.y += (paddingTL(padding) + paddingBR(padding)).y;
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
@@ -703,7 +1093,7 @@ namespace NodeGraph {
         edge_t(gui_graph_port* _portDst, gui_graph_port* _portSrc) : portDst(_portDst), portSrc(_portSrc) {
         }
     };
-    bool getChannelRef(const gui_graph_port* port, const bool isSrc, DAW::channel_ref_t& ref) {
+    bool getChannelRef(const gui_graph_port_audio* port, const bool isSrc, DAW::channel_ref_t& ref) {
         auto procNode = port->getNode()->getProcessingNode();
         switch (procNode->type) {
             case DAW::track_node_type_t::TRACK:
@@ -752,9 +1142,9 @@ namespace NodeGraph {
         return false;
     }
 
-    gui_graph_port* getOutputPort(const std::vector<gui_graph_port*>& portsOutput, const DAW::channel_ref_t& channelRef) {
+    gui_graph_port* getOutputPort(const std::vector<gui_graph_port_audio*>& portsOutput, const DAW::channel_ref_t& channelRef) {
         DAW::channel_ref_t refTmp;
-        auto it = std::find_if(portsOutput.begin(), portsOutput.end(), [&refTmp, &channelRef](gui_graph_port* gn) {
+        auto it = std::find_if(portsOutput.begin(), portsOutput.end(), [&refTmp, &channelRef](gui_graph_port_audio* gn) {
             if (NodeGraph::getChannelRef(gn, true, refTmp)) {
                 return DAW::channelRefEquals(channelRef, refTmp, 0);
             }
@@ -825,7 +1215,7 @@ public:
         }
     }
 };
-    bool connectPorts(DawInstance* daw, gui_graph_port* portDst, gui_graph_port* portSrc) {
+    bool connectAudioPorts(DawInstance* daw, gui_graph_port_audio* portDst, gui_graph_port_audio* portSrc) {
         /* allow no connection to self */
         if (portDst == portSrc) { // TODO: check at lower level
             return false;
@@ -876,7 +1266,7 @@ public:
                     dbgassert(nodeDest->effectOptional);
                     nodeDest->effectOptional->getTrackLink()->createRoutingSnapshot(snapshot);
                     stageRef = nodeDest->effectOptional->getTrackLink()->toRef();
-                    refSrc.dstChannelOffset = portDst->getChannelDesc().offset;
+                    refSrc.dstChannelOffset = portDst->getChannelIdx();
                     removeRouting(nodeDest->effectOptional->inputChannels, refSrc, true);
                     nodeDest->effectOptional->inputChannels.push_back(refSrc);
                     nodeDest->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
@@ -891,9 +1281,9 @@ public:
         dbgassert(0);
         return false;
     }
-    bool disconnectEdge(DawInstance* daw, edge_t* edge) {
-        auto nodeSrc = edge->portSrc->getNode()->getProcessingNodePointer();
-        auto nodeDest = edge->portDst->getNode()->getProcessingNodePointer();
+    bool disconnectAudioEdge(DawInstance* daw, gui_graph_port_audio* portSrc, gui_graph_port_audio* portDst) {
+        auto nodeSrc = portSrc->getNode()->getProcessingNodePointer();
+        auto nodeDest = portDst->getNode()->getProcessingNodePointer();
         if (nodeSrc->type == DAW::track_node_type_t::TRACK || nodeDest->type == DAW::track_node_type_t::TRACK) {
             auto stage = nodeSrc->trackOptional->audio;
             track_io_configuration_snapshot_t snapshot;
@@ -904,7 +1294,7 @@ public:
             return true;
         }
         DAW::channel_ref_t refSrc;
-        if (getChannelRef(edge->portSrc, true, refSrc)) {
+        if (getChannelRef(portSrc, true, refSrc)) {
             audio_stage_ref_t stageRef;
             track_effect_routing_snapshot_t snapshot;
             switch (nodeDest->type) {
@@ -919,7 +1309,7 @@ public:
                     dbgassert(nodeDest->effectOptional);
                     nodeDest->effectOptional->getTrackLink()->createRoutingSnapshot(snapshot);
                     stageRef = nodeDest->effectOptional->getTrackLink()->toRef();
-                    refSrc.dstChannelOffset = edge->portDst->getChannelDesc().offset;
+                    refSrc.dstChannelOffset = portDst->getChannelIdx();
                     removeRouting(nodeDest->effectOptional->inputChannels, refSrc, true);
                     nodeDest->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
                     break;
@@ -929,6 +1319,80 @@ public:
             auto action = new action_modify_stage_routing(stageRef, snapshot);
             daw->pushHist(action);
             return true;
+        }
+        return false;
+    }
+    bool disconnectMidiEdge(DawInstance* daw, gui_graph_port_midi* portSrc, gui_graph_port_midi* portDst) {
+        auto nodeSrc = portSrc->getNode()->getProcessingNodePointer();
+        auto nodeDest = portDst->getNode()->getProcessingNodePointer();
+        if (nodeSrc->type == DAW::track_node_type_t::TRACK || nodeDest->type == DAW::track_node_type_t::TRACK) {
+            auto stage = nodeDest->trackOptional->audio;
+            track_io_configuration_snapshot_t snapshot;
+            stage->createIOSnapshot(snapshot);
+            auto action = new action_modify_track_routing(stage->toRef(), snapshot);
+            for (auto it = stage->midiInputChannels.begin(); it != stage->midiInputChannels.end(); ++it) {
+                if (it->getType() == DAW::midistage_type::INPUT_AUDIOSTAGE && it->stage.stageRef.stageId == nodeSrc->stageId) {
+                    if (it->srcChannel == portSrc->getChannelIdx() && it->dstChannel == portDst->getChannelIdx()) {
+                        stage->midiInputChannels.erase(it);
+                        break;
+                    }
+                }
+            }
+            daw->pushHist(action);
+            return true;
+        }
+        return false;
+    }
+    bool connectMidiPorts(DawInstance* daw, gui_graph_port_midi* portSrc, gui_graph_port_midi* portDst) {
+        /* allow no connection to self */
+        if (portDst == portSrc) { // TODO: check at lower level
+            return false;
+        }
+        /* only allow input to output connections */
+        auto isInputDst = portDst->isInput();
+        auto isInputSrc = portSrc->isInput();
+        if (isInputDst == isInputSrc) {
+            return false;
+        }
+        if (isInputSrc) {
+            std::swap(portDst, portSrc);
+            std::swap(isInputDst, isInputSrc);
+        }
+        auto nodeSrc = portSrc->getNode()->getProcessingNodePointer();
+        auto nodeDest = portDst->getNode()->getProcessingNodePointer();
+        if (nodeSrc->type == DAW::track_node_type_t::TRACK || nodeDest->type == DAW::track_node_type_t::TRACK) {
+            if (nodeSrc->type != nodeDest->type) {
+                return false;
+            }
+            if (nodeDest->trackOptional && nodeDest->trackOptional->audio) {
+                track_io_configuration_snapshot_t snapshot;
+                nodeDest->trackOptional->audio->createIOSnapshot(snapshot);
+                auto action = new action_modify_track_routing(nodeDest->trackOptional->audio->toRef(), snapshot);
+                auto srcStage = nodeSrc->trackOptional->audio;
+                auto dstStage = nodeDest->trackOptional->audio;
+                if (dstStage->midiInputChannels.size() == 1 && (dstStage->midiInputChannels.front().getType() == DAW::midistage_type::INPUT_EMPTY || dstStage->midiInputChannels.front().getType() == DAW::midistage_type::INPUT_DEFAULT)) {
+                    dstStage->midiInputChannels.clear();
+                }
+                dstStage->midiInputChannels.push_back(DAW::MidiChannelStage(srcStage, stage_bufferpoint::OUTPUT_POST, portSrc->getChannelIdx(), portDst->getChannelIdx()));
+                daw->pushHist(action);
+                return true;
+            }
+        }
+
+        return false;
+    }
+    bool disconnectEdge(DawInstance* daw, edge_t* edge) {
+        if (!edge->portSrc->isMidi() && !edge->portDst->isMidi()) {
+            if (NodeGraph::disconnectAudioEdge(daw, static_cast<gui_graph_port_audio*>(edge->portSrc), static_cast<gui_graph_port_audio*>(edge->portDst))) {
+                daw->onPluginsChanged();
+                return true;
+            }
+        }
+        if (edge->portSrc->isMidi() && edge->portDst->isMidi()) {
+            if (NodeGraph::disconnectMidiEdge(daw, static_cast<gui_graph_port_midi*>(edge->portSrc), static_cast<gui_graph_port_midi*>(edge->portDst))) {
+                daw->onPluginsChanged();
+                return true;
+            }
         }
         return false;
     }
@@ -971,7 +1435,7 @@ public:
             }
             for (const DAW::track_source_t& channelSrc : allSources) {
                 auto it = std::find_if(graphNode->portsInput.begin(), graphNode->portsInput.end(), [dstChannelOffset=channelSrc.channel.dstChannelOffset](gui_graph_port* gn) {
-                    return gn->getChannelDesc().offset == dstChannelOffset;
+                    return gn->getChannelIdx() == dstChannelOffset;
                 });
                 gui_graph_port* portInput = it != graphNode->portsInput.end() ? *it : nullptr;
                 gui_graph_port* portOutput = nullptr;
@@ -987,6 +1451,46 @@ public:
                     // to be expected when a node has no connections
                     // log_lf(Log::L_WARN, "Did not find UI graph entry for stage %d\n", static_cast<int32_t>(procNode->stageId));
                 }
+            }
+            if (procNode->type == DAW::track_node_type_t::TRACK && procNode->trackOptional) {
+                auto& stage = procNode->trackOptional->audio;
+                if (stage) {
+                    for (auto& midiInputChannel : stage->midiInputChannels) {
+                        gui_graph_port* portInput = nullptr;
+                        if (midiInputChannel.dstChannel < 0) {
+                            portInput = graphNode->portsMidiInput[0];
+                        } else if (1 + midiInputChannel.dstChannel < int32_t(graphNode->portsMidiInput.size())) {
+                            portInput = graphNode->portsMidiInput[1 + midiInputChannel.dstChannel];
+                        }
+                        if (!portInput) {
+                            continue;
+                        }
+                        switch (midiInputChannel.getType()) {
+                            case DAW::midistage_type::INPUT_DEFAULT:
+                            case DAW::midistage_type::INPUT_EMPTY:
+                            case DAW::midistage_type::INPUT_EXTERNAL_MIDI:
+                                break;
+                            case DAW::midistage_type::INPUT_AUDIOSTAGE: {
+                                for (auto& listNode : listNodes) {
+                                    auto out = listNode->getProcessingNode();
+                                    if (out->trackOptional && out->trackOptional->getStage()->stageId.stageId == midiInputChannel.stage.stageRef.stageId) {
+                                        gui_graph_port* portOutput = nullptr;
+                                        if (midiInputChannel.srcChannel < 0) {
+                                            portOutput = listNode->portsMidiOutput[0];
+                                        } else if (1 + midiInputChannel.srcChannel < int32_t(listNode->portsMidiOutput.size())) {
+                                            portOutput = listNode->portsMidiOutput[1 + midiInputChannel.srcChannel];
+                                        }
+                                        if (portOutput) {
+                                            edgeList.emplace_back(portInput, portOutput);
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
             }
         }
     }
@@ -1008,11 +1512,13 @@ gui_graph_port* gui_graph_port::findClosestPort(guibase* target, ivec2 mousepos)
             float distanceClosest = 0.0f;
             const float maxDistance = 64.0f;
             for (auto const& node : listNodes) {
-                for (auto const& port : node->guiPorts) {
-                    auto distance = math::distvec2(port->getPortPos(), mousePosParent);
-                    if (distance < maxDistance && (portClosest == nullptr || distance < distanceClosest)) {
-                        portClosest = port;
-                        distanceClosest = distance;
+                for (auto const& bus : node->guiBusses) {
+                    for (auto const& port : bus->guiPorts) {
+                        auto distance = math::distvec2(port->getPortPos(), mousePosParent);
+                        if (distance < maxDistance && (portClosest == nullptr || distance < distanceClosest)) {
+                            portClosest = port;
+                            distanceClosest = distance;
+                        }
                     }
                 }
             }
@@ -1043,8 +1549,13 @@ void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
     if (port) {
         auto const daw = dawCtrl->getDaw();
         ThreadLock lock = daw->lockPlayThread();
-        NodeGraph::connectPorts(daw, this, port);
-        daw->onPluginsChanged();
+        if (port->isMidi() && this->isMidi()) {
+            NodeGraph::connectMidiPorts(daw, static_cast<gui_graph_port_midi*>(port), static_cast<gui_graph_port_midi*>(this));
+            daw->onPluginsChanged();
+        } else if (!port->isMidi() && !this->isMidi()) {
+            NodeGraph::connectAudioPorts(daw, static_cast<gui_graph_port_audio*>(port), static_cast<gui_graph_port_audio*>(this));
+            daw->onPluginsChanged();
+        }
     }
 }
 
@@ -1103,39 +1614,47 @@ void gui_graph::render(NVGcontext* vg) {
     const auto colAutomated = theme->getColor(GuiColor::COL_AUTOMATED);
     for (auto& edge : impl->edgeList) {
 
-        const DAW::processing_track_node_t* nodeInput  = edge.portSrc->getNode()->getProcessingNode();
 
+        gui_graph_port_audio* portAudio = nullptr;
+        if (!edge.portSrc->isMidi()) {
+            portAudio = static_cast<gui_graph_port_audio*>(edge.portSrc);
 
-        DAW::rmsmeter* ptrMeter = nullptr;
-
-        if (nodeInput->effectOptional) {
-            ptrMeter = &nodeInput->effectOptional->meter;
         }
-        if (nodeInput->trackOptional && nodeInput->trackOptional->audio) {
-            ptrMeter = &nodeInput->trackOptional->audio->meter;
-        }
-        if (nodeInput->stage) {
-            ptrMeter = &nodeInput->stage->meterInput;
-        }
-        if (ptrMeter && ptrMeter->getNumChannels() == 0) {
-            ptrMeter = nullptr;
-        }
+        int numPaths = 1;
+        if (portAudio) {
+            const DAW::processing_track_node_t* nodeInput  = edge.portSrc->getNode()->getProcessingNode();
 
 
+            DAW::rmsmeter* ptrMeter = nullptr;
+
+            if (nodeInput->effectOptional) {
+                ptrMeter = &nodeInput->effectOptional->meter;
+            }
+            if (nodeInput->trackOptional && nodeInput->trackOptional->audio) {
+                ptrMeter = &nodeInput->trackOptional->audio->meter;
+            }
+            if (nodeInput->stage) {
+                ptrMeter = &nodeInput->stage->meterInput;
+            }
+            if (ptrMeter && ptrMeter->getNumChannels() == 0) {
+                ptrMeter = nullptr;
+            }
+
+
+            if (ptrMeter) {
+                auto channelDesc = portAudio->getChannelDesc();
+                auto meter = ptrMeter->getSubChannelMeter(channelDesc.offset, channelDesc.count);
+                if (meter.getMaxRMS() > dsp_util::GAIN_DBFLOOR) {
+                    numPaths++;
+                }
+            }
+        }
         const guictr_graph_impl::hit_result hitResult = impl->hitTest(mouseLocal);
         NVGcolor colEdge = theme->getColor(GuiColor::COL_NODES_EDGE);
         if (hitResult.hitType == guictr_graph_impl::hit_result_type::HIT_EDGE && (&edge == hitResult.edge)) {
             colEdge = NVGcolor{ 0.45f, 0.05f, 0.45f, 1.0f };
         }
 
-        int numPaths = 1;
-        if (ptrMeter) {
-            auto channelDesc = edge.portSrc->getChannelDesc();
-            auto meter = ptrMeter->getSubChannelMeter(channelDesc.offset, channelDesc.count);
-            if (meter.getMaxRMS() > dsp_util::GAIN_DBFLOOR) {
-                numPaths++;
-            }
-        }
 
         std::vector<vec2>& pts = edge.spline.calculateSplineVectors(edge.portDst->getPortPos(), edge.portSrc->getPortPos());
         if (pts.empty())
@@ -1348,25 +1867,6 @@ void gui_graph::updateList(bool resetPositions) {
                 bNewEntry = true;
                 entry = new gui_graph_n(impl, node);
                 entry->id = stageIdI32;
-                if (node->trackOptional) {
-                    entry->meterOut = new gui_trackmeter(&node->trackOptional->audio->meter);
-                    entry->meterIn  = new gui_trackmeter(&node->trackOptional->audio->meterInput);
-                }
-                if (node->effectOptional) {
-                    entry->meterOut = new gui_trackmeter(&node->effectOptional->meter);
-                    entry->meterIn  = new gui_trackmeter(&node->effectOptional->meterIn);
-                }
-                if (node->stage) {
-                    if (node->stageId == node->stage->stageId.inputStageId) {
-                        entry->meterIn = new gui_trackmeter(&node->stage->meterInput);
-                    } else {
-                        entry->meterOut = new gui_trackmeter(&node->stage->meter);
-                    }
-                }
-                if (entry->meterIn)
-                    entry->add(entry->meterIn);
-                if (entry->meterOut)
-                    entry->add(entry->meterOut);
                 if (node->type == DAW::track_node_type_t::EFFECT && node->effectOptional) {
                     auto intEffect = dynamic_cast<internalplugin*>(node->effectOptional);
                     if (intEffect) {

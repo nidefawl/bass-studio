@@ -129,6 +129,7 @@ public:
     void reset();
     void refresh();
     void buttonClicked(guibase* _button) override {
+        layout();
         if (parent) parent->buttonClicked(_button);
     }
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;

@@ -269,6 +269,8 @@ void serialize(Archive& archive, io_midi_snapshot_t& m) {
         make_nvp("type", m.type)
     );
     make_optional_nvp(archive, "inputName", m.inputName);
+    make_optional_nvp(archive, "srcChannel", m.srcChannel);
+    make_optional_nvp(archive, "dstChannel", m.dstChannel);
 }
 
 template<class Archive>

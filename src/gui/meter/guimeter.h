@@ -11,6 +11,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, const vec2 &size, DAW::rmsmeter *meter);
 
 class gui_trackmeter final : public guibase {
+    bool bRenderHorizontal = false;
     DAW::rmsmeter* const meter;
 public:
     gui_trackmeter(DAW::rmsmeter* _meter)
@@ -18,4 +19,5 @@ public:
     {
     }
     void render(NVGcontext* vg) override;
+    void setRenderHorizontal(bool b) { bRenderHorizontal = b; }
 };

@@ -532,7 +532,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
                 // kill oldest (first) note
                 bool fnd = false;
                 for (auto& noteHeld : midiData.notes.m_list) {
-                    if(noteHeld.pitch == pitch) {
+                    if(noteHeld.pitch == pitch && noteHeld.channel == int8_t(msg.message & 0x0F)) {
                         if (!noteHeld.isHeld()) {
                             //log_printf("%s note was released before, looking for next one\n", noteName(noteHeld.pitch));
                             continue;
@@ -2023,7 +2023,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                 } else {
                     tmp.ctrlEventsTemp.clear();
                     tmp.noteEventsTemp.clear();
-                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, audioProperties.ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true);
+                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, audioProperties.ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true, -1, -1);
                     effect->getTrackLink()->sendMidiToEffect(tmp.noteEventsTemp, tmp.ctrlEventsTemp, processingPosLatencyCompensate, prjGlobals.tempo100, effect);
                     effect->process(this, effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, sampleLatencyCompensated, numSamples, playbackState);
                     blockPostProcess = effect->blockOutputs;

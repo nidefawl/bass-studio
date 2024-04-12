@@ -461,3 +461,29 @@ guictr_base::guictr_base(gui_type guiType)
     setBackgroundRenderedInset(true);
     setFlag(FLG_SUPPRESS_TOOLTIP, true);
 }
+
+bool guictr_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (this->contains(mpos)) {
+        ivec2 localMouse = this->toContainerSpace(mpos);
+        // iterate over guis vector in reverse
+        for (auto it = guis.rbegin(); it != guis.rend(); ++it) {
+            auto gui = *it;
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
+                return true;
+            }
+        }
+        if (evt.type == MouseHitType::MOUSE_SCROLL) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (canMouseHit()) {
+            evt.requestFocus(this);
+            return true;
+        }
+    }
+    return false;
+}

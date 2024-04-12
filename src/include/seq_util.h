@@ -63,9 +63,9 @@ removeAll(C1& a, const C1& b) {
     a.erase(std::remove_if(begin(a), end(a), [&b](auto x) { return std::find(begin(b), end(b), x) != end(b); }), end(a));
 }
 
-template<typename C1>
+template<typename C1, typename C2>
 inline void
-addAll(C1& a, const C1& b) {
+addAll(C1& a, const C2& b) {
     a.insert(a.end(), begin(b), end(b));
 }
 /**

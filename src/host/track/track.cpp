@@ -608,12 +608,16 @@ namespace DAW {
         cfg.type              = static_cast<int32_t>(channel.type);
         cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
         cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
+        cfg.srcChannel = channel.srcChannel;
+        cfg.dstChannel = channel.dstChannel;
         cfg.inputName = channel.name;
     }
     void loadMidiChannelRefSnapshot(const io_midi_snapshot_t& cfg, midichannel_ref_t& channel) {
         channel.type                   = static_cast<midistage_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
+        channel.srcChannel = cfg.srcChannel;
+        channel.dstChannel = cfg.dstChannel;
         channel.name = cfg.inputName;
     }
 }
@@ -1001,7 +1005,7 @@ track_impl_t::track_impl_t(DAW::Host::PluginManager* const _host, audio_stage_id
       outputChannel(DAW::ChannelDefaultNone()),
       midiValidation(new clip_notes_t())
 {
-      midiInputChannels.push_back(_track->type == TRACK_TYPE_MIDI ? DAW::MidiChannelDefault() : DAW::MidiChannelNone());
+    //   midiInputChannels.push_back(_track->type == TRACK_TYPE_MIDI ? DAW::MidiChannelDefault() : DAW::MidiChannelNone());
 }
 
 const std::vector<DAW::arp_note_t>& track_impl_t::getArpHeldNotes() {
@@ -1060,10 +1064,16 @@ void sortNoteEvents(std::vector<midievent_note_t>& noteEvents) {
     std::sort(noteEvents.begin(), noteEvents.end(), [](const midievent_note_t& a, const midievent_note_t& b) {
         // sort by tick, pitch, note off, note on
         if (a.globalTick == b.globalTick) {
-            if (a.pitch == b.pitch) {
-                return !a.isNoteOn && b.isNoteOn;
+            if (a.tickOffsetInBlock == b.tickOffsetInBlock) {
+                if (a.pitch == b.pitch) {
+                    if (a.channel == b.channel) {
+                        return !a.isNoteOn && b.isNoteOn;
+                    }
+                    return a.channel < b.channel;
+                }
+                return a.pitch < b.pitch;
             }
-            return a.pitch < b.pitch;
+            return a.tickOffsetInBlock < b.tickOffsetInBlock;
         }
         return a.globalTick < b.globalTick;
     });
@@ -1072,7 +1082,12 @@ void sortControlEvents(std::vector<midievent_ctrl_t>& ctrlEvents) {
     std::sort(ctrlEvents.begin(), ctrlEvents.end(), [](const midievent_ctrl_t& a, const midievent_ctrl_t& b) {
         if (a.tick == b.tick) {
             if (a.midiTime == b.midiTime) {
-                return a.message < b.message;
+                auto channelA = a.message & 0x0F;
+                auto channelB = b.message & 0x0F;
+                if (channelA == channelB) {
+                    return a.message < b.message;
+                }
+                return channelA < channelB;
             }
             return a.midiTime < b.midiTime;
         }
@@ -1241,7 +1256,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             // Find beginning notes
             if (note.start() >= blockLoopStart && note.start() < blockLoopEnd) {
                 auto it = std::find_if( m_heldNotes.begin(), m_heldNotes.end(), [&note](const note_t& held) {
-                    return held.pitch == note.pitch;
+                    return held.pitch == note.pitch && held.channel == note.channel;
                 });
                 if (it != m_heldNotes.end()) {
                     log_lf(Log::L_WARN, "Block %d-%d: %s ALREADY HELD at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
@@ -1254,13 +1269,13 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 }
             } else if (chaseNotes && note.start() < blockLoopStart && note.end() > blockLoopStart) {
                 auto it = std::find_if( m_heldNotes.begin(), m_heldNotes.end(), [&note](const note_t& held) {
-                    return held.pitch == note.pitch;
+                    return held.pitch == note.pitch && held.channel == note.channel;
                 });
                 // check in in heldNotes
                 if (it == m_heldNotes.end()) {
                     tick_t minStartTime = blockStart;
                     for (const auto& evt : noteEvents) {
-                        if (!evt.isNoteOn && evt.pitch  == note.pitch) {
+                        if (!evt.isNoteOn && evt.pitch  == note.pitch && evt.channel == note.channel) {
                             minStartTime = evt.globalTick;
                         }
                     }
@@ -1340,26 +1355,22 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         notesPre.update(blockStart, noteEvents, ctrlEvents);
         updateProfilingTime(procMidiStats.tm4SortEvents, tmr.getTimeReset());
         
+        bool once = false;
         for (auto& midiChannel : midiInputChannels) {
             if (midiChannel.type == midistage_type::INPUT_AUDIOSTAGE) {
-                auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
-                if (stageMidiInput) {
+                if (!once) {
                     noteEvents.clear();
                     ctrlEvents.clear();
-                    stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT);
-                    if (midiChannel.dstChannel > -1) {
-                        auto dstChannel = uint8_t(midiChannel.dstChannel);
-                        for (auto& note : noteEvents) {
-                            note.channel = dstChannel;
-                        }
-                        for (auto& ctrl : ctrlEvents) {
-                            ctrl.message &= ~0x0F;
-                            ctrl.message |= dstChannel & 0x0F;
-                        }
-                    }
+                    once = true;
+                }
+                auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
+                if (stageMidiInput) {
+                    stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT, midiChannel.srcChannel, midiChannel.dstChannel);
                 }
             }
         }
+        sortNoteEvents(noteEvents);
+        sortControlEvents(ctrlEvents);
 
         if (isSet(this->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
             recorder.recordNoteEvents(state, blockStart, blockEnd, noteEvents, ctrlEvents);
@@ -1399,9 +1410,9 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 
 }
 
-void audio_stage_t::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost) {
+void audio_stage_t::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost, int32_t midiChannelMatch, int32_t midiChannelRewrite) {
     auto& notesStage = isPost ? notesPost : notesPre;
-    notesStage.getNotesDelayed(tickLatencyCompensated, ticksPerBlock, evtsOut, ctrlEvts);
+    notesStage.getNotesDelayed(tickLatencyCompensated, ticksPerBlock, evtsOut, ctrlEvts, midiChannelMatch, midiChannelRewrite);
 }
 void audio_stage_t::sendMidiToEffect(const std::vector<midievent_note_t>& evtsOut, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect) {
     midi_data_processing_t events{ &evtsOut, &ctrlEvts, tickLatencyCompensated, bpm100 };
@@ -2257,25 +2268,38 @@ void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_not
     }
 }
 
-void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut) {
+void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut, int32_t midiChannelMatch, int32_t midiChannelRewrite) {
     if (tickLatencyCompensated > currentTick) {
         log_lf(Log::L_WARN, "tickLatencyCompensated=%d, ticksPerBlock=%f, currentTick=%d\n", tickLatencyCompensated, ticksPerBlock, currentTick);
         return;
     }
     if (!noteEvts.empty()) {
         for (auto& evt : noteEvts) {
+            if (midiChannelMatch != -1 && midiChannelMatch != evt.channel) {
+                continue;
+            }
             if (evt.globalTick >= tickLatencyCompensated && evt.globalTick < tickLatencyCompensated + ticksPerBlock) {
                 noteEvtsOuts.emplace_back(evt);
                 auto& evtCompensated = noteEvtsOuts.back();
                 evtCompensated.tickOffsetInBlock = (evtCompensated.globalTick - tickLatencyCompensated);
                 dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
+                if (midiChannelRewrite > -1) {
+                    evtCompensated.channel = midiChannelRewrite;
+                }
             }
         }
     }
     if (!ctrlEvts.empty()) {
         for (auto& evt : ctrlEvts) {
+            if (midiChannelMatch != -1 && midiChannelMatch != int32_t(evt.message & 0x0F)) {
+                continue;
+            }
             if (evt.tick >= tickLatencyCompensated && evt.tick < tickLatencyCompensated + ticksPerBlock) {
                 ctrlEvtsOut.emplace_back(evt);
+                if (midiChannelRewrite > -1) {
+                    auto& evt = ctrlEvtsOut.back();
+                    evt.message = (evt.message & 0xF0) | midiChannelRewrite;
+                }
             }
         }
         /* if (!ctrlEvtsOut.empty()) {

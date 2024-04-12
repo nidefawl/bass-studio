@@ -98,13 +98,19 @@ public:
 };
 
 inline bool operator==(const note_t& lhs, const note_t& rhs) {
-    return lhs.time == rhs.time && lhs.pitch == rhs.pitch;
+    return lhs.time == rhs.time && lhs.pitch == rhs.pitch && lhs.channel == rhs.channel;
 }
 inline bool operator!=(const note_t& lhs, const note_t& rhs) { return !operator==(lhs, rhs); }
 inline bool operator<(const note_t& lhs, const note_t& rhs) {
     if (lhs.time == rhs.time) {
         if (lhs.pitch == rhs.pitch) {
-            return lhs.len > rhs.len;
+            if (lhs.channel == rhs.channel) {
+                if (lhs.len == rhs.len) {
+                    return lhs.velocity < rhs.velocity;
+                }
+                return lhs.len < rhs.len;
+            }
+            return lhs.channel < rhs.channel;
         }
         return lhs.pitch < rhs.pitch;
     }
@@ -174,7 +180,7 @@ int cutIntersectingNotesFindDupe(std::vector<T>& m_list, T& n) {
     // find exact duplicate
     while (it != m_list.end()) {
         const T& val = *it++;
-        if (val.isEnabled() && val.pitch == n.pitch && val.time == n.time && val.len == n.len) {
+        if (val.isEnabled() && val.pitch == n.pitch && val.time == n.time && val.len == n.len && val.channel == n.channel) {
             return -1;
         }
     }
@@ -186,7 +192,10 @@ int cutIntersectingNotesFindDupe(std::vector<T>& m_list, T& n) {
             continue;
         if (c.pitch != n.pitch) {
             continue;
-        } 
+        }
+        if (c.channel != n.channel) {
+            continue;
+        }
         if (c.start() >= n.end() || c.end() <= n.start()) {
             continue;
         }

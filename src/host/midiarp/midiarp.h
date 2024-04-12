@@ -90,8 +90,8 @@ public:
     std::vector<marker_t> markers2;
 
 #ifdef DAW_DEBUG_ARP
-    std::array<int32_t, 128> debugNoteCounts{};
-    std::array<int32_t, 128> prevDebugNoteCounts{};
+    std::array<int32_t, 128*16> debugNoteCounts{};
+    std::array<int32_t, 128*16> prevDebugNoteCounts{};
     Host::note_event_validator_t inputValidator;
 #endif
 

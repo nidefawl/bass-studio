@@ -234,7 +234,7 @@ struct audio_stage_t : public IDelayLineStorage {
     virtual void sendNotesOff();
     virtual void onStartPlayback();
     virtual void sendMidiToEffect(const std::vector<midievent_note_t>& evtsOut, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect);
-    virtual void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost);
+    virtual void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost, int32_t midiChannelMatch, int32_t midiChannelRewrite);
     virtual void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
     virtual void onStopPlayback();
     const automated_param_t* getParameterAutomationModulation(const automatable_t* dev, int32_t paramIdx) const;

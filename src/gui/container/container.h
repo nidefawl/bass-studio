@@ -149,6 +149,12 @@ public:
     ivec2 toParentSpace(ivec2 in) const override {
         return getPosContent() + in;
     }
+    vec2 toParentSpace2f(vec2 in) const override {
+        return (vec2(getPosContent())) + in;
+    }
+    vec2 toContainerSpace2f(vec2 in) const override {
+        return in - (vec2(getPosContent()));
+    }
 
     ivec2 toScreenSpace(ivec2 in) const override {
         in += getPosContent();
@@ -258,31 +264,7 @@ public:
         gui->setParent(nullptr);
     }
 
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (this->contains(mpos)) {
-            ivec2 localMouse = this->toContainerSpace(mpos);
-            // iterate over guis vector in reverse
-            for (auto it = guis.rbegin(); it != guis.rend(); ++it) {
-                auto gui = *it;
-                if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-                    return true;
-                }
-            }
-            if (evt.type == MouseHitType::MOUSE_SCROLL) {
-                evt.requestFocus(this);
-                return true;
-            }
-            if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-                evt.requestFocus(this);
-                return true;
-            }
-            if (canMouseHit()) {
-                evt.requestFocus(this);
-                return true;
-            }
-        }
-        return false;
-    }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 
     void onIdle() override {
         for (guibase* gui : guis) {

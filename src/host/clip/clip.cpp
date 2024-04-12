@@ -186,7 +186,7 @@ int cutIntersectingEliminateDupes(std::vector<note_t>& m_list, note_t& n, bool e
                 it++;// allow exact duplicates
             }
             exactDupes++;
-        } else if (c.pitch != n.pitch) {
+        } else if (c.pitch != n.pitch || c.channel != n.channel) {
             it++;
         } else if (c.start() >= n.end() || c.end() <= n.start()) {
             it++;
@@ -219,7 +219,7 @@ bool cutSelfIntersecting(std::vector<note_t>& m_list) {
                     it = m_list.erase(it);
                     hasIntersections = true;
                     break;
-                } else if (c.pitch != n.pitch) {
+                } else if (c.pitch != n.pitch || c.channel != n.channel) {
                     it++;
                 } else if (c.start() >= n.end() || c.end() <= n.start()) {
                     it++;

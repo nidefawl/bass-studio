@@ -191,7 +191,7 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
     UIFont::bindFont(vg, instance);
     //  int32_t spacing = CONST_LAYOUT_MARGIN;
     //  ivec2 inset(spacing);
-    auto widthGain = size.y * 3;
+    auto widthGain = size.x * 0.20f;
     vec2 mtrPos  = pos;
     vec2 mtrSize = {size.x - widthGain - CONST_PADDING_TRACK_CONTROLS, size.y};
     vec2 gainPos  = {size.x - widthGain, mtrPos.y};
@@ -346,5 +346,9 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
 void gui_trackmeter::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
-    renderMeterAt(vg, theme, pos, size, meter);
+    if (bRenderHorizontal) {
+        renderMeterHorizontal(vg, theme, pos, size, meter);
+    } else {
+        renderMeterAt(vg, theme, pos, size, meter);
+    }
 }
