@@ -1317,16 +1317,18 @@ public:
     int32_t parentIdx = -1;
     int32_t childIdxTree = -1;
     track_t* trackPtr;
+    std::vector<DAW::removed_routings> removedRoutings;
 
     action_modify_track_remove() = delete;
 
-    action_modify_track_remove(String description, track_t* _trackPtr, int32_t _parentIdx, int32_t _childIdxTree) : action_base() {
+    action_modify_track_remove(String description, track_t* _trackPtr, int32_t _parentIdx, int32_t _childIdxTree, const std::vector<DAW::removed_routings>& _removedRoutings) : action_base() {
         desc     = std::move(description);
         trackPtr = _trackPtr;
         trackIdx = _trackPtr->projectIdx;
         localIdx = _trackPtr->localIdxFlat;
         parentIdx = _parentIdx;
         childIdxTree = _childIdxTree;
+        removedRoutings = _removedRoutings;
     }
 
     ~action_modify_track_remove() override = default;
@@ -1352,6 +1354,27 @@ public:
         dbgassert(localIdx == trackPtr->localIdxFlat);
         localIdx = trackPtr->localIdxFlat;
         trackPtr = nullptr;
+        auto host = daw->getHost();
+        for (auto& routing : removedRoutings) {
+            if (routing.inputChannel) {
+                auto stage = host->getAudioStage(routing.stageRef);
+                if (stage && stage->getTrack()) {
+                    stage->getTrack()->getStage()->inputChannel = *routing.inputChannel;
+                }
+            }
+            if (routing.outputChannel) {
+                auto stage = host->getAudioStage(routing.stageRef);
+                if (stage && stage->getTrack()) {
+                    stage->getTrack()->getStage()->outputChannel = *routing.outputChannel;
+                }
+            }
+            for (auto& midiInput : routing.midiInputChannels) {
+                auto stage = host->getAudioStage(routing.stageRef);
+                if (stage && stage->getTrack()) {
+                    stage->getTrack()->getStage()->midiInputChannels.push_back(midiInput);
+                }
+            }
+        }
     }
 
     void redo(DawInstance* daw) override {
@@ -1411,12 +1434,17 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
             pDawCtrl->removeTrackFromView(track, flags);
         }
     }
-    DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.stageId);
-    DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.inputStageId);
-    DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputStageId);
-    DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputPostStageId);
+    std::vector<DAW::removed_routings> removedRoutings;
+    auto v = DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.stageId);
+    removedRoutings.insert(removedRoutings.end(), v.begin(), v.end());
+    v = DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.inputStageId);
+    removedRoutings.insert(removedRoutings.end(), v.begin(), v.end());
+    v = DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputStageId);
+    removedRoutings.insert(removedRoutings.end(), v.begin(), v.end());
+    v = DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputPostStageId);
+    removedRoutings.insert(removedRoutings.end(), v.begin(), v.end());
     if (flags & FLG_TRK_CHANGE_USER) {
-        pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track, parentId, childTreeIdx));
+        pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track, parentId, childTreeIdx, removedRoutings));
     }
     tls.host->onTrackLayoutChange();
 }

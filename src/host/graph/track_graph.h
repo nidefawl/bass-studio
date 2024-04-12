@@ -107,8 +107,13 @@ namespace DAW {
         return nullptr;
     }
 
-
-    bool removeTrackRoutings(const track_vector& tracksFlat, audiostageid_i32 stageId);
+    struct removed_routings {
+        audio_stage_ref_t stageRef;
+        std::optional<DAW::channel_ref_t> inputChannel;
+        std::optional<DAW::channel_ref_t> outputChannel;
+        std::vector<DAW::midichannel_ref_t> midiInputChannels;
+    };
+    std::vector<removed_routings> removeTrackRoutings(const track_vector& tracksFlat, audiostageid_i32 stageId);
     /**
      * @brief Builds the Directed acyclic graph using track list and track routings
      * 

@@ -17,6 +17,7 @@
 #include "track_graph.h"
 #include "host/daw_channel.h"
 #include "host/host.h"
+#include <numeric>
 #include <vector>
 #include <deque>
 
@@ -110,15 +111,18 @@ namespace DAW {
         return numRemoved == 0;
     }
 
-    bool removeTrackRoutings(const track_vector& tracksFlat, const audiostageid_i32 stageId) {
-        size_t numRemoved = 0;
+    std::vector<removed_routings> removeTrackRoutings(const track_vector& tracksFlat, const audiostageid_i32 stageId) {
+        std::vector<removed_routings> removedRoutings;
         for (track_t* track : tracksFlat) {
-
+            size_t numRemoved = 0;
             track_impl_t* trackImpl  = track->getStage();
+            removed_routings removed;
+            removed.stageRef= trackImpl->toRef();
             const auto inputChannel  = trackImpl->inputChannel;
             const auto outputChannel = trackImpl->outputChannel;
             if (inputChannel.getType() != stage_type::INPUT_DEFAULT && isChannelConnected(inputChannel)) {
                 if (inputChannel.stage.stageRef.stageId == stageId) {
+                    removed.inputChannel = inputChannel;
                     trackImpl->inputChannel = ChannelNone();
                     numRemoved++;
                 }
@@ -127,14 +131,33 @@ namespace DAW {
             }
             if (outputChannel.getType() != stage_type::INPUT_DEFAULT && isChannelConnected(outputChannel)) {
                 if (inputChannel.stage.stageRef.stageId == stageId) {
+                    removed.outputChannel = trackImpl->outputChannel;
                     trackImpl->outputChannel = ChannelNone();
                     numRemoved++;
                 }
             } else {
                 dbgassert(outputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
             }
+            auto& midiInputChannels = trackImpl->midiInputChannels;
+            for (auto it = midiInputChannels.begin(); it != midiInputChannels.end();) {
+                auto& midiInputChannel = *it;
+                if (isMidiChannelConnected(midiInputChannel)) {
+                    if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
+                        if (midiInputChannel.stage.stageRef.stageId == stageId) {
+                            removed.midiInputChannels.push_back(midiInputChannel);
+                            it = midiInputChannels.erase(it);
+                            numRemoved++;
+                            continue;
+                        }
+                    }
+                }
+                ++it;
+            }
+            if (numRemoved) {
+                removedRoutings.push_back(removed);
+            }
         }
-        return numRemoved > 0;
+        return removedRoutings;
     }
 
     struct dependency_trackgraph_flattened_t {
