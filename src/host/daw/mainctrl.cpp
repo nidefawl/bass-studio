@@ -2505,7 +2505,7 @@ void DawInstance::onPluginsChanged() {
             }
             if (entry->getType() == gui_type::CTR_TYPE_NODES) {
                 auto trackCtr = guictr_cast<guictr_nodes_splitview>(entry);
-                trackCtr->reset();
+                // trackCtr->reset();
                 trackCtr->refresh();
             }
             return true;

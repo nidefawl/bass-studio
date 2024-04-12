@@ -603,6 +603,7 @@ struct project_layout_t {
 struct graph_node_layout_t {
     vec2 pos;
     vec2 size;
+    uint8_t busState = 0x3;
 };
 
 class project_t {

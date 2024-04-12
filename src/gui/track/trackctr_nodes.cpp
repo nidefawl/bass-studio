@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <glm/geometric.hpp>
@@ -587,6 +588,16 @@ public:
     bool isInput() {
         return bIsInput;
     }
+
+    bool isFolded() {
+        return bIsFolded;
+    }
+
+    void setFolded(bool b) {
+        bIsFolded = b;
+        updatePortList();
+    }
+
     template<class T>
     void setPorts(std::vector<T> _guiPorts) {
         for (auto port : guiPorts) {
@@ -780,6 +791,9 @@ class gui_graph_node_bus_audio : public gui_graph_node_bus {
 public:
     gui_graph_node_bus_audio(DAW::processing_track_node_t* node, bool _bIsInput, bool _bIsFolded)
         : gui_graph_node_bus(_bIsInput, _bIsFolded) {
+        setMeterFromNode(node);
+    }
+    void setMeterFromNode(DAW::processing_track_node_t* node) {
         if (node->trackOptional) {
             meter = bIsInput ? &node->trackOptional->audio->meterInput : &node->trackOptional->audio->meter;
         }
@@ -954,6 +968,13 @@ public:
         }
     }
 
+    void setBusFoldState(uint8_t state) {
+        busInput.setFolded(!(state & 1));
+        busOutput.setFolded(!(state & 2));
+        busMidiInput.setFolded(!(state & 4));
+        busMidiOutput.setFolded(!(state & 8));
+    }
+
     const DAW::processing_track_node_t* getProcessingNode() const {
         return node;
     }
@@ -964,6 +985,8 @@ public:
 
     void setNode(DAW::processing_track_node_t* _node) {
         node = _node;
+        busInput.setMeterFromNode(node);
+        busOutput.setMeterFromNode(node);
         guiText.setNode(_node);
         setPorts();
     }
@@ -975,6 +998,23 @@ public:
         busOutput.pos = ivec2(-padding - overlap, 0) + ivec2(size.x, hpt);
         busMidiInput.pos = busInput.getLeftBottom() + ivec2(0, padding);
         busMidiOutput.pos = busOutput.getLeftBottom() + ivec2(0, padding);
+        std::map<int32_t, graph_node_layout_t>& graphLayouts = dawCtrl->getDaw()->getProject()->graphLayouts;
+        if (graphLayouts.count(id)) {
+            uint8_t busState = 0;
+            if (!busInput.isFolded()) {
+                busState |= 1;
+            }
+            if (!busOutput.isFolded()) {
+                busState |= 2;
+            }
+            if (!busMidiInput.isFolded()) {
+                busState |= 4;
+            }
+            if (!busMidiOutput.isFolded()) {
+                busState |= 8;
+            }
+            graphLayouts[id].busState = busState;
+        }
 
         for (guibase* gui : guis) {
             gui->layout();
@@ -1584,7 +1624,9 @@ gui_graph::~gui_graph() {
     delete impl;
 }
 void gui_graph::refresh() {
-    reset();
+    impl->edgeList.clear();
+    removeGuis();
+    impl->procList   = nullptr;
     updateList(false);
 }
 void gui_graph::reset() {
@@ -1764,6 +1806,9 @@ bool gui_graph::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 }
 
 void gui_graph::updateList(bool resetPositions) {
+    if (!dawCtrl) {
+        return;
+    }
     auto const daw = dawCtrl->getDaw();
     std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
     {
@@ -1884,6 +1929,9 @@ void gui_graph::updateList(bool resetPositions) {
                 add(entry);
                 tmpListNew.push_back(entry);
             } else {
+                if (!hasGui(entry)) {
+                    add(entry);
+                }
                 entry->setNode(node);
             }
             if (!graphLayouts.count(entry->id) || resetPositions) {
@@ -1917,6 +1965,7 @@ void gui_graph::updateList(bool resetPositions) {
                 auto const nodeLayout = &graphLayouts[entry->id];
                 entry->pos  = nodeLayout->pos;
                 entry->size = nodeLayout->size;
+                entry->setBusFoldState(resetPositions ? 0x3 : nodeLayout->busState);
             }
         }
     }
@@ -2003,7 +2052,7 @@ void guictr_nodes_editor::render(NVGcontext* vg) {
 }
 
 void guictr_nodes_editor::refresh() {
-    impl->refreshQueued = 1;
+    graph.updateList(false);
 }
 
 void guictr_nodes_editor::resetPositions() {
