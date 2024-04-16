@@ -147,7 +147,6 @@ void clip_notes_t::removeAll(std::vector<note_t>& a) {
 }
 
 void clip_notes_t::setTo(std::set<note_t*>& notePtrs, tick_t offset) {
-    m_list.clear();
     for (note_t* notePtr : notePtrs) {
         note_t note = *notePtr;
         note.time += offset;
@@ -307,6 +306,16 @@ void clip_notes_t::copy(const clip_notes_t& obj) {
     lastNote  = obj.lastNote;
     minNote   = obj.minNote;
     maxNote   = obj.maxNote;
+    for (note_t* sel : selection) {
+        bool found = false;
+        for (note_t& ent : m_list) {
+            if (sel == &ent) {
+                found = true;
+                break;
+            }
+        }
+        dbgassert(found);
+    }
 }
 
 note_t* clip_notes_t::get(tick_t time, int32_t pitch) {
@@ -331,7 +340,7 @@ int clip_notes_t::getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, in
         //if (note.isIntersectTime(timeS, timeE))
         //    log_lf(Log::L_DEBUG, "note isIntersectTime vel timeS %d, timeE %d\n", timeS, timeE);
 
-        if (note.isIntersectTime(timeS, timeE) && note.start() > timeS && note.isIntersectVel(velL, velH)) {
+        if (note.isIntersectTime(timeS, timeE) && note.start() >= timeS && note.isIntersectVel(velL, velH)) {
             list.push_back(&note);
             count++;
         }
@@ -418,7 +427,7 @@ void clip_t::applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t
 }
 
 /* HOT CODEPATH */
-void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, bool forPlayback) const {
+void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, NoteSampleOptions options) const {
     notesView.m_list.clear();
     if (!enabled) {
         notesView.updateBounds();
@@ -428,7 +437,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
     const tick_t preLoopLen = !loopEnabled ? len : offsetStart > loopStart ? math::max(0, (/*loopEnd*/ loopStart + loopLen) - offsetStart)
                                                                            : math::max(0, loopStart - offsetStart);
 
-    auto itNote    = notes.m_list.cbegin();
+    auto itNoteBegin = notes.m_list.cbegin();
     auto itNoteEnd = notes.m_list.cend();
 
     /** add all pre-loop notes */
@@ -447,19 +456,23 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
     } else {
         listLoop.clear();
     }
-    for (; itNote != itNoteEnd; itNote++) {
+    
+    for (auto itNote = notes.m_list.cbegin(); itNote != itNoteEnd; itNote++) {
         const note_t& note = *itNote;
-        if (forPlayback && !note.isEnabled()) {
+        if (options.bCutMutedNotes && !note.isEnabled()) {
             continue;
         }
         if (fillLoop && (note.start() >= loopStart && note.start() < loopStart + loopLen)) {//note.isIntersectTime(loopStart, loopStart + loopLen)) {
-            listLoop.push_back(note);
+            auto nodeLoop = note;
+            nodeLoop.id = itNote - itNoteBegin;
+            listLoop.push_back(nodeLoop);
         }
         if (!inPreLoop)
             continue;
         auto localEndMin = math::min(localEnd, preLoopLen);
         note_t nnote = note;// copy
-        if (grooveIdx >= 0) {
+        nnote.id = itNote - itNoteBegin;
+        if (options.bApplyGroove && grooveIdx >= 0) {
             auto nextNote = getFirstAfter(notes.m_list, nnote.pitch, nnote.time);
             applyNoteQuantizationGroove(groove, nnote, nextNote);
         }
@@ -467,13 +480,13 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
         if (nnote.isIntersectTime(localStart, localEndMin)) {
             if (nnote.start() < localStart) {
                 /** cut pre-loop note on the left for render, ignore for playback */
-                if (!forPlayback) {
+                if (options.bCutNotes) {
                     nnote.cutLeft(localStart);
                 }
             }
             if (nnote.end() > localEndMin) {
                 /** always cut pre-loop note ends at pre-loop end */
-                if (!forPlayback || localEndMin == preLoopLen) {
+                if (options.bCutNotes || localEndMin == preLoopLen) {
                     nnote.cutRight(localEndMin);
                 }
             }
@@ -491,15 +504,15 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
         if (notesView.m_list.capacity() < numLoops * listLoop.size())
             notesView.m_list.reserve(numLoops * listLoop.size());
         for (auto i = firstLoop; i < firstLoop + numLoops; i++) {
-            itNote                  = listLoop.cbegin();
-            itNoteEnd               = listLoop.cend();
+            auto itNote = listLoop.cbegin();
+            itNoteEnd   = listLoop.cend();
             const tick_t posCurLoopStart = preLoopLen + (i * loopLenProcessing);
             const tick_t posCurLoopEnd   = posCurLoopStart + loopLenProcessing;
             const tick_t clipStart       = math::max(posCurLoopStart, localStart);
             const tick_t clipEnd         = math::min(posCurLoopEnd, localEnd);
             for (; itNote != itNoteEnd; itNote++) {
                 note_t note = *itNote;// copy
-                if (grooveIdx >= 0) {
+                if (options.bApplyGroove && grooveIdx >= 0) {
                     auto nextNote = getFirstAfter(listLoop, note.pitch, note.time);
                     note.time -= loopStart;
                     note.time += posCurLoopStart;
@@ -519,15 +532,15 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                     continue;
                 if (note.end() > localStart && note.start() < localEnd) {
                     if (note.start() < clipStart) {
-                        //if (forPlayback) {
+                        //if (!options.bCutNotes) {
                         //    continue;
                         //}
-                        if (!forPlayback) {
+                        if (options.bCutNotes) {
                             note.cutLeft(clipStart);
                         }
                     }
                     if (note.end() > clipEnd) {
-                        if (!forPlayback) {
+                        if (options.bCutNotes) {
                             note.cutRight(clipEnd);
                         }
                     }
@@ -541,7 +554,8 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 }
 
 /* HOT CODEPATH */
-int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& list) {
+int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& list, NoteSampleOptions options) const {
+    dbgassert(absStart <= absEnd);
     tick_t clipStart = start();
     tick_t clipEnd   = end();
     tick_t relStart  = absStart;
@@ -566,7 +580,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
         return 0;
 
     static thread_local clip_notes_t notesView; // TODO: avoid heap allocation
-    getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd), notesView, true);
+    getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd), notesView, options);
 #if 0
     size_t posOld = list.size();
     list.insert(list.end(), notesView.m_list.begin(), notesView.m_list.end());
@@ -577,16 +591,25 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
     }
     return posNew - posOld;
 #endif
-    for (auto& note : notesView.m_list) {
-        note.time += clipStart;
-        note.len = math::min(note.end(), clipEnd) - note.time;
-        if (cutIntersectingNotesFindDupe(list, note) == -1) {
-            continue;
+    if (options.bRelative) {
+        for (auto& note : notesView.m_list) {
+            auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
+                return n.time > note.time;
+            });
+            list.insert(it, note);
         }
-        auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
-            return n.time > note.time;
-        });
-        list.insert(it, note);
+    } else {
+        for (auto& note : notesView.m_list) {
+            note.time += clipStart;
+            note.len = math::min(note.end(), clipEnd) - note.time;
+            if (cutIntersectingNotesFindDupe(list, note) == -1) {
+                continue;
+            }
+            auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
+                return n.time > note.time;
+            });
+            list.insert(it, note);
+        }
     }
     return CtrSize(notesView.m_list);
 }
@@ -608,7 +631,7 @@ void clip_notes_t::selectIdxRange(size_t start, size_t end) {
 }
 
 void clip_notes_t::updateBounds() {
-    minNote   = note_t();
+    minNote   = note_t{.pitch = -1};
     maxNote   = minNote;
     firstNote = minNote;
     lastNote  = minNote;
@@ -618,6 +641,7 @@ void clip_notes_t::updateBounds() {
 
         minNote                 = beginNote;
         maxNote                 = beginNote;
+        firstNote               = beginNote;
         lastNote                = beginNote;
 
         it++;
@@ -900,7 +924,9 @@ void clip_t::copy(const clip_t& obj) {
 }
 
 void clip_notes_t::clear() {
-    copy({});
+    firstNote = lastNote = minNote = maxNote = note_t();
+    selection.clear();
+    m_list.clear();
 }
 
 bool clip_notes_t::isEmpty() const {
@@ -913,11 +939,11 @@ bool clip_notes_t::hasDuplicates() const {
 
 
 void clip_notes_t::getSelectionIndices(std::vector<size_t>& selIdx) const {
-    const auto begin = m_list.begin();
+    const auto begin = m_list.cbegin();
     for (note_t* n : selection) {
-        auto it = std::find_if(m_list.begin(), m_list.end(),
+        auto it = std::find_if(m_list.cbegin(), m_list.cend(),
                                [n](const note_t& note) { return &note == n; });
-        if (it == m_list.end()) {
+        if (it == m_list.cend()) {
             dbgassert(0);
         }
         selIdx.push_back(static_cast<size_t>(it - begin));
@@ -970,7 +996,7 @@ void clip_notes_t::addOrRemoveSelection(note_t* note) {
 
 void clip_notes_t::clearSelection() {
     selection.clear();
-    removeDuplicates();
+    // removeDuplicates();
 }
 
 void clip_notes_t::copySelectionTo(std::vector<note_t>& _out) const {
@@ -1307,9 +1333,11 @@ void clip_t::updateNoteView() const {
     if (dirty) {
         noteViewRender.reqRevision++;
         noteViewRenderFullClip.reqRevision++;
+        noteViewSelection.reqRevision++;
         dirty = false;
-        getNotesView(0, getLen(), noteViewRender, false);
+        getNotesView(0, getLen(), noteViewRender, {.bCutNotes = true, .bCutMutedNotes = false, .bApplyGroove = true});
         static_cast<clip_notes_t*>(&noteViewRenderFullClip)->copy(this->notes);
+        noteViewSelection.clear();
     }
 }
 
@@ -1327,4 +1355,31 @@ void quantizeNoteStartTime(std::vector<note_t>& notesPtrs, tick_t quantize) {
         auto newTime = math::roundfS32(note.start() / static_cast<float>(quantize)) * quantize;
         note.time    = newTime;
     }
+}
+
+void clip_t::updateNoteViewSelection() {
+    noteViewSelection.reqRevision++;
+}
+
+noteview_render_t& clip_t::getNoteViewSelection() const {
+    if (noteViewSelection.curRevision != noteViewSelection.reqRevision) {
+        noteViewSelection.clear();
+        getInTimeRange(start(), end(), -1, -1, noteViewSelection.m_list, {
+            .bCutNotes = false,
+            .bCutMutedNotes = false,
+            .bApplyGroove = false,
+        });
+        std::vector<note_t> sel;
+        for (note_t* pnote: notes.selection) {
+            auto idx = pnote - notes.m_list.data();
+            for (auto& note : noteViewSelection.m_list) {
+                if (note.id == idx) {
+                    sel.push_back(note);
+                }
+            }
+        }
+        noteViewSelection.m_list = std::move(sel);
+        noteViewSelection.curRevision = noteViewSelection.reqRevision;
+    }
+    return this->noteViewSelection;
 }

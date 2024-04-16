@@ -1,5 +1,6 @@
 
 
+#include "gui/container/container_layout_types.h"
 #include "gui/controls/button.h"
 #include "gui/linetess/pymachine.h"
 #include "appsettings.h"
@@ -38,8 +39,10 @@
 #include "host/audiosample.h"
 #include "host/host_pluginmanager.h"
 #include "appconfig.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "types.h"
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <nanovg.h>
@@ -51,6 +54,56 @@
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
 constexpr int32_t PIANOROLL_MIN_SCALE = 4;
 constexpr int32_t PIANOROLL_MAX_SCALE = 48;
+constexpr int32_t NOTES_LABEL_MIN_HEIGHT = 10;
+
+std::pair<note_t*, note_t*> getMinMaxTime(clip_view_t& view) {
+    std::pair<note_t*, note_t*> pairPtr{nullptr, nullptr};
+    for (auto& entry : view.m_notesDragged) {
+        auto& notes = entry.second.draggedSelection;
+        if (notes.empty()) {
+            continue;
+        }
+        auto min = std::min_element(notes.begin(), notes.end(),
+                                    [](note_t const& lhs, note_t const& rhs) { return lhs.time < rhs.time; });
+        auto max = std::max_element(notes.begin(), notes.end(),
+                                    [](note_t const& lhs, note_t const& rhs) { return (lhs.time + lhs.len) < (rhs.time + rhs.len); });
+
+        if (pairPtr.first == nullptr) {
+            pairPtr.first = &*min;
+        } else if (min != notes.end() && min->time < pairPtr.first->time) {
+            pairPtr.first = &*min;
+        }
+        if (pairPtr.second == nullptr) {
+            pairPtr.second = &*max;
+        } else if (max != notes.end() && (max->time + max->len) > (pairPtr.second->time + pairPtr.second->len)) {
+            pairPtr.second = &*max;
+        }
+    }
+
+    return pairPtr;
+}
+std::pair<note_t*, note_t*> getMinMaxSemitones(clip_view_t& view) {
+    std::pair<note_t*, note_t*> pairPtr{nullptr, nullptr};
+    for (auto& entry : view.m_notesDragged) {
+        auto& notes = entry.second.draggedSelection;
+        if (notes.empty()) {
+            continue;
+        }
+        auto minmax = std::minmax_element(notes.begin(), notes.end(),
+                                        [](note_t const& lhs, note_t const& rhs) { return lhs.pitch < rhs.pitch; });
+        if (pairPtr.first == nullptr) {
+            pairPtr.first = &*minmax.first;
+        } else if (minmax.first != notes.end() && minmax.first->pitch < pairPtr.first->pitch) {
+            pairPtr.first = &*minmax.first;
+        }
+        if (pairPtr.second == nullptr) {
+            pairPtr.second = &*minmax.second;
+        } else if (minmax.second != notes.end() && minmax.second->pitch > pairPtr.second->pitch) {
+            pairPtr.second = &*minmax.second;
+        }
+    }
+    return pairPtr;
+}
 
 class guictxtmenu_noteeditor final : public guictxtmenu {
     guictr_noteeditor* editor;
@@ -311,7 +364,7 @@ void guictr_clipeditor::render(NVGcontext* vg) {
         gui->render(vg);
         nvgRestore(vg);
     }
-    if (!clip) {
+    if (!clip && !(view.isAbsoluteTimeMode() && view.m_selectionView.totalClipCount > 0)) {
         renderText(vg, posContent + sizeContent * 0.5f, sizeContent * 0.5f, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
 }
@@ -757,110 +810,117 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
         renderFrame(vg, dragBegin, dragTo);
     }
 }
+bool gui_clipcontent_velocities::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    if (math::abs(yoffset) > 0.0) {
+        float scale = isCtrl(evt.kbmods) ? 1.0f : 4.0f;
+        auto velOffset = scale * yoffset;
 
+        //TODO: history entry
+        ThreadLock lock = dawCtrl->lockPlayThread();
+        view.visitClipView([&](clip_t* cl) {
+            auto& dragged = view.m_notesDragged[cl];
+            dragged.draggedSelection = dragged.draggedSelectionBegin;
+            auto it          = dragged.draggedSelection.begin();
+            const auto itEnd = dragged.draggedSelection.end();
+            while (it != itEnd) {
+                note_t& note  = *it;
+                note.velocity = math::min(127, math::max(0, math::rounddS32(note.velocity + velOffset)));
+                it++;
+            }
+            mergeDraggedNotes(dragMode, cl);
+            view.copySelectedNoteList();
+            return true;
+        });
+    }
+    return true;
+}
 void gui_clipcontent_velocities::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
     renderBackground(vg);
     renderGridLines(vg, theme, grid.gridList, size);
-    auto clip = view.clip();
-    if (!clip) {
-        if (dragMode == drag_frame) {
-            renderFrame(vg, dragBegin, dragTo);
-        }
-        return;
-    }
     float w = size.x;
     const float h = size.y;
-    const clip_notes_t& notes = clip->notes;
-    auto tickOffset = tick_t(0);
-    if (view.isAbsoluteTimeMode()) {
-        tickOffset = clip->time;
-    }
     NVGpaint paint{};
     paint.image     = -1;
     paint.customPar = 1;
     nvgShapeAntiAlias(vg, 0);
     const float extendCullCheck = 8.0f;
-    if (!notes.isEmpty()) {
-        const int32_t nw = 4;
-        const float r    = 4;
-        for (int i = 0; i < 2; i++) {
-            int nRendered = 0;
-            for (const note_t& note: notes.m_list) {
-                if ((i == 0) != note.isEnabled())
-                    continue;
-                auto nx = grid.tickToScreenD(note.time + tickOffset);
-                if (nx + nw / 2.0f < -extendCullCheck) continue;
-                if (nx - nw / 2.0f > w + extendCullCheck) continue;
-                auto nh     = velocityToFloat(note.velocity) * h;
-                auto insetx = calcInset(1, nw);
-                auto insety = calcInset(1, nh);
-                nvgBatchedRect(vg, float(nx - nw / 2.0f + insetx), size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
-                nRendered++;
-            }
-            if (nRendered) {
-                paint.innerColor = theme->getColor(i == 0 ? GuiColor::COL_NOTE : GuiColor::COL_NOTE_MUTE);
-                paint.innerColor.a *= 0.8f;
-                paint.renderType = 4;
-                nvgFillPaint(vg, paint);
-                nvgBatchedRender(vg);
-
-                for (const note_t& note: notes.m_list) {
-                    if ((i == 0) != note.isEnabled())
+    auto currentClip = view.clip();
+    view.visitClipView([&](clip_t* clip) {
+        auto& noteView = clip->getNoteViewRender();
+        auto& noteViewSel = clip->getNoteViewSelection();
+        auto pList = view.isAbsoluteTimeMode() ? &noteView.m_list : &clip->notes.m_list;
+        auto pListSelection = view.isAbsoluteTimeMode() ? &noteViewSel.m_list : &view.m_notesDragged[clip].draggedSelection;
+        auto tickOffset = tick_t(0);
+        if (view.isAbsoluteTimeMode()) {
+            tickOffset = clip->time;
+        }
+        if (currentClip == clip && view.isAbsoluteTimeMode()) {
+            tickOffset = currentClip->time;
+            notesViewTemp.clear();
+            currentClip->getNotesView(0, currentClip->getLen(), notesViewTemp, {.bCutNotes = true, .bCutMutedNotes = false, .bApplyGroove = false});
+            pList = &notesViewTemp.m_list;
+        }
+        if (!pListSelection->empty() || !pList->empty()) {
+            const int32_t nw = 4;
+            const float r    = 4;
+            const GuiColor::constant_t colors[3] = {GuiColor::COL_NOTE, GuiColor::COL_NOTE_MUTE, GuiColor::COL_NOTE_SELECTED};
+            auto colNote = rgbToNvg(clip->rgb);
+            for (int i = 0; i < 3; i++) {
+                paint.innerColor = i == 0 ? colNote : theme->getColor(colors[i]);
+                if (i < 2){
+                    paint.innerColor.a *= 0.8f;
+                }
+                auto noteList = i < 2 ? pList : pListSelection;
+                int nRendered = 0;
+                for (const note_t& note: *noteList) {
+                    if (!note.isEnabled() && i == 0) {
                         continue;
+                    } else if (note.isEnabled() && i == 1) {
+                        continue;
+                    }
+                    if (i >= 2) tickOffset = 0;
+                    auto nx = grid.tickToScreenD(note.time + tickOffset);
+                    if (nx + nw / 2.0f < -extendCullCheck) continue;
+                    if (nx - nw / 2.0f > w + extendCullCheck) continue;
+                    auto nh     = velocityToFloat(note.velocity) * h;
+                    auto insetx = calcInset(1, nw);
+                    auto insety = calcInset(1, nh);
+                    nvgBatchedRect(vg, float(nx - nw / 2.0f + insetx), size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
+                    nRendered++;
+                }
+                if (nRendered) {
+                    paint.renderType = 4;
+                    nvgFillPaint(vg, paint);
+                    nvgBatchedRender(vg);
+                    nRendered = 0;
+                }
+                for (const note_t& note: *noteList) {
+                    if (!note.isEnabled() && i == 0) {
+                        continue;
+                    } else if (note.isEnabled() && i == 1) {
+                        continue;
+                    }
                     auto nx = grid.tickToScreenD(note.time + tickOffset);
                     if (nx + r < -extendCullCheck) continue;
                     if (nx - r > w + extendCullCheck) continue;
                     auto nh = velocityToFloat(note.velocity) * h;
                     nvgBatchedRect(vg, float(nx - r), size.y - nh - r, r * 2, r * 2);
+                    nRendered++;
                 }
-                paint.renderType = 5;
-                nvgFillPaint(vg, paint);
-                nvgBatchedRender(vg);
+                if (nRendered) {
+                    paint.renderType = 5;
+                    nvgFillPaint(vg, paint);
+                    nvgBatchedRender(vg);
+                }
             }
         }
-    }
-    if (!notes.selection.empty()) {
-        const int32_t nw = 5;
-        const float r    = 5;
-        for (int i = 0; i < 2; i++) {
-            int nRendered = 0;
-            for (const note_t* pnote: notes.selection) {
-                if ((i == 0) != pnote->isEnabled())
-                    continue;
-                auto nx = grid.tickToScreenD(pnote->time + tickOffset);
-                if (nx + nw / 2.0f < -extendCullCheck) continue;
-                if (nx - nw / 2.0f > w + extendCullCheck) continue;
-                auto nh     = velocityToFloat(pnote->velocity) * h;
-                auto insetx = calcInset(1, nw);
-                auto insety = calcInset(1, nh);
-                nvgBatchedRect(vg, float(nx - nw / 2.0f + insetx), size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
-                nRendered++;
-            }
-            if (nRendered) {
-                paint.innerColor = theme->getColor(i == 0 ? GuiColor::COL_NOTE_SELECTED : GuiColor::COL_NOTE_MUTE);
-                paint.renderType = 4;
-                nvgFillPaint(vg, paint);
-                nvgBatchedRender(vg);
-                for (const note_t* pnote: notes.selection) {
-                    if ((i == 0) != pnote->isEnabled())
-                        continue;
-                    auto nx = grid.tickToScreenD(pnote->time + tickOffset);
-                    if (nx + r < -extendCullCheck) continue;
-                    if (nx - r > w + extendCullCheck) continue;
-                    auto nh = velocityToFloat(pnote->velocity) * h;
-                    nvgBatchedRect(vg, float(nx - r), size.y - nh - r, r * 2, r * 2);
-                }
-                paint.renderType = 5;
-                nvgFillPaint(vg, paint);
-                nvgBatchedRender(vg);
-            }
-        }
-    }
+        return true;
+    });
     nvgShapeAntiAlias(vg, USE_NANOVG_AA);
-    if (dragMode <= drag_frame) {
+    /* if (dragMode <= drag_frame) {
         const int32_t nw = 6;
         const float r = 6;
         ivec2 imouse  = toControlsObjectSpace(dawCtrl->m_mousePos, this);
@@ -888,7 +948,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
                 nvgFill(vg);
             }
         }
-    }
+    } */
     //  hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
     //  if (currentDragged.mode == dragmode::drag_node) {
     //    int32_t ptIdx = currentDragged.dataPt;
@@ -930,11 +990,23 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
         renderFrame(vg, dragBegin, dragTo);
     }
 }
-
-void gui_clipcontent_notes::renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted) {
+void gui_clipcontent_notes::renderNoteLabels(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, bool bRenderPosLen) {
+    if (scale >= NOTES_LABEL_MIN_HEIGHT) {
+        for (auto& note : clipNotes) {
+            auto nx = grid.tickToScreenD(note.time + tickOffset);
+            auto nw = grid.tickLenToScreen(note.len);
+            if (nx + nw < renderPos.x - 4)
+                continue;
+            if (nx > renderPos.x + renderSize.x + 4)
+                continue;
+            renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, note.time + tickOffset, false);
+        }
+    }
+}
+void gui_clipcontent_notes::renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, float inset, NVGcolor color, int32_t shading, bool renderMuted) {
     if (!clipNotes.empty()) {
         NVGpaint paint{};
-        paint.customPar  = 1;
+        paint.customPar  = shading;
         paint.image      = -1;
         paint.innerColor = color;
         int nRendered = 0;
@@ -1107,41 +1179,41 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         renderGridLines(vg, theme, grid.gridList, cs);
 
     }
-    auto& selView = view.m_selectionView;
-    clip_t* currentClip = view.clip();
-    // this deref is not safe
-    for (auto& [trackEntry, vecClips] : selView.tracks) {
-        for (clip_t* clip : vecClips) {
-            if (!view.clipRef().isTrackValid(trackEntry.track)
-                || !trackEntry.track->getClips().hasClip(clip)) {
-                continue;
+    clip_t* const currentClip = view.clip();
+    view.visitClipView([&](clip_t* cl) {
+        if (cl != currentClip) {
+            auto& notesView = cl->getNoteViewRender();
+            if (!notesView.isEmpty()) {
+                renderClipNoteRects(vg, notesView.m_list, {}, cs, cl->time, scale, 1.0f, rgbToNvg(cl->rgb), 1, false);
+                renderNoteLabels(vg, notesView.m_list, {}, cs, cl->time, scale, false);
             }
-            auto tickOffset = clip->time;
-            if (!view.isAbsoluteTimeMode() && currentClip) {
-                tickOffset += currentClip->offsetStart;
-                if (clip != currentClip) {
-                    tickOffset += clip->time - currentClip->time;
-                }
-            }
-            // auto col = track == view.track() ? clip->rgb : track->rgb;
-            auto col = clip->rgb;
-            auto& notesView = clip->getNoteViewRender();
-            if (notesView.isEmpty()) {
-                continue;
-            }
-            renderClipNoteRects(vg, notesView.m_list, {}, cs, tickOffset, scale, 1.0f, rgbToNvg(col), false);
         }
-    }
+        return true;
+    });
+
     auto tickOffset = tick_t(0);
     if (currentClip) {
-        auto& clipNotes = currentClip->notes;
+        auto pList = currentClip->notes.m_list;
         if (view.isAbsoluteTimeMode()) {
             tickOffset = currentClip->time;
+            currentClip->getNotesView(0, currentClip->getLen(), notesViewTemp, {.bCutNotes = true, .bCutMutedNotes = false, .bApplyGroove = false});
+            pList = notesViewTemp.m_list;
         }
-        renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE_MUTE), true);
-        renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE), false);
+
+
+        //TODO: culling or caching
+        // Render muted notes
+        renderClipNoteRects(vg, pList, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE_MUTE), 1, true);
+        // Render enabled notes
+        renderClipNoteRects(vg, pList, {}, cs, tickOffset, scale, 1.0f, rgbToNvg(currentClip->rgb), 4, false);
+        renderNoteLabels(vg, pList, {}, cs, tickOffset, scale, false);
+
+
+        if (view.isAbsoluteTimeMode()) {
+            tickOffset -= currentClip->offsetStart;
+        }
     }
-    
+
     auto x = float(grid.tickToScreenD(view.m_cursor.start));
     if (view.m_cursor.start == view.m_cursor.end) {
         if (x >= -2 && x < cs.x + 2) {
@@ -1170,9 +1242,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
     }
 
-    clip_t* clip = view.clip();
     auto track = view.track();
-    if (clip && track && track->audio) {
+    if (currentClip && track && track->audio) {
 
 
         /* auto daw = dawCtrl->getDaw();
@@ -1184,10 +1255,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 if (note.isRealtime()) {
                     continue;
                 }
-                tick_t pos = note.start() - clip->start() + clip->offsetStart;
-                if (clip->isLoopEnabled()) {
-                    if (pos > clip->loopStart) {
-                        pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+                tick_t pos = note.start() - currentClip->start() + currentClip->offsetStart;
+                if (currentClip->isLoopEnabled()) {
+                    if (pos > currentClip->loopStart) {
+                        pos = currentClip->loopStart + (pos - currentClip->loopStart) % currentClip->loopLen;
                     }
                 }
                 //TODO: CULL
@@ -1211,10 +1282,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 if (note.isRealtime()) {
                     continue;
                 }
-                tick_t pos = note.start() - clip->start() + clip->offsetStart;
-                if (clip->isLoopEnabled()) {
-                    if (pos > clip->loopStart) {
-                        pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+                tick_t pos = note.start() - currentClip->start() + currentClip->offsetStart;
+                if (currentClip->isLoopEnabled()) {
+                    if (pos > currentClip->loopStart) {
+                        pos = currentClip->loopStart + (pos - currentClip->loopStart) % currentClip->loopLen;
                     }
                 }
                 //TODO: CULL
@@ -1237,10 +1308,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 // nvgBeginPath(vg);
 
                 for (auto& note: heldNotesArp) {
-                    tick_t pos = note.start() - clip->start() + clip->offsetStart;
-                    if (clip->isLoopEnabled()) {
-                        if (pos > clip->loopStart) {
-                            pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+                    tick_t pos = note.start() - currentClip->start() + currentClip->offsetStart;
+                    if (currentClip->isLoopEnabled()) {
+                        if (pos > currentClip->loopStart) {
+                            pos = currentClip->loopStart + (pos - currentClip->loopStart) % currentClip->loopLen;
                         }
                     }
                     //TODO: CULL
@@ -1249,7 +1320,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 NVGpaint paint{};
                 paint.image      = -1;
                 paint.innerColor = theme->getColor(GuiColor::COL_NOTE_ARP);
-                paint.customPar  = 1234;
+                paint.customPar  = 4;
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
             }
@@ -1261,10 +1332,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             std::vector<marker_t> markers = track->audio->getArpMarkers(i);//TODO: NOT THREADSAFE
             if (markers.size()) {
                 for (marker_t& m: markers) {
-                    tick_t pos = m.time - clip->start() + clip->offsetStart;
-                    if (clip->isLoopEnabled()) {
-                        if (pos > clip->loopStart) {
-                            pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+                    tick_t pos = m.time - currentClip->start() + currentClip->offsetStart;
+                    if (currentClip->isLoopEnabled()) {
+                        if (pos > currentClip->loopStart) {
+                            pos = currentClip->loopStart + (pos - currentClip->loopStart) % currentClip->loopLen;
                         }
                     }
                     auto nx = grid.tickToScreenD(pos);
@@ -1298,56 +1369,86 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
     }
 
-    if (currentClip) {
-        const auto& notes = currentClip->notes;
-        int n2 = 0;
-        if (dragMode >= drag_notes_move) {
-            for (note_t& note: view.draggedSelection) {
+    NVGpaint paint{};
+    paint.image      = -1;
+    paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
+    paint.customPar  = 4;
+    if (dragMode >= drag_notes_move) {
+        view.visitClipView([&](clip_t* cl) {
+            if (!view.m_notesDragged.count(cl))
+                return true;
+            int32_t n = 0;
+            for (note_t& note: view.m_notesDragged[cl].draggedSelection) {
                 renderNote(vg, this, &note, scale, tickOffset);
-                n2++;
+                n++;
             }
-        } else {
+            if (n) {
+                nvgFillPaint(vg, paint);
+                nvgBatchedRender(vg);
+            }
+            return true;
+        });
+    } else {
+        if (view.isAbsoluteTimeMode()) {
+            view.visitClipView([&](clip_t* cl) {
+                auto& notes = cl->notes;
+                if (notes.selection.empty())
+                    return true;
+                int32_t n = 0;
+                auto& view = cl->getNoteViewSelection();
+                for (auto& note : view.m_list) {
+                    renderNote(vg, this, &note, scale, 0);
+                    n++;
+                }
+                if (n) {
+                    nvgFillPaint(vg, paint);
+                    nvgBatchedRender(vg);
+                    renderNoteLabels(vg, view.m_list, {}, cs, 0, scale, true);
+                }
+                return true;
+            });
+        } else if (currentClip) {
+            const auto& notes = currentClip->notes;
+            int32_t n = 0;
             for (note_t* pnote: notes.selection) {
                 renderNote(vg, this, pnote, scale, tickOffset);
-                n2++;
+                n++;
+            }
+            if (n) {
+                nvgFillPaint(vg, paint);
+                nvgBatchedRender(vg);
             }
         }
-        if (n2) {
-            NVGpaint paint{};
-            paint.image      = -1;
-            paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
-            paint.customPar  = 1234;
-            nvgFillPaint(vg, paint);
-            nvgBatchedRender(vg);
+    }
+
+    if (scale >= NOTES_LABEL_MIN_HEIGHT && !view.isAbsoluteTimeMode() && currentClip) {
+        const auto& notes = currentClip->notes;
+        for (auto& note: notes.m_list) {
+            auto nx = grid.tickToScreenD(note.time + tickOffset);
+            auto nw = grid.tickLenToScreen(note.len);
+            if (nx + nw < -4)
+                continue;
+            if (nx > w + 4)
+                continue;
+            tick_t absPos = note.start();
+            if (currentClip) {
+                absPos = note.start() + currentClip->start() - currentClip->offsetStart;
+            }
+            renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, false);
         }
-        if (scale >= 10) {
-            for (auto& note: notes.m_list) {
-                auto nx = grid.tickToScreenD(note.time + tickOffset);
-                auto nw = grid.tickLenToScreen(note.len);
-                if (nx + nw < -4)
-                    continue;
-                if (nx > w + 4)
-                    continue;
-                tick_t absPos = note.start();
-                if (currentClip) {
-                    absPos = note.start() + currentClip->start() - currentClip->offsetStart;
-                }
-                renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, false);
+        for (note_t* pNote: notes.selection) {
+            auto& note = *pNote;
+            auto nx = grid.tickToScreenD(note.time + tickOffset);
+            auto nw = grid.tickLenToScreen(note.len);
+            if (nx + nw < -4)
+                continue;
+            if (nx > w + 4)
+                continue;
+            tick_t absPos = note.start();
+            if (currentClip) {
+                absPos = note.start() + currentClip->start() - currentClip->offsetStart;
             }
-            for (note_t* pNote: notes.selection) {
-                auto& note = *pNote;
-                auto nx = grid.tickToScreenD(note.time + tickOffset);
-                auto nw = grid.tickLenToScreen(note.len);
-                if (nx + nw < -4)
-                    continue;
-                if (nx > w + 4)
-                    continue;
-                tick_t absPos = note.start();
-                if (currentClip) {
-                    absPos = note.start() + currentClip->start() - currentClip->offsetStart;
-                }
-                renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, true);
-            }
+            renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, true);
         }
     }
 
@@ -1363,57 +1464,70 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
     clip_t* contextClip    = view.clip();
     int32_t pitch          = math::floorfS32(toNoteF(local.y));
     int32_t velClicked     = screenToVel(local.y, size.y);
-    auto tickOffset = tick_t(0);
+    // auto tickOffset = tick_t(0);
     note_t* contextNote    = nullptr;
-    if (view.isAbsoluteTimeMode()) {
-        for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
-            if (!view.clipRef().isTrackValid(trackEntry.track)) {
-                continue;
-            }
-            for (clip_t* cl : vecClips) {
-                clip_notes_t& notes = cl->notes;
-                tickOffset = cl->time;
-                if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
-                    int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
-                    contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
-                } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-                    contextNote = notes.get(tickExact - tickOffset, pitch);
-                }
-                if (contextNote) {
-                    contextClip = cl;
-                    break;
-                }
-            }
+    note_t* viewNote = nullptr;
+    view.visitClipViewReverse([&](clip_t* cl) {
+        notesViewTemp.clear();
+        clip_notes_t* clNotes = &cl->notes;
+        if (view.isAbsoluteTimeMode()) {
+            cl->getInTimeRange(cl->start(), cl->end(), -1, -1, notesViewTemp.m_list, {
+                .bCutNotes = true,
+                .bCutMutedNotes = cl != contextClip,
+                .bApplyGroove = false,
+                .bRelative = !view.isAbsoluteTimeMode(),
+            });
+            clNotes = &notesViewTemp;
         }
-    } else if (contextClip) {
-        clip_notes_t& notes = contextClip->notes;
         if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
             int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
-            contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+            viewNote = getMinDistNoteVel(*clNotes, tickExact, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
         } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-            contextNote = notes.get(tickExact - tickOffset, pitch);
+            viewNote = clNotes->get(tickExact, pitch);
+        }
+        if (viewNote) {
+            if (view.isAbsoluteTimeMode()) {
+                dbgassert(viewNote->id >= 0 && size_t(viewNote->id) < cl->notes.m_list.size());
+                auto note = &cl->notes.m_list[viewNote->id];
+                if (note) {
+                    contextNote = note;
+                    contextClip = cl;
+                    return false;
+                }
+            } else {
+                contextNote = viewNote;
+                contextClip = cl;
+                return false;
+            }
+        }
+        viewNote = nullptr;
+        return true;
+    });
+
+    if (view.isAbsoluteTimeMode() && view.clip() != contextClip) {
+        auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
+        if (assert_expr(clipEditor)) {
+            clipEditor->selectEditClip(contextClip);
         }
     }
-    if (!contextClip) {
-        return;
-    }
-    if (view.isAbsoluteTimeMode()) {
-        view.setSelected(contextClip);
-    }
-    clip_notes_t& notes    = contextClip->notes;
+
     tick_t tickGridNearest = grid.screenToTickSnap(local.x, SNAP_ON);
     tick_t tickGridLeast   = grid.prev(tickExact);
     bool inSelection = false;
-    if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES || guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
+    if (contextClip && (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES || guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY)) {
         if (evt.type == M_EVT_DOUBLECLICK) {
-            ThreadLock lock            = dawCtrl->lockPlayThread();
+            ThreadLock lock  = dawCtrl->lockPlayThread();
+            clip_notes_t& notes = contextClip->notes;
             clip_cursor_t cursorBefore = view.m_cursor;
-            notes.clearSelection();
-            clip_notes_t notesBefore = notes;
-            if (contextNote) {
-                contextNote = notes.get(tickExact - tickOffset, pitch);
-            }
+            view.visitClipView([&](clip_t* cl) {
+                cl->notes.clearSelection();
+                return true;
+            });
+            // if (contextNote) {
+            //     contextNote = notes.get(tickExact - tickOffset, pitch);
+            // }
             String desc = "???";
+            view.m_notesDragged[contextClip].dragStartNotes = notes;
             if (contextNote) {
                 if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
                     view.m_cursor.start = view.m_cursor.end = contextNote->start();
@@ -1427,52 +1541,61 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                 if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
                     note_t note;
                     note.pitch = pitch;
-                    note.time  = tickGridLeast - tickOffset;
+                    note.time = contextClip->getLoopedTick(tickGridLeast - contextClip->time);
                     note.len   = grid.getTickLength();
                     notes.paste(note);
-                    contextNote = notes.get(tickGridLeast - tickOffset, pitch);
+                    contextNote = notes.get(note.time, pitch);
                     if (assert_expr(contextNote)) {
                         notes.selection.insert(contextNote);
-                        view.copySelectedNoteList();
                         dawCtrl->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
                         desc = "Add Note";
-                        setSelectionFrame(getMinMaxTime(view.draggedSelection));
+                        setSelectionFrame(getMinMaxTime(view));
+                        contextClip->updateNoteViewSelection();
                     }
                 }
             }
-            dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
+            dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, cursorBefore));
+            view.copySelectedNoteList();
             contextClip->setDirty();
             view.updateNotePitches(false);
             inSelection = true;
         } else {
-
+            clip_notes_t& notes = contextClip->notes;
             if (contextNote) {
+                beginDragNote = *contextNote;
                 inSelection = stl_contains(notes.selection, contextNote);
-                if (!inSelection) {
-                    notes.clearSelection();
-                    if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
-                        int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
-                        contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
-                    } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-                        contextNote = notes.get(tickExact - tickOffset, pitch);
-                    }
-                    if (contextNote) {
-                        beginDragNote = *contextNote;
-                        notes.selection.insert(contextNote);
-                        view.copySelectedNoteList();
-                        inSelection = true;
-                    }
-                }
-                if (contextNote) {
-                    beginDragNote = *contextNote;
-                }
             }
+            if (!inSelection && !isShift(evt.kbmods) && !isCtrl(evt.kbmods)) {
+                view.visitClipView([&](clip_t* cl) {
+                    cl->notes.clearSelection();
+                    cl->updateNoteViewSelection();
+                    return true;
+                });
+            }
+            if (contextNote) {
+                if (isShift(evt.kbmods)) {
+                    if (!inSelection) {
+                        notes.selection.insert(contextNote);
+                        inSelection = true;
+                    } else {
+                        notes.selection.erase(contextNote);
+                        inSelection = false;
+                    }
+                } else if (!inSelection) {
+                    notes.selection.insert(contextNote);
+                    inSelection = true;
+                }
+                contextClip->updateNoteViewSelection();
+            }
+            view.copySelectedNoteList();
             if (inSelection) {
                 if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
                     dragMode = drag_velocity;
-                } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-                    auto distL = local.x - grid.tickToScreenD(contextNote->start() + tickOffset);
-                    auto distR = grid.tickToScreenD(contextNote->end() + tickOffset) - local.x;
+                } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES && viewNote) {
+                    auto distL = local.x - grid.tickToScreenD(viewNote->start());
+                    auto distR = grid.tickToScreenD(viewNote->end()) - local.x;
+                    distL = math::abs(distL);
+                    distR = math::abs(distR);
                     if (distL < DRAG_RANGE) {
                         dragMode = drag_note_left;
                     }
@@ -1488,38 +1611,75 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                         }
                     }
                 }
-                notes.removeDuplicates();
-                view.copySelectedNoteList();
-
-                notes.selection.clear();
-                setSelectionFrame(getMinMaxTime(view.draggedSelection));
                 dragStartCursor = view.m_cursor;
+                setSelectionFrame(getMinMaxTime(view));
             }
         }
     }
     if (!inSelection) {
-        if (notes.selection.empty())
-            notes.removeDuplicates();
+        if (contextClip && contextClip->notes.selection.empty())
+            contextClip->notes.removeDuplicates();
+
+        selectionsStart.clear();
+        view.visitClipView([&](clip_t* cl) {
+            selectionsStart[cl] = cl->notes.selection;
+            return true;
+        });
         if (isShift(evt.kbmods)) {
-            selectionStart = notes.selection;
-            if (math::abs(view.m_cursor.start - tickGridNearest) < math::abs(view.m_cursor.end - tickGridNearest)) {
+            if (math::abs(view.m_cursor.start - tickGridNearest) < math::abs(tickGridNearest - view.m_cursor.end)) {
                 view.m_cursor.start = tickGridNearest;
             } else {
                 view.m_cursor.end = tickGridNearest;
             }
         } else {
-            selectionStart.clear();
-            notes.clearSelection();
+            if (contextClip)
+                contextClip->notes.clearSelection();
             view.m_cursor.start = view.m_cursor.end = tickGridNearest;
-            view.copySelectedNoteList();
+            if (view.isAbsoluteTimeMode()) {
+                // find clicked clip on same track
+                if (!contextClip || view.m_cursor.start < contextClip->start() || view.m_cursor.start >= contextClip->end()) {
+                    view.setSelected(nullptr);
+                    auto& tracks = view.m_selectionView.tracks;
+                    for (auto& [trGuiEntry, clips]: tracks) {
+                        if (!contextClip || stl_contains(clips, contextClip)) {
+                            for (auto& clip: clips) {
+                                if (clip->start() <= view.m_cursor.start && clip->end() > view.m_cursor.start) {
+                                    auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
+                                    if (assert_expr(clipEditor)) {
+                                        clipEditor->selectEditClip(clip);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!view.clip()) {
+                        view.visitClipViewReverse([&](clip_t* cl) {
+                            if (cl->start() <= view.m_cursor.start && cl->end() > view.m_cursor.start) {
+                                auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
+                                if (assert_expr(clipEditor)) {
+                                    clipEditor->selectEditClip(cl);
+                                }
+                                return false;
+                            }
+                            return true;
+                        });
+                    }
+                }
+            }
         }
 
         dragMode = drag_frame;
+    } else {
+        setSelectionFrameFromView();
     }
     if (dragMode != drag_none) {
         dragBegin = local;
         dragTo    = local;
+        dragBeginPitch = math::floorfS32(toNoteFNoFolding(dragBegin.y));
+        dragBeginTick = grid.screenToTick(dragBegin.x);
     }
+    view.copySelectedNoteList();
     setStatusText();
     setGlobalSelectionFromClipSelection();
 }
@@ -1544,31 +1704,29 @@ void gui_clipcontent::setStatusText() {
     }
     clip_notes_t& notes = clip->notes;
     String selStatus    = StringFormat("%zu notes selected", notes.selection.size());
-    if (!view.draggedSelection.empty()) {
-        auto pair = getMinMaxSemitones(view.draggedSelection);
-        if (pair.first && pair.second) {
-            selStatus += " - ";
-            selStatus += StringFormat("pitch %d to %d", pair.first->pitch, pair.second->pitch);
-            selStatus += " - ";
-            auto pair2 = getMinMaxTime(view.draggedSelection);
-            selStatus += StringFormat("time %d to %d", pair2.first->start(), pair2.second->end());
-        }
+    auto pair = getMinMaxSemitones(view);
+    if (pair.first && pair.second) {
+        selStatus += " - ";
+        selStatus += StringFormat("pitch %d to %d", pair.first->pitch, pair.second->pitch);
+        selStatus += " - ";
+        auto pair2 = getMinMaxTime(view);
+        selStatus += StringFormat("time %d to %d", pair2.first->start(), pair2.second->end());
     }
     dawCtrl->setStatusText(selStatus);
 }
 
 void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
-    clip_t* clip = view.clip();
-    if (!clip)
-        return;
-    clip_notes_t& notes = clip->notes;
-    auto tickOffset = tick_t(0);
-    if (view.isAbsoluteTimeMode()) {
-        tickOffset = clip->time;
+    const bool bIsShift = isShift(evt.kbmods);
+    const bool bIsCtrl = isCtrl(evt.kbmods);
+    dragTo = evt.relMousepos;
+    clip_t* const contextClip = view.clip();
+    auto tickOffset1 = tick_t(0);
+    if (view.isAbsoluteTimeMode() && contextClip) {
+        tickOffset1 = contextClip->time;
+        tickOffset1 -= contextClip->offsetStart;
     }
     if (dragMode == drag_none)
         return;
-    dragTo = evt.relMousepos;
     if (dragMode == drag_frame && (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES || guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY)) {
         *evt.dragDistance     = ivec2(0);
 
@@ -1581,7 +1739,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         tick_t tickOver  = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 
         clip_cursor_t& cursor = view.m_cursor;
-        if (isShift(evt.kbmods)) {
+        if (bIsShift) {
             tick_t gridSize = grid.getTickLength();
             if (math::abs(cursor.start - tickOver) < math::abs(cursor.end - tickOver)) {
                 if (tickOver < cursor.end - gridSize) {
@@ -1593,46 +1751,141 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                 }
             }
         } else {
-            cursor.start = grid.screenToTickSnap(xStart, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-            cursor.end   = grid.screenToTickSnap(xEnd, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-            setSelectionFrame(getMinMaxTime(view.draggedSelection));
+            setSelectionFrame(getMinMaxTime(view));
+            cursor.start = math::min(cursor.start, grid.screenToTickSnap(xStart, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON));
+            cursor.end = math::max(cursor.end, grid.screenToTickSnap(xEnd, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON));
         }
-        notes.selection = selectionStart;
         if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-
             int32_t pitchLow  = math::floorfS32(toNoteF(yEnd));
             int32_t pitchHigh = math::floorfS32(toNoteF(yStart));
-            std::vector<note_t*> inRangeList;
-            //TODO: selection must happen from looped notes in absolute mode
-            if (notes.getInRange(tickStart - tickOffset, tickEnd - tickOffset, pitchLow, pitchHigh, inRangeList)) {
-                std::set<note_t*>& selection = notes.selection;
-                for (note_t* inSelRange: inRangeList) {
-                    auto result = selection.insert(inSelRange);
-                    if (!result.second) {
-                        selection.erase(result.first);
+            if (view.isAbsoluteTimeMode()) {
+                view.visitClipViewReverse([&](clip_t* cl) {
+                    std::set<note_t*>& selection = cl->notes.selection;
+                    if (bIsShift || bIsCtrl) {
+                        cl->notes.selection = selectionsStart[cl];
+                    } else {
+                        cl->notes.selection.clear();
+                    }
+                    auto rangeBegin = math::max(tickStart, cl->start());
+                    auto rangeEnd   = math::min(tickEnd, cl->end());
+                    if (rangeBegin < rangeEnd) {
+                        notesViewTemp.clear();
+                        cl->getInTimeRange(rangeBegin, rangeEnd, -1, -1, notesViewTemp.m_list, {
+                            .bCutNotes = true,
+                            .bCutMutedNotes = cl != contextClip,
+                            .bApplyGroove = false,
+                        });
+                        // create vector of all note.id in range
+                        std::vector<int32_t> ids;
+                        for (note_t& inSelRange: notesViewTemp.m_list) {
+                            if (inSelRange.pitch >= pitchLow && inSelRange.pitch <= pitchHigh
+                                && !stl_contains(ids, inSelRange.id)) {
+                                ids.push_back(inSelRange.id);
+                            }
+                        }
+                        for (auto id: ids) {
+                            auto* pNode = &cl->notes.m_list[id];
+                            auto result = selection.insert(pNode);
+                            if (bIsCtrl) {
+                                selection.erase(result.first);
+                            }
+                        }
+                    }
+                    cl->updateNoteViewSelection();
+                    return true;
+                });
+            } else if (contextClip) {
+                clip_notes_t& notes = contextClip->notes;
+                if (bIsShift || bIsCtrl) {
+                    notes.selection = selectionsStart[contextClip];
+                } else {
+                    notes.selection.clear();
+                }
+                std::vector<note_t*> inRangeList;
+                if (notes.getInRange(tickStart, tickEnd, pitchLow, pitchHigh, inRangeList)) {
+                    std::set<note_t*>& selection = notes.selection;
+                    for (note_t* inSelRange: inRangeList) {
+                        auto result = selection.insert(inSelRange);
+                        if (bIsCtrl) {
+                            selection.erase(result.first);
+                        }
                     }
                 }
+                contextClip->updateNoteViewSelection();
             }
         } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
             int32_t velLow  = screenToVel(yEnd, size.y);
             int32_t velHigh = screenToVel(yStart, size.y);
-            std::vector<note_t*> inRangeList;
-            //TODO: selection must happen from looped notes in absolute mode
-            if (notes.getStartsInRangeV(tickStart - tickOffset, tickEnd - tickOffset, velLow, velHigh, grid.pixelsToTicks(VEL_SELECT_DISTANCE), inRangeList)) {
-                std::set<note_t*>& selection = notes.selection;
-                for (note_t* inSelRange: inRangeList) {
-                    auto result = selection.insert(inSelRange);
-                    if (!result.second) {
-                        selection.erase(result.first);
+            if (view.isAbsoluteTimeMode()) {
+                view.visitClipViewReverse([&](clip_t* cl) {
+                    std::set<note_t*>& selection = cl->notes.selection;
+                    if (bIsShift || bIsCtrl) {
+                        cl->notes.selection = selectionsStart[cl];
+                    } else {
+                        cl->notes.selection.clear();
+                    }
+                    // auto rangeBegin = math::max(tickStart, cl->start());
+                    // auto rangeEnd   = math::min(tickEnd, cl->end());
+                    auto rangeBegin = tickStart;
+                    auto rangeEnd   = tickEnd;
+                    if (rangeBegin < rangeEnd && (tickEnd >= cl->start() && tickStart < cl->end())) {
+                        notesViewTemp.clear();
+                        cl->getInTimeRange(cl->start(), cl->end(), -1, -1, notesViewTemp.m_list, {
+                            .bCutNotes = true,
+                            .bCutMutedNotes = cl != contextClip,
+                            .bApplyGroove = false,
+                        });
+                        // create vector of all note.id in range
+                        std::vector<int32_t> ids;
+                        for (note_t& inSelRange: notesViewTemp.m_list) {
+                            if (inSelRange.start() >= rangeBegin && inSelRange.start() < rangeEnd
+                             && inSelRange.velocity >= velLow && inSelRange.velocity <= velHigh
+                                && !stl_contains(ids, inSelRange.id)) {
+                                ids.push_back(inSelRange.id);
+                            }
+                        }
+                        for (auto id: ids) {
+                            auto* pNode = &cl->notes.m_list[id];
+                            auto result = selection.insert(pNode);
+                            if (bIsCtrl) {
+                                selection.erase(result.first);
+                            }
+                        }
+                    }
+                    cl->updateNoteViewSelection();
+                    return true;
+                });
+            } else if (contextClip) {
+                clip_notes_t& notes = contextClip->notes;
+                if (bIsShift || bIsCtrl) {
+                    notes.selection = selectionsStart[contextClip];
+                } else {
+                    notes.selection.clear();
+                }
+                std::vector<note_t*> inRangeList;
+                if (notes.getStartsInRangeV(tickStart, tickEnd, velLow, velHigh, grid.pixelsToTicks(VEL_SELECT_DISTANCE), inRangeList)) {
+                    std::set<note_t*>& selection = notes.selection;
+                    for (note_t* inSelRange: inRangeList) {
+                        auto result = selection.insert(inSelRange);
+                        if (bIsCtrl) {
+                            selection.erase(result.first);
+                        }
                     }
                 }
+                contextClip->updateNoteViewSelection();
             }
         }
-        if (!isShift(evt.kbmods)) {
-            if (!notes.selection.empty()) {
-                auto pair = getMinMaxTime(notes.selection);
-                expandSelectionFrame(pair);
-            }
+        if (!bIsShift) {
+            // if (!clip->notes.selection.empty()) {
+            //     auto pair = getMinMaxTime(clip->notes.selection);
+            //     expandSelectionFrame(pair);
+            // }
+            // view.visitClipView([&](clip_t* cl) {
+            //     return true;
+            // });
+            setSelectionFrameFromView();
+        } else {
+            //
         }
         view.copySelectedNoteList();
 
@@ -1641,20 +1894,24 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         *evt.dragDistance = ivec2(0);
         //    tick_t tickOver = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
         //    clip_cursor_t& cursor = view.m_cursor;
-        ThreadLock lock       = dawCtrl->lockPlayThread();
         int32_t velOffset     = (dragBegin.y - dragTo.y) * 127 / size.y;
-        view.draggedSelection = view.draggedSelectionBegin;
-        {
-            auto it          = view.draggedSelection.begin();
-            const auto itEnd = view.draggedSelection.end();
-            while (it != itEnd) {
-                note_t& note  = *it;
-                note.velocity = math::min(127, math::max(0, note.velocity + velOffset));
-                it++;
+        view.visitClipView([&](clip_t* cl) {
+            auto& dragged = view.m_notesDragged[cl];
+            dragged.draggedSelection = dragged.draggedSelectionBegin;
+            {
+                auto it          = dragged.draggedSelection.begin();
+                const auto itEnd = dragged.draggedSelection.end();
+                while (it != itEnd) {
+                    note_t& note  = *it;
+                    note.velocity = math::min(127, math::max(0, note.velocity + velOffset));
+                    it++;
+                }
             }
-        }
+            return true;
+        });
+        ThreadLock lock       = dawCtrl->lockPlayThread();
         mergeDraggedNotes(dragMode);
-        setSelectionFrame(getMinMaxTime(view.draggedSelection));
+        setSelectionFrameFromView();
 
     } else if (dragMode >= drag_notes_move) {
         ThreadLock lock = dawCtrl->lockPlayThread();
@@ -1665,10 +1922,10 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 
 
         tick_t gridSize       = grid.getTickLength();
-        int32_t pitchStart    = math::floorfS32(toNoteFNoFolding(dragBegin.y));
+        int32_t pitchStart    = dragBeginPitch;
         int32_t pitchEnd      = math::floorfS32(toNoteFNoFolding(dragTo.y));
         tick_t pitchOffset    = pitchEnd - pitchStart;
-        tick_t tickStartExact = grid.screenToTick(dragBegin.x);
+        tick_t tickStartExact = dragBeginTick;
         tick_t tickEndExact   = grid.screenToTick(dragTo.x);
         tick_t timeOffsetEx   = tickEndExact - tickStartExact;
 
@@ -1676,7 +1933,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         const note_t noteDrag = this->beginDragNote;
         if (modeMove == SNAP_ON) {
             tick_t handlePos = dragMode == drag_note_right ? noteDrag.end() : noteDrag.start();
-            handlePos += tickOffset;
+            handlePos += tickOffset1;
             if (math::abs(timeOffsetEx) > gridSize / 4) {
                 tick_t next = grid.next(handlePos + timeOffsetEx) - handlePos;
                 tick_t prev = grid.prev(handlePos + timeOffsetEx) - handlePos;
@@ -1695,59 +1952,64 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         } else {
             timeOffset = timeOffsetEx;
         }
-        view.draggedSelection = view.draggedSelectionBegin;
-        {
-            auto it          = view.draggedSelection.begin();
-            const auto itEnd = view.draggedSelection.end();
-            while (it != itEnd) {
-                note_t& note = *it;
-                if (dragMode == drag_note_left) {
-                    auto before = getFirstBefore(notes.m_list, note.pitch, note.time);
-                    note.time      = math::min(note.end() - 1, note.start() + timeOffset);
-                    note.len       = math::max(math::max(1, gridSize/4), note.len - timeOffset);
-                    if (before) {
-                        if (note.start() < before->end()) {
-                            note.cutLeft(before->end());
+        view.visitClipView([&](clip_t* cl) {
+            auto& dragged = view.m_notesDragged[cl];
+            dragged.draggedSelection = dragged.draggedSelectionBegin;
+            {
+                auto& notes = cl->notes;
+                auto it          = dragged.draggedSelection.begin();
+                const auto itEnd = dragged.draggedSelection.end();
+                while (it != itEnd) {
+                    note_t& note  = *it;
+                    if (dragMode == drag_note_left) {
+                        auto before = getFirstBefore(notes.m_list, note.pitch, note.time);
+                        note.time      = math::min(note.end() - 1, note.start() + timeOffset);
+                        note.len       = math::max(math::max(1, gridSize/4), note.len - timeOffset);
+                        if (before) {
+                            if (note.start() < before->end()) {
+                                note.cutLeft(before->end());
+                            }
                         }
-                    }
-                } else if (dragMode == drag_note_right) {
-                    auto after = getFirstAfter(notes.m_list, note.pitch, note.time);
-                    note.len      = math::max(math::max(1, gridSize/4), note.len + timeOffset);
-                    if (after) {
-                        if (note.end() > after->start()) {
-                            note.cutRight(after->start());
+                    } else if (dragMode == drag_note_right) {
+                        auto after = getFirstAfter(notes.m_list, note.pitch, note.time);
+                        note.len      = math::max(math::max(1, gridSize/4), note.len + timeOffset);
+                        if (after) {
+                            if (note.end() > after->start()) {
+                                note.cutRight(after->start());
+                            }
                         }
-                    }
-                } else {
-                    note.time += timeOffset;
-                    if (layoutRoll.bFoldNotes) {
-                        note.pitch = math::floorfS32(view.nextFoldNote(note.pitch, pitchOffset));
                     } else {
-                        note.pitch += pitchOffset;
+                        note.time += timeOffset;
+                        if (layoutRoll.bFoldNotes) {
+                            note.pitch = math::floorfS32(view.nextFoldNote(note.pitch, pitchOffset));
+                        } else {
+                            note.pitch += pitchOffset;
+                        }
                     }
+                    it++;
                 }
+                {
+                    std::vector<note_t> notesDraggedCopy = dragged.draggedSelection;
+                    std::vector<note_t> notesDraggedNoDuplicates = dragged.draggedSelection;
 
-                it++;
-            }
-        }
-        {
-            std::vector<note_t> notesDraggedCopy = view.draggedSelection;
-            std::vector<note_t> notesDraggedNoDuplicates = view.draggedSelection;
-
-            auto it    = notesDraggedCopy.begin();
-            auto itEnd = notesDraggedCopy.end();
-            while (it != itEnd) {
-                note_t& noteTest = *it++;
-                if (cutIntersectingEliminateDupes(notesDraggedNoDuplicates, noteTest, false) > 0) {
-                    notesDraggedCopy = notesDraggedNoDuplicates;
-                    it    = notesDraggedCopy.begin();
-                    itEnd = notesDraggedCopy.end();
+                    auto it    = notesDraggedCopy.begin();
+                    auto itEnd = notesDraggedCopy.end();
+                    while (it != itEnd) {
+                        note_t& noteTest = *it++;
+                        if (cutIntersectingEliminateDupes(notesDraggedNoDuplicates, noteTest, false) > 0) {
+                            notesDraggedCopy = notesDraggedNoDuplicates;
+                            it    = notesDraggedCopy.begin();
+                            itEnd = notesDraggedCopy.end();
+                        }
+                    }
+                    dragged.draggedSelection = notesDraggedNoDuplicates;
                 }
             }
-            view.draggedSelection = notesDraggedNoDuplicates;
-        }
+            return true;
+        });
         mergeDraggedNotes(dragMode);
-        setSelectionFrame(getMinMaxTime(view.draggedSelection));
+        // setSelectionFrame(getMinMaxTime(view));
+        setSelectionFrameFromView();
     }
     setGlobalSelectionFromClipSelection();
 }
@@ -1761,27 +2023,49 @@ bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
         }
         if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES && evt.type <= MouseHitType::MOUSE_RIGHT) {
-            auto clip  = view.clip();
-            if (clip) {
-                auto pitch = toNoteF(local.y);
-                auto tickExact  = grid.screenToTickSnap(local.x, SNAP_OFF);
-                auto tickOffset = tick_t(0);
+            auto pitch = toNoteF(local.y);
+            auto tickExact  = grid.screenToTickSnap(local.x, SNAP_OFF);
+            auto tickRange = grid.pixelsToTicks(DRAG_RANGE+2);
+            auto currentClip = view.clip();
+            view.visitClipViewReverse([&](clip_t* cl) {
+                const note_t* contextNote = nullptr;
                 if (view.isAbsoluteTimeMode()) {
-                    tickOffset = clip->time;
+                    auto rangeBegin = math::max(tickExact-tickRange, cl->start());
+                    auto rangeEnd   = math::min(tickExact+tickRange, cl->end());
+                    if (rangeBegin >= rangeEnd) {
+                        return true;
+                    }
+                    notesViewTemp.clear();
+                    cl->getInTimeRange(rangeBegin, rangeEnd, -1, -1, notesViewTemp.m_list, {
+                        .bCutNotes = true,
+                        .bCutMutedNotes = cl != currentClip,
+                        .bApplyGroove = false,
+                    });
+                    //TODO: selection must happen from looped notes in absolute mode
+                    contextNote = notesViewTemp.get(tickExact, math::floorfS32(pitch));
+                } else {
+                    contextNote = cl->notes.get(tickExact, math::floorfS32(pitch));
                 }
-                //TODO: selection must happen from looped notes in absolute mode
-                const auto* contextNote = clip->notes.get(tickExact - tickOffset, math::floorfS32(pitch));
                 if (contextNote) {
-                    auto distL = local.x - grid.tickToScreenD(contextNote->start() + tickOffset);
-                    auto distR = grid.tickToScreenD(contextNote->end() + tickOffset) - local.x;
+                    auto distL = local.x - grid.tickToScreenD(contextNote->start());
+                    auto distR = grid.tickToScreenD(contextNote->end()) - local.x;
+                    distL = math::abs(distL);
+                    distR = math::abs(distR);
+                    bool bHit = false;
                     if (distL < DRAG_RANGE) {
                         evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
+                        bHit = true;
                     }
                     if (distR < DRAG_RANGE && (distL >= DRAG_RANGE || distR < distL)) {
                         evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
+                        bHit = true;
+                    }
+                    if (bHit) {
+                        return false;
                     }
                 }
-            }
+                return true;
+            });
         }
         evt.requestFocus(this);
         return true;
@@ -1789,34 +2073,82 @@ bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 
-void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
-    clip_t* clip        = view.clip();
-    clip_notes_t& notes = clip->notes;
-    notes               = view.dragStartNotes;
+bool gui_clipcontent::mergeDraggedNotes(dragmode mergeMode, clip_t* cl) {
+    auto& dragged = view.m_notesDragged[cl];
+    if (dragged.draggedSelection.empty())
+        return false;
+    auto& notes = cl->notes;
+    notes  = dragged.dragStartNotes;
     notes.selection.clear();
     if (mergeMode != dragmode::drag_notes_copy) {
-        notes.removeAllKeepDuplicates(view.draggedSelectionBegin);
+        dbgassert(!notes.hasDuplicates());
+        notes.removeAllKeepDuplicates(dragged.draggedSelectionBegin);
     }
-    for (note_t& note: view.draggedSelection) {
+    for (note_t& note: dragged.draggedSelection) {
         notes.paste(note, true);
     }
-    notes.selectLastN(view.draggedSelection.size());
+    notes.selectLastN(dragged.draggedSelection.size());
     notes.updateBounds();
-    clip->setDirty();
-    view.updateNotePitches(false);
+    cl->setDirty();
+    return true;
 }
+
+int32_t gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
+    int32_t merged = 0;
+    view.visitClipView([&](clip_t* cl) {
+        if (mergeDraggedNotes(mergeMode, cl)) {
+            merged++;
+        }
+        return true;
+    });
+    view.updateNotePitches(false);
+    return merged;
+}
+
+void gui_clipcontent::setSelectionFrameFromView() {
+    if (view.isAbsoluteTimeMode()) {
+        note_t minNote{ .pitch = -1 };
+        note_t maxNote{ .pitch = -1 };
+        view.visitClipView([&](clip_t* cl) {
+            if (cl->notes.selection.empty()) {
+                return true;
+            }
+            auto& noteView = cl->getNoteViewSelection();
+            if (!noteView.isEmpty()) {
+                noteView.updateBounds();
+                tick_t offset = !view.isAbsoluteTimeMode() ? cl->time : 0;
+                if (minNote.pitch < 0 || noteView.firstNote.start() - offset < minNote.start()) {
+                    minNote = noteView.firstNote;
+                    maxNote.time -= offset;
+                }
+                if (maxNote.pitch < 0 || noteView.lastNote.end() - offset > maxNote.end()) {
+                    maxNote = noteView.lastNote;
+                    maxNote.time -= offset;
+                }
+            }
+            return true;
+        });
+
+        if (minNote.pitch >= 0 && maxNote.pitch >= 0) {
+            auto& cursor = view.m_cursor;
+            cursor.start = minNote.start();
+            cursor.end   = maxNote.end();
+        }
+    }
+}
+
 void gui_clipcontent::expandSelectionFrame(std::pair<note_t*, note_t*> minMax) {
     if (minMax.first && minMax.second) {
         auto& cursor = view.m_cursor;
-        cursor.start = math::min(cursor.start, minMax.first->time + getTickOffset());
-        cursor.end   = math::max(cursor.end, (minMax.second->time + minMax.second->len + getTickOffset()));
+        cursor.start = math::min(cursor.start, minMax.first->time);
+        cursor.end   = math::max(cursor.end, (minMax.second->time + minMax.second->len));
     }
 }
 void gui_clipcontent::setSelectionFrame(std::pair<note_t*, note_t*> minMax) {
     if (minMax.first && minMax.second) {
         auto& cursor = view.m_cursor;
-        cursor.start = minMax.first->time + getTickOffset();
-        cursor.end   = minMax.second->time + minMax.second->len + getTickOffset();
+        cursor.start = minMax.first->time;
+        cursor.end   = minMax.second->time + minMax.second->len;
     }
 }
 void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
@@ -1825,31 +2157,71 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
         dragMode = drag_none;
         return;
     }
-    clip_t* clip = view.clip();
-    if (clip) {
-        if (dragMode >= drag_notes_move) {
-            ThreadLock lock = dawCtrl->lockPlayThread();
-            clip_notes_t& notes = clip->notes;
-            mergeDraggedNotes(dragMode);
-            setSelectionFrame(getMinMaxTime(notes.selection));
-            String action;
-            if (dragMode == drag_velocity) {
-                action = "Modify note velocities";
-            } else if (dragMode >= drag_note_left) {
-                action = "Modify note lengths";
-            } else {
-                action = "Move notes";
-            }
-            dawCtrl->getDaw()->pushHist(new action_modify_notes(action, view, view.dragStartNotes, dragStartCursor));
-            view.copySelectedNoteList();
-            clip->setDirty();
-            view.updateNotePitches(false);
+    if (dragMode >= drag_notes_move) {
+        ThreadLock lock = dawCtrl->lockPlayThread();
+        mergeDraggedNotes(dragMode);
+        view.visitClipView([&](clip_t* cl) {
+            cl->updateNoteViewSelection();
+            return true;
+        });
+        setSelectionFrameFromView();
+        String action;
+        if (dragMode == drag_velocity) {
+            action = "Modify note velocities";
+        } else if (dragMode >= drag_note_left) {
+            action = "Modify note lengths";
+        } else {
+            action = "Move notes";
         }
+        dawCtrl->getDaw()->pushHist(new action_modify_notes(action, view, dragStartCursor));
+        view.copySelectedNoteList();
+        view.updateNotePitches(false);
     }
     dragMode = drag_none;
+    setSelectionFrameFromView();
     setGlobalSelectionFromClipSelection();
 }
 
+std::shared_ptr<notes_clipboard> ClipboardFromView(clip_view_t& view, const clip_cursor_t& cursor, bool bMerged = false) {
+    std::shared_ptr<notes_clipboard> clipboard;
+    view.visitClipViewReverse([&](clip_t* cl) {
+        auto& notes = cl->notes;
+        if (notes.selection.empty()) {
+            return true;
+        }
+        if (!clipboard) {
+            clipboard = std::make_shared<notes_clipboard>();
+            clipboard->cursorRange = cursor.end - cursor.start;
+        }
+        tick_t offset = -(cursor.start );
+        if (!view.isAbsoluteTimeMode()) {
+            clipboard->notes.setTo(notes.selection, offset);
+        } else {
+            clip_notes_t noteViewSelection;
+            cl->getInTimeRange(cl->start(), cl->end(), -1, -1, noteViewSelection.m_list, {
+                .bCutNotes = false,
+                .bCutMutedNotes = false,
+                .bApplyGroove = false,
+            });
+            for (note_t* pnote: notes.selection) {
+                auto idx = pnote - notes.m_list.data();
+                for (auto& note : noteViewSelection.m_list) {
+                    if (note.id == idx) {
+                        auto noteOffset = note;
+                        noteOffset.time += offset;
+                        clipboard->notes.m_list.push_back(noteOffset);
+                    }
+                }
+            }
+        }
+        return bMerged;
+    });
+    if (clipboard) {
+        clipboard->notes.removeDuplicates();
+        clipboard->notes.updateBounds();
+    }
+    return clipboard;
+};
 bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     auto daw = dawCtrl->getDaw();
     auto command = ctxt.type;
@@ -1862,102 +2234,149 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     if (!clip) {
         return false;
     }
-    clip_notes_t& notes = clip->notes;
     if (kevt.type != K_RELEASE) {
         clip_cursor_t& cursor          = view.m_cursor;
-        const clip_notes_t notesBefore = notes; // copy
         clip_cursor_t cursorBefore     = cursor;// copy
         bool handled                   = false;
         bool edit                      = false;
         String desc                    = "???";
+        // view.m_notesDragged[clip].dragStartNotes = clip->notes;// copy
         if (kevt.type == K_PRESS) {
+            clip_notes_t& notes = clip->notes;
             if (command == CMD_SELECT_ALL) {
-                notes.clearSelection();
-                notes.updateBounds();
-                notes.selectIdxRange(0, notes.m_list.size());
+                if (view.isAbsoluteTimeMode()) {
+                    view.visitClipView([&](clip_t* cl) {
+                        notesViewTemp.clear();
+                        cl->notes.clearSelection();
+                        cl->getInTimeRange(cl->start(), cl->end(), -1, -1, notesViewTemp.m_list, {
+                            .bCutNotes = false,
+                            .bCutMutedNotes = false,
+                            .bApplyGroove = false,
+                            .bRelative = false,
+                        });
+                        for (auto& note: notesViewTemp.m_list) {
+                            auto pNote = &cl->notes.m_list[note.id];
+                            cl->notes.selection.insert(pNote);
+                        }
+                        return true;
+                    });
+                } else {
+                    notes.clearSelection();
+                    notes.updateBounds();
+                    notes.selectIdxRange(0, notes.m_list.size());
+                }
                 view.copySelectedNoteList();
-                setSelectionFrame(getMinMaxTime(notes.selection));
+                setSelectionFrame(getMinMaxTime(view));
                 handled = true;
             }
-            if (command == CMD_DELETE && !notes.selection.empty()) {
-                notes.deleteSelectedNotes(notes);
+            if (command == CMD_DELETE) {
+                view.visitClipView([&](clip_t* cl) {
+                    if (!cl->notes.selection.empty()) {
+                        cl->notes.deleteSelectedNotes(cl->notes);
+                        cl->setDirty();
+                        edit    = true;
+                    }
+                    return true;
+                });
+                if (edit) {
+                    desc    = "Delete notes";
+                }
                 handled = true;
-                edit    = true;
-                desc    = "Delete notes";
             }
-            if (command == CMD_MUTE && !notes.selection.empty()) {
-                //        notes.muteToggleSelectedNotes(notes);
-                muteNotesToggle(view.draggedSelection);
-                mergeDraggedNotes(dragmode::drag_notes_move);
-                notes.updateBounds();
-                // setSelectionFrame(getMinMaxTime(notes.selection));
+            if (command == CMD_MUTE) {
+                if (!notes.selection.empty()) {
+                    //        notes.muteToggleSelectedNotes(notes);
+                    view.visitClipView([&](clip_t* cl) {
+                        muteNotesToggle(view.m_notesDragged[cl].draggedSelection);
+                        return true;
+                    });
+                    mergeDraggedNotes(dragmode::drag_notes_move);
+                    notes.updateBounds();
+                    // setSelectionFrame(getMinMaxTime(notes.selection));
+                    edit    = true;
+                    desc    = "Mute notes";
+                }
                 handled = true;
-                edit    = true;
-                desc    = "Mute notes";
-            } else if (command == CMD_CUT && !notes.selection.empty()) {
-                auto clipboard = std::make_shared<notes_clipboard>();
-                clipboard->cursorRange = cursor.end - cursor.start;
-                clipboard->notes.setTo(notes.selection, -(cursor.start - getTickOffset()));
-                daw->setNotesClipboard(clipboard);
-                notes.deleteSelectedNotes(notes);
+            } else if (command == CMD_CUT) {
+                auto clipboard = ClipboardFromView(view, cursor, true);
+                view.visitClipViewReverse([&](clip_t* cl) {
+                    auto& notes = cl->notes;
+                    if (notes.selection.empty()) {
+                        return true;
+                    }
+                    notes.deleteSelectedNotes(notes);
+                    cl->setDirty();
+                    cl->updateNoteViewSelection();
+                    edit    = true;
+                    return true;
+                });
+                if (edit && clipboard) {
+                    daw->setNotesClipboard(clipboard);
+                    desc = "Cut notes";
+                }
                 handled = true;
-                edit    = true;
-                desc    = "Cut notes";
-            } else if (command == CMD_COPY && !notes.selection.empty()) {
-                auto clipboard = std::make_shared<notes_clipboard>();
-                clipboard->cursorRange = cursor.end - cursor.start;
-                clipboard->notes.setTo(notes.selection, -(cursor.start - getTickOffset()));
-                daw->setNotesClipboard(clipboard);
+            } else if (command == CMD_COPY) {
+                auto clipboard = ClipboardFromView(view, cursor, true);
+                if (clipboard) {
+                    daw->setNotesClipboard(clipboard);
+                    desc    = "Copy notes";
+                }
                 handled = true;
-                desc    = "Copy notes";// never appears in list
-            } else if (command == CMD_DUPLICATE && !notes.selection.empty()) {
-                clip_notes_t tmpClipboard;
+            } else if (command == CMD_DUPLICATE) {
+                if (!notes.selection.empty()) {
 #ifndef NDEBUG
-                for (note_t* selPtr: notes.selection) {
-                    dbgassert(notes.has(selPtr));
-                }
+                    for (note_t* selPtr: notes.selection) {
+                        dbgassert(notes.has(selPtr));
+                    }
 #endif
-                tmpClipboard.setTo(notes.selection, -(cursor.start - getTickOffset()));
-                tick_t cursorRange = cursor.end - cursor.start;
-                cursor.start += cursorRange;
-                cursor.end += cursorRange;
-                notes.clearSelection();
-                view.copySelectedNoteList();
-                view.draggedSelection.clear();
-                for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
-                    note.time += cursor.start - getTickOffset();
-                    view.draggedSelection.push_back(note);
-                }
-                mergeDraggedNotes(dragmode::drag_notes_copy);
+                    auto clipboard = ClipboardFromView(view, cursor);
+                    if (clipboard) {
+                        // tmpClipboard.setTo(notes.selection, -(cursor.start - (!view.isAbsoluteTimeMode() ? clip->time : 0)));
+                        tick_t cursorRange = cursor.end - cursor.start;
+                        cursor.start += cursorRange;
+                        cursor.end += cursorRange;
+                        notes.clearSelection();
+                        view.copySelectedNoteList();
+                        auto& dragged = view.m_notesDragged[clip].draggedSelection;
+                        dragged.clear();
+                        tick_t offset = view.isAbsoluteTimeMode() ? clip->time : 0;
+                        auto cursorPos = view.isAbsoluteTimeMode() ? clip->getLoopedTick(cursor.start - offset) : cursor.start;
+                        for (auto& note : clipboard->notes.m_list) {
+                            dragged.push_back(note);
+                            dragged.back().time += cursorPos;
+                        }
+                        mergeDraggedNotes(dragmode::drag_notes_move);
 #ifndef NDEBUG
-                for (note_t* selPtr: notes.selection) {
-                    dbgassert(notes.has(selPtr));
-                }
+                        for (note_t* selPtr: notes.selection) {
+                            dbgassert(notes.has(selPtr));
+                        }
 #endif
-                auto pair = getMinMaxTime(notes.selection);
-                if (pair.second)
-                    grid.makeTickVisible(pair.second->end() + getTickOffset());
-                handled = true;
-                edit    = true;
-                desc    = "Duplicate notes";
-            } else if (command == CMD_PASTE && daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES && !daw->getNotesClipboard()->empty()) {
-                auto& clipboard = daw->getNotesClipboard();
-                notes.clearSelection();
-                view.copySelectedNoteList();
-                view.draggedSelection.clear();
-                for (note_t note: clipboard->notes.m_list) {//not using reference here, copy while iterating
-                    // note.time += cursor.start;
-                    note.time += cursor.start - getTickOffset();
-                    view.draggedSelection.push_back(note);
+                        grid.makeTickVisible(cursor.end);
+                        edit    = true;
+                        desc    = "Duplicate notes";
+                    }
                 }
-                mergeDraggedNotes(dragmode::drag_notes_move);
-                view.m_cursor.end = cursor.start + clipboard->cursorRange;
-                auto pair = getMinMaxTime(notes.selection);
-                if (pair.second)
-                    grid.makeTickVisible(pair.second->end() + getTickOffset());
                 handled = true;
-                edit    = true;
-                desc    = "Paste notes";
+            } else if (command == CMD_PASTE) {
+                if (daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES && !daw->getNotesClipboard()->empty()) {
+                    auto& clipboard = daw->getNotesClipboard();
+                    notes.clearSelection();
+                    view.copySelectedNoteList();
+                    auto& dragged = view.m_notesDragged[clip].draggedSelection;
+                    dragged.clear();
+                    tick_t offset = view.isAbsoluteTimeMode() ? clip->time : 0;
+                    auto cursorPos = view.isAbsoluteTimeMode() ? clip->getLoopedTick(cursor.start - offset) : cursor.start;
+                    for (auto& note: clipboard->notes.m_list) {
+                        dragged.push_back(note);
+                        dragged.back().time += cursorPos;
+                    }
+                    mergeDraggedNotes(dragmode::drag_notes_move);
+                    cursor.end = cursor.start + clipboard->cursorRange;
+                    grid.makeTickVisible(cursor.end);
+                    edit    = true;
+                    desc    = "Paste notes";
+                }
+                handled = true;
             } else if (command == CMD_APPLY_ARP) {
                 auto clipBefore = *clip;
                 auto track = view.track();
@@ -1976,7 +2395,11 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     end = clip->start() + clip->loopStart + clip->loopLen;
                 }
                 std::vector<note_t> notes;
-                clip->getInTimeRange(begin, end, -1, -1, notes);
+                clip->getInTimeRange(begin, end, -1, -1, notes, {
+                    .bCutNotes = false,
+                    .bCutMutedNotes = false,
+                    .bApplyGroove = true,
+                });
                 auto host = dawCtrl->getDaw()->getHost();
                 auto state = playback_state::status_playback;
                 std::vector<midievent_note_t> noteEvents;
@@ -2011,14 +2434,14 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 clip->notes = tmpClipboard;
                 clip->setDirty();
                 // edit = true;
-                handled = true;
                 desc = "Apply Arp";
                 dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
                 clip->setDirty();
                 view.updateNotePitches(false);
+                handled = true;
             } else if (command == CMD_APPLY_GROOVE) {
                 clip_notes_t tmpClipboard;
-                view.draggedSelection.clear();
+                view.copySelectedNoteList();
                 notes.clearSelection();
                 auto clipBefore = *clip;
                 auto applyGroove = [&](DawInstance* daw, clip_t* clip, clip_notes_t& notes) {
@@ -2030,7 +2453,11 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                             tick_t start = minMax.first->start();
                             tick_t end = minMax.second->end();
                             if (end - start > 0) {
-                                clip->getNotesView(start, end, notes, false);
+                                clip->getNotesView(start, end, notes, {
+                                    .bCutNotes = false,
+                                    .bCutMutedNotes = true,
+                                    .bApplyGroove = true,
+                                });
                                 cutSelfIntersecting(notes.m_list);
                                 notes.updateBounds();
                                 return true;
@@ -2050,46 +2477,48 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
                 clip->setDirty();
                 view.updateNotePitches(false);
-            } else if (command == CMD_QUANTIZE && !notes.selection.empty()) {
-                auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
-                if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
-                    /* Quantize notes to grid 
-                     * 1. cut notes from clip
-                     * 2. quantize notes in isolation
-                     * 3. paste notes back to clip, cutting intersections
-                     */
-                    clip_notes_t tmpClipboard;
-                    tmpClipboard.setTo(notes.selection, 0);
-                    notes.deleteSelectedNotes(notes);
-                    notes.clearSelection();
-                    view.copySelectedNoteList();
-                    view.draggedSelection.clear();
-                    if (settings.quantizeStart > 0) {
-                        quantizeNoteStartTime(tmpClipboard.m_list, settings.quantizeStart);
-                    }
-                    if (settings.quantizeEnd > 0) {
-                        quantizeNoteEndTime(tmpClipboard.m_list, settings.quantizeEnd);
-                    }
-                    bool bRemovedNotes = cutSelfIntersecting(tmpClipboard.m_list);
-                    if (bRemovedNotes) {
-                        log_lf(Log::L_DEBUG, "removed some intersecting notes\n");
-                    }
-                    for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
-                        view.draggedSelection.push_back(note);
-                    }
-                    mergeDraggedNotes(dragmode::drag_notes_copy);
+            } else if (command == CMD_QUANTIZE) {
+                if (!notes.selection.empty()) {
+                    auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
+                    if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
+                        /* Quantize notes to grid 
+                        * 1. cut notes from clip
+                        * 2. quantize notes in isolation
+                        * 3. paste notes back to clip, cutting intersections
+                        */
+                        clip_notes_t tmpClipboard;
+                        tmpClipboard.setTo(notes.selection, 0);
+                        notes.deleteSelectedNotes(notes);
+                        notes.clearSelection();
+                        view.copySelectedNoteList();
+                        auto& dragged = view.m_notesDragged[clip];
+                        if (settings.quantizeStart > 0) {
+                            quantizeNoteStartTime(tmpClipboard.m_list, settings.quantizeStart);
+                        }
+                        if (settings.quantizeEnd > 0) {
+                            quantizeNoteEndTime(tmpClipboard.m_list, settings.quantizeEnd);
+                        }
+                        bool bRemovedNotes = cutSelfIntersecting(tmpClipboard.m_list);
+                        if (bRemovedNotes) {
+                            log_lf(Log::L_DEBUG, "removed some intersecting notes\n");
+                        }
+                        for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
+                            dragged.draggedSelection.push_back(note);
+                        }
+                        mergeDraggedNotes(dragmode::drag_notes_copy);
 #ifndef NDEBUG
-                    for (note_t* selPtr: notes.selection) {
-                        dbgassert(notes.has(selPtr));
-                    }
+                        for (note_t* selPtr: notes.selection) {
+                            dbgassert(notes.has(selPtr));
+                        }
 #endif
-                    auto pair = getMinMaxTime(notes.selection);
-                    if (pair.second)
-                        grid.makeTickVisible(pair.second->end() + getTickOffset());
-                    expandSelectionFrame(pair);
-                    edit = true;
-                    handled = true;
-                    desc = "Quanitize notes";
+                        auto pair = getMinMaxTime(notes.selection);
+                        if (pair.second)
+                            grid.makeTickVisible(pair.second->end() + getTickOffset());
+                        expandSelectionFrame(pair);
+                        edit = true;
+                        handled = true;
+                        desc = "Quanitize notes";
+                    }
                 }
             } else if (command == CMD_APPLY_PYTHON_SCRIPT) {
                 if (notes.selection.empty()) {
@@ -2102,7 +2531,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 notes.deleteSelectedNotes(notes);
                 notes.clearSelection();
                 view.copySelectedNoteList();
-                view.draggedSelection.clear();
+                auto& dragged = view.m_notesDragged[clip];
                 try {
                     DAW::PythonNoteProcessor::python_script_ctxt_t pyCtxt;
                     pyCtxt.notes = tmpClipboard.m_list;
@@ -2116,7 +2545,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 }
                 cutSelfIntersecting(tmpClipboard.m_list);
                 for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
-                    view.draggedSelection.push_back(note);
+                    dragged.draggedSelection.push_back(note);
                 }
                 mergeDraggedNotes(dragmode::drag_notes_copy);
 #ifndef NDEBUG
@@ -2134,67 +2563,79 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
             }
         }
         if (command == GlobalCommandType::CMD_MOVE_CURSOR) {
-            auto dir = ivec2(ctxt.argInt0, ctxt.argInt1);
-            if (dir.y && !notes.selection.empty()) {
-                if ((kevt.mods & KB_MOD_SHIFT)) {
-                    dir *= 12;
-                }
-                changePitch(view.draggedSelection, dir.y,
-                            layoutRoll.bFoldNotes, layoutRoll.bFoldNotes ? view.notePitches : std::vector<int32_t>{});
-                mergeDraggedNotes(dragmode::drag_notes_move);
-                notes.updateBounds();
-                setSelectionFrame(getMinMaxTime(notes.selection));
-                auto pair = getMinMaxSemitones(view.draggedSelection);
-                if (dir.y < 0) {
-                    if (pair.first) {
-                        makeNotePitchVisible(pair.first->pitch);
-                    }
-                } else if (dir.y > 0) {
-                    if (pair.second) {
-                        makeNotePitchVisible(pair.second->pitch);
-                    }
-                }
-                edit = true;
-
-            } else if (dir.x) {
-                tick_t timeOffset = dir.x;
-                tick_t minLen     = grid.pixelsToTicks(2);
-                if (!isAlt(kevt.mods)) {
-                    minLen = grid.getTickLength();
-                }
-                timeOffset *= minLen;
-                cursor.start += timeOffset;
-                cursor.end += timeOffset;
-                if (!notes.selection.empty()) {
+            view.visitClipView([&](clip_t* cl) {
+                auto& dragged = view.m_notesDragged[cl];
+                auto& notes = cl->notes;
+                auto dir = ivec2(ctxt.argInt0, ctxt.argInt1);
+                if (dir.y && !notes.selection.empty()) {
                     if ((kevt.mods & KB_MOD_SHIFT)) {
-                        offsetEndTime(view.draggedSelection, timeOffset, minLen);
+                        dir *= 12;
+                    }
+                    changePitch(dragged.draggedSelection, dir.y,
+                                layoutRoll.bFoldNotes, layoutRoll.bFoldNotes ? view.notePitches : std::vector<int32_t>{});
+                    int32_t merged = mergeDraggedNotes(dragmode::drag_notes_move, cl);
+                    if (merged > 0) {
+                        notes.updateBounds();
+                        cl->updateNoteViewSelection();
+                        auto pair = getMinMaxSemitones(view);
+                        if (dir.y < 0) {
+                            if (pair.first) {
+                                makeNotePitchVisible(pair.first->pitch);
+                            }
+                        } else if (dir.y > 0) {
+                            if (pair.second) {
+                                makeNotePitchVisible(pair.second->pitch);
+                            }
+                        }
+                        edit = true;
+                    }
+                } else if (dir.x) {
+                    tick_t timeOffset = dir.x;
+                    tick_t minLen     = grid.pixelsToTicks(2);
+                    if (!isAlt(kevt.mods)) {
+                        minLen = grid.getTickLength();
+                    }
+                    timeOffset *= minLen;
+                    cursor.start += timeOffset;
+                    cursor.end += timeOffset;
+                    if (!notes.selection.empty()) {
+                        if ((kevt.mods & KB_MOD_SHIFT)) {
+                            offsetEndTime(dragged.draggedSelection, timeOffset, minLen);
+                        } else {
+                            offsetStartTime(dragged.draggedSelection, timeOffset);
+                        }
+                        int32_t merged = mergeDraggedNotes(dragmode::drag_notes_move, cl);
+                        if (merged > 0) {
+                            notes.updateBounds();
+                            cl->updateNoteViewSelection();
+                            auto pair = getMinMaxTime(notes.selection);
+                            if (dir.x < 0) {
+                                if (pair.first) {
+                                    grid.makeTickVisible(pair.first->start() + getTickOffset());
+                                }
+                            } else if (dir.x > 0) {
+                                if (pair.second) {
+                                    grid.makeTickVisible(pair.second->end() + getTickOffset());
+                                }
+                            }
+                            edit = true;
+                        }
                     } else {
-                        offsetStartTime(view.draggedSelection, timeOffset);
+                        grid.makeTickVisible(cursor.start);
                     }
-                    mergeDraggedNotes(dragmode::drag_notes_move);
-                    notes.updateBounds();
-                    setSelectionFrame(getMinMaxTime(notes.selection));
-                    auto pair = getMinMaxTime(notes.selection);
-                    if (dir.x < 0) {
-                        if (pair.first) {
-                            grid.makeTickVisible(pair.first->start() + getTickOffset());
-                        }
-                    } else if (dir.x > 0) {
-                        if (pair.second) {
-                            grid.makeTickVisible(pair.second->end() + getTickOffset());
-                        }
-                    }
-                    edit = true;
-                } else {
-                    grid.makeTickVisible(cursor.start);
                 }
+                return true;
+            });
+            if (edit) {
+                view.updateNotePitches(false);
+                setSelectionFrameFromView();
             }
             handled = true;
             desc    = "Move notes";
         }
         if (edit) {
-            notes.updateBounds();
-            dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
+            // notes.updateBounds();
+            dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, cursorBefore));
             clip->setDirty();
             view.updateNotePitches(false);
         }
@@ -2461,7 +2902,7 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
                         paint.image      = -1;
                         paint.innerColor = rgbNote;
                         paint.outerColor = rgbNote;
-                        paint.customPar  = 1234;
+                        paint.customPar  = 4;
                         nvgFillPaint(vg, paint);
                         nvgBatchedRender(vg);
                     }
@@ -2510,7 +2951,7 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
                             paint.image      = -1;
                             paint.innerColor = j == 0 ? rgbNoteOverlap : rgbNoteMuted;
                             paint.outerColor = j == 0 ? rgbNoteOverlap : rgbNoteMuted;
-                            paint.customPar  = 1234;
+                            paint.customPar  = 4;
                             nvgFillPaint(vg, paint);
                             nvgBatchedRender(vg);
                         }
@@ -2785,7 +3226,7 @@ void CCEdit::setSelectRect(vec4 rect) {
 
 tick_t guictr_cliphandles::getTickOffset() const {
     auto tickOffset = tick_t(0);
-    auto selClipView = parentEditor.getClipView();
+    auto& selClipView = parentEditor.getClipView();
     auto selClip = selClipView.clip();
     auto thizClip = view.clip();
     if (selClipView.isAbsoluteTimeMode() && thizClip) {

@@ -309,7 +309,11 @@ void trackdata_clips_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStar
         if (clip->end() <= start || clip->start() > end) {
             continue;
         }
-        clip->getInTimeRange(start, end, cutStart, cutEnd, notes);
+        clip->getInTimeRange(start, end, cutStart, cutEnd, notes, {
+            .bCutNotes = false,
+            .bCutMutedNotes = true,
+            .bApplyGroove = true,
+        });
     }
 }
 
@@ -319,7 +323,11 @@ void trackdata_clips_t::getEventsInRange(tick_t start, tick_t end, tick_t cutSta
         if (clip->end() <= start || clip->start() > end) {
             continue;
         }
-        clip->getInTimeRange(start, end, cutStart, cutEnd, notes);
+        clip->getInTimeRange(start, end, cutStart, cutEnd, notes, {
+            .bCutNotes = false,
+            .bCutMutedNotes = true,
+            .bApplyGroove = true,
+        });
         clip->controlData.getInTimeRange(clip, start, end, cutStart, cutEnd, ctrlEvents);
     }
 }

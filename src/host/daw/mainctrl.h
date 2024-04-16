@@ -156,16 +156,29 @@ public:
     }
 };
 
+struct clip_notes_dragged_t {
+    clip_notes_t dragStartNotes;
+    std::vector<note_t> draggedSelectionBegin;
+    std::vector<note_t> draggedSelection;
+    void clear() {
+        dragStartNotes.clear();
+        draggedSelectionBegin.clear();
+        draggedSelection.clear();
+    }
+};
+
 class clip_view_t {
     clip_ref_t m_clipRef;
 public:
     clip_cursor_t m_cursor;
-    clip_notes_t dragStartNotes;
-    std::vector<note_t> draggedSelectionBegin;
-    std::vector<note_t> draggedSelection;
+    std::map<clip_t*, clip_notes_dragged_t> m_notesDragged;
     std::vector<int32_t> notePitches;
     editor_view_selection_t m_selectionView;
     bool bIsAbsoluteMode = false;
+    clip_view_t() = default;
+    // delete copy constructor
+    clip_view_t(const clip_view_t&) = delete;
+    clip_view_t& operator=(const clip_view_t&) = delete;
 
     clip_ref_t& clipRef() {
         return m_clipRef;
@@ -202,6 +215,71 @@ public:
     float toFoldNote(float note) const;
     float unfoldNote(float note);
     float unfoldNoteClamped(float note);
+    
+    template<typename T>
+    void visitClipViewReverse(T&& visitor) {
+        auto contextClip = clip();
+        if (contextClip) {
+            if (!visitor(contextClip)) {
+                return;
+            }
+        }
+        for (auto it = m_selectionView.tracks.rbegin(); it != m_selectionView.tracks.rend(); ++it) {
+            auto& [trackEntry, vecClips] = *it;
+            if (!clipRef().isTrackValid(trackEntry.track)) {
+                continue;
+            }
+            for (clip_t* cl : vecClips) {
+                if (cl == contextClip) {
+                    continue;
+                }
+                if (!trackEntry.track->getClips().hasClip(cl)) {
+                    continue;
+                }
+                if (!visitor(cl)) {
+                    return;
+                }
+            }
+        }
+    }
+
+    template<typename T>
+    void visitClipView(T&& visitor) {
+        auto contextClip = clip();
+        for (auto& [trackEntry, vecClips] : m_selectionView.tracks) {
+            if (!clipRef().isTrackValid(trackEntry.track)) {
+                continue;
+            }
+            for (clip_t* cl : vecClips) {
+                if (cl == contextClip) {
+                    continue;
+                }
+                if (!trackEntry.track->getClips().hasClip(cl)) {
+                    continue;
+                }
+                if (!visitor(cl)) {
+                    return;
+                }
+            }
+        }
+        if (contextClip) {
+            if (!visitor(contextClip)) {
+                return;
+            }
+        }
+    }
+
+    template<typename T>
+    void visitClipViewTracks(T&& visitor) {
+        for (auto& [trackEntry, vecClips] : m_selectionView.tracks) {
+            if (!clipRef().isTrackValid(trackEntry.track)) {
+                continue;
+            }
+            if (!visitor(trackEntry.track, vecClips)) {
+                return;
+            }
+        }
+    }
 };
 
 struct Menus {

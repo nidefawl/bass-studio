@@ -35,6 +35,7 @@ public:
     tick_t len       = 0;
     int32_t flags    = NoteFlags::ENABLED;
     int8_t channel   = 0;
+    int64_t id       = 0;
     inline void setEnabled(bool bIsEnabled) {
         if (bIsEnabled) {
             flags |= NoteFlags::ENABLED;
@@ -106,6 +107,9 @@ inline bool operator<(const note_t& lhs, const note_t& rhs) {
         if (lhs.pitch == rhs.pitch) {
             if (lhs.channel == rhs.channel) {
                 if (lhs.len == rhs.len) {
+                    if (lhs.velocity == rhs.velocity) {
+                        return lhs.id < rhs.id;
+                    }
                     return lhs.velocity < rhs.velocity;
                 }
                 return lhs.len < rhs.len;

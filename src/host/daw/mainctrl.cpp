@@ -2323,31 +2323,29 @@ void load_project_task::getPreciseProgress(double& progressOverall, double& prog
 void clip_view_t::updateNotePitches(bool reset) {
     if (reset)
         notePitches.clear();
-    clip_t* currentClip = clip();
-    if (currentClip)
-        currentClip->notes.getNotePitches(notePitches);
-    for (auto& [trackEntry, vecClips] : this->m_selectionView.tracks) {
-        if (!clipRef().isTrackValid(trackEntry.track)) {
-            continue;
+    visitClipView([&](clip_t* cl) {
+        if (bIsAbsoluteMode) {
+            cl->getNoteViewRender().getNotePitches(notePitches);
+        } else {
+            cl->notes.getNotePitches(notePitches);
         }
-        auto& trackClipList = trackEntry.track->getClips();
-        for (clip_t* clip : vecClips) {
-            if (clip == currentClip
-                || !trackClipList.hasClip(clip)) {
-                continue;
-            }
-            clip->notes.getNotePitches(notePitches);
-        }
-    }
+        return true;
+    });
 }
 
 void clip_view_t::copySelectedNoteList() {
-    clip_t* currentClip = clip();
-    if (currentClip) {
-        dragStartNotes = currentClip->notes;
-        currentClip->notes.copySelectionTo(draggedSelection);
-        currentClip->notes.copySelectionTo(draggedSelectionBegin);
-    }
+    m_notesDragged.clear();
+    visitClipView([this](clip_t* clip) {
+        auto& dragged = m_notesDragged[clip];
+        dragged.clear();
+        for (note_t* note : clip->notes.selection) {
+            note_t& ref = *note;
+            dragged.draggedSelection.push_back(ref);
+        }
+        dragged.draggedSelectionBegin = dragged.draggedSelection;
+        dragged.dragStartNotes = clip->notes;
+        return true;
+    });
 }
 
 void clip_view_t::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
@@ -2374,12 +2372,14 @@ void clip_view_t::setSelected(clip_t* clip) {
 void clip_view_t::setSingleClip(clip_t* clip) {
     m_selectionView = {};
     m_clipRef.set(clip);
+    m_notesDragged.clear();
     updateNotePitches(true);
     bIsAbsoluteMode = false;
 }
 
 void clip_view_t::reset() {
     m_selectionView = {};
+    m_notesDragged.clear();
     m_clipRef.set(nullptr);
     updateNotePitches(true);
 }

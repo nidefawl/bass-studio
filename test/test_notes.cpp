@@ -696,6 +696,7 @@ namespace {
         //cut, shift cursor by 64 ticks, paste, repeat
         for (int i = 0; i < 100; i++) {
             //cut notes = ctrl+x
+            clipNotes.clear();
             clipNotes.setTo(clip->notes.selection, -cursorPos);
             clip->notes.deleteSelectedNotes(clip->notes);
 

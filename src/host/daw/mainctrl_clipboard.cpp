@@ -158,7 +158,11 @@ namespace DAW {
                         continue;
                     }
                     notes.clear();
-                    shPtrClip->getInTimeRange(tickBegin, tickEnd, tickBegin, tickEnd, notes);
+                    shPtrClip->getInTimeRange(tickBegin, tickEnd, tickBegin, tickEnd, notes, {
+                        .bCutNotes = true,
+                        .bCutMutedNotes = true,
+                        .bApplyGroove = false,
+                    });
                     clip.notes.addAll(notes);
                     auto readPos = math::max(0, tickBegin - shPtrClip->start());
                     auto readEnd = math::min(shPtrClip->len, tickEnd - shPtrClip->start());

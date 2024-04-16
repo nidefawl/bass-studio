@@ -41,76 +41,73 @@
 class i_ctr_shape_editor;
 
 class action_modify_notes final : public action_base {
-protected:
+    struct clip_changed_t {
+        int32_t trackIdx = 0;
+        tick_t clipTime  = 0;
+        clip_notes_t before;
+        clip_notes_t after;
+        clip_cursor_t cursorBefore;
+        clip_cursor_t cursorAfter;
+        bool bHasCursor = true;
+    };
 public:
-    int32_t trackIdx = 0;
-    tick_t clipTime  = 0;
-    clip_notes_t before;
-    clip_notes_t after;
-    clip_cursor_t cursorBefore;
-    clip_cursor_t cursorAfter;
-    bool bHasCursor = true;
+    std::vector<clip_changed_t> clipsChanged;
     action_modify_notes() : action_base() {
     }
-    //desc, clip, notesBefore, cursorBefore
-    action_modify_notes(String description, const clip_view_t& view, const clip_notes_t& oldNotes, const clip_cursor_t& oldCursor) : action_base() {
-        desc = std::move(description);
-        //    clip = view.clip;
-        after       = view.clip()->notes;
-        trackIdx    = view.track()->projectIdx;
-        clipTime    = view.clip()->time;
-        cursorAfter = view.m_cursor;
-        before      = oldNotes;
 
-        std::list<note_t*> selcopy;
-        for (note_t* sel : before.selection) {
-            selcopy.insert(selcopy.end(), sel);
-        }
-#ifndef NDEBUG
-        for (note_t* sel : selcopy) {
-            bool found = false;
-            for (note_t& ent : before.m_list) {
-                if (sel == &ent) {
-                    found = true;
-                    break;
+    action_modify_notes(String description, clip_view_t& view, const clip_cursor_t& oldCursor) : action_base() {
+        desc = std::move(description);
+        if (view.isAbsoluteTimeMode()) {
+            view.visitClipViewTracks([&](track_t* track, std::vector<clip_t*>& clips) {
+                for (clip_t* clip : clips) {
+                    auto& notesBefore = view.m_notesDragged[clip].dragStartNotes;
+                    if (notesBefore != clip->notes) {
+                        clipsChanged.push_back({track->projectIdx, clip->time, notesBefore, clip->notes, oldCursor, view.m_cursor});
+                    }
                 }
+                return true;
+            });
+        } else {
+            auto clip = view.clip();
+            auto& notesBefore = view.m_notesDragged[clip].dragStartNotes;
+            if (notesBefore != clip->notes) {
+                clipsChanged.push_back({view.track()->projectIdx, clip->time, notesBefore, clip->notes, oldCursor, view.m_cursor});
             }
-            dbgassert(found);
         }
-#endif
-        cursorBefore = oldCursor;
-        before.removeDuplicates();
-        after.removeDuplicates();
     }
     void undo(DawInstance* daw) override {
-        track_t* tr = daw->getTracks()[trackIdx];
-        if (!tr)
-            return;
-        trackdata_clips_t& midi = tr->getClips();
-        clip_t* clip           = midi.getClipAt(clipTime);
-        if (!clip)
-            return;
-        clip->notes = before;
-        clip->setDirty();
-        if (bHasCursor)
-            daw->updateClipViewsAndCursor(clip, cursorBefore);
-        else
-            daw->updateClipViews(clip);
+        for (auto& clipChanged : clipsChanged) {
+            track_t* tr = daw->getTracks()[clipChanged.trackIdx];
+            if (!tr)
+                continue;
+            trackdata_clips_t& midi = tr->getClips();
+            clip_t* clip           = midi.getClipAt(clipChanged.clipTime);
+            if (!clip)
+                continue;
+            clip->notes = clipChanged.before;
+            clip->setDirty();
+            if (clipChanged.bHasCursor)
+                daw->updateClipViewsAndCursor(clip, clipChanged.cursorBefore);
+            else
+                daw->updateClipViews(clip);
+        }
     }
     void redo(DawInstance* daw) override {
-        track_t* tr = daw->getTracks()[trackIdx];
-        if (!tr)
-            return;
-        trackdata_clips_t& midi = tr->getClips();
-        clip_t* clip           = midi.getClipAt(clipTime);
-        if (!clip)
-            return;
-        clip->notes = after;
-        clip->setDirty();
-        if (bHasCursor)
-            daw->updateClipViewsAndCursor(clip, cursorAfter);
-        else
-            daw->updateClipViews(clip);
+        for (auto& clipChanged : clipsChanged) {
+            track_t* tr = daw->getTracks()[clipChanged.trackIdx];
+            if (!tr)
+                continue;
+            trackdata_clips_t& midi = tr->getClips();
+            clip_t* clip           = midi.getClipAt(clipChanged.clipTime);
+            if (!clip)
+                continue;
+            clip->notes = clipChanged.after;
+            clip->setDirty();
+            if (clipChanged.bHasCursor)
+                daw->updateClipViewsAndCursor(clip, clipChanged.cursorAfter);
+            else
+                daw->updateClipViews(clip);
+        }
     }
 };
 
@@ -567,10 +564,13 @@ public:
     };
     clip_cursor_t dragStartCursor;
     dragmode dragMode = drag_none;
-    std::set<note_t*> selectionStart;
+    std::map<clip_t*, std::set<note_t*>> selectionsStart;
     ivec2 dragBegin = ivec2(0);
     ivec2 dragTo    = ivec2(0);
+    int32_t dragBeginPitch = 0;
+    tick_t dragBeginTick = 0;
     note_t beginDragNote;
+    noteview_render_t notesViewTemp;
     // const bool isVelocity;
     gui_clipcontent(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout, bool _isVel)
         : gui_clipcontent_base(_grid, _view), piano_scale(_layout, _view, size.y)
@@ -582,13 +582,24 @@ public:
     void setStatusText();
     void expandSelectionFrame(std::pair<note_t*, note_t*> minMax);
     void setSelectionFrame(std::pair<note_t*, note_t*> minMax);
-    void mergeDraggedNotes(dragmode mergeMode);
+    void setSelectionFrameFromView();
+    int32_t mergeDraggedNotes(dragmode mergeMode);
+    bool mergeDraggedNotes(dragmode mergeMode, clip_t* clip);
     void handleRightClick(MouseEvent& evt) override;
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
+        if (dragMode >= drag_notes_move) {
+            auto local = toContainerSpace(evt.relMousepos);
+            auto evtCopy = evt;
+            evtCopy.relMousepos = local;
+            handleDraggedMove(evtCopy);
+        }
+        return false;
+    }
 
 
 protected:
@@ -597,7 +608,9 @@ protected:
 
 class gui_clipcontent_notes final : public gui_clipcontent {
     void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, 
-                                tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted);
+                                tick_t tickOffset, float scale, float inset, NVGcolor color, int32_t shading, bool renderMuted);
+    void renderNoteLabels(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, 
+                                tick_t tickOffset, float scale, bool bRenderPosLen);
 public:
     gui_clipcontent_notes(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);
@@ -611,6 +624,7 @@ public:
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY);
     }
     void render(NVGcontext* vg) override;
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
 };
 
 struct scaled_pos_t {
@@ -780,7 +794,7 @@ public:
     void renderLoopHandle(NVGcontext* vg, vec2 editorSize) const;
     bool containsHandlePos(ivec2 mpos) const;
     void setControl(BaseCtrl* parentCtrl) override {
-        view = {};
+        view.reset();
         guibase::setControl(parentCtrl);
     }
 };

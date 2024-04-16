@@ -79,8 +79,9 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
     tick_t tickRelative = grid.screenToTickSnap(mousePosX, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON) - getTickOffset();
     tick_t clipEndOffset     = clip->offsetStart + clip->getLen();
     tick_t curLoopEnd = clip->loopStart + clip->loopLen;
+    bool bIsAbsoluteTimeMode = view.isAbsoluteTimeMode();
     if (dragHandle == drag_handle_right) {
-        if (!parentEditor.getClipView().isAbsoluteTimeMode()) {
+        if (!bIsAbsoluteTimeMode) {
             tick_t tickDelta = (tickRelative - clipEndOffset);
             tick_t newLen    = clip->getLen() + tickDelta;
             tick_t newEnd = clip->start() + newLen;
@@ -103,7 +104,7 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
         }
     }
     if (dragHandle == drag_handle_left) {
-        if (!parentEditor.getClipView().isAbsoluteTimeMode()) {
+        if (!bIsAbsoluteTimeMode) {
             tick_t curStart  = clip->offsetStart;
             tick_t tickDelta = (tickRelative - curStart);
             tick_t newStart  = clip->offsetStart + tickDelta;
@@ -142,8 +143,10 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
         }
     }
     if (dragHandle == drag_handle_loopright) {
-        tick_t tickDelta = (tickRelative - curLoopEnd);
-        tick_t newLen    = clip->loopLen + tickDelta;
+        tick_t newLen    = clip->loopLen + (tickRelative - curLoopEnd);
+        if (bIsAbsoluteTimeMode) {
+            newLen = tickRelative;
+        }
         if (newLen > 0) {
             if (clip->loopLen == newLen)
                 return;
@@ -151,14 +154,16 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
         }
     }
     if (dragHandle == drag_handle_loopleft) {
-        tick_t curLoopStart = clip->loopStart;
-        tick_t tickDelta    = (tickRelative - curLoopStart);
-        tick_t newStart     = clip->loopStart + tickDelta;
-        if (newStart < curLoopEnd) {
-            if (clip->loopStart == newStart && clip->loopLen == curLoopEnd - newStart)
-                return;
-            clip->loopStart = newStart;
-            clip->loopLen   = curLoopEnd - newStart;
+        if (!bIsAbsoluteTimeMode) {
+            tick_t curLoopStart = clip->loopStart;
+            tick_t tickDelta    = (tickRelative - curLoopStart);
+            tick_t newStart     = clip->loopStart + tickDelta;
+            if (newStart < curLoopEnd) {
+                if (clip->loopStart == newStart && clip->loopLen == curLoopEnd - newStart)
+                    return;
+                clip->loopStart = newStart;
+                clip->loopLen   = curLoopEnd - newStart;
+            }
         }
     }
     if (dragHandle == drag_handle_loopbar) {
@@ -186,6 +191,10 @@ guictr_cliphandles::dist_dragzone_handle guictr_cliphandles::getDragZone(ivec2 l
         float distBar    = std::numeric_limits<float>::max();
         float barSX      = clipLoopStartScrX();
         float barEX      = clipLoopEndScrX();
+        if (view.isAbsoluteTimeMode()) {
+            barSX = clipStartScrX();
+            barEX = barSX + (clipLoopEndScrX() - clipLoopStartScrX());
+        }
         if (local.x >= barSX && local.x < barEX && local.y >= halfHeight && local.y < halfHeight * 2) {
             distBar = DRAG_RANGE * DRAG_RANGE * 0.8f;
         }
@@ -201,6 +210,13 @@ guictr_cliphandles::dist_dragzone_handle guictr_cliphandles::getDragZone(ivec2 l
                 if (hndl.mode == dragmode::drag_handle_loopbar
                     || hndl.mode == dragmode::drag_handle_loopleft
                     || hndl.mode == dragmode::drag_handle_loopright) {
+                    hndl.mode = dragmode::drag_handle_none;
+                }
+            }
+        }
+        if (view.isAbsoluteTimeMode()) {
+            for (auto& hndl : hndls) {
+                if (hndl.mode == dragmode::drag_handle_loopleft) {
                     hndl.mode = dragmode::drag_handle_none;
                 }
             }
@@ -260,14 +276,19 @@ void guictr_cliphandles::renderLoopHandle(NVGcontext* vg, vec2 editorSize) const
         colLI.g *= 0.5f;
         colLI.b *= 0.5f;
     }
-    float tickBeginX = clipStartScrX();
-    float tickEndX   = clipEndScrX();
+    float tickBeginX = 0;
+    float tickEndX   = 0;
 
     float yOffset = 0;
     auto cs = editorSize;
     yOffset += heightLoopInidicator;
-    tickBeginX = clipLoopStartScrX();
-    tickEndX   = clipLoopEndScrX();
+    if (view.isAbsoluteTimeMode()) {
+        tickBeginX = clipStartScrX();
+        tickEndX   = tickBeginX + (clipLoopEndScrX() - clipLoopStartScrX());
+    } else {
+        tickBeginX = clipLoopStartScrX();
+        tickEndX   = clipLoopEndScrX();
+    }
     if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
         float barBeginX = math::max(-wLoopInidicator, tickBeginX);
         float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);
@@ -280,7 +301,7 @@ void guictr_cliphandles::renderLoopHandle(NVGcontext* vg, vec2 editorSize) const
         nvgStrokeWidth(vg, strokeWidthLI);
         nvgStroke(vg);
 
-        if (tickBeginX > -wLoopInidicator && tickBeginX < cs.x + wLoopInidicator) {
+        if (!view.isAbsoluteTimeMode() && tickBeginX > -wLoopInidicator && tickBeginX < cs.x + wLoopInidicator) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, tickBeginX, yOffset);
             nvgLineTo(vg, tickBeginX, yOffset + cs.y);
@@ -334,6 +355,16 @@ void guictr_cliphandles::renderHandle(NVGcontext* vg, int32_t trackSelIdx) const
         nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
         nvgStrokeWidth(vg, 1.f);
         nvgStroke(vg);
+        if (clip->name.length() && barEndX - barBeginX > 12 && heightLoopInidicator * 2 > 12) {
+            renderTextLabel(vg,
+                            {barBeginX + heightLoopInidicator/2, yOffset + heightLoopInidicator},
+                            {barEndX - barBeginX - heightLoopInidicator, heightLoopInidicator * 2},
+                            clip->name,
+                            theme,
+                            heightLoopInidicator * 2,
+                            getContrastFontColor(clip->rgb),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        }
     }
     if (tickBeginX > -wLoopInidicator && tickBeginX < cs.x + wLoopInidicator) {
         nvgBeginPath(vg);
@@ -551,16 +582,23 @@ void guictr_editor_base::zoomPianoRollToClipsNoteRange() {
 }
 void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
     guictr_editor_base::zoomPianoRollToClipsNoteRange();
-    clip_t* clip = view.clip();
-    if (!clip || clip->isEmpty()) {
-        content.showRange(CLIPEDITOR_DEFAULT_MIN, CLIPEDITOR_DEFAULT_MAX);
-        return;
-    }
-    int32_t minSemi = clip->notes.minNote.pitch;
-    int32_t maxSemi = clip->notes.maxNote.pitch;
+    int32_t minSemi = -1;
+    int32_t maxSemi = -1;
     if (bFoldNotes) {
         minSemi = 0;
         maxSemi = view.notePitches.size();
+    } else {
+        view.visitClipView([&](clip_t* clip) {
+            if (view.isAbsoluteTimeMode()) {
+                auto& view = clip->getNoteViewRender();
+                minSemi = minSemi == -1 ? view.minNote.pitch : math::min<int32_t>(minSemi, view.minNote.pitch);
+                maxSemi = maxSemi == -1 ? view.maxNote.pitch : math::max<int32_t>(maxSemi, view.maxNote.pitch);
+            } else {
+                minSemi = minSemi == -1 ? clip->notes.minNote.pitch : math::min<int32_t>(minSemi, clip->notes.minNote.pitch);
+                maxSemi = maxSemi == -1 ? clip->notes.maxNote.pitch : math::max<int32_t>(maxSemi, clip->notes.maxNote.pitch);
+            }
+            return true;
+        });
     }
     int32_t range = math::abs(maxSemi - minSemi);
     if (range < 6) {
@@ -635,6 +673,7 @@ void guictr_editor_base::relayout() {
         auto& clipHandles = **(it++);
         clipHandles.setVisible(true);
         clipHandles.getClipView().setSingleClip(currentClip);
+        clipHandles.getClipView().bIsAbsoluteMode = bIsAbsMode;
         clipHandles.setTrackSelectionIdx(0);
         dbgassert(clipHandles.getClipView().clip() == currentClip);
         clipHandles.setHandleActive(true);
@@ -657,6 +696,7 @@ void guictr_editor_base::relayout() {
             dbgassert(it <= clipsHandles.end());
             clipHandles.setVisible(true);
             clipHandles.getClipView().setSingleClip(selClip);
+            clipHandles.getClipView().bIsAbsoluteMode = bIsAbsMode;
             clipHandles.setTrackSelectionIdx(trackIdx);
             dbgassert(clipHandles.getClipView().clip() == selClip);
             clipHandles.setHandleActive(selClip == currentClip);
@@ -762,6 +802,7 @@ bool guictr_noteeditor::handleMouseScroll(MouseEvent& evt, double xoffset, doubl
     } else {
         piano.setOffset(offset() + yoffset * 2.0 * scale());
     }
+    content.handleMouseScroll(evt, xoffset, yoffset);
     return true;
 }
 

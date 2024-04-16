@@ -223,6 +223,12 @@ inline bool operator==(const clip_notes_t& lhs, const clip_notes_t& rhs) {
 inline bool operator!=(const clip_notes_t& lhs, const clip_notes_t& rhs) { return !operator==(lhs, rhs); }
 
 class clip_t {
+    struct NoteSampleOptions {
+        bool bCutNotes = false;
+        bool bCutMutedNotes = false;
+        bool bApplyGroove = false;
+        bool bRelative = false;
+    };
 public:
     clip_notes_t notes;
     clip_audio_t audio;
@@ -295,8 +301,9 @@ public:
         }
         return pos;
     }
-    int getInTimeRange(tick_t timeS, tick_t timeE, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& list);
-    void getNotesView(tick_t timeS, tick_t timeE, clip_notes_t& notesView, bool forPlayback) const;
+   
+    int getInTimeRange(tick_t timeS, tick_t timeE, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& list, NoteSampleOptions options) const;
+    void getNotesView(tick_t timeS, tick_t timeE, clip_notes_t& notesView, NoteSampleOptions options) const;
     void applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t& note, const note_t* nextNote) const;
     noteview_render_t& getNoteViewRender() const {
         updateNoteView();
@@ -306,6 +313,8 @@ public:
         updateNoteView();
         return this->noteViewRenderFullClip;
     }
+    noteview_render_t& getNoteViewSelection() const;
+    void updateNoteViewSelection();
     tick_t getLoopBegin() const;
     tick_t getNumLoops() const;
     void adjustStartOffset(tick_t offset);
@@ -346,6 +355,7 @@ private:
     mutable bool dirty = true;
     mutable noteview_render_t noteViewRender;
     mutable noteview_render_t noteViewRenderFullClip;
+    mutable noteview_render_t noteViewSelection;
     void updateNoteView() const;
 };
 
