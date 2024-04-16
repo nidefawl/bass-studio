@@ -64,8 +64,6 @@ const float nodePortRadius = 8.0f;
 const auto colEdgeSignal   = NVGcolor{ 0.1f, 0.6f, 0.1f, 1.0f };
 const auto GRAPH_NODE_SIZE = vec2(260);
 const auto GRAPH_FONT_SIZE = 16;
-const auto GRAPH_NODE_METER_WIDTH = 8;
-
 
 class edge_spline {
 public:
@@ -612,6 +610,10 @@ public:
         updatePortList();
     }
     void determineSize(ivec2& prefSize) override {
+        if (guiPorts.empty()) {
+            prefSize = ivec2(0);
+            return;
+        }
         auto visiblePorts = std::count_if(guiPorts.begin(), guiPorts.end(), [](auto port) { return port->isVisible(); });
         prefSize.y = nodePortRadius * 3;
         if (visiblePorts > 0) {
@@ -914,6 +916,9 @@ private:
         busMidiOutput.setPorts(portsMidiOutput);
         busInput.setPorts(portsInput);
         busOutput.setPorts(portsOutput);
+        for (auto bus : guiBusses) {
+            bus->setVisible(!bus->guiPorts.empty());
+        }
     }
 
 public:
@@ -993,7 +998,7 @@ public:
 
     void layout() override {
         const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-        auto overlap = busInput.size.x - nodePortRadius;
+        auto overlap = math::max(busInput.size.x, busOutput.size.x) - nodePortRadius;
         busInput.pos = ivec2(-padding + overlap, 0) + ivec2(0 - busInput.size.x, hpt);
         busOutput.pos = ivec2(-padding - overlap, 0) + ivec2(size.x, hpt);
         busMidiInput.pos = busInput.getLeftBottom() + ivec2(0, padding);
