@@ -110,7 +110,12 @@ void gui_clipsettings::buttonClicked(guibase* button) {
     if (&btnDuplicateLoop == button) {
         duplicateClipLoop(daw, view);
         parentClipEditor.getNoteEditor().updateCopiedClipData();
-        parentClipEditor.getNoteEditor().getGrid().makeTickVisible(clip->loopStart + clip->loopLen);
+        auto tick = clip->loopStart + clip->loopLen;
+        if (view.isAbsoluteTimeMode()) {
+            tick += clip->getOffsetStart();
+            tick = math::min(clip->end(), tick);
+        }
+        parentClipEditor.getNoteEditor().getGrid().makeTickVisible(tick);
     }
     if (&btnSelectMuted == button) {
         selectAllMuted(daw, view);
