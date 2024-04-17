@@ -355,6 +355,35 @@ void guictr_cliphandles::renderHandle(NVGcontext* vg, int32_t trackSelIdx) const
         nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
         nvgStrokeWidth(vg, 1.f);
         nvgStroke(vg);
+        if (clip->loopEnabled && clip->loopLen > 0) {
+            tick_t firstLoop = 0;
+            if (clip->offsetStart < clip->loopStart) {
+                firstLoop = clip->loopStart - clip->offsetStart;
+            }
+            nvgBeginPath(vg);
+            int n = 0;
+            for (tick_t posLoopIndicator = firstLoop; posLoopIndicator < clip->getLen(); posLoopIndicator += clip->loopLen) {
+                if (posLoopIndicator >= 0) {
+                    auto x = grid.tickToScreenD(posLoopIndicator + clip->time);
+                    if (x < -5) {
+                        continue;
+                    }
+                    if (x > size.x + 5) {
+                        continue;
+                    }
+                    n++;
+                    nvgMoveTo(vg, x, 0);
+                    nvgLineTo(vg, x, 0 + float(size.y) / 4);
+                    nvgMoveTo(vg, x, 0 + float(size.y) * 3 / 4);
+                    nvgLineTo(vg, x, 0 + float(size.y));
+                }
+            }
+            if (n != 0) {
+                nvgStrokeColor(vg, theme->getFrameColorBase());
+                nvgStrokeWidth(vg, 1.f);
+                nvgStroke(vg);
+            }
+        }
         if (clip->name.length() && barEndX - barBeginX > 12 && heightLoopInidicator * 2 > 12) {
             renderTextLabel(vg,
                             {barBeginX + heightLoopInidicator/2, yOffset + heightLoopInidicator},
