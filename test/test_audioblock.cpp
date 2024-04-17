@@ -116,8 +116,7 @@ namespace test_audioblock {
         AudioBlock block(numChannels, blockSize);
         AudioBlock block2(numChannels, blockSize);
         const float* const* const pBuf = block2.buf;
-        const float * const * pConst = block2.buf;
-        samplecount_t copyLen = 30;
+        const samplecount_t copyLen = 30;
         float testInputBuf[copyLen];
         for (samplecount_t i = 0; i < copyLen; i++) {
             testInputBuf[i] = (float)i;
