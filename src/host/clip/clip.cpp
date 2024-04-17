@@ -306,16 +306,6 @@ void clip_notes_t::copy(const clip_notes_t& obj) {
     lastNote  = obj.lastNote;
     minNote   = obj.minNote;
     maxNote   = obj.maxNote;
-    for (note_t* sel : selection) {
-        bool found = false;
-        for (note_t& ent : m_list) {
-            if (sel == &ent) {
-                found = true;
-                break;
-            }
-        }
-        dbgassert(found);
-    }
 }
 
 note_t* clip_notes_t::get(tick_t time, int32_t pitch) {
@@ -489,7 +479,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
             }
             if (nnote.end() > localEndMin) {
                 /** always cut pre-loop note ends at pre-loop end */
-                if (options.bCutNotes || localEndMin == preLoopLen) {
+                if (options.bCutNotes || (loopEnabled && localEndMin == preLoopLen)) {
                     nnote.cutRight(localEndMin);
                 }
             }
@@ -604,7 +594,8 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
     } else {
         for (auto& note : notesView.m_list) {
             note.time += clipStart;
-            note.len = math::min(note.end(), clipEnd) - note.time;
+            if (options.bCutNotes)
+                note.len = math::min(note.end(), clipEnd) - note.time;
             // if (cutIntersectingNotesFindDupe(list, note) == -1) {
             //     continue;
             // }
