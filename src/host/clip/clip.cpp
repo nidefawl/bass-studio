@@ -457,6 +457,9 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
         listLoop.clear();
     }
     
+    const auto loopLen = this->loopLen;
+    const auto loopStart = this->loopStart;
+    const auto offsetStart = this->offsetStart;
     for (auto itNote = notes.m_list.cbegin(); itNote != itNoteEnd; itNote++) {
         const note_t& note = *itNote;
         if (options.bCutMutedNotes && !note.isEnabled()) {
@@ -602,9 +605,9 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
         for (auto& note : notesView.m_list) {
             note.time += clipStart;
             note.len = math::min(note.end(), clipEnd) - note.time;
-            if (cutIntersectingNotesFindDupe(list, note) == -1) {
-                continue;
-            }
+            // if (cutIntersectingNotesFindDupe(list, note) == -1) {
+            //     continue;
+            // }
             auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
                 return n.time > note.time;
             });

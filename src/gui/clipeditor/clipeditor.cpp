@@ -1768,6 +1768,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                     }
                     auto rangeBegin = math::max(tickStart, cl->start());
                     auto rangeEnd   = math::min(tickEnd, cl->end());
+                    bool bChanged = false;
                     if (rangeBegin < rangeEnd) {
                         notesViewTemp.clear();
                         cl->getInTimeRange(rangeBegin, rangeEnd, -1, -1, notesViewTemp.m_list, {
@@ -1786,12 +1787,18 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                         for (auto id: ids) {
                             auto* pNode = &cl->notes.m_list[id];
                             auto result = selection.insert(pNode);
-                            if (bIsCtrl) {
+                            if (result.second) {
+                                bChanged = true;
+                            }
+                            if (bIsCtrl && result.first != selection.end()) {
                                 selection.erase(result.first);
+                                bChanged = true;
                             }
                         }
                     }
-                    cl->updateNoteViewSelection();
+                    if (bChanged) {
+                        cl->updateNoteViewSelection();
+                    }
                     return true;
                 });
             } else if (contextClip) {
@@ -1801,17 +1808,24 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                 } else {
                     notes.selection.clear();
                 }
+                bool bChanged = false;
                 std::vector<note_t*> inRangeList;
                 if (notes.getInRange(tickStart, tickEnd, pitchLow, pitchHigh, inRangeList)) {
                     std::set<note_t*>& selection = notes.selection;
                     for (note_t* inSelRange: inRangeList) {
                         auto result = selection.insert(inSelRange);
-                        if (bIsCtrl) {
+                        if (result.second) {
+                            bChanged = true;
+                        }
+                        if (bIsCtrl && result.first != selection.end()) {
                             selection.erase(result.first);
+                            bChanged = true;
                         }
                     }
                 }
-                contextClip->updateNoteViewSelection();
+                if (bChanged) {
+                    contextClip->updateNoteViewSelection();
+                }
             }
         } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
             int32_t velLow  = screenToVel(yEnd, size.y);
@@ -1828,6 +1842,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                     // auto rangeEnd   = math::min(tickEnd, cl->end());
                     auto rangeBegin = tickStart;
                     auto rangeEnd   = tickEnd;
+                    bool bChanged = false;
                     if (rangeBegin < rangeEnd && (tickEnd >= cl->start() && tickStart < cl->end())) {
                         notesViewTemp.clear();
                         cl->getInTimeRange(cl->start(), cl->end(), -1, -1, notesViewTemp.m_list, {
@@ -1847,12 +1862,18 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                         for (auto id: ids) {
                             auto* pNode = &cl->notes.m_list[id];
                             auto result = selection.insert(pNode);
-                            if (bIsCtrl) {
+                            if (result.second) {
+                                bChanged = true;
+                            }
+                            if (bIsCtrl && result.first != selection.end()) {
                                 selection.erase(result.first);
+                                bChanged = true;
                             }
                         }
                     }
-                    cl->updateNoteViewSelection();
+                    if (bChanged) {
+                        cl->updateNoteViewSelection();
+                    }
                     return true;
                 });
             } else if (contextClip) {
@@ -2231,18 +2252,13 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         return true;
     }
     clip_t* clip = view.clip();
-    if (!clip) {
-        return false;
-    }
     if (kevt.type != K_RELEASE) {
         clip_cursor_t& cursor          = view.m_cursor;
         clip_cursor_t cursorBefore     = cursor;// copy
-        bool handled                   = false;
         bool edit                      = false;
         String desc                    = "???";
         // view.m_notesDragged[clip].dragStartNotes = clip->notes;// copy
         if (kevt.type == K_PRESS) {
-            clip_notes_t& notes = clip->notes;
             if (command == CMD_SELECT_ALL) {
                 if (view.isAbsoluteTimeMode()) {
                     view.visitClipView([&](clip_t* cl) {
@@ -2258,16 +2274,17 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                             auto pNote = &cl->notes.m_list[note.id];
                             cl->notes.selection.insert(pNote);
                         }
+                        cl->updateNoteViewSelection();
                         return true;
                     });
-                } else {
+                } else if (clip) {
+                    clip_notes_t& notes = clip->notes;
                     notes.clearSelection();
                     notes.updateBounds();
                     notes.selectIdxRange(0, notes.m_list.size());
                 }
                 view.copySelectedNoteList();
                 setSelectionFrame(getMinMaxTime(view));
-                handled = true;
             }
             if (command == CMD_DELETE) {
                 view.visitClipView([&](clip_t* cl) {
@@ -2281,22 +2298,23 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 if (edit) {
                     desc    = "Delete notes";
                 }
-                handled = true;
             }
             if (command == CMD_MUTE) {
-                if (!notes.selection.empty()) {
-                    //        notes.muteToggleSelectedNotes(notes);
-                    view.visitClipView([&](clip_t* cl) {
-                        muteNotesToggle(view.m_notesDragged[cl].draggedSelection);
+                bool bChanged = false;
+                view.visitClipView([&](clip_t* cl) {
+                    if (cl->notes.selection.empty()) {
                         return true;
-                    });
-                    mergeDraggedNotes(dragmode::drag_notes_move);
-                    notes.updateBounds();
-                    // setSelectionFrame(getMinMaxTime(notes.selection));
+                    }
+                    bChanged = true;
+                    muteNotesToggle(view.m_notesDragged[cl].draggedSelection);
+                    mergeDraggedNotes(dragmode::drag_notes_move, cl);
+                    cl->setDirty();
+                    return true;
+                });
+                if (bChanged) {
                     edit    = true;
                     desc    = "Mute notes";
                 }
-                handled = true;
             } else if (command == CMD_CUT) {
                 auto clipboard = ClipboardFromView(view, cursor, true);
                 view.visitClipViewReverse([&](clip_t* cl) {
@@ -2314,16 +2332,15 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     daw->setNotesClipboard(clipboard);
                     desc = "Cut notes";
                 }
-                handled = true;
             } else if (command == CMD_COPY) {
                 auto clipboard = ClipboardFromView(view, cursor, true);
                 if (clipboard) {
                     daw->setNotesClipboard(clipboard);
                     desc    = "Copy notes";
                 }
-                handled = true;
             } else if (command == CMD_DUPLICATE) {
-                if (!notes.selection.empty()) {
+                if (clip && !clip->notes.selection.empty()) {
+                    auto& notes = clip->notes;
 #ifndef NDEBUG
                     for (note_t* selPtr: notes.selection) {
                         dbgassert(notes.has(selPtr));
@@ -2352,13 +2369,14 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                         }
 #endif
                         grid.makeTickVisible(cursor.end);
+                        clip->setDirty();
                         edit    = true;
                         desc    = "Duplicate notes";
                     }
                 }
-                handled = true;
             } else if (command == CMD_PASTE) {
-                if (daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES && !daw->getNotesClipboard()->empty()) {
+                if (clip && daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES && !daw->getNotesClipboard()->empty()) {
+                    auto& notes = clip->notes;
                     auto& clipboard = daw->getNotesClipboard();
                     notes.clearSelection();
                     view.copySelectedNoteList();
@@ -2373,114 +2391,118 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     mergeDraggedNotes(dragmode::drag_notes_move);
                     cursor.end = cursor.start + clipboard->cursorRange;
                     grid.makeTickVisible(cursor.end);
+                    clip->setDirty();
                     edit    = true;
                     desc    = "Paste notes";
                 }
-                handled = true;
             } else if (command == CMD_APPLY_ARP) {
-                auto clipBefore = *clip;
-                auto track = view.track();
-                arp_snapshot snapshot;
-                tracksnapshot_store_opts_t opts;
-                opts.storeAutomation = false;
-                opts.storeClips = false;
-                opts.storeLayouts = false;
-                opts.storePluginPreset = true;
-                track->getStage()->arp->createSnapshot(snapshot, opts);
-                DAW::midiarp arpCopy(track->getStage());
-                arpCopy.loadSnapshot(snapshot);
-                auto begin = clip->start();
-                auto end = clip->end();
-                if (clip->isLoopEnabled()) {
-                    end = clip->start() + clip->loopStart + clip->loopLen;
-                }
-                std::vector<note_t> notes;
-                clip->getInTimeRange(begin, end, -1, -1, notes, {
-                    .bCutNotes = false,
-                    .bCutMutedNotes = false,
-                    .bApplyGroove = true,
-                });
-                auto host = dawCtrl->getDaw()->getHost();
-                auto state = playback_state::status_playback;
-                std::vector<midievent_note_t> noteEvents;
-                for (auto& note : notes) {
-                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - begin, note.start(), true, false, note.channel});
-                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.end() - begin, note.end(), false, false, note.channel});
-                }
-                std::vector<midievent_note_t> noteEventsProcessed;
-                arpCopy.process(host, state, 0, noteEvents, begin, end + 1, -1, -1, noteEventsProcessed);
-                clip_notes_t tmpClipboard;
-                tmpClipboard.m_list.clear();
-                for (auto& note : noteEventsProcessed) {
-                    if (note.isNoteOn) {
-                        note_t n;
-                        n.pitch = note.pitch;
-                        n.velocity = note.velocity;
-                        n.time = note.tickOffsetInBlock;
-                        n.len = 0;
-                        n.channel = note.channel;
-                        tmpClipboard.m_list.push_back(n);
-                    } else {
-                        // find last note (reverse)
-                        for (auto it = tmpClipboard.m_list.rbegin(); it != tmpClipboard.m_list.rend(); ++it) {
-                            if (it->pitch == note.pitch && it->channel == note.channel) {
-                                it->len = note.tickOffsetInBlock - it->time;
-                                break;
+                if (clip) {
+                    auto clipBefore = *clip;
+                    auto track = view.track();
+                    arp_snapshot snapshot;
+                    tracksnapshot_store_opts_t opts;
+                    opts.storeAutomation = false;
+                    opts.storeClips = false;
+                    opts.storeLayouts = false;
+                    opts.storePluginPreset = true;
+                    track->getStage()->arp->createSnapshot(snapshot, opts);
+                    DAW::midiarp arpCopy(track->getStage());
+                    arpCopy.loadSnapshot(snapshot);
+                    auto begin = clip->start();
+                    auto end = clip->end();
+                    if (clip->isLoopEnabled()) {
+                        end = clip->start() + clip->loopStart + clip->loopLen;
+                    }
+                    std::vector<note_t> notes;
+                    clip->getInTimeRange(begin, end, -1, -1, notes, {
+                        .bCutNotes = false,
+                        .bCutMutedNotes = false,
+                        .bApplyGroove = true,
+                    });
+                    auto host = dawCtrl->getDaw()->getHost();
+                    auto state = playback_state::status_playback;
+                    std::vector<midievent_note_t> noteEvents;
+                    for (auto& note : notes) {
+                        InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - begin, note.start(), true, false, note.channel});
+                        InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.end() - begin, note.end(), false, false, note.channel});
+                    }
+                    std::vector<midievent_note_t> noteEventsProcessed;
+                    arpCopy.process(host, state, 0, noteEvents, begin, end + 1, -1, -1, noteEventsProcessed);
+                    clip_notes_t tmpClipboard;
+                    tmpClipboard.m_list.clear();
+                    for (auto& note : noteEventsProcessed) {
+                        if (note.isNoteOn) {
+                            note_t n;
+                            n.pitch = note.pitch;
+                            n.velocity = note.velocity;
+                            n.time = note.tickOffsetInBlock;
+                            n.len = 0;
+                            n.channel = note.channel;
+                            tmpClipboard.m_list.push_back(n);
+                        } else {
+                            // find last note (reverse)
+                            for (auto it = tmpClipboard.m_list.rbegin(); it != tmpClipboard.m_list.rend(); ++it) {
+                                if (it->pitch == note.pitch && it->channel == note.channel) {
+                                    it->len = note.tickOffsetInBlock - it->time;
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                    // clip->selectedGroove = -1;
-                clip->notes = tmpClipboard;
-                clip->setDirty();
-                // edit = true;
-                desc = "Apply Arp";
-                dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
-                clip->setDirty();
-                view.updateNotePitches(false);
-                handled = true;
-            } else if (command == CMD_APPLY_GROOVE) {
-                clip_notes_t tmpClipboard;
-                view.copySelectedNoteList();
-                notes.clearSelection();
-                auto clipBefore = *clip;
-                auto applyGroove = [&](DawInstance* daw, clip_t* clip, clip_notes_t& notes) {
-                    auto& grooves = daw->getGrooveLibrary().getGrooves();
-                    auto groove = size_t(clip->selectedGroove);
-                    if (groove >= 0 && groove < grooves.size()) {
-                        auto minMax = getMinMaxTime(clip->notes.m_list);
-                        if (minMax.first && minMax.second) {
-                            tick_t start = minMax.first->start();
-                            tick_t end = minMax.second->end();
-                            if (end - start > 0) {
-                                clip->getNotesView(start, end, notes, {
-                                    .bCutNotes = false,
-                                    .bCutMutedNotes = true,
-                                    .bApplyGroove = true,
-                                });
-                                cutSelfIntersecting(notes.m_list);
-                                notes.updateBounds();
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                };
-                if (applyGroove(daw, clip, tmpClipboard)) {
-                    clip->selectedGroove = -1;
+                        // clip->selectedGroove = -1;
                     clip->notes = tmpClipboard;
                     clip->setDirty();
+                    // edit = true;
+                    desc = "Apply Arp";
+                    dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+                    clip->setDirty();
+                    view.updateNotePitches(false);
                 }
-                // edit = true;
-                handled = true;
-                desc = "Apply groove";
-                dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
-                clip->setDirty();
-                view.updateNotePitches(false);
+            } else if (command == CMD_APPLY_GROOVE) {
+                if (clip) {
+                    auto& notes = clip->notes;  
+                    clip_notes_t tmpClipboard;
+                    view.copySelectedNoteList();
+                    notes.clearSelection();
+                    auto clipBefore = *clip;
+                    auto applyGroove = [&](DawInstance* daw, clip_t* clip, clip_notes_t& notes) {
+                        auto& grooves = daw->getGrooveLibrary().getGrooves();
+                        auto groove = size_t(clip->selectedGroove);
+                        if (groove >= 0 && groove < grooves.size()) {
+                            auto minMax = getMinMaxTime(clip->notes.m_list);
+                            if (minMax.first && minMax.second) {
+                                tick_t start = minMax.first->start();
+                                tick_t end = minMax.second->end();
+                                if (end - start > 0) {
+                                    clip->getNotesView(start, end, notes, {
+                                        .bCutNotes = false,
+                                        .bCutMutedNotes = true,
+                                        .bApplyGroove = true,
+                                    });
+                                    cutSelfIntersecting(notes.m_list);
+                                    notes.updateBounds();
+                                    return true;
+                                }
+                            }
+                        }
+                        return false;
+                    };
+                    if (applyGroove(daw, clip, tmpClipboard)) {
+                        clip->selectedGroove = -1;
+                        clip->notes = tmpClipboard;
+                        clip->setDirty();
+                    }
+                    // edit = true;
+                    desc = "Apply groove";
+                    dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+                    clip->setDirty();
+                    view.updateNotePitches(false);
+                }
             } else if (command == CMD_QUANTIZE) {
-                if (!notes.selection.empty()) {
+                if (clip && !clip->notes.selection.empty()) {
                     auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
                     if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
+                        auto& notes = clip->notes;
                         /* Quantize notes to grid 
                         * 1. cut notes from clip
                         * 2. quantize notes in isolation
@@ -2515,51 +2537,54 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                         if (pair.second)
                             grid.makeTickVisible(pair.second->end() + getTickOffset());
                         expandSelectionFrame(pair);
+                        clip->setDirty();
                         edit = true;
-                        handled = true;
                         desc = "Quanitize notes";
                     }
                 }
             } else if (command == CMD_APPLY_PYTHON_SCRIPT) {
-                if (notes.selection.empty()) {
-                    DAW::UI::CommandContext ctxtSelectAll = ctxt;
-                    ctxtSelectAll.type = GlobalCommandType::CMD_SELECT_ALL;
-                    handleEditorCommand(ctxtSelectAll);
-                }
-                clip_notes_t tmpClipboard;
-                tmpClipboard.setTo(notes.selection, 0);
-                notes.deleteSelectedNotes(notes);
-                notes.clearSelection();
-                view.copySelectedNoteList();
-                auto& dragged = view.m_notesDragged[clip];
-                try {
-                    DAW::PythonNoteProcessor::python_script_ctxt_t pyCtxt;
-                    pyCtxt.notes = tmpClipboard.m_list;
-                    seq_rand rnd;
-                    rnd.rng_seed(getTimeMillis());
-                    pyCtxt.seed = int32_t(rnd.rng_rand());
-                    pyCtxt.params = ctxt.argFloats;
-                    tmpClipboard.m_list = DAW::PythonNoteProcessor::RunPythonNoteProcessor(ctxt.argStr0, pyCtxt);
-                } catch (std::exception& e) {
-                    log_lf(Log::L_ERROR, "Python script failed: %s\n", e.what());
-                }
-                cutSelfIntersecting(tmpClipboard.m_list);
-                for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
-                    dragged.draggedSelection.push_back(note);
-                }
-                mergeDraggedNotes(dragmode::drag_notes_copy);
+                if (clip) {
+                    auto& notes = clip->notes;
+                    if (notes.selection.empty()) {
+                        DAW::UI::CommandContext ctxtSelectAll = ctxt;
+                        ctxtSelectAll.type = GlobalCommandType::CMD_SELECT_ALL;
+                        handleEditorCommand(ctxtSelectAll);
+                    }
+                    clip_notes_t tmpClipboard;
+                    tmpClipboard.setTo(notes.selection, 0);
+                    notes.deleteSelectedNotes(notes);
+                    notes.clearSelection();
+                    view.copySelectedNoteList();
+                    auto& dragged = view.m_notesDragged[clip];
+                    try {
+                        DAW::PythonNoteProcessor::python_script_ctxt_t pyCtxt;
+                        pyCtxt.notes = tmpClipboard.m_list;
+                        seq_rand rnd;
+                        rnd.rng_seed(getTimeMillis());
+                        pyCtxt.seed = int32_t(rnd.rng_rand());
+                        pyCtxt.params = ctxt.argFloats;
+                        tmpClipboard.m_list = DAW::PythonNoteProcessor::RunPythonNoteProcessor(ctxt.argStr0, pyCtxt);
+                    } catch (std::exception& e) {
+                        log_lf(Log::L_ERROR, "Python script failed: %s\n", e.what());
+                    }
+                    cutSelfIntersecting(tmpClipboard.m_list);
+                    for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
+                        dragged.draggedSelection.push_back(note);
+                    }
+                    mergeDraggedNotes(dragmode::drag_notes_copy);
 #ifndef NDEBUG
-                for (note_t* selPtr: notes.selection) {
-                    dbgassert(notes.has(selPtr));
-                }
+                    for (note_t* selPtr: notes.selection) {
+                        dbgassert(notes.has(selPtr));
+                    }
 #endif
-                auto pair = getMinMaxTime(notes.selection);
-                if (pair.second)
-                    grid.makeTickVisible(pair.second->end() + getTickOffset());
-                expandSelectionFrame(pair);
-                edit = true;
-                handled = true;
-                desc = "Apply python note processor";
+                    auto pair = getMinMaxTime(notes.selection);
+                    if (pair.second)
+                        grid.makeTickVisible(pair.second->end() + getTickOffset());
+                    expandSelectionFrame(pair);
+                    clip->setDirty();
+                    edit = true;
+                    desc = "Apply python note processor";
+                }
             }
         }
         if (command == GlobalCommandType::CMD_MOVE_CURSOR) {
@@ -2630,16 +2655,15 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 view.updateNotePitches(false);
                 setSelectionFrameFromView();
             }
-            handled = true;
             desc    = "Move notes";
         }
         if (edit) {
             // notes.updateBounds();
             dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, cursorBefore));
-            clip->setDirty();
             view.updateNotePitches(false);
         }
-        return handled;
+        static constexpr auto commands = {CMD_SELECT_ALL, CMD_DELETE, CMD_MUTE, CMD_CUT, CMD_COPY, CMD_DUPLICATE, CMD_PASTE, CMD_APPLY_ARP, CMD_APPLY_GROOVE, CMD_QUANTIZE, CMD_APPLY_PYTHON_SCRIPT};
+        return std::find(commands.begin(), commands.end(), command) != commands.end();
     }
     return false;
 }

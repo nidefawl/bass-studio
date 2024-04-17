@@ -293,6 +293,7 @@ namespace DAW {
 
     bool HandleEditorCommand(DawInstance* daw, DawCtrl* dawCtrl, track_gui_manager_i& iGuiMgr, DAW::Cursor& cursor, scaled_grid& grid, project_t& project, const UI::CommandContext& ctxt) {
         auto& kevt = ctxt.kevt;
+        const auto command = ctxt.type;
         if (kevt.type != K_RELEASE) {
             trackstate_t preModifyState;
             ThreadLock lock      = daw->lockPlayThread();
@@ -300,7 +301,6 @@ namespace DAW {
             bool handledKeyinput = false;
             String desc          = "???";
             bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
-            auto command = ctxt.type;
             if (kevt.type == K_PRESS) {
                 if (command == CMD_SELECT_ALL) {
                     tick_t evtMin            = INVALID_TICK;
@@ -598,9 +598,26 @@ namespace DAW {
             if (handledKeyinput) {
                 daw->updateVisibleTrackContents();
             }
-            return handledKeyinput;
         }
-        return false;
+        static constexpr auto commands = {
+            GlobalCommandType::CMD_MOVE_CURSOR,
+            GlobalCommandType::CMD_SELECT_ALL,
+            GlobalCommandType::CMD_CREATE_EMPTY_CLIP,
+            GlobalCommandType::CMD_DELETE_TIME,
+            GlobalCommandType::CMD_INSERT_TIME,
+            GlobalCommandType::CMD_DELETE,
+            GlobalCommandType::CMD_CUT,
+            GlobalCommandType::CMD_MUTE,
+            GlobalCommandType::CMD_SET_COLOR,
+            GlobalCommandType::CMD_SET_NAME,
+            GlobalCommandType::CMD_COPY,
+            GlobalCommandType::CMD_PASTE,
+            GlobalCommandType::CMD_PASTE_NO_AUTOMATION,
+            GlobalCommandType::CMD_RENDER_TO_AUDIO,
+            GlobalCommandType::CMD_CONSOLIDATE,
+            GlobalCommandType::CMD_DUPLICATE,
+        };
+        return std::find(commands.begin(), commands.end(), command) != commands.end();
     }
 } // namespace DAW
 
