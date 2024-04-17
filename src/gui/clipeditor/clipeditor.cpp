@@ -1567,6 +1567,8 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             }
             if (!inSelection && !isShift(evt.kbmods) && !isCtrl(evt.kbmods)) {
                 view.visitClipView([&](clip_t* cl) {
+                    if (cl->notes.selection.empty())
+                        return true;
                     cl->notes.clearSelection();
                     cl->updateNoteViewSelection();
                     return true;
@@ -2062,7 +2064,6 @@ bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                         .bCutMutedNotes = cl != currentClip,
                         .bApplyGroove = false,
                     });
-                    //TODO: selection must happen from looped notes in absolute mode
                     contextNote = notesViewTemp.get(tickExact, math::floorfS32(pitch));
                 } else {
                     contextNote = cl->notes.get(tickExact, math::floorfS32(pitch));
