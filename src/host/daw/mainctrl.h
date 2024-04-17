@@ -174,6 +174,7 @@ public:
     std::map<clip_t*, clip_notes_dragged_t> m_notesDragged;
     std::vector<int32_t> notePitches;
     editor_view_selection_t m_selectionView;
+    noteview_render_t notesViewTemp;
     bool bIsAbsoluteMode = false;
     clip_view_t() = default;
     // delete copy constructor
@@ -279,6 +280,31 @@ public:
                 return;
             }
         }
+    }
+    template<typename T>
+    int32_t selectAll(T&& visitor) {
+        int32_t numSelected = 0;
+        visitClipView([&](clip_t* cl) {
+            notesViewTemp.clear();
+            cl->notes.clearSelection();
+            cl->getInTimeRange(cl->start(), cl->end(), -1, -1, notesViewTemp.m_list, {
+                .bCutNotes = false,
+                .bCutMutedNotes = false,
+                .bApplyGroove = false,
+                .bRelative = false,
+            });
+            for (auto& note: notesViewTemp.m_list) {
+                auto pNote = &cl->notes.m_list[note.id];
+                if (visitor(pNote)) {
+                    numSelected++;
+                    cl->notes.selection.insert(pNote);
+                }
+            }
+            cl->updateNoteViewSelection();
+            return true;
+        });
+        copySelectedNoteList();
+        return numSelected;
     }
 };
 

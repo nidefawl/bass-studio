@@ -1546,7 +1546,6 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                         notes.selection.insert(contextNote);
                         dawCtrl->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
                         desc = "Add Note";
-                        setSelectionFrame(getMinMaxTime(view));
                         contextClip->updateNoteViewSelection();
                         dragMode = drag_note_right;
                         dragStartCursor = view.m_cursor;
@@ -2278,22 +2277,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         if (kevt.type == K_PRESS) {
             if (command == CMD_SELECT_ALL) {
                 if (view.isAbsoluteTimeMode()) {
-                    view.visitClipView([&](clip_t* cl) {
-                        notesViewTemp.clear();
-                        cl->notes.clearSelection();
-                        cl->getInTimeRange(cl->start(), cl->end(), -1, -1, notesViewTemp.m_list, {
-                            .bCutNotes = false,
-                            .bCutMutedNotes = false,
-                            .bApplyGroove = false,
-                            .bRelative = false,
-                        });
-                        for (auto& note: notesViewTemp.m_list) {
-                            auto pNote = &cl->notes.m_list[note.id];
-                            cl->notes.selection.insert(pNote);
-                        }
-                        cl->updateNoteViewSelection();
-                        return true;
-                    });
+                    view.selectAll([](note_t* note) { return true; });
                 } else if (clip) {
                     clip_notes_t& notes = clip->notes;
                     notes.clearSelection();

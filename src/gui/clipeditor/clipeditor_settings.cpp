@@ -95,18 +95,11 @@ void gui_clipsettings::renderBackground(NVGcontext* vg) {
 
 void duplicateClipLoop(DawInstance* daw, clip_view_t& view);//clipeditor.cpp;
 void selectAllMuted(DawInstance* daw, clip_view_t& view) {
-    auto clip = view.clip();
-    if (!clip) return;
-    clip_notes_t& notes = clip->notes;
-    notes.selection.clear();
-    notes.visitNotes([&notes](note_t& n) {
-        if (!n.isEnabled()) {
-            notes.selection.insert(&n);
-        }
-    });
-    String selStatus = StringFormat("%zu notes selected", notes.selection.size());
+    auto numSelected = view.selectAll([](note_t* note) { return !note->isEnabled(); });
+    String selStatus = StringFormat("%d notes selected", numSelected);
     daw->getMainControl()->setStatusText(selStatus);
 }
+
 void gui_clipsettings::buttonClicked(guibase* button) {
     auto const daw = dawCtrl->getDaw();
     auto clip = view.clip();
