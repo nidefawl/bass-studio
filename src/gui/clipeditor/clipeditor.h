@@ -555,6 +555,7 @@ class gui_clipcontent : public gui_clipcontent_base, public piano_scale {
 public:
     enum dragmode {
         drag_none,
+        drag_note_clicked,
         drag_frame,
         drag_notes_move,
         drag_notes_copy,
