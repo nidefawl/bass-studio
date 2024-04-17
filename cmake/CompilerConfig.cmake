@@ -94,7 +94,6 @@ else()
   endif()
 
   if (CLANG)
-    add_compile_definitions(_LIBCPP_NO_EXCEPTIONS)  
     add_compile_options(-ffunction-sections -fdata-sections)
   endif()
 
