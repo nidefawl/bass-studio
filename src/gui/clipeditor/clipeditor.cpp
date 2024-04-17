@@ -2662,11 +2662,11 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
             dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, cursorBefore));
             view.updateNotePitches(false);
         }
-        static constexpr auto commands = {CMD_SELECT_ALL, CMD_DELETE, CMD_MUTE, CMD_CUT, CMD_COPY, CMD_DUPLICATE, CMD_PASTE, CMD_APPLY_ARP, CMD_APPLY_GROOVE, CMD_QUANTIZE, CMD_APPLY_PYTHON_SCRIPT};
-        return std::find(commands.begin(), commands.end(), command) != commands.end();
     }
-    return false;
+    static constexpr auto commands = {CMD_SELECT_ALL, CMD_DELETE, CMD_MUTE, CMD_CUT, CMD_COPY, CMD_DUPLICATE, CMD_PASTE, CMD_APPLY_ARP, CMD_APPLY_GROOVE, CMD_QUANTIZE, CMD_APPLY_PYTHON_SCRIPT};
+    return std::find(commands.begin(), commands.end(), command) != commands.end();
 }
+
 bool gui_clipcontent_control_data::handleKeyInput(KeyEvent& kevt) {
     clip_t* clip = view.clip();
     if (!clip) {
@@ -2764,10 +2764,6 @@ bool gui_clipcontent_control_data::handleEditorCommand(DAW::UI::CommandContext& 
     return false;
 }
 bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
-    clip_t* clip = view.clip();
-    if (!clip) {
-        return false;
-    }
     if (kevt.type != K_REPEAT && isCtrlKey(kevt.keyCode)) {
         if ((dragMode == drag_notes_move || dragMode == drag_notes_copy)) {
             if ((dragMode == drag_notes_copy) != (kevt.type == K_PRESS)) {
