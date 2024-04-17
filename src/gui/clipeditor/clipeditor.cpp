@@ -990,9 +990,11 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
         renderFrame(vg, dragBegin, dragTo);
     }
 }
-void gui_clipcontent_notes::renderNoteLabels(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, bool bRenderPosLen) {
+void gui_clipcontent_notes::renderNoteLabels(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, bool bRenderPosLen, bool bRenderMuted) {
     if (scale >= NOTES_LABEL_MIN_HEIGHT) {
         for (auto& note : clipNotes) {
+            if (!bRenderMuted && !note.isEnabled())
+                continue;
             auto nx = grid.tickToScreenD(note.time + tickOffset);
             auto nw = grid.tickLenToScreen(note.len);
             if (nx + nw < renderPos.x - 4)
@@ -1185,7 +1187,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             auto& notesView = cl->getNoteViewRender();
             if (!notesView.isEmpty()) {
                 renderClipNoteRects(vg, notesView.m_list, {}, cs, cl->time, scale, 1.0f, rgbToNvg(cl->rgb), 1, false);
-                renderNoteLabels(vg, notesView.m_list, {}, cs, cl->time, scale, false);
+                renderNoteLabels(vg, notesView.m_list, {}, cs, cl->time, scale, false, false);
             }
         }
         return true;
@@ -1206,7 +1208,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         renderClipNoteRects(vg, pList, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE_MUTE), 1, true);
         // Render enabled notes
         renderClipNoteRects(vg, pList, {}, cs, tickOffset, scale, 1.0f, rgbToNvg(currentClip->rgb), 4, false);
-        renderNoteLabels(vg, pList, {}, cs, tickOffset, scale, false);
+        renderNoteLabels(vg, pList, {}, cs, tickOffset, scale, false, true);
 
 
         if (view.isAbsoluteTimeMode()) {
@@ -1385,6 +1387,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             if (n) {
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
+                renderNoteLabels(vg, view.m_notesDragged[cl].draggedSelection, {}, cs, 0, scale, true, true);
             }
             return true;
         });
@@ -1403,7 +1406,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 if (n) {
                     nvgFillPaint(vg, paint);
                     nvgBatchedRender(vg);
-                    renderNoteLabels(vg, view.m_list, {}, cs, 0, scale, true);
+                    renderNoteLabels(vg, view.m_list, {}, cs, 0, scale, true, true);
                 }
                 return true;
             });
