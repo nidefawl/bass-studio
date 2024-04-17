@@ -80,6 +80,13 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
     tick_t clipEndOffset     = clip->offsetStart + clip->getLen();
     tick_t curLoopEnd = clip->loopStart + clip->loopLen;
     bool bIsAbsoluteTimeMode = view.isAbsoluteTimeMode();
+    if (bIsAbsoluteTimeMode) {
+        if (clip->offsetStart < clip->loopStart) {
+            curLoopEnd = clip->loopStart - clip->offsetStart + clip->loopLen;
+        } else {
+            curLoopEnd = clip->loopLen;
+        }
+    }
     if (dragHandle == drag_handle_right) {
         if (!bIsAbsoluteTimeMode) {
             tick_t tickDelta = (tickRelative - clipEndOffset);
@@ -144,13 +151,10 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
     }
     if (dragHandle == drag_handle_loopright) {
         tick_t newLen    = clip->loopLen + (tickRelative - curLoopEnd);
-        if (bIsAbsoluteTimeMode) {
-            newLen = tickRelative;
-        }
         if (newLen > 0) {
             if (clip->loopLen == newLen)
                 return;
-            clip->loopLen = newLen;
+            clip->loopLen = math::max(0, newLen);
         }
     }
     if (dragHandle == drag_handle_loopleft) {
@@ -161,8 +165,8 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
             if (newStart < curLoopEnd) {
                 if (clip->loopStart == newStart && clip->loopLen == curLoopEnd - newStart)
                     return;
-                clip->loopStart = newStart;
-                clip->loopLen   = curLoopEnd - newStart;
+                clip->loopStart = math::max(0, newStart);
+                clip->loopLen   = math::max(0, curLoopEnd - newStart);
             }
         }
     }
@@ -171,8 +175,15 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
         tick_t tickDelta    = (tickRelative - curLoopStart);
         if (!tickDelta)
             return;
-        clip->loopStart += tickDelta;
-        clip->offsetStart = clip->loopStart;
+        bool bMatch = clip->offsetStart == clip->loopStart;
+        if (isAlt(evt.kbmods)) {
+            clip->loopStart = math::max(0, tickRelative);
+        } else {
+            clip->loopStart = math::max(0, clip->loopStart + tickDelta);
+            if (!bIsAbsoluteTimeMode || bMatch) {
+                clip->offsetStart = clip->loopStart;
+            }
+        }
     }
     clip->setDirty();
     dawCtrl->getDaw()->updateVisibleTrackContents();
@@ -180,6 +191,7 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
 
 void guictr_cliphandles::handleDraggedRelease(MouseEvent& evt) {
     dragHandle = drag_handle_none;
+    //TODO: handle history
 }
 
 guictr_cliphandles::dist_dragzone_handle guictr_cliphandles::getDragZone(ivec2 local) {
@@ -191,10 +203,6 @@ guictr_cliphandles::dist_dragzone_handle guictr_cliphandles::getDragZone(ivec2 l
         float distBar    = std::numeric_limits<float>::max();
         float barSX      = clipLoopStartScrX();
         float barEX      = clipLoopEndScrX();
-        if (view.isAbsoluteTimeMode()) {
-            barSX = clipStartScrX();
-            barEX = barSX + (clipLoopEndScrX() - clipLoopStartScrX());
-        }
         if (local.x >= barSX && local.x < barEX && local.y >= halfHeight && local.y < halfHeight * 2) {
             distBar = DRAG_RANGE * DRAG_RANGE * 0.8f;
         }
@@ -282,13 +290,8 @@ void guictr_cliphandles::renderLoopHandle(NVGcontext* vg, vec2 editorSize) const
     float yOffset = 0;
     auto cs = editorSize;
     yOffset += heightLoopInidicator;
-    if (view.isAbsoluteTimeMode()) {
-        tickBeginX = clipStartScrX();
-        tickEndX   = tickBeginX + (clipLoopEndScrX() - clipLoopStartScrX());
-    } else {
-        tickBeginX = clipLoopStartScrX();
-        tickEndX   = clipLoopEndScrX();
-    }
+    tickBeginX = clipLoopStartScrX();
+    tickEndX   = clipLoopEndScrX();
     if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
         float barBeginX = math::max(-wLoopInidicator, tickBeginX);
         float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);

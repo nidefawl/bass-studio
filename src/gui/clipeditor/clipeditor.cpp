@@ -3205,6 +3205,9 @@ float guictr_cliphandles::clipLoopStartScrX() const {
     if (!assert_expr(clip)) {
         return 0;
     }
+    if (view.isAbsoluteTimeMode()) {
+        return grid.tickToScreenD(getTickOffsetOffset() + (clip->offsetStart < clip->loopStart ? clip->loopStart - clip->offsetStart : 0));
+    }
     return (float) grid.tickToScreenD(getTickOffset() + clip->loopStart);
 }
 
@@ -3212,6 +3215,9 @@ float guictr_cliphandles::clipLoopEndScrX() const {
     auto clip = view.clip();
     if (!assert_expr(clip)) {
         return 0;
+    }
+    if (view.isAbsoluteTimeMode()) {
+        return grid.tickToScreenD(getTickOffsetOffset() + (clip->offsetStart < clip->loopStart ? clip->loopStart - clip->offsetStart : 0) + clip->loopLen);
     }
     return (float) grid.tickToScreenD(getTickOffset() + clip->loopStart + clip->loopLen);
 }
