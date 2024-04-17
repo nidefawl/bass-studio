@@ -2460,87 +2460,128 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     view.updateNotePitches(false);
                 }
             } else if (command == CMD_APPLY_GROOVE) {
-                if (clip) {
+                auto applyGroove = [&](DawInstance* daw, clip_t* clip, clip_notes_t& notes) {
+                    auto& grooves = daw->getGrooveLibrary().getGrooves();
+                    auto groove = size_t(clip->selectedGroove);
+                    if (groove >= 0 && groove < grooves.size()) {
+                        auto minMax = getMinMaxTime(clip->notes.m_list);
+                        if (minMax.first && minMax.second) {
+                            tick_t start = minMax.first->start();
+                            tick_t end = minMax.second->end();
+                            if (end - start > 0) {
+                                clip->getNotesView(start, end, notes, {
+                                    .bCutNotes = false,
+                                    .bCutMutedNotes = true,
+                                    .bApplyGroove = true,
+                                });
+                                cutSelfIntersecting(notes.m_list);
+                                notes.updateBounds();
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                };
+                auto daw = dawCtrl->getDaw();
+                int32_t numEdited = 0;
+                view.visitClipView([&](clip_t* clip) {
                     auto& notes = clip->notes;  
                     clip_notes_t tmpClipboard;
                     view.copySelectedNoteList();
                     notes.clearSelection();
                     auto clipBefore = *clip;
-                    auto applyGroove = [&](DawInstance* daw, clip_t* clip, clip_notes_t& notes) {
-                        auto& grooves = daw->getGrooveLibrary().getGrooves();
-                        auto groove = size_t(clip->selectedGroove);
-                        if (groove >= 0 && groove < grooves.size()) {
-                            auto minMax = getMinMaxTime(clip->notes.m_list);
-                            if (minMax.first && minMax.second) {
-                                tick_t start = minMax.first->start();
-                                tick_t end = minMax.second->end();
-                                if (end - start > 0) {
-                                    clip->getNotesView(start, end, notes, {
-                                        .bCutNotes = false,
-                                        .bCutMutedNotes = true,
-                                        .bApplyGroove = true,
-                                    });
-                                    cutSelfIntersecting(notes.m_list);
-                                    notes.updateBounds();
-                                    return true;
-                                }
-                            }
-                        }
-                        return false;
-                    };
                     if (applyGroove(daw, clip, tmpClipboard)) {
                         clip->selectedGroove = -1;
                         clip->notes = tmpClipboard;
                         clip->setDirty();
+                        desc = "Apply groove";
+                        daw->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+                        numEdited++;
                     }
+                    return true;
+                });
+                if (numEdited > 0) {
                     // edit = true;
-                    desc = "Apply groove";
-                    dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
                     clip->setDirty();
-                    view.updateNotePitches(false);
                 }
             } else if (command == CMD_QUANTIZE) {
-                if (clip && !clip->notes.selection.empty()) {
-                    auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
-                    if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
-                        auto& notes = clip->notes;
+                auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
+                if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
+                    bool bUpdateViewSelection = false;
+                    view.visitClipView([&](clip_t* cl) {
+                        // auto& notes = cl->notes;
                         /* Quantize notes to grid 
                         * 1. cut notes from clip
                         * 2. quantize notes in isolation
                         * 3. paste notes back to clip, cutting intersections
                         */
-                        clip_notes_t tmpClipboard;
-                        tmpClipboard.setTo(notes.selection, 0);
-                        notes.deleteSelectedNotes(notes);
-                        notes.clearSelection();
-                        view.copySelectedNoteList();
-                        auto& dragged = view.m_notesDragged[clip];
+                        if (cl->notes.selection.empty()) {
+                            return true;
+                        }
+
+                        auto& dragged = view.m_notesDragged[cl];
+                        dragged.draggedSelection = dragged.draggedSelectionBegin;
+                        auto getClipOffset = [](const clip_t* cl, tick_t ticksQ) {
+                            auto offset = cl->time % ticksQ;
+                            if (cl->loopEnabled) {
+                                if (cl->offsetStart < cl->loopStart) {
+                                    offset += (cl->loopStart - cl->offsetStart) % ticksQ;
+                                } else {
+                                    offset += ((cl->loopStart - cl->offsetStart) % cl->loopLen) % ticksQ;
+                                }
+                            } else {
+                                offset -= cl->offsetStart % ticksQ;
+                            }
+                            return offset % ticksQ;
+                        };
                         if (settings.quantizeStart > 0) {
-                            quantizeNoteStartTime(tmpClipboard.m_list, settings.quantizeStart);
+                            auto ticksQ = settings.quantizeStart;
+                            tick_t offset = 0;
+                            if (view.isAbsoluteTimeMode()) {
+                                offset = getClipOffset(cl, ticksQ);
+                            }
+                            for (auto& note : dragged.draggedSelection) {
+                                auto newTime = math::roundfS32((note.start() + offset) / static_cast<float>(ticksQ)) * ticksQ;
+                                note.time    = newTime - offset;
+                            }
                         }
                         if (settings.quantizeEnd > 0) {
-                            quantizeNoteEndTime(tmpClipboard.m_list, settings.quantizeEnd);
+                            auto ticksQ = settings.quantizeEnd;
+                            tick_t offset = 0;
+                            if (view.isAbsoluteTimeMode()) {
+                                offset = getClipOffset(cl, ticksQ);
+                            }
+                            for (auto& note : dragged.draggedSelection) {
+                                auto newEnd = math::roundfS32((note.end() + offset) / static_cast<float>(ticksQ)) * ticksQ;
+                                auto newLen = (newEnd - offset) - note.time;
+                                if (newLen > 0) {
+                                    note.len = newLen;
+                                }                            
+                            }
                         }
-                        bool bRemovedNotes = cutSelfIntersecting(tmpClipboard.m_list);
+                        bool bRemovedNotes = cutSelfIntersecting(dragged.draggedSelection);
                         if (bRemovedNotes) {
                             log_lf(Log::L_DEBUG, "removed some intersecting notes\n");
                         }
-                        for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
-                            dragged.draggedSelection.push_back(note);
+                        mergeDraggedNotes(dragmode::drag_notes_move, cl);
+                        if (view.isAbsoluteTimeMode()) {
+                            auto pair = getMinMaxTime(cl->notes.selection);
+                            if (pair.second)
+                                grid.makeTickVisible(pair.second->end() + getTickOffset());
+                            expandSelectionFrame(pair);
+                        } else {
+                            bUpdateViewSelection = true;
                         }
-                        mergeDraggedNotes(dragmode::drag_notes_copy);
-#ifndef NDEBUG
-                        for (note_t* selPtr: notes.selection) {
-                            dbgassert(notes.has(selPtr));
-                        }
-#endif
-                        auto pair = getMinMaxTime(notes.selection);
-                        if (pair.second)
-                            grid.makeTickVisible(pair.second->end() + getTickOffset());
-                        expandSelectionFrame(pair);
-                        clip->setDirty();
+                        cl->setDirty();
+                        cl->updateNoteViewSelection();
                         edit = true;
+                        return true;
+                    });
+                    if (edit) {
                         desc = "Quanitize notes";
+                    }
+                    if (bUpdateViewSelection) {
+                        setSelectionFrameFromView();
                     }
                 }
             } else if (command == CMD_APPLY_PYTHON_SCRIPT) {
@@ -2572,7 +2613,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
                         dragged.draggedSelection.push_back(note);
                     }
-                    mergeDraggedNotes(dragmode::drag_notes_copy);
+                    mergeDraggedNotes(dragmode::drag_notes_move);
 #ifndef NDEBUG
                     for (note_t* selPtr: notes.selection) {
                         dbgassert(notes.has(selPtr));
