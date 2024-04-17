@@ -617,6 +617,9 @@ public:
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);
     }
     void render(NVGcontext* vg) override;
+    guibase* getFocusedContainer() override {
+        return this;
+    }
 };
 
 class gui_clipcontent_velocities final : public gui_clipcontent {
@@ -987,6 +990,9 @@ public:
         return toScreenSpace(posContentArea);
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    guibase* getFocusedContainer() override {
+        return content.getFocusedContainer();
+    }
 };
 
 class gui_audiocontent final : public gui_clipcontent_base {
@@ -1087,6 +1093,9 @@ public:
 
     void releaseRendered();
     void updatePosition();
+    guibase* getFocusedContainer() override {
+        return this;
+    }
 };
 
 class guictr_audioeditor final : public guictr_editor_base {
@@ -1114,6 +1123,9 @@ public:
     void storeEditorLayout() override;
     ivec2 getContentSize() const override {
         return content.size;
+    }
+    guibase* getFocusedContainer() override {
+        return content.getFocusedContainer();
     }
 };
 class guictr_clipeditor final : public guictr_base {
@@ -1155,6 +1167,11 @@ public:
             resetClipView();
     }
     void refreshAudioWaveform();
+    guibase* getFocusedContainer() override {
+        if (audioeditor.isVisible())
+            return audioeditor.getFocusedContainer();
+        return noteeditor.getFocusedContainer();
+    }
 };
 
 
