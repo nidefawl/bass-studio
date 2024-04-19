@@ -32,6 +32,7 @@ struct audiofile_t final : public samplesource_t {
         AUDIOFILE_FLAG_DERIVED = 1 << 5,
     };
     int32_t id = 0;
+    int32_t derivedFromId = 0;
     String path;
     String name;
     String ext;
@@ -39,6 +40,7 @@ struct audiofile_t final : public samplesource_t {
     uint8_t state = AUDIOFILE_FLAGS_NONE;
     String pathLoaded;
     std::unique_ptr<audiosample_t> sample;
+    clip_audio_settings_t settings;
     audiosample_t* getSample() override {
         return sample.get();
     }

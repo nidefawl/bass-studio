@@ -1,4 +1,5 @@
 #include "host/audiocache/audiocache.h"
+#include <algorithm>
 #include <archive.h>
 #include <archive_entry.h>
 #include <cstdint>
@@ -801,6 +802,14 @@ void audiocache::unloadUnreferenced(const std::vector<int32_t>& refSampleIds) {
     while (it != list.end()) {
         auto* ptr = it->get();
         if (!std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), ptr->id)) {
+            auto derivedSample = std::find_if(mapId.cbegin(), mapId.cend(), [ptr](const auto& p) {
+                const auto* f = p.second;
+                return f->derivedFromId == ptr->id;
+            });
+            if (derivedSample != mapId.cend()) {
+                ++it;
+                continue;
+            }
             log_lf(Log::L_DEBUG, "Unloading unreferenced sample %s (ID %d)\n", StringAsCStr(ptr->path), ptr->id);
             auto itMap = mapId.find(ptr->id);
             if (itMap != mapId.end()) {
@@ -848,6 +857,12 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio) {
         return getSample(clipAudio.id);
     }
     if (clipAudio.idDerived == -1) {
+        for (auto& w : list) {
+            if (w->derivedFromId == clipAudio.id && w->settings == clipAudio.settings) {
+                clipAudio.idDerived = w->id;
+                return w.get();
+            }
+        }
         auto it = mapId.find(clipAudio.id);
         if (it == mapId.end()) {
             log_lf(Log::L_WARN, "getDerivedSample: sample %d not found\n", clipAudio.id);
@@ -894,6 +909,8 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio) {
             log_lf(Log::L_WARN, "Failed to create derived sample for %s\n", audiofile->path.c_str());
             return nullptr;
         }
+        derivedSample->derivedFromId = audiofile->id;
+        derivedSample->settings = clipAudio.settings;
         derivedSample->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_DERIVED;
         auto sample = derivedSample->getSample();
         sample->nSamples = blockNoPreRoll.samples;

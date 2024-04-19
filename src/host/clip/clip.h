@@ -42,11 +42,6 @@ struct clip_fade_t {
     DAW::Shape::shape_t shape;
 };
 
-struct clip_audio_settings_t {
-    float pitch = 0.0f;
-    float stretch = 1.0f;
-};
-
 class clip_audio_t {
 public:
     int32_t id = -1;

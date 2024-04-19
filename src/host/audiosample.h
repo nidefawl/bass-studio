@@ -37,6 +37,12 @@ inline bool operator<(const audioclip_loop_pos_t& lhs, const audioclip_loop_pos_
            std::tie(rhs.clipSampleOffset, rhs.loopStart, rhs.loopEnd, rhs.preLoopLen);
 }
 
+struct clip_audio_settings_t {
+    float pitch = 0.0f;
+    float stretch = 1.0f;
+    auto operator<=>(const clip_audio_settings_t&) const = default;
+};
+
 using samplechannel_t = std::vector<float>;
 struct audiosample_t {
     channelnum_t nChannels;
@@ -46,6 +52,7 @@ struct audiosample_t {
     std::vector<samplechannel_t> samples;
     std::vector<std::vector<samplechannel_t>> downsampled;
     int64_t sampleVersion = 0;
+    clip_audio_settings_t settings;
 };
 
 struct samplesource_t {
