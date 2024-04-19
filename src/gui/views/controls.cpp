@@ -470,6 +470,7 @@ void gui_tempocontrol_input::onKeyInputChangeValue(ivec2 direction) {
     auto const daw = dawCtrl->getDaw();
     int tempo = daw->getCurrentTempo();
     daw->setTempo(tempo + direction.y);
+    daw->updateVisibleTrackContents();
 }
 bool gui_tempocontrol_input::handleKeyInput(KeyEvent& kevt) {
     bool handled = false;
