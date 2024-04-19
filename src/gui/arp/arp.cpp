@@ -233,8 +233,3 @@ void gui_arp::updateClipViewReferences() {
         knob->setArp(arp);
     }
 }
-
-bool gui_arp::isVisible() const {
-    if (!getArp()) return false;
-    return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsArp;
-}

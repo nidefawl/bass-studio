@@ -328,17 +328,15 @@ void guictr_clipeditor::render(NVGcontext* vg) {
     auto sizeContent = vec2(getSizeContent());
     nvgTranslate(vg, posContent.x, posContent.y);
     auto clip = view.clip();
-    if (clip) {
-        if (settingsScrollCtr.isVisible()) {
-            nvgSave(vg);
-            settingsScrollCtr.render(vg);
-            nvgRestore(vg);
-        }
-        if (arp.isVisible()) {
-            nvgSave(vg);
-            arp.render(vg);
-            nvgRestore(vg);
-        }
+    if (settingsScrollCtr.isVisible()) {
+        nvgSave(vg);
+        settingsScrollCtr.render(vg);
+        nvgRestore(vg);
+    }
+    if (arp.isVisible()) {
+        nvgSave(vg);
+        arp.render(vg);
+        nvgRestore(vg);
     }
     nvgSave(vg);
     if (clip && clip->clipType == CLIP_AUDIO) {
@@ -371,6 +369,10 @@ void guictr_clipeditor::render(NVGcontext* vg) {
 
 void guictr_clipeditor::layout() {
     const int32_t padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+    guibase* leftContainer = nullptr;
+    auto& dawSettings = daw_tls::getDawSettings();
+    arp.setVisible(dawSettings.uiShowSettingsArp);
+    settingsScrollCtr.setVisible(dawSettings.uiShowSettingsClip);
 
     ivec2 cs      = getSizeContent();
     settingsCtr.pos = settingsScrollCtr.pos  = ivec2(0, 0);
@@ -382,11 +384,6 @@ void guictr_clipeditor::layout() {
         settingsScrollCtr.layout();
     }
 
-    guibase* leftContainer = nullptr;
-    auto& dawSettings = daw_tls::getDawSettings();
-    auto clip = view.clip();
-    arp.setVisible(dawSettings.uiShowSettingsArp && clip && clip->clipType == CLIP_MIDI);
-    settingsScrollCtr.setVisible(dawSettings.uiShowSettingsClip);
     if (settingsScrollCtr.isVisible()) {
         leftContainer = &settingsScrollCtr;
     }
@@ -1461,7 +1458,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 }
 
 void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
-    dragMode     = drag_none;
+    dragMode      = drag_none;
     const ivec2 local      = evt.relMousepos;
     const tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
     clip_t* contextClip    = view.clip();
@@ -1646,16 +1643,13 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             if (view.isAbsoluteTimeMode()) {
                 // find clicked clip on same track
                 if (!contextClip || view.m_cursor.start < contextClip->start() || view.m_cursor.start >= contextClip->end()) {
-                    view.setSelected(nullptr);
+                    clip_t* clipClicked = nullptr;
                     auto& tracks = view.m_selectionView.tracks;
                     for (auto& [trGuiEntry, clips]: tracks) {
                         if (!contextClip || stl_contains(clips, contextClip)) {
                             for (auto& clip: clips) {
                                 if (clip->start() <= view.m_cursor.start && clip->end() > view.m_cursor.start) {
-                                    auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
-                                    if (assert_expr(clipEditor)) {
-                                        clipEditor->selectEditClip(clip);
-                                    }
+                                    clipClicked = clip;
                                     break;
                                 }
                             }
@@ -1664,14 +1658,16 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                     if (!view.clip()) {
                         view.visitClipViewReverse([&](clip_t* cl) {
                             if (cl->start() <= view.m_cursor.start && cl->end() > view.m_cursor.start) {
-                                auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
-                                if (assert_expr(clipEditor)) {
-                                    clipEditor->selectEditClip(cl);
-                                }
+                                clipClicked = cl;
                                 return false;
                             }
                             return true;
                         });
+                    }
+                    auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
+                    if (assert_expr(clipEditor)) {
+                        clipEditor->selectEditClip(clipClicked);
+                        contextClip = clipClicked;
                     }
                 }
             }

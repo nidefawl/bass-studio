@@ -28,5 +28,4 @@ public:
     void render(NVGcontext* vg) override;
     void layout() override;
     void updateClipViewReferences();
-    bool isVisible() const override;
 };
