@@ -2420,7 +2420,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     std::vector<note_t> notes;
                     clip->getInTimeRange(begin, end, -1, -1, notes, {
                         .bCutNotes = false,
-                        .bCutMutedNotes = false,
+                        .bCutMutedNotes = true,
                         .bApplyGroove = true,
                     });
                     auto host = dawCtrl->getDaw()->getHost();
