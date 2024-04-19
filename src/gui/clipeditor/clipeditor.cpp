@@ -3953,3 +3953,15 @@ gui_clipgroove_settings::~gui_clipgroove_settings() {
     delete dropdownSelectGroove;
     delete dropdownSelectPreset;
 }
+
+bool gui_pianoroll::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    if (isCtrl(evt.kbmods)) {
+        dragPosObjSpace = toNoteF(evt.relMousepos.y);
+        setScale(layoutRoll.scale() + yoffset);
+        int32_t rel  = math::min(size.y - 1, math::max(0, size.y - evt.relMousepos.y));
+        float offset = (size.y - toScreenF(dragPosObjSpace)) + layoutRoll.offset();
+        setOffset(offset - rel);
+        return true;
+    }
+    return guibase::handleMouseScroll(evt, xoffset, yoffset);
+}

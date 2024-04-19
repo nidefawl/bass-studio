@@ -410,6 +410,7 @@ public:
     void handleMouseDownBegin(MouseEvent& evt);
     virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
         if (parent) {
+            evt.relMousepos = toParentSpace(evt.relMousepos);
             return parent->handleMouseScroll(evt, xoffset, yoffset);
         }
         return false;

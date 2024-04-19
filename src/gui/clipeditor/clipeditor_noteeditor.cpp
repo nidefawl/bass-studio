@@ -49,7 +49,13 @@ void guictr_cliphandles::handleDraggedBegin(MouseEvent& evt) {
     if (dragHandle == drag_handle_none) {
         if (!parentEditor.getClipView().isAbsoluteTimeMode())
             return;
-        parentEditor.getClipEditor().selectEditClip(view.clip());
+        if (evt.type == M_EVT_DOUBLECLICK) {
+            // zoom to clip
+            parentEditor.getGrid().showRange(clip->start(), clip->end());
+            parentEditor.getClipEditor().getNoteEditor().zoomPianoRollToClipsNoteRange(clip);
+        } else {
+            parentEditor.getClipEditor().selectEditClip(view.clip());
+        }
         return;
     }
     dragOffset  = evt.relMousepos.x - (int32_t) (grid.tickToScreenD(getTickOffset() + clip->loopStart));
@@ -560,7 +566,7 @@ void guictr_noteeditor::buttonClicked(guibase* button) {
         bFoldNotes = !bFoldNotes;
         view.updateNotePitches(true);
         if (bFoldNotes && yscalefold == 0 && yoffsetfold == 0) {
-            zoomPianoRollToClipsNoteRange();
+            zoomPianoRollToClipsNoteRange(nullptr);
         }
     }
     if (button == &btnShowVelocities) {
@@ -599,7 +605,7 @@ void guictr_noteeditor::gridChanged(scaled_grid& _grid) {
 void guictr_noteeditor::handleDraggedBegin(MouseEvent& evt) {
     if (evt.guiDragged == &piano) {
         if (evt.type == M_EVT_DOUBLECLICK)
-            zoomPianoRollToClipsNoteRange();
+            zoomPianoRollToClipsNoteRange(nullptr);
         return;
     }
     if (evt.guiDragged == this && evt.type == M_EVT_BTN_DOWN
@@ -610,10 +616,7 @@ void guictr_noteeditor::handleDraggedBegin(MouseEvent& evt) {
     }
 }
 
-void guictr_editor_base::zoomPianoRollToClipsNoteRange() {
-}
-void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
-    guictr_editor_base::zoomPianoRollToClipsNoteRange();
+void guictr_noteeditor::zoomPianoRollToClipsNoteRange(clip_t* optionalClipOnly) {
     int32_t minSemi = -1;
     int32_t maxSemi = -1;
     if (bFoldNotes) {
@@ -621,6 +624,8 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
         maxSemi = view.notePitches.size();
     } else {
         view.visitClipView([&](clip_t* clip) {
+            if (optionalClipOnly && clip != optionalClipOnly)
+                return true;
             if (view.isAbsoluteTimeMode()) {
                 auto& view = clip->getNoteViewRender();
                 minSemi = minSemi == -1 ? view.minNote.pitch : math::min<int32_t>(minSemi, view.minNote.pitch);
@@ -664,7 +669,7 @@ void guictr_noteeditor::relayout() {
     }
     
     if (layout.noLayout) {
-        zoomPianoRollToClipsNoteRange();
+        zoomPianoRollToClipsNoteRange(nullptr);
     } else {
         setLayout(layout.layoutPianoRoll);
     }
@@ -826,9 +831,16 @@ bool guictr_noteeditor::handleKeyInput(KeyEvent& kevt) {
 
 bool guictr_noteeditor::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
     if (isCtrl(evt.kbmods)) {
-        float zomDelta   = 1.0f + yoffset * -0.2f;
-        ivec2 localMouse = timeline.toContainerSpace(evt.relMousepos);
-        timeline.adjustZoom(localMouse.x, zomDelta);
+        if (isShift(evt.kbmods)) {
+            ivec2 localMouse = piano.toContainerSpace(evt.relMousepos);
+            auto evt2 = evt;
+            evt2.relMousepos = localMouse;
+            piano.handleMouseScroll(evt2, xoffset, yoffset);
+        } else {
+            float zomDelta   = 1.0f + yoffset * -0.2f;
+            ivec2 localMouse = timeline.toContainerSpace(evt.relMousepos);
+            timeline.adjustZoom(localMouse.x, zomDelta);
+        }
     } else if (isShift(evt.kbmods)) {
         timeline.adjustOffset(-yoffset * 32);
     } else {

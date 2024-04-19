@@ -409,6 +409,7 @@ public:
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void layout() override;
     vec2 getNoteFromPos(vec2 pos);
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
 };
 
 class gui_quantize_clip final : public guictr_base {
@@ -817,7 +818,6 @@ protected:
     guitrack_timeline timeline;
     std::vector<std::shared_ptr<guictr_cliphandles>> clipsHandles;
     int32_t handlesHeight = heightClipIndicators;
-    virtual void zoomPianoRollToClipsNoteRange();
     clip_editor_layout_t lastLayout{};
 public:
     explicit guictr_editor_base(guictr_clipeditor& parentClipEditor, gui_clipcontent_base* pContent, clip_view_t& _view)
@@ -958,7 +958,6 @@ public:
     bool bShowVelocity = true;
 protected:
     void setLayout(layout_pianoroll_t& layout);
-    void zoomPianoRollToClipsNoteRange() override;
 public:
     explicit guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view);
     ~guictr_noteeditor() override;
@@ -993,6 +992,7 @@ public:
     guibase* getFocusedContainer() override {
         return content.getFocusedContainer();
     }
+    void zoomPianoRollToClipsNoteRange(clip_t* optionalClipOnly);
 };
 
 class gui_audiocontent final : public gui_clipcontent_base {
