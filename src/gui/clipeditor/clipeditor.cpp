@@ -1662,7 +1662,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                             }
                         }
                     }
-                    if (!view.clip()) {
+                    if (!clipClicked) {
                         view.visitClipViewReverse([&](clip_t* cl) {
                             if (cl->start() <= view.m_cursor.start && cl->end() > view.m_cursor.start) {
                                 clipClicked = cl;
@@ -1772,49 +1772,55 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
             int32_t pitchLow  = math::floorfS32(toNoteF(yEnd));
             int32_t pitchHigh = math::floorfS32(toNoteF(yStart));
             if (view.isAbsoluteTimeMode()) {
-                view.visitClipViewReverse([&](clip_t* cl) {
-                    std::set<note_t*>& selection = cl->notes.selection;
-                    if (bIsShift) {
-                        cl->notes.selection = selectionsStart[cl];
-                    } else {
-                        cl->notes.selection.clear();
+                auto trackFilter = isAlt(evt.kbmods) ? view.track() : nullptr;
+                view.visitClipViewTracks([&](const track_t* tr, const std::vector<clip_t*>& clips) {
+                    if (trackFilter && trackFilter != tr) {
+                        return true;
                     }
-                    auto rangeBegin = math::max(tickStart, cl->start());
-                    auto rangeEnd   = math::min(tickEnd, cl->end());
-                    if (rangeBegin < rangeEnd) {
-                        notesViewTemp.clear();
-                        cl->getInTimeRange(rangeBegin, rangeEnd, -1, -1, notesViewTemp.m_list, {
-                            .bCutNotes = true,
-                            .bCutMutedNotes = cl != contextClip,
-                            .bApplyGroove = false,
-                        });
-                        // create vector of all note.id in range
-                        std::vector<int32_t> ids;
-                        for (note_t& inSelRange : notesViewTemp.m_list) {
-                            if (inSelRange.pitch >= pitchLow && inSelRange.pitch <= pitchHigh
-                                && !std::binary_search(ids.begin(), ids.end(), inSelRange.id)) {
-                                ids.insert(std::upper_bound(ids.begin(), ids.end(), inSelRange.id), inSelRange.id);
-                            }
+                    for (auto cl : clips) {
+                        std::set<note_t*>& selection = cl->notes.selection;
+                        if (bIsShift) {
+                            cl->notes.selection = selectionsStart[cl];
+                        } else {
+                            cl->notes.selection.clear();
                         }
-                        for (auto id : ids) {
-                            auto* pNote = &cl->notes.m_list[id];
-                            if (bIsShift) {
-                                if (selection.contains(pNote)) {
-                                    selection.erase(pNote);
-                                } else {
-                                    selection.insert(pNote);
+                        auto rangeBegin = math::max(tickStart, cl->start());
+                        auto rangeEnd   = math::min(tickEnd, cl->end());
+                        if (rangeBegin < rangeEnd) {
+                            notesViewTemp.clear();
+                            cl->getInTimeRange(rangeBegin, rangeEnd, -1, -1, notesViewTemp.m_list, {
+                                .bCutNotes = true,
+                                .bCutMutedNotes = cl != contextClip,
+                                .bApplyGroove = false,
+                            });
+                            // create vector of all note.id in range
+                            std::vector<int32_t> ids;
+                            for (note_t& inSelRange : notesViewTemp.m_list) {
+                                if (inSelRange.pitch >= pitchLow && inSelRange.pitch <= pitchHigh
+                                    && !std::binary_search(ids.begin(), ids.end(), inSelRange.id)) {
+                                    ids.insert(std::upper_bound(ids.begin(), ids.end(), inSelRange.id), inSelRange.id);
                                 }
-                                bChanged = true;
-                            } else {
-                                auto result = selection.insert(pNote);
-                                if (result.second) {
+                            }
+                            for (auto id : ids) {
+                                auto* pNote = &cl->notes.m_list[id];
+                                if (bIsShift) {
+                                    if (selection.contains(pNote)) {
+                                        selection.erase(pNote);
+                                    } else {
+                                        selection.insert(pNote);
+                                    }
                                     bChanged = true;
+                                } else {
+                                    auto result = selection.insert(pNote);
+                                    if (result.second) {
+                                        bChanged = true;
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (bChanged) {
-                        cl->updateNoteViewSelection();
+                        if (bChanged) {
+                            cl->updateNoteViewSelection();
+                        }
                     }
                     return true;
                 });
