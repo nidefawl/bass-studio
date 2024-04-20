@@ -108,7 +108,6 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 
     void renderClip(NVGcontext* vg, const track_gui_entry_t* entry, clip_t* cl, tick_t offset);
-    void renderAction(NVGcontext* vg, clip_dragaction& renderAction);
     void render(NVGcontext* vg) override;
     void renderDebugPass(NVGcontext* vg);
 

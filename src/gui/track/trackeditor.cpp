@@ -1191,25 +1191,6 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
     }
 }
 
-void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& renderAction) {
-    clip_clipboard* _clipboard = renderAction.clipboard.get();
-    for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
-        track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
-        int32_t trackIdx               = _clipboard->srcTrack + i + (cursor.cursorTrack - renderAction.cursorBegin.cursorTrack);
-        if (!project.trackList.validTrackIdx(trackIdx)) {
-            continue;
-        }
-        trackIdx    = project.trackList.clampTrackIdx(trackIdx);
-        track_t* tr = project.trackList[trackIdx];
-        track_gui_entry_t* entry{};
-        always_assert(iGuiMgr.getPointerEntry(tr, &entry));
-        dbgassert(entry->content != nullptr);
-        for (auto& clip : trClipboard->clips) {
-            renderClip(vg, entry, clip.get(), (cursor.cursorPos - _clipboard->srcPos));
-        }
-    }
-}
-
 void guitrack_editor::renderDebugPass(NVGcontext* vg) {
     ivec2 posInset  = getPosContent();
     ivec2 sizeInset = getSizeContent();
@@ -1346,6 +1327,18 @@ void guitrack_editor::render(NVGcontext* vg) {
             if (entry->content->isVisible()) {
                 nvgSave(vg);
                 entry->content->render(vg);
+                if (action.dragtype) {
+                    auto clipboard = action.clipboard.get();
+                    if (clipboard) {
+                        int32_t clipboardIdx = g->projectIdx - clipboard->srcTrack - (cursor.cursorTrack - action.cursorBegin.cursorTrack);
+                        if (clipboardIdx >= 0 && clipboardIdx < int32_t(clipboard->tracks.size())) {
+                            track_clipboard_t* trClipboard = clipboard->tracks[clipboardIdx].get();
+                            for (auto& clip : trClipboard->clips) {
+                                renderClip(vg, entry, clip.get(), (cursor.cursorPos - clipboard->srcPos));
+                            }
+                        }
+                    }
+                }
                 nvgRestore(vg);
                 for (gui_track_subtrack* g2 : entry->subtracks) {
                     nvgSave(vg);
@@ -1375,6 +1368,18 @@ void guitrack_editor::render(NVGcontext* vg) {
             if (entry->content->isVisible() && contentPos < ySplit && contentPos + totalHeight > 0) {
                 nvgSave(vg);
                 entry->content->render(vg);
+                if (action.dragtype) {
+                    auto clipboard = action.clipboard.get();
+                    if (clipboard) {
+                        int32_t clipboardIdx = t->projectIdx - clipboard->srcTrack - (cursor.cursorTrack - action.cursorBegin.cursorTrack);
+                        if (clipboardIdx >= 0 && clipboardIdx < int32_t(clipboard->tracks.size())) {
+                            track_clipboard_t* trClipboard = clipboard->tracks[clipboardIdx].get();
+                            for (auto& clip : trClipboard->clips) {
+                                renderClip(vg, entry, clip.get(), (cursor.cursorPos - clipboard->srcPos));
+                            }
+                        }
+                    }
+                }
                 nvgRestore(vg);
                 for (gui_track_subtrack* g2 : entry->subtracks) {
                     nvgSave(vg);
@@ -1383,11 +1388,6 @@ void guitrack_editor::render(NVGcontext* vg) {
                     drawSeperator(vg, theme, g2->top() - TRACK_HEIGHT_SPACING_HALF, cs);
                 }
             }
-        }
-        if (action.dragtype) {
-            nvgSave(vg);
-            renderAction(vg, action);
-            nvgRestore(vg);
         }
     }
 
@@ -1427,8 +1427,10 @@ void guitrack_editor::render(NVGcontext* vg) {
 
             if (tickEndX > -4.0 && tickBeginX < cs.x + 4.0) {
                 if (TRACK_CTR_MIDIAUDIO != TRACKTYPE_TO_CTR(trEEntry->track->type)) {
-                    restore = false;
-                    nvgRestore(vg);
+                    if (restore) {
+                        restore = false;
+                        nvgRestore(vg);
+                    }
                 }
                 tickBeginX   = CLAMP_I(tickBeginX, -4.0, cs.x + 3.0);
                 tickEndX     = CLAMP_I(tickEndX, -3.0, cs.x + 4.0);
@@ -1457,6 +1459,12 @@ void guitrack_editor::render(NVGcontext* vg) {
                 }
                 cursorScreenX += 0.5;
                 NVGcolor cursorColor = getCursorColor();
+                if (TRACK_CTR_MIDIAUDIO != TRACKTYPE_TO_CTR(trEntry->track->type)) {
+                    if (restore) {
+                        restore = false;
+                        nvgRestore(vg);
+                    }
+                }
                 nvgBeginPath(vg);
                 nvgMoveTo(vg, cursorScreenX, trackYMin + 1);
                 nvgLineTo(vg, cursorScreenX, trackYMax - 1);
