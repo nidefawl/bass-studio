@@ -1520,6 +1520,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             clip_cursor_t cursorBefore = view.m_cursor;
             view.visitClipView([&](clip_t* cl) {
                 cl->notes.clearSelection();
+                cl->updateNoteViewSelection();
                 return true;
             });
             String desc = "???";
@@ -1546,16 +1547,15 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                         notes.selection.insert(contextNote);
                         dawCtrl->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
                         desc = "Add Note";
-                        contextClip->updateNoteViewSelection();
                         dragMode = drag_note_right;
                         dragStartCursor = view.m_cursor;
-                        setSelectionFrame(getMinMaxTime(view));
                     }
                 }
             }
             dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, cursorBefore));
             view.copySelectedNoteList();
             contextClip->setDirty();
+            setSelectionFrameFromView();
             view.updateNotePitches(false);
             inSelection = true;
         } else {
@@ -1637,8 +1637,15 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                 view.m_cursor.end = tickGridNearest;
             }
         } else {
-            if (contextClip)
-                contextClip->notes.clearSelection();
+            view.visitClipView([&](clip_t* cl) {
+                if (cl->notes.selection.empty())
+                    return true;
+                cl->notes.clearSelection();
+                cl->updateNoteViewSelection();
+                return true;
+            });
+            view.copySelectedNoteList();
+            view.m_cursor.end = view.m_cursor.start = grid.screenToTickSnap(tickExact, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
             view.m_cursor.start = view.m_cursor.end = tickGridNearest;
             if (view.isAbsoluteTimeMode()) {
                 // find clicked clip on same track
@@ -1674,6 +1681,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
         }
 
         dragMode = drag_frame;
+
     } else {
         setSelectionFrameFromView();
     }
@@ -1689,14 +1697,13 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 }
 
 void gui_clipcontent::setGlobalSelectionFromClipSelection() {
-    clip_t* clip = view.clip();
-    if (!clip) {
-        return;
-    }
     DAW::Cursor& cursor = dawCtrl->getCursor();
     if (!view.isAbsoluteTimeMode()) {
-        cursor.cursorPos = view.m_cursor.start + clip->start() - clip->offsetStart;
-        cursor.selRange  = view.m_cursor.end - view.m_cursor.start;
+    clip_t* clip = view.clip();
+        if (clip) {
+            cursor.cursorPos = view.m_cursor.start + clip->start() - clip->offsetStart;
+            cursor.selRange  = view.m_cursor.end - view.m_cursor.start;
+        }
     } else {
         cursor.cursorPos = view.m_cursor.start;
         cursor.selRange  = view.m_cursor.end - view.m_cursor.start;
@@ -2142,9 +2149,9 @@ int32_t gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
 }
 
 void gui_clipcontent::setSelectionFrameFromView() {
+    note_t minNote{ .pitch = -1 };
+    note_t maxNote{ .pitch = -1 };
     if (view.isAbsoluteTimeMode()) {
-        note_t minNote{ .pitch = -1 };
-        note_t maxNote{ .pitch = -1 };
         view.visitClipView([&](clip_t* cl) {
             if (cl->notes.selection.empty()) {
                 return true;
@@ -2164,12 +2171,23 @@ void gui_clipcontent::setSelectionFrameFromView() {
             }
             return true;
         });
+    }
 
-        if (minNote.pitch >= 0 && maxNote.pitch >= 0) {
-            auto& cursor = view.m_cursor;
-            cursor.start = minNote.start();
-            cursor.end   = maxNote.end();
+    if (!view.isAbsoluteTimeMode()) {
+        auto clip = view.clip();
+        if (clip && !clip->notes.selection.empty()) {
+            auto minMax = getMinMaxTime(view);
+            if (minMax.first && minMax.second) {
+                minNote = *minMax.first;
+                maxNote = *minMax.second;
+            }
         }
+    }
+
+    if (minNote.pitch >= 0 && maxNote.pitch >= 0) {
+        auto& cursor = view.m_cursor;
+        cursor.start = minNote.start();
+        cursor.end   = maxNote.end();
     }
 }
 
@@ -2282,9 +2300,11 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     notes.clearSelection();
                     notes.updateBounds();
                     notes.selectIdxRange(0, notes.m_list.size());
+                    clip->updateNoteViewSelection();
                 }
                 view.copySelectedNoteList();
                 setSelectionFrameFromView();
+                setGlobalSelectionFromClipSelection();
             }
             if (command == CMD_DELETE) {
                 view.visitClipView([&](clip_t* cl) {
@@ -2700,6 +2720,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         }
         if (edit) {
             // notes.updateBounds();
+            setGlobalSelectionFromClipSelection();
             dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, cursorBefore));
             view.updateNotePitches(false);
         }
