@@ -508,12 +508,70 @@ void serialize(Archive& archive, clip_t& m) {
 
 template<class Archive>
 void save(Archive& archive, clip_notes_t const& m) {
-    archive(make_nvp("notes", m.m_list));
+    auto shrdHeapVec = std::make_shared<std::vector<std::byte>>();
+    shrdHeapVec->resize(64);
+    DAW::ByteBuffer::stream_write<std::vector<std::byte>> out{*shrdHeapVec, 0};
+    out.write(size_t(0));
+    out.write(int32_t(1)); // version
+    out.write(int32_t(0)); // reserved
+    out.write(size_t(m.m_list.size()));
+    for (const auto& note : m.m_list) {
+        out.write<int64_t>(note.id);
+        out.write<int32_t>(note.pitch);
+        out.write<int32_t>(note.velocity);
+        out.write<tick_t>(note.time);
+        out.write<tick_t>(note.len);
+        out.write<int32_t>(note.flags);
+        out.write<int8_t>(note.channel);
+        // write reserved bytes
+        out.write<int8_t>(0);
+        out.write<int8_t>(0);
+        out.write<int8_t>(0);
+    }
+    out.setPos(0);
+    out.write(size_t(shrdHeapVec->size()));
+    archive(make_nvp("size", shrdHeapVec->size()));
+    ((JSONOutputArchive*) &archive)->saveBinaryValue(shrdHeapVec->data(), shrdHeapVec->size(), "data");
 }
 
 template<class Archive>
 void load(Archive& archive, clip_notes_t& m) {
-    archive(make_nvp("notes", m.m_list));
+    try {
+        archive(make_nvp("notes", m.m_list));
+    } catch (const std::exception& e) {
+        size_t size = 0;
+        archive(make_nvp("size", size));
+        std::vector<std::byte> vec;
+        vec.resize(size);
+        ((JSONInputArchive*) &archive)->loadBinaryValue((void*) vec.data(), size, "data");
+        DAW::ByteBuffer::stream_read in{vec};
+        in.read(size);
+        int32_t version = 0;
+        int32_t reserved = 0;
+        in.read(version);
+        if (version != 1) {
+            throw std::runtime_error("Invalid version");
+        }
+        in.read(reserved);
+        if (version != 1) {
+            throw std::runtime_error("Invalid version");
+        }
+        size_t numNotes = 0;
+        in.read(numNotes);
+        for (size_t i = 0; i < numNotes; ++i) {
+            note_t note;
+            in.read<int64_t>(note.id);
+            in.read<int32_t>(note.pitch);
+            in.read<int32_t>(note.velocity);
+            in.read<tick_t>(note.time);
+            in.read<tick_t>(note.len);
+            in.read<int32_t>(note.flags);
+            in.read<int8_t>(note.channel);
+            m.m_list.push_back(note);
+            in.skip(3);
+        }
+    }
+
     m.updateBounds();
     m.removeDuplicates();
 }

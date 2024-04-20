@@ -65,5 +65,8 @@ namespace DAW::ByteBuffer {
             pos += stringSize;
             return true;
         }
+        void skip(size_t n) {
+            pos += n;
+        }
     };
 }
