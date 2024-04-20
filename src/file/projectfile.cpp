@@ -194,6 +194,9 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version >= 15) {
         archive(make_nvp("windowLayout", m.windowLayout));
     }
+    if (version >= 17) {
+        archive(make_nvp("modulationRouting", m.modulationRouting));
+    }
     archive(make_nvp("plugins", m.pluginSnapshots));
 }
 
@@ -228,8 +231,9 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
         make_nvp("stageIds", m.stageIds),
         make_nvp("routing", m.effectRouting),
         make_nvp("uisnapshot", m.uiSnapshots),
-        make_nvp("plugins", m.pluginSnapshots),
-        make_nvp("windowLayout", m.windowLayout)
+        make_nvp("windowLayout", m.windowLayout),
+        make_nvp("modulationRouting", m.modulationRouting),
+        make_nvp("plugins", m.pluginSnapshots)
     );
 }
 
@@ -725,7 +729,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(guictrlayout_entry_snapshot_t, 1);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 16);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 17);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);
@@ -875,7 +879,6 @@ bool saveProjectToJsonFile(const std::shared_ptr<project_file>& f, const String&
 
     try {
         std::vector<uint8_t> buf;
-        buf.reserve(2048);
         if (saveProject(f, buf)) {
             WriteFileVector(path, buf);
             return true;

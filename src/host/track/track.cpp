@@ -1675,6 +1675,21 @@ namespace DAW {
                 inputRoutingEffects[key] = copyVals;
             }
             s->effectRouting.inputRoutingEffects = inputRoutingEffects;
+            track_modulation_routing_snapshot_t newModulationRouting;
+            for(auto& r : s->modulationRouting.effectMods) {
+                auto key = getNewPluginId(r.first);
+                auto copyVals = r.second;
+                for (auto& ref : copyVals) {
+                    ref.refSrc.refId = getNewPluginId(ref.refSrc.refId);
+                }
+                newModulationRouting.effectMods[key] = std::move(copyVals);
+            }
+            for(auto& ref : s->modulationRouting.arp) {
+                ref.refSrc.refId = getNewPluginId(ref.refSrc.refId);
+            }
+            for(auto& ref : s->modulationRouting.mixer) {
+                ref.refSrc.refId = getNewPluginId(ref.refSrc.refId);
+            }
         }
     }
 
