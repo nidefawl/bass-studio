@@ -850,8 +850,10 @@ public:
                         meterPos.x -= meterSize.x + nodePortRadius * 1.5f;
                     }
                     auto desc = static_cast<gui_graph_port_audio*>(port)->getChannelDesc();
-                    auto subMeter = meter->getSubChannelMeter(desc.offset, desc.count);
-                    renderBusPortMeter(vg, theme, meterPos, meterSize, &subMeter);
+                    if (desc.offset + desc.count <= meter->getNumChannels()) {
+                        auto subMeter = meter->getSubChannelMeter(desc.offset, desc.count);
+                        renderBusPortMeter(vg, theme, meterPos, meterSize, &subMeter);
+                    }
                 }
             }
         }
