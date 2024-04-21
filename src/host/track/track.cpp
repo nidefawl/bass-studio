@@ -549,7 +549,15 @@ namespace DAW {
         audioStage->removePlugin(module);
         std::vector<effectbase*> effects;
         effects.push_back(module);
-        auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), audioStage->toRef(), module->getSlot());
+        std::vector<DAW::removed_modulation_routings> allRemovedModulationRoutings;         
+        if (module->hasAutomationModulationOutput()) {
+            auto* modulator = dynamic_cast<internal_modulator*>(module);
+            if (modulator) {
+                auto removedRoutings = DAW::RemoveModulationTargets(daw->getHost(), modulator);
+                allRemovedModulationRoutings.insert(allRemovedModulationRoutings.end(), removedRoutings.begin(), removedRoutings.end());
+            }
+        }
+        auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), std::move(allRemovedModulationRoutings), audioStage->toRef(), module->getSlot());
         daw->pushHist(actionRemove);
         audioStage->pluginsChanged();
         daw->onPluginsChanged();
@@ -2228,6 +2236,41 @@ namespace DAW {
             return AutomationRef(dev, paramIdx);
         }
         return AutomationConstant(dev, paramIdx);
+    }
+    
+
+    std::vector<DAW::removed_modulation_routings> RemoveModulationTargets(Host::PluginManager* const host, internal_modulator* modulator) {
+        std::vector<removed_modulation_routings> removed;
+        automatable_param_ref_t refSrc = modulator->toRef();
+        refSrc.type = AUTOMATABLE_MODULATOR_OUTPUT;
+        host->visitAudioStageInstances([&](audio_stage_t* stage) {
+            for (effectbase* effect : stage->effects) {
+                if (modulator == effect)
+                    continue;
+                effect->removeModulationsFrom(refSrc, &removed);
+            }
+        });
+        host->visitTrackAudioStageInstances([&](track_impl_t* trImpl) {
+            if (trImpl->arp) {
+                trImpl->arp->removeModulationsFrom(refSrc, &removed);
+            }
+            trImpl->mixer.removeModulationsFrom(refSrc, &removed);
+        });
+        return removed;
+    }
+    void RestoreModulationTargets(Host::PluginManager* const host, const std::vector<DAW::removed_modulation_routings>& restore) {
+        for (auto& r : restore) {
+            auto dev = resolveAutomatableRefDevice(host, r.modulatedRef);
+            if (dev) {
+                auto& modulations = dev->getModulations();
+                dbgassert(r.slot >= 0);
+                dbgassert(r.slot <= CtrSize(modulations));
+                if (r.slot >= 0 && r.slot <= CtrSize(modulations)) {
+                    modulations.insert(modulations.begin() + r.slot, r.routing);
+                    dev->updateModulationMap();
+                }
+            }
+        }
     }
 }// namespace DAW
 void track_impl_t::createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) {

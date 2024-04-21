@@ -2,6 +2,7 @@
 #include <archive_entry.h>
 #include <archive.h>
 #include <cstddef>
+#include <cstdint>
 #include <ctime>
 #include <functional>
 #include <GLFW/glfw3.h>
@@ -1317,11 +1318,11 @@ public:
     int32_t parentIdx = -1;
     int32_t childIdxTree = -1;
     track_t* trackPtr;
-    std::vector<DAW::removed_routings> removedRoutings;
+    std::vector<DAW::removed_track_routings> removedRoutings;
 
     action_modify_track_remove() = delete;
 
-    action_modify_track_remove(String description, track_t* _trackPtr, int32_t _parentIdx, int32_t _childIdxTree, const std::vector<DAW::removed_routings>& _removedRoutings) : action_base() {
+    action_modify_track_remove(String description, track_t* _trackPtr, int32_t _parentIdx, int32_t _childIdxTree, const std::vector<DAW::removed_track_routings>& _removedRoutings) : action_base() {
         desc     = std::move(description);
         trackPtr = _trackPtr;
         trackIdx = _trackPtr->projectIdx;
@@ -1434,7 +1435,7 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
             pDawCtrl->removeTrackFromView(track, flags);
         }
     }
-    std::vector<DAW::removed_routings> removedRoutings;
+    std::vector<DAW::removed_track_routings> removedRoutings;
     auto v = DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.stageId);
     removedRoutings.insert(removedRoutings.end(), v.begin(), v.end());
     v = DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.inputStageId);

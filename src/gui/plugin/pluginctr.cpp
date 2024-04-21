@@ -267,11 +267,20 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 }
                 int32_t slot = selection[0]->getSlot();
                 std::vector<effectbase*> pendingInstances;
+                std::vector<removed_modulation_routings> allRemovedModulationRoutings;
                 for (effectbase* eff : selection) {
                     audioStageAffected->removePlugin(eff);
                     pendingInstances.push_back(eff);
+                    if (eff->hasAutomationModulationOutput()) {
+                        auto modulator = dynamic_cast<internal_modulator*>(eff);
+                        if (!modulator) {
+                            continue;
+                        }
+                        auto removedRoutings = DAW::RemoveModulationTargets(daw->getHost(), modulator);
+                        allRemovedModulationRoutings.insert(allRemovedModulationRoutings.end(), removedRoutings.begin(), removedRoutings.end());
+                    }
                 }
-                auto* actionRemove = new action_remove_modules("Remove plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
+                auto* actionRemove = new action_remove_modules("Remove plugins", std::move(pendingInstances), std::move(allRemovedModulationRoutings), audioStageAffected->toRef(), slot);
                 daw->pushHist(actionRemove);
                 audioStageAffected->pluginsChanged();
                 daw->onPluginsChanged();
@@ -290,11 +299,26 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 }
                 int32_t slot = selection[0]->getSlot();
                 std::vector<effectbase*> pendingInstances;
+                std::vector<removed_modulation_routings> allRemovedModulationRoutings;
                 for (effectbase* eff : selection) {
                     audioStageAffected->removePlugin(eff);
                     pendingInstances.push_back(eff);
+                    if (eff->hasAutomationModulationOutput()) {
+                        auto modulator = dynamic_cast<internal_modulator*>(eff);
+                        if (!modulator) {
+                            continue;
+                        }
+                        auto removedRoutings = DAW::RemoveModulationTargets(daw->getHost(), modulator);
+                        allRemovedModulationRoutings.insert(allRemovedModulationRoutings.end(), removedRoutings.begin(), removedRoutings.end());
+                    }
                 }
-                auto* actionCut = new action_remove_modules("Cut plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
+                auto* actionCut = new action_remove_modules(
+                                            "Cut plugins",
+                                            std::move(pendingInstances),
+                                            std::move(allRemovedModulationRoutings),
+                                            audioStageAffected->toRef(),
+                                            slot
+                                        );
                 daw->pushHist(actionCut);
                 audioStageAffected->pluginsChanged();
                 daw->onPluginsChanged();
@@ -892,7 +916,7 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
         prefSize.x = maxX + 4;
     }
 }
-action_remove_modules::action_remove_modules(String s, std::vector<effectbase*>&& _effects, audio_stage_ref_t _ref, int32_t _dst) : action_base(), effects(_effects), ref(_ref), dstSlot(_dst) {
+action_remove_modules::action_remove_modules(String s, std::vector<effectbase*>&& _effects, std::vector<DAW::removed_modulation_routings>&& _modRoutings, audio_stage_ref_t _ref, int32_t _dst) : action_base(), effects(_effects), modulationRoutings(_modRoutings), ref(_ref), dstSlot(_dst) {
     desc = s;
     dbgassert(effects.size());
 }
@@ -917,10 +941,10 @@ void action_remove_modules::undo(DawInstance* daw) {
     int32_t slot = 0;
     for (effectbase* eff : effects) {
         daw->getPluginManager()->insertNewPlugin(stage, eff, dstSlot + slot);
-        daw->onPluginsChanged();
         dbgassert(eff->getSlot() == dstSlot + slot);
         slot++;
     }
+    DAW::RestoreModulationTargets(daw->getHost(), modulationRoutings);
     daw->onPluginsChanged();
     weOwn = false;
 }
@@ -933,10 +957,20 @@ void action_remove_modules::redo(DawInstance* daw) {
         return;
     }
     dbgassert(effects[0]->getSlot() == dstSlot);
+    std::vector<DAW::removed_modulation_routings> allRemovedModulationRoutings;
     for (effectbase* eff : effects) {
         eff->closeWindow();
         daw->getPluginManager()->removePlugin(eff);
+        if (eff->hasAutomationModulationOutput()) {
+            auto modulator = dynamic_cast<internal_modulator*>(eff);
+            if (!modulator) {
+                continue;
+            }
+            auto removedRoutings = DAW::RemoveModulationTargets(daw->getHost(), modulator);
+            allRemovedModulationRoutings.insert(allRemovedModulationRoutings.end(), removedRoutings.begin(), removedRoutings.end());
+        }
     }
+    modulationRoutings = std::move(allRemovedModulationRoutings);
     daw->onPluginsChanged();
     weOwn = true;
 }

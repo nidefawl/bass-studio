@@ -111,12 +111,12 @@ namespace DAW {
         return numRemoved == 0;
     }
 
-    std::vector<removed_routings> removeTrackRoutings(const track_vector& tracksFlat, const audiostageid_i32 stageId) {
-        std::vector<removed_routings> removedRoutings;
+    std::vector<removed_track_routings> removeTrackRoutings(const track_vector& tracksFlat, const audiostageid_i32 stageId) {
+        std::vector<removed_track_routings> removedRoutings;
         for (track_t* track : tracksFlat) {
             size_t numRemoved = 0;
             track_impl_t* trackImpl  = track->getStage();
-            removed_routings removed;
+            removed_track_routings removed;
             removed.stageRef= trackImpl->toRef();
             const auto inputChannel  = trackImpl->inputChannel;
             const auto outputChannel = trackImpl->outputChannel;

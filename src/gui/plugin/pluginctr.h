@@ -208,13 +208,14 @@ public:
 
 class action_remove_modules final : public action_base {
     std::vector<effectbase*> effects;
+    std::vector<DAW::removed_modulation_routings> modulationRoutings;
     audio_stage_ref_t ref;
     int32_t dstSlot;
     bool weOwn = true;
 
 protected:
 public:
-    action_remove_modules(String s, std::vector<effectbase*>&& _effects, audio_stage_ref_t _ref, int32_t _dst);
+    action_remove_modules(String s, std::vector<effectbase*>&& _effects, std::vector<DAW::removed_modulation_routings>&& _modRoutings, audio_stage_ref_t _ref, int32_t _dst);
     void undo(DawInstance* daw) override;
     void redo(DawInstance* daw) override;
     void releaseResources(DawInstance* daw) override;

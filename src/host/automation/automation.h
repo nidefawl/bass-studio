@@ -85,6 +85,11 @@ namespace DAW {
         channelnum_t offset = 0;
         String name;
     };
+    struct removed_modulation_routings {
+        automatable_param_ref_t modulatedRef;
+        DAW::modulation_channel_ref routing;
+        int32_t slot = -1;
+    };
 }
 
 struct automation_point_t {
@@ -384,6 +389,30 @@ public:
         return nullptr;
     }
 
+    void removeModulationsFrom(automatable_param_ref_t refSrc, std::vector<DAW::removed_modulation_routings>* optionalRemoved = nullptr) {
+        int32_t numRemoved = 0;
+        if (optionalRemoved) {
+            for (auto it = inputChannelsModulation.begin(); it != inputChannelsModulation.end();) {
+                if (it->refSrc.refId == refSrc.refId && it->refSrc.type == refSrc.type) {
+                    auto slotIdx = int32_t(it - inputChannelsModulation.begin());
+                    optionalRemoved->push_back(DAW::removed_modulation_routings{ toRef(), *it, slotIdx });
+                }
+                ++it;
+            }
+        }
+        for (auto it = inputChannelsModulation.begin(); it != inputChannelsModulation.end();) {
+            if (it->refSrc.refId == refSrc.refId && it->refSrc.type == refSrc.type) {
+                it = inputChannelsModulation.erase(it);
+                ++numRemoved;
+            } else {
+                ++it;
+            }
+        }
+        if (numRemoved > 0) {
+            updateModulationMap();
+        }
+    }
+
     bool isParamModulated(int32_t paramIdx) const {
         return getParam(paramIdx)->isModulated();
     }
@@ -612,6 +641,7 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int
 void simplifyData(std::vector<automation_point_t>& data);
 void toggleDeviceEnableState(automatable_t* effect, int flags);
 
+class internal_modulator;
 namespace DAW {
     enum class automation_routing_type {
         ROUTING_NONE,
@@ -665,4 +695,6 @@ namespace DAW {
     inline bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {
         return dev->isParamModulated(paramIdx);
     }
+    std::vector<DAW::removed_modulation_routings> RemoveModulationTargets(Host::PluginManager* const host, internal_modulator* modulator);
+    void RestoreModulationTargets(Host::PluginManager* const host, const std::vector<DAW::removed_modulation_routings>& restore);
 }// namespace DAW
