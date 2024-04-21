@@ -642,7 +642,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
             }
         }
 
-
+        bool bResetArp = false;
         // TODO: store index of last processed event and start iterating at that location
         while (eventIdx < noteEventsInRef.size()) {
             const midievent_note_t& evt = noteEventsInRef[eventIdx];
@@ -679,7 +679,6 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                     heldInput.erase(it);
                 }
             }
-
             // process note on event (even when arp is disabled)
             if (evt.isNoteOn) {
                 auto it = std::find_if(heldInput.begin(), heldInput.end(), [&evt](const auto& heldArpIn) {
@@ -692,12 +691,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                 }
                 if (it == heldInput.end()) {
                     if (heldInput.empty()) {
-                        reset(tick);
-#ifdef PLACE_MARKERS
-                        markers.push_back(marker_t{ tick, col(1), StringFormat("Step %d reset", step), (float) (tickMarkers++) });
-#endif
-                        initRandomDelays(tick, start, end, 0, stepSize, lSeed, true);
-                        stepGenerated = 0;
+                        bResetArp = true;
                     }
                     arp_note_t arpInputNote;
                     arpInputNote.time     = tick;
@@ -732,6 +726,15 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                 InsertArpEventSortedCopy(this, noteEventsProcessed, evt);
                 nSend++;
             }
+        }
+        if (bResetArp) {
+            bResetArp = false;
+            reset(tick);
+#ifdef PLACE_MARKERS
+            markers.push_back(marker_t{ tick, col(1), StringFormat("Step %d reset", step), (float) (tickMarkers++) });
+#endif
+            initRandomDelays(tick, start, end, 0, stepSize, lSeed, true);
+            stepGenerated = 0;
         }
 
         const auto stepRecalc = (tick - resetTime) / stepSize;

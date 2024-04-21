@@ -1078,16 +1078,16 @@ void track_impl_t::sendNotesOff() {
 namespace DAW::Host {
 void sortNoteEvents(std::vector<midievent_note_t>& noteEvents) {
     std::sort(noteEvents.begin(), noteEvents.end(), [](const midievent_note_t& a, const midievent_note_t& b) {
-        // sort by tick, pitch, note off, note on
+        // sort by time, note off, note on, pitch, channel
         if (a.globalTick == b.globalTick) {
             if (a.tickOffsetInBlock == b.tickOffsetInBlock) {
-                if (a.pitch == b.pitch) {
-                    if (a.channel == b.channel) {
-                        return !a.isNoteOn && b.isNoteOn;
+                if (a.isNoteOn == b.isNoteOn) {
+                    if (a.pitch == b.pitch) {
+                        return a.channel < b.channel;
                     }
-                    return a.channel < b.channel;
+                    return a.pitch < b.pitch;
                 }
-                return a.pitch < b.pitch;
+                return b.isNoteOn;
             }
             return a.tickOffsetInBlock < b.tickOffsetInBlock;
         }
