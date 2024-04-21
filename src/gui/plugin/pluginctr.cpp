@@ -256,7 +256,6 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
         return true;
     }
     getSelectedEffects(sel, selection);
-    bool handledKeyinput = false;
     switch (ctxt.type) {
         case GlobalCommandType::CMD_DELETE:
             if (!selection.empty()) {
@@ -276,7 +275,6 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 daw->pushHist(actionRemove);
                 audioStageAffected->pluginsChanged();
                 daw->onPluginsChanged();
-                handledKeyinput = true;
             }
             break;
         case GlobalCommandType::CMD_CUT:
@@ -300,7 +298,6 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 daw->pushHist(actionCut);
                 audioStageAffected->pluginsChanged();
                 daw->onPluginsChanged();
-                handledKeyinput = true;
             }
             break;
         case GlobalCommandType::CMD_COPY:
@@ -309,7 +306,6 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
                 daw->setPluginClipboard(clipboard);
-                handledKeyinput = true;
             }
             break;
         case GlobalCommandType::CMD_DUPLICATE:
@@ -318,7 +314,6 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
                 pastePluginClipboard(daw, clipboard, sel.pluginCtr->stage, selection.back()->getSlot() + 1);
-                handledKeyinput = true;
             }
             break;
         case GlobalCommandType::CMD_PASTE:
@@ -329,7 +324,6 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 int pluginPasteSlot = selection.empty() ? -2 : (selection.back()->getSlot() + 1);
                 pastePluginClipboard(daw, clipboard, sel.pluginCtr->stage, pluginPasteSlot);
                 //TODO: handle undo
-                handledKeyinput = true;
                 sel.pluginCtr->stage->pluginsChanged();
                 daw->onPluginsChanged();
             }
@@ -338,7 +332,7 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
             unreachable();
             break;
     }
-    return handledKeyinput;
+    return true;
 }
 }
 bool guictr_plugins::handleCommand(DAW::UI::CommandContext& ctxt) {
@@ -868,7 +862,6 @@ void guictr_plugins::layout() {
     //    }
 }
 void guictr_plugins::determineSize(glm::ivec2& prefSize) {
-
     ivec2 sizeInset     = prefSize - (paddingTL(padding) + paddingBR(padding));
     int32_t guiH        = sizeInset.y - margin;
     int32_t titleHeight = math::clamp(((guiH / 8) >> 1) << 1, 8, ((320 / 8) >> 1) << 1);
