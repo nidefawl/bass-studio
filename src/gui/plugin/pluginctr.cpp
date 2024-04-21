@@ -739,6 +739,12 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
             audio_stage_ref_t refsrc = srcStage->toRef();
             audio_stage_ref_t refdst = stage->toRef();
             daw->pushHist(new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last - first + 1));
+            for (auto& sharedPtr : srcStage->gui) {
+                auto* ctr = sharedPtr.get();
+                if (ctr) {
+                    ctr->relayout();
+                }
+            }
         } else {
             if (targetslot > first) targetslot -= CtrSize(g->effects);
             if (first == targetslot)
@@ -748,7 +754,6 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
             daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
         }
         daw->onPluginsChanged();
-        relayout();
         onChildLayoutChanged(this);
     }
 }
