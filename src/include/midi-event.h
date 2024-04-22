@@ -18,8 +18,12 @@ struct midievent_note_t {
     int8_t channel     = 0;
     bool isNoteOn      = false;
     bool isLoopNoteOff = false;
+    note_t note;
     midievent_note_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2, int8_t ch = 0)
         : pitch(p), velocity(v), tickOffsetInBlock(math::max(0, t)), globalTick(gt), channel(ch), isNoteOn(b), isLoopNoteOff(b2) {
+    }
+    midievent_note_t(const note_t& note, tick_t tickOffsetInBlock, tick_t globalTick, bool _isNoteOn, bool _isLoopNoteOff)
+        : pitch(note.pitch), velocity(note.velocity), tickOffsetInBlock(math::max(0, tickOffsetInBlock)), globalTick(globalTick), channel(note.channel), isNoteOn(_isNoteOn), isLoopNoteOff(_isLoopNoteOff), note(note) {
     }
     String ToString() const;
 };

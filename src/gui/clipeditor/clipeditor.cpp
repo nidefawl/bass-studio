@@ -123,6 +123,7 @@ public:
         if (bHasContentSelected) {
             addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_MUTE));
             addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_QUANTIZE));
+            addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_NOTE_ARP_RESET));
             addEntry(new ctxtmenu_splitter());
             addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CUT));
             addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_COPY));
@@ -461,10 +462,14 @@ void renderNoteName(NVGcontext* vg, const gui_clipcontent* c, const note_t* note
     const auto color = c->theme->getColor(GuiColor::COL_NOTE_TEXT);
     auto posText = vec2(nx + insetx, ny - nh + nh / 2.0f);
     auto sizeText = vec2(nw - insetx + 2, nh);
+    auto strNoteName = String(noteName(note->pitch));
+    if (note->flags & NoteFlags::ARP_RESET) {
+        strNoteName += " R";
+    }
     float w = renderTextLabel(vg,
         posText,
         sizeText,
-        noteName(note->pitch),
+        strNoteName,
         c->theme, 18, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     if (bRenderPosLen) {
         const String strStart = tickAsBeatString(note->start(), false);
@@ -2348,6 +2353,31 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     edit    = true;
                     desc    = "Mute notes";
                 }
+            } else if (command == CMD_NOTE_ARP_RESET) {
+                bool bChanged = false;
+                view.visitClipView([&](clip_t* cl) {
+                    if (cl->notes.selection.empty()) {
+                        return true;
+                    }
+                    auto& dragged = view.m_notesDragged[cl].draggedSelection;
+                    if (dragged.empty())
+                        return true;
+                    bChanged = true;
+                    bool bIsEnabled = !(dragged[0].flags & NoteFlags::ARP_RESET);
+                    for (note_t& note : view.m_notesDragged[cl].draggedSelection) {
+                        note.flags &= ~NoteFlags::ARP_RESET;
+                        if (bIsEnabled) {
+                            note.flags |= NoteFlags::ARP_RESET;
+                        }
+                    }
+                    mergeDraggedNotes(dragmode::drag_notes_move, cl);
+                    cl->setDirty();
+                    return true;
+                });
+                if (bChanged) {
+                    edit    = true;
+                    desc    = "Toggle ARP reset on notes";
+                }
             } else if (command == CMD_CUT) {
                 auto clipboard = ClipboardFromView(view, cursor, true);
                 view.visitClipViewReverse([&](clip_t* cl) {
@@ -2455,8 +2485,8 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     auto state = playback_state::status_playback;
                     std::vector<midievent_note_t> noteEvents;
                     for (auto& note : notes) {
-                        InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - begin, note.start(), true, false, note.channel});
-                        InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.end() - begin, note.end(), false, false, note.channel});
+                        InsertMidiEventSorted(noteEvents, {note, note.start() - begin, note.start(), true, false});
+                        InsertMidiEventSorted(noteEvents, {note, note.end() - begin, note.end(), false, false});
                     }
                     std::vector<midievent_note_t> noteEventsProcessed;
                     arpCopy.process(host, state, 0, noteEvents, begin, end + 1, -1, -1, noteEventsProcessed);

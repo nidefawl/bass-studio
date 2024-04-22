@@ -26,6 +26,7 @@ namespace NoteFlags {
     static constexpr int32_t ENABLED  = 1;
     static constexpr int32_t REALTIME = 2;
     static constexpr int32_t IS_HELD  = 4;
+    static constexpr int32_t ARP_RESET = 8;
 }// namespace NoteFlags
 struct note_t {
 public:

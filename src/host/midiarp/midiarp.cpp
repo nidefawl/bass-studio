@@ -395,7 +395,7 @@ void midiarp::addNote(tick_t start, arp_note_t& note, std::vector<midievent_note
         if constexpr (logProcessedNotes) {
             log_lf(Log::L_DEBUG, "Block %d: %s ARP ON at %d = %d, arp enabled: %d\n", start, StringAsCStr(noteNameAndNumber(note.pitch)), note.start() - start, note.start(), enable);
         }
-        InsertArpEventSorted(this, noteEvents, {note.pitch, note.velocity, note.start() - start, note.start(), true, false});
+        InsertArpEventSorted(this, noteEvents, {note, note.start() - start, note.start(), true, false});
     }
 }
 
@@ -477,7 +477,7 @@ int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopSt
                 if (forceLoopEndNotesOff) {
                     log_lf(Log::L_ERROR, "forceLoopEndNotesOff\n");
                 }
-                InsertArpEventSorted(this, noteEventsProcessed, {heldNoteOut.pitch, heldNoteOut.velocity, tickOffsetInBlockEnd, start+tickOffsetInBlockEnd, false, forceLoopEndNotesOff});
+                InsertArpEventSorted(this, noteEventsProcessed, {heldNoteOut, tickOffsetInBlockEnd, start+tickOffsetInBlockEnd, false, forceLoopEndNotesOff});
                 nSend++;
             }
             heldNoteOut.setIsHeld(false);
@@ -541,7 +541,7 @@ int32_t ToggleHeldInputsOnOff(midiarp* arp, tick_t start, tick_t end, tick_t tic
     for (arp_note_t& noteInHeld : arpNotes) {
         if (bEnable == noteInHeld.isHeld()) {
             noteInHeld.setIsHeld(!bEnable);
-            InsertArpEventSorted(arp, noteEventsProcessed, {noteInHeld.pitch, noteInHeld.velocity, tick - start, tick, !bEnable, false});
+            InsertArpEventSorted(arp, noteEventsProcessed, {noteInHeld, tick - start, tick, !bEnable, false});
             if constexpr (logProcessedNotes) {
                 log_lf(Log::L_DEBUG, "Block %d: %s ARP PASSTHRU heldIn %s at %d = %d\n", start, StringAsCStr(noteNameAndNumber(noteInHeld.pitch)), (!bEnable ? "ON" : "OFF"), tick - start, tick);
             }
@@ -559,7 +559,7 @@ int32_t ToggleHeldOutputsOnOff(midiarp* arp, tick_t start, tick_t end, tick_t ti
         if (noteOutHeld.isEnabled()) {
             if (bEnable != noteOutHeld.isHeld()) {
                 noteOutHeld.setIsHeld(bEnable);
-                InsertArpEventSorted(arp, noteEventsProcessed, {noteOutHeld.pitch, noteOutHeld.velocity, tick - start, tick, bEnable, false});
+                InsertArpEventSorted(arp, noteEventsProcessed, {noteOutHeld, tick - start, tick, bEnable, false});
                 if constexpr (logProcessedNotes) {
                     log_lf(Log::L_DEBUG, "Block %d: %s ARP PASSTRU heldOut %s at %d = %d\n", start, StringAsCStr(noteNameAndNumber(noteOutHeld.pitch)), (bEnable ? "ON" : "OFF"), tick - start, tick);
                 }
@@ -690,7 +690,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                     log_lf(Log::L_ERROR, "Held note started at tick %d\n", it->time);
                 }
                 if (it == heldInput.end()) {
-                    if (heldInput.empty()) {
+                    if (heldInput.empty() || (evt.note.flags & NoteFlags::ARP_RESET)) {
                         bResetArp = true;
                     }
                     arp_note_t arpInputNote;
@@ -879,7 +879,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                             log_lf(Log::L_DEBUG, "Block %d: %s ARP ON at %d = %d, arp enabled: %d\n", start, StringAsCStr(noteNameAndNumber(noteArpStep.pitch)), noteArpStep.start() - start, noteArpStep.start(), enable);
                         }
                         nSend += numEnded;
-                        InsertArpEventSorted(this, noteEventsProcessed, {noteArpStep.pitch, noteArpStep.velocity, noteArpStep.start() - start, noteArpStep.start(), true, false});
+                        InsertArpEventSorted(this, noteEventsProcessed, {noteArpStep, noteArpStep.start() - start, noteArpStep.start(), true, false});
                         nSend++;
                     }
                 }
