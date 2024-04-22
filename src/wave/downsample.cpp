@@ -57,7 +57,7 @@ int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, 
                         return &filter;
                     }
                 }
-                filters.emplace_back(sampleRate, downsampleBits, nullptr, 0);
+                filters.push_back({sampleRate, downsampleBits, nullptr, 0});
                 auto* filter = &filters.back();
 
                 const double ft     = (filter->sampleRate * 0.45f);
