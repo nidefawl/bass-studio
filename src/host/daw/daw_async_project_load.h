@@ -15,9 +15,11 @@
 #include "host/clip/clip.h"
 #include "host/daw/mainctrl.h"
 #include "host/host.h"
+#include "logging.h"
 #include "str_util.h"
 #include "types.h"
 #include "window_impl.h"
+#include "wave/downsample.h"
 
 namespace DAW {
 
@@ -31,6 +33,7 @@ struct samplefile_index_incremental_loader_t {
     bool bFinished = false;
     struct archive_entry* entry = nullptr;
     String curFileName;
+    std::shared_ptr<audiocache::fileloader> loader;
     samplefile_index_incremental_loader_t(audiocache* cache, struct archive* ar, samplefile_index_t& index, String workingDir)
         : cache(cache),
         ar(ar),
@@ -47,7 +50,11 @@ struct samplefile_index_incremental_loader_t {
         }
     }
     double getProgress() const {
-        return !indexSize ? 1.0 : indexPos / double(indexSize);
+        auto progress = double(!indexSize ? 1.0 : indexPos / double(indexSize));
+        if (loader) {
+            progress += loader->getProgress() / indexSize;
+        }
+        return progress;
     }
     void step() {
         if (ar) {
@@ -73,27 +80,59 @@ struct samplefile_index_incremental_loader_t {
         }
         if (curFileName.empty()) {
             step();
-            return;
         }
         if (bFinished) {
             return;
         }
-        if (ar) {
-            auto it = index.list.begin();
-            const auto itEnd = index.list.end();
-            for (; it != itEnd; ++it) {
-                if (it->name == curFileName) {
-                    cache->loadFile(it->name, it->id, workingDir, ar, entry);
-                    it = index.list.erase(it);
-                    indexPos++;
-                    curFileName = "";
-                    return;
+        if (!loader) {
+            if (ar) {
+                auto it = index.list.begin();
+                const auto itEnd = index.list.end();
+                for (; it != itEnd; ++it) {
+                    if (it->name == curFileName) {
+                        auto loader = std::make_shared<audiocache::fileloader>();
+                        loader->setTargetSampleRate(cache->getSampleRate());
+                        if (!loader->resolveFile(curFileName, workingDir, false)) {
+                            log_lf(Log::L_ERROR, "Failed to resolve file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
+                        } else if (!loader->preloadFile(ar, entry)) {
+                            log_lf(Log::L_ERROR, "Failed to preload file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
+                        } else {
+                            loader->getFile()->id = it->id;
+                            this->loader = std::move(loader);
+                        }
+                        it = index.list.erase(it);
+                        break;
+                    }
+                }
+            } else {
+                auto loader = std::make_shared<audiocache::fileloader>();
+                loader->setTargetSampleRate(cache->getSampleRate());
+                if (!loader->resolveFile(curFileName, workingDir, true)) {
+                    log_lf(Log::L_ERROR, "Failed to resolve file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
+                } else if (!loader->preloadFile(nullptr, nullptr)) {
+                    log_lf(Log::L_ERROR, "Failed to preload file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
+                } else {
+                    loader->getFile()->id = index.list[indexPos].id;
+                    this->loader = std::move(loader);
                 }
             }
-            curFileName = "";
-        } else {
-            auto& fileIndex = index.list[indexPos];
-            cache->loadFile(curFileName, fileIndex.id, workingDir, nullptr, nullptr);
+        }
+        if (loader) {
+            if (!loader->isFinished()) {
+                if (loader->loadFileIncremental()) {
+                    return;
+                }
+            } else {
+                if (!loader->isOk()) {
+                    log_lf(Log::L_ERROR, "Failed to load file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
+                    loader.reset();
+                } else {
+                    cache->addFile(loader->getSPFile());
+                    loader.reset();
+                }
+            }
+        }
+        if (!loader) {
             curFileName = "";
             indexPos++;
         }

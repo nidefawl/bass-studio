@@ -191,6 +191,9 @@ public:
     void getStats(host_stats_t& stats) {
         stats = this->stats;
     }
+    int32_t getOutputQueueLen() const {
+        return stats.outputQueueLen;
+    }
     void getProcessingStats(host_processing_stats_t& stats) {
         stats = this->processing;
     }

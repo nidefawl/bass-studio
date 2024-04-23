@@ -707,6 +707,9 @@ public:
     String& getProjectPath() {
         return daw.projectPath;
     }
+    String& getProjectDirectory() {
+        return daw.lastProjectDirectory;
+    }
     WorkerThread* getWorkerThread() {
         return &daw.workerThread;
     }

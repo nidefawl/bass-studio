@@ -63,6 +63,9 @@ public:
     bool canRun() const {
         return task->status <= status_accepted;
     }
+    void destruct() {
+        task->destruct();
+    }
 };
 WorkerThread::ThreadTask::~ThreadTask() {
     delete m_taskImpl;
@@ -154,6 +157,7 @@ private:
                 }
             }
             task->notify();
+            task->destruct();
         }
     }
     ThreadTaskImpl* pop() {

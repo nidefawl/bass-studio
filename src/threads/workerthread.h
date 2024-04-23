@@ -62,6 +62,7 @@ public:
         bool isCompleted() const;
         virtual void run() = 0;
         virtual void notifyCustom() {};
+        virtual void destruct() {};
 
     private:
         ThreadTaskImpl* m_taskImpl;

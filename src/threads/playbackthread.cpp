@@ -342,10 +342,8 @@ private:
                 }
 
                 if (m_status != playback_state::status_render) {
-                    host_stats_t stats;
-                    host->getStats(stats);
-                    if (!host->bypassPlaybackProcessing && stats.outputQueueLen < 2) {
-                        if (stats.outputQueueLen != 0) {
+                    if (!host->bypassPlaybackProcessing && host->getOutputQueueLen() < 2) {
+                        if (host->getOutputQueueLen() != 0) {
                             seqthreads::threadSleepMicros(500);
                         }
                     } else {

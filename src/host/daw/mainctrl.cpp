@@ -1596,22 +1596,69 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
         if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT) || StrEndsWith(path, "." PROJECT_FILE_EXT))
             continue;
         String ext;
-        String nameWithoutExt;
-        SplitPath(path, nullptr, &nameWithoutExt, &ext);
+        SplitPath(path, nullptr, nullptr, &ext);
         if (stl_contains(std::array{ SUPPORTED_AUDIO_FILE_TYPES }, ext)) {
-            audiofile_t* audio = daw.getAudioCache()->loadFile(path, -1, "", nullptr, nullptr);
-            if (audio) {
-                auto* sample = audio->sample.get();
+            auto audiocache = daw.getAudioCache();
+            audiocache::fileloader loader;
+            loader.setTargetSampleRate(audiocache->getSampleRate());
+            if (!loader.resolveFile(path, daw.lastProjectDirectory, false)) {
+                log_lf(Log::L_ERROR, "Failed to resolve file %s: %s\n", path.c_str(), loader.getError().c_str());
+                return false;
+            } else if (!loader.preloadFile(nullptr, nullptr)) {
+                log_lf(Log::L_ERROR, "Failed to preload file %s: %s\n", path.c_str(), loader.getError().c_str());
+                return false;
+            }
+            if (!loader.isOk()) {
+                log_lf(Log::L_ERROR, "Failed to load file %s: %s\n", path.c_str(), loader.getError().c_str());
+                return false;
+            } else {
+                class LoadAudioTask : public WorkerThread::ThreadTask {
+                    const String path;
+                    audiocache::fileloader loader;
+                public:
+                    LoadAudioTask(const String& path, audiocache::fileloader _loader)
+                        : path(path),
+                        loader(std::move(_loader))
+                    {
+                        dbgassert(loader.getFile());
+                    }
+                    void run() override {
+                        while (!loader.isFinished()) {
+                            if (!loader.loadFileIncremental()) {
+                                log_lf(Log::L_ERROR, "Failed to load file %s: %s\n", path.c_str(), loader.getError().c_str());
+                            }
+                            seqthreads::threadSleep(50);
+                        }
+                        if (loader.isOk()) {
+                            log_lf(Log::L_INFO, "Loaded file %s\n", path.c_str());
+                        } else {
+                            log_lf(Log::L_ERROR, "Failed to load file %s: %s\n", path.c_str(), loader.getError().c_str());
+                        }
+                    }
+                    void destruct() override {
+                        loader = {};
+                        delete this;
+                    }
+                };
+                auto spFile = loader.getSPFile();
+                {
+                    auto lock = daw.lockPlayThread();
+                    spFile->id = audiocache->getUniqueSampleId();
+                    audiocache->addFile(spFile);
+                }
+                auto* sample = spFile->sample.get();
                 if (sample) {
+                    String nameWithoutExt;
+                    SplitPath(path, nullptr, &nameWithoutExt, nullptr);
                     clip_t clip;
                     clip.clipType = CLIP_AUDIO;
                     clip.name     = nameWithoutExt;
                     //clip.notes = move(notes);
-                    clip.audio.id = audio->id;
-                    clip.setLenSamples(sample->nSamples);
+                    clip.audio.id = spFile->id;
+                    auto lenSamples = loader.getExpectedNumSamples();
                     auto host = daw.getHost();
                     dbgassert(host);
-                    clip.setLen(sampleToTickConvert<tick_t, roundmode::round>(sample->nSamples, daw.projectGlobals.tempo100, host->m_sampleFormatInternal.sampleRate));
+                    clip.setLen(sampleToTickConvert<tick_t, roundmode::round>(lenSamples, daw.projectGlobals.tempo100, host->m_sampleFormatInternal.sampleRate));
                     clip.loopEnabled = false;
 
                     std::shared_ptr<track_clipboard_t> trClipboard = std::make_shared<track_clipboard_t>();
@@ -1621,6 +1668,12 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
                     daw.dragdropclip.reset();
                     daw.dragdropclip.clipboard = fileClipboard;
                     daw.dragdropclip.isLoaded  = true;
+                }
+
+                auto task = new LoadAudioTask(path, std::move(loader));
+                if (!daw.workerThread.pushTask(task)) {
+                    delete task;
+                    return false;
                 }
             }
         }
