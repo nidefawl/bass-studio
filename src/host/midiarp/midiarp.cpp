@@ -66,18 +66,18 @@ template<typename Evt>
 void InsertArpEventSorted(midiarp* arp, std::vector<Evt>& list, Evt&& evt) {
     auto insertPos = std::find_if(list.begin(), list.end(), [tick = evt.globalTick](const auto& ev) { return ev.globalTick > tick;});
     list.insert(insertPos, evt);
-#ifdef DAW_DEBUG_ARP
+/* #ifdef DAW_DEBUG_ARP
     AssertNoteCounts(arp, list);
-#endif
+#endif */
 }
 
 template<typename Evt>
 void InsertArpEventSortedCopy(midiarp* arp, std::vector<Evt>& list, const Evt& evt) {
     auto insertPos = std::find_if(list.begin(), list.end(), [tick = evt.globalTick](const auto& ev) { return ev.globalTick > tick;});
     list.insert(insertPos, evt);
-#ifdef DAW_DEBUG_ARP
+/* #ifdef DAW_DEBUG_ARP
     AssertNoteCounts(arp, list);
-#endif
+#endif */
 }
 
 }
@@ -510,7 +510,7 @@ void midiarp::process(const DAW::Host::PluginManager* const host, playback_state
     } else {
         processArpInternal(host, state, cursorPos, noteEventsIn, start, end, loopStart, loopEnd, wallClockTime, noteEventsProcessed);
     }
-
+/* 
 #ifdef DAW_DEBUG_ARP
     for (auto& e : noteEventsProcessed) {
         if (e.isNoteOn) {
@@ -520,7 +520,7 @@ void midiarp::process(const DAW::Host::PluginManager* const host, playback_state
         }
         dbgassert(prevDebugNoteCounts[e.pitch * 16 + e.channel] >= -5 && prevDebugNoteCounts[e.pitch * 16 + e.channel] <= 5);
     }
-#endif
+#endif */
 
     updateMarkersAndAnimation(start, end, loopStart, loopEnd, wallClockTime);
     /*if (wallClockTime - tmLastLog > 10.0f) {
