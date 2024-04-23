@@ -134,8 +134,8 @@ namespace RenderResources {
         {
             NvgFonts fonts;
             std::vector<FileFound> files;
-            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "ttf", false, files);
-            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "otf", false, files);
+            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "ttf", true, files);
+            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "otf", true, files);
             if (files.empty()) {
                 throw appexception("Please install ttf fonts to fonts/gui");
             }
