@@ -142,6 +142,27 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
             nvgTranslate(vg, -pos.x, -pos.y);
         }
     }
+    if (file && (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADING) && size.x > 0 && size.y - HEIGHT_CLIP_TITLE > 4) {
+        auto colInvalid = theme->getColor(GuiColor::COL_INVALID_INPUT);
+        colInvalid.a = 0.5;
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y+HEIGHT_CLIP_TITLE, size.x, size.y-HEIGHT_CLIP_TITLE);
+        nvgFillColor(vg, colInvalid);
+        nvgFill(vg);
+        textPos.x += HEIGHT_CLIP_TITLE;
+        textBounds.x -= HEIGHT_CLIP_TITLE;
+        auto iconId = ICON_LOADING;
+        auto sizeIcon = ivec2(math::min<float>(HEIGHT_CLIP_TITLE, size.x));
+        if (float(sizeIcon.x) > float(HEIGHT_CLIP_TITLE) * 0.5f) {
+            // nvgTranslate(vg, pos.x, pos.y);
+            nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE / 2.0f - sizeIcon.y / 2.0f);
+            NVGcolor dummy;
+            drawLoadingIcon(vg, pos, sizeIcon, dummy, iconId, 0);
+            // drawIcon(vg, sizeIcon, &RenderResources::imgIcons[iconId], -2);
+            nvgTranslate(vg, 0, -HEIGHT_CLIP_TITLE / 2.0f + sizeIcon.y / 2.0f);
+            // nvgTranslate(vg, -pos.x, -pos.y);
+        }
+    }
     if (cl->name.length() && textBounds.x > 0 && textBounds.y > 0) {
         renderTextLabel(vg,
                         textPos,

@@ -41,6 +41,7 @@ struct audiofile_t final : public samplesource_t {
         AUDIOFILE_FLAG_TEMPORARY = 1 << 3,
         AUDIOFILE_FLAG_BUNDLED = 1 << 4,
         AUDIOFILE_FLAG_DERIVED = 1 << 5,
+        AUDIOFILE_FLAG_LOADING = 1 << 6,
     };
     int32_t id = -1;
     int32_t derivedFromId = -1;

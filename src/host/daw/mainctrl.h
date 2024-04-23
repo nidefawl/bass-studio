@@ -112,6 +112,7 @@ public:
 
 namespace DAW {
     struct load_project_task;
+    class LoadAudioTask;
     class ProcessClipAudioThreadTask;
     std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const Cursor& _cursor, bool copyAutomation);
     std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const Cursor& _cursor);
@@ -402,6 +403,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     friend class CompanionCtrl;
     friend class DawCtrl;
     friend class DAW::ProcessClipAudioThreadTask;
+    friend class DAW::LoadAudioTask;
     friend struct DAW::load_project_task;
     ProjectFileType projectFileType = ProjectFileType::PROJECT_FILETYPE_JSON;
     project_t project;
@@ -428,6 +430,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     std::shared_ptr<project_to_load_t> projectToLoad;
     std::shared_ptr<DAW::ProcessClipAudioThreadTask> processAudioTaskRunning;
     std::vector<std::shared_ptr<DAW::ProcessClipAudioThreadTask>> processAudioTasks;
+    std::vector<std::shared_ptr<DAW::LoadAudioTask>> loadAudioTasks;
 
     ClipBoardType clipboardType = CLIPBOARD_NONE;
     std::shared_ptr<plugin_clipboard_t> clipboardPlugins;
@@ -635,6 +638,7 @@ public:
     bool configureSampleRate();
     void updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& settings);
     void updateAudioProcessingTask();
+    void updateLoadAudioTasks();
 private:
     void onDawCompanionWindowClose(DawWindowCompanion& entry);
     void saveProjectBundle(const String& path);

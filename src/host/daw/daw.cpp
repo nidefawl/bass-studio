@@ -287,6 +287,7 @@ void DawInstance::onTick() {
         }
     }
 
+    updateLoadAudioTasks();
     updateAudioProcessingTask();
 
     host->onTick();

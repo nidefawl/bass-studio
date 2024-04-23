@@ -77,7 +77,7 @@ void drawImage(NVGcontext* vg, int image, float alpha,
                float x, float y, float w, float h);   // position and size of the sprite rectangle on screen
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs);
 void drawSquareInset(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
-
+void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {

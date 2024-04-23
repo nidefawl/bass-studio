@@ -498,6 +498,31 @@ void drawSquareInset(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& co
     nvgStroke(vg);
 }
 
+void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) 
+{
+    int32_t inset = 3;
+    int32_t extImg = 0;
+    int32_t iconW  = math::min(size.x, size.y);
+    ivec2 offset   = ivec2(math::max(0, (size.x - iconW)), math::max(0, (size.y - iconW) / 2));
+    ivec2 iconPos  = pos + inset + offset;
+    iconW -= inset * 2;
+    auto time = getTimeMillisF();
+    // 2 iterations per second
+    float t = fmod(time, 2000.0f) / 2000.0f;
+    float a = 2.0f * M_PI * t;
+    RenderResources::NvgImageTexture& image = RenderResources::imgIcons[drawParm];
+    NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image.perContextId[vg], 1.0f);
+    nvgSave(vg);
+    nvgTranslate(vg, iconPos.x + iconW*0.5f, iconPos.y + iconW*0.5f);
+    nvgRotate(vg, a);
+    nvgTranslate(vg, -iconW*0.5f, -iconW*0.5f);
+    nvgBeginPath(vg);
+    nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);
+    nvgFillPaint(vg, paintIcon);
+    nvgFill(vg);
+    nvgRestore(vg);
+}
+
 GuiColor::constant_t guibase::getLabelColor() const {
     if (isFlag(FLG_HAS_COLOR_BG) && theme) {
         auto colBgU32 = theme->getColorInt32(getBackgroundColor());
