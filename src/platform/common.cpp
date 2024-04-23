@@ -97,21 +97,25 @@ void extractDefaultPresets() {
         }
         auto pathName = archive_entry_pathname(entry);
         if (archive_entry_filetype(entry) == AE_IFREG) {
-            String strPathUserdata = toUserdataPath(pathName);
-            if (!FileExists(strPathUserdata)) {
-                log_lf(Log::L_INFO, "extracting: %s to %s\n", pathName, StringAsCStr(strPathUserdata));
-                auto size = archive_entry_size(entry);
-                std::vector<uint8_t> buffer(size);
-                auto readsize = archive_read_data(a, buffer.data(), size);
-                if (readsize < ARCHIVE_OK) {
-                    auto errorMsg = archive_error_string(a);
-                    log_lf(Log::L_ERROR, "archive_read_data() failed: %s\n", errorMsg);
-                    break;
+            try {
+                String strPathUserdata = toUserdataPath(pathName);
+                if (!FileExists(strPathUserdata)) {
+                    log_lf(Log::L_INFO, "extracting: %s to %s\n", pathName, StringAsCStr(strPathUserdata));
+                    auto size = archive_entry_size(entry);
+                    std::vector<uint8_t> buffer(size);
+                    auto readsize = archive_read_data(a, buffer.data(), size);
+                    if (readsize < ARCHIVE_OK) {
+                        auto errorMsg = archive_error_string(a);
+                        log_lf(Log::L_ERROR, "archive_read_data() failed: %s\n", errorMsg);
+                        break;
+                    }
+                    String path;
+                    SplitPath(strPathUserdata, &path, nullptr, nullptr, nullptr);
+                    CreateDirectoryIfNotExists(path);
+                    WriteFileVector(strPathUserdata, buffer);
                 }
-                String path;
-                SplitPath(strPathUserdata, &path, nullptr, nullptr, nullptr);
-                CreateDirectoryIfNotExists(path);
-                WriteFileVector(strPathUserdata, buffer);
+            } catch (const std::exception& e) {
+                log_lf(Log::L_ERROR, "extracting: %s failed: %s\n", pathName, e.what());
             }
         }
     }
