@@ -615,6 +615,7 @@ bool audiocache::fileloader::resample() {
 
 bool audiocache::loadFile(std::shared_ptr<audiofile_t>& outFile, const String& pathIn, const String& workingDir, bool remapPath, struct archive* ar, struct archive_entry* entry) {
     fileloader loader;
+    loader.setTargetSampleRate(getSampleRate());
     if (!loader.resolveFile(pathIn, workingDir, remapPath)) {
         log_lf(Log::L_ERROR, "Failed to resolve file %s: %s\n", pathIn.c_str(), loader.getError().c_str());
         return false;
@@ -632,6 +633,8 @@ bool audiocache::loadFile(std::shared_ptr<audiofile_t>& outFile, const String& p
             return false;
         }
         outFile = loader.getSPFile();
+        outFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED;
+        addFile(outFile);
         return true;
     }
 }

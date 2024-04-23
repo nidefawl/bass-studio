@@ -66,11 +66,11 @@ struct waveform_test {
                 continue;
             }
             log_printf("loadFile %s\n", StringAsCStr(files[i].path));
-            auto sample = tls.audioCache->loadFile(files[i].path, -1, "", nullptr, nullptr);
-            if (!sample) {
+            std::shared_ptr<audiofile_t> outFile;
+            if (!tls.audioCache->loadFile(outFile, files[i].path, "")) {
                 log_printf("Failed loading sample %s\n", StringAsCStr(files[i].path));
             } else {
-                vec.push_back(waveform_test_entry{ sample, gui_waveform_texture_ref{}, 0u });
+                vec.push_back(waveform_test_entry{ outFile.get(), gui_waveform_texture_ref{}, 0u });
             }
         }
         if (vec.size() < 1) {

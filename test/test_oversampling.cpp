@@ -26,7 +26,9 @@ namespace {
             {
                 sampleformat_t format{sampleRate, 128, sampleformat_bits_t::FLOAT_32};
                 audiocache cache(format.sampleRate);
-                audiofile_t* audiofile = cache.loadFile(file.path, -1, "", nullptr, nullptr);
+                std::shared_ptr<audiofile_t> out;
+                TEST_ASSERT_THROW(cache.loadFile(out, file.path, ""));
+                audiofile_t* audiofile = out.get();
                 TEST_ASSERT_THROW(audiofile != nullptr);
                 sampleNameDownsampled = audiofile->name + "_downsampled.wav";
                 sampleNameUpsampled = audiofile->name + "_upsampled.wav";
@@ -95,7 +97,9 @@ namespace {
                 // load upsampled file and downsample it
                 format = sampleformat_t{sampleRate * 2, 128, sampleformat_bits_t::FLOAT_32};
                 cache.setSamplerate(format.sampleRate);
-                const auto audiofile = cache.loadFile(sampleNameUpsampled, -1, "", nullptr, nullptr);
+                std::shared_ptr<audiofile_t> out;
+                TEST_ASSERT_THROW(cache.loadFile(out, sampleNameUpsampled, "", false, nullptr, nullptr));
+                const auto audiofile = out.get();
                 TEST_ASSERT_THROW(audiofile != nullptr);
                 const auto sampleIn = audiofile->sample.get();
                 log_lf(Log::L_INFO, "loaded audiofile: %s - %u channels, %zd samples\n", audiofile->name.c_str(), sampleIn->nChannels, sampleIn->nSamples);

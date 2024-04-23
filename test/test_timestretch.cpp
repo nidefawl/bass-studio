@@ -4,6 +4,7 @@
 #include "logging.h"
 #include "samplerate.h"
 #include "tls.h"
+#include <memory>
 #include <signalsmith-stretch.h>
 #include <vector>
 
@@ -19,8 +20,9 @@ namespace {
         log_printf(TEST_PATH("audiofiles: %zu files\n"), files.size());
         audiocache cache(44100);
         for (const FileFound& file : files) {
-            audiofile_t* audiofile = cache.loadFile(file.path, -1, "", nullptr, nullptr);
-            if (audiofile) {
+            std::shared_ptr<audiofile_t> out;
+            if (cache.loadFile(out, file.path, "")) {
+                auto audiofile = out.get();
                 log_lf(Log::L_INFO, "loaded audiofile: %s - %u channels, %zd samples\n", audiofile->name.c_str(), audiofile->sample->nChannels, audiofile->sample->nSamples);
                 {
                     signalsmith::stretch::SignalsmithStretch<float> stretch;
