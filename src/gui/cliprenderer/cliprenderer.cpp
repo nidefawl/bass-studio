@@ -133,9 +133,14 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
         textPos.x += HEIGHT_CLIP_TITLE;
         textBounds.x -= HEIGHT_CLIP_TITLE;
         auto iconId = ICON_WARNING;
-        nvgTranslate(vg, pos.x, pos.y);
-        drawIcon(vg, vec2(HEIGHT_CLIP_TITLE), &RenderResources::imgIcons[iconId], -2);
-        nvgTranslate(vg, -pos.x, -pos.y);
+        auto sizeIcon = vec2(math::min<float>(HEIGHT_CLIP_TITLE, size.x));
+        if (float(sizeIcon.x) > float(HEIGHT_CLIP_TITLE) * 0.5f) {
+            nvgTranslate(vg, pos.x, pos.y);
+            nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE / 2.0f - sizeIcon.y / 2.0f);
+            drawIcon(vg, sizeIcon, &RenderResources::imgIcons[iconId], -2);
+            nvgTranslate(vg, 0, -HEIGHT_CLIP_TITLE / 2.0f + sizeIcon.y / 2.0f);
+            nvgTranslate(vg, -pos.x, -pos.y);
+        }
     }
     if (cl->name.length() && textBounds.x > 0 && textBounds.y > 0) {
         renderTextLabel(vg,
