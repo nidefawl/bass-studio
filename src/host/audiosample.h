@@ -45,12 +45,14 @@ struct clip_audio_settings_t {
 
 using samplechannel_t = std::vector<float>;
 struct audiosample_t {
-    channelnum_t nChannels;
+    static constexpr uint8_t MAX_DOWNSAMPLE = 8;
     samplecount_t nSamples;
+    channelnum_t nChannels;
     samplerate_t sampleRate;
     uint16_t bitsPerSample;
     std::vector<samplechannel_t> samples;
-    std::vector<std::vector<samplechannel_t>> downsampled;
+    std::array<std::vector<samplechannel_t>, MAX_DOWNSAMPLE> downsampled;
+    size_t downsampleSteps = 0;
     int64_t sampleVersion = 0;
     clip_audio_settings_t settings;
 };

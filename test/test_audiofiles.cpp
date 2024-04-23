@@ -2,6 +2,7 @@
 #include "fileio.h"
 #include "host/audiocache/audiocache.h"
 #include "logging.h"
+#include "platform.h"
 #include "tls.h"
 #include <vector>
 
@@ -15,12 +16,24 @@ namespace {
             findFilesWithExt(TEST_PATH("samples"), fileType, false, files);
         }
         log_printf(TEST_PATH("audiofiles: %zu files\n"), files.size());
-        audiocache cache(44100);
         for (const FileFound& file : files) {
-            audiofile_t* audiofile = cache.loadFile(file.path, -1, "", nullptr, nullptr);
+            audiocache::fileloader loader;
+            bool b = loader.resolveFile(file.path, App::Platform::getCurrentWorkingDirectory(), false);
+            loader.setTargetSampleRate(44100);
+            TEST_ASSERT_EQUAL(b, true);
+            TEST_ASSERT_EQUAL(loader.isOk(), true);
+            b = loader.preloadFile(nullptr, nullptr);
+            TEST_ASSERT_EQUAL(b, true);
+            TEST_ASSERT_EQUAL(loader.isOk(), true);
+            TEST_ASSERT_NOT_EQUAL(loader.getExpectedNumSamples(), 0);
+            while (!loader.isFinished()) {
+                bool b = loader.loadFileIncremental();
+                TEST_ASSERT_EQUAL(b, true);
+            }
+            TEST_ASSERT_EQUAL(loader.isOk(), true);
+            auto audiofile = loader.getSPFile();
             if (audiofile) {
                 log_lf(Log::L_INFO, "loaded audiofile: %s - %u channels, %zd samples\n", audiofile->name.c_str(), audiofile->sample->nChannels, audiofile->sample->nSamples);
-                cache.unloadSampleId(audiofile->id);
             } else {
                 log_lf(Log::L_ERROR, "Failed to load audiofile: %s\n", file.path.c_str());
             }

@@ -74,6 +74,26 @@ struct samplefile_index_incremental_loader_t {
             }
         }
     }
+
+    void openFile(int32_t id) {
+        auto loader = std::make_shared<audiocache::fileloader>();
+        loader->setTargetSampleRate(cache->getSampleRate());
+        if (!loader->resolveFile(curFileName, workingDir, ar == nullptr, id)) {
+            log_lf(Log::L_ERROR, "Failed to resolve file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
+            loader->getFile()->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING;
+        } else if (!loader->preloadFile(ar, entry)) {
+            log_lf(Log::L_ERROR, "Failed to preload file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
+            loader->getFile()->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING;
+        }
+        auto spFile = loader->getSPFile();
+        if (spFile) {
+            cache->addFile(spFile);
+        }
+        if (loader->isOk() && !loader->isFinished()) {
+            this->loader = std::move(loader);
+        }
+    }
+    
     void loadSingleStep() {
         if (bFinished) {
             return;
@@ -90,31 +110,13 @@ struct samplefile_index_incremental_loader_t {
                 const auto itEnd = index.list.end();
                 for (; it != itEnd; ++it) {
                     if (it->name == curFileName) {
-                        auto loader = std::make_shared<audiocache::fileloader>();
-                        loader->setTargetSampleRate(cache->getSampleRate());
-                        if (!loader->resolveFile(curFileName, workingDir, false)) {
-                            log_lf(Log::L_ERROR, "Failed to resolve file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
-                        } else if (!loader->preloadFile(ar, entry)) {
-                            log_lf(Log::L_ERROR, "Failed to preload file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
-                        } else {
-                            loader->getFile()->id = it->id;
-                            this->loader = std::move(loader);
-                        }
+                        openFile(it->id);
                         it = index.list.erase(it);
                         break;
                     }
                 }
             } else {
-                auto loader = std::make_shared<audiocache::fileloader>();
-                loader->setTargetSampleRate(cache->getSampleRate());
-                if (!loader->resolveFile(curFileName, workingDir, true)) {
-                    log_lf(Log::L_ERROR, "Failed to resolve file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
-                } else if (!loader->preloadFile(nullptr, nullptr)) {
-                    log_lf(Log::L_ERROR, "Failed to preload file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
-                } else {
-                    loader->getFile()->id = index.list[indexPos].id;
-                    this->loader = std::move(loader);
-                }
+                openFile(index.list[indexPos].id);
             }
         }
         if (loader) {
@@ -125,11 +127,8 @@ struct samplefile_index_incremental_loader_t {
             } else {
                 if (!loader->isOk()) {
                     log_lf(Log::L_ERROR, "Failed to load file %s: %s\n", curFileName.c_str(), loader->getError().c_str());
-                    loader.reset();
-                } else {
-                    cache->addFile(loader->getSPFile());
-                    loader.reset();
                 }
+                loader.reset();
             }
         }
         if (!loader) {

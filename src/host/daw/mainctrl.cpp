@@ -1591,6 +1591,9 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
     if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
         return false;
     }
+    if (daw.getAsyncTask()) {
+        return false;
+    }
     tmpFileDragPaths = files;
     for (auto path : files) {
         if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT) || StrEndsWith(path, "." PROJECT_FILE_EXT))
@@ -1630,6 +1633,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
                             seqthreads::threadSleep(50);
                         }
                         if (loader.isOk()) {
+                            loader.getFile()->getSample()->sampleVersion += 1;
                             log_lf(Log::L_INFO, "Loaded file %s\n", path.c_str());
                         } else {
                             log_lf(Log::L_ERROR, "Failed to load file %s: %s\n", path.c_str(), loader.getError().c_str());

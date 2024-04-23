@@ -209,24 +209,27 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
 
 void audiocache::Downsample(audiosample_t* sample) {
     int64_t timeBeginDownsample = getTimeMicros();
-    sample->downsampled.clear();
-    for (uint8_t downsampleStep = 1; downsampleStep < audiocache::maxDownS; downsampleStep++) {
+    for (uint8_t downsampleStep = 1; downsampleStep <= audiosample_t::MAX_DOWNSAMPLE; downsampleStep++) {
         samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
 
         if (lenSamplesDownsampled < 10)
             break;
-
-        std::vector<samplechannel_t> downsampledChannels(2);
+        sample->downsampleSteps = downsampleStep - 1;
+        auto& chDown = sample->downsampled.at(downsampleStep - 1);
+        chDown.resize(sample->nChannels);
         for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
-            samplechannel_t chDownSmpld(static_cast<size_t>(lenSamplesDownsampled));
+            auto& chIn = sample->samples.at(ch);
+            auto& chOut = chDown.at(ch);
+            chOut.resize(lenSamplesDownsampled);
             downsample(sample->sampleRate,
-                        sample->samples.at(ch).data(),
+                        chIn.data(),
                         0,
                         sample->nSamples,
-                        chDownSmpld, downsampleStep);
-            downsampledChannels[ch] = std::move(chDownSmpld);
+                        chOut,
+                        downsampleStep
+                    );
         }
-        sample->downsampled.push_back(std::move(downsampledChannels));
+        sample->downsampleSteps = downsampleStep;
     }
     int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
     double timeDiffInSeconds = timeDiffDownsample / 1000000.0;
@@ -247,7 +250,7 @@ void audiocache::addFile(std::shared_ptr<audiofile_t>& af) {
     this->list.push_back(af);
 }
 
-bool audiocache::fileloader::resolveFile(const String& pathIn, const String& workingDir, bool remapPath) {
+bool audiocache::fileloader::resolveFile(const String& pathIn, const String& workingDir, bool remapPath, int32_t id) {
     String path = pathIn;
     if (remapPath) {
         auto mappings = daw_tls::getSettings().pathmapping;
@@ -293,6 +296,7 @@ bool audiocache::fileloader::resolveFile(const String& pathIn, const String& wor
     file->sample = std::make_unique<audiosample_t>();
     file->path   = pathIn;
     file->pathLoaded = path;
+    file->id     = id;
     String pathOnly, nameOnly, extOnly, nameExt;
     SplitPath(path, &pathOnly, &nameOnly, &extOnly, &nameExt);
     file->name = nameOnly;
@@ -371,7 +375,8 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
             error = StringFormat("File %s has 0 channels", StringAsCStr(path));
             return false;
         }
-        pSamples.resize(wav.totalPCMFrameCount * wav.channels);
+        fileReadSamples = wav.totalPCMFrameCount * wav.channels;
+        pSamples.resize(fileReadSamples);
         memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
     } else if (std::holds_alternative<drmp3>(drAudiofile)) {
         auto& mp3 = std::get<drmp3>(drAudiofile);
@@ -382,9 +387,8 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
             drmp3_uninit(&mp3);
             return false;
         }
-        auto total = samplecount_t(drmp3_get_pcm_frame_count(&mp3) * sourceNumChannels);
-        size_t chunkSize = 4096 * 32;
-        pSamples.resize(total + chunkSize);
+        fileReadSamples = samplecount_t(drmp3_get_pcm_frame_count(&mp3) * sourceNumChannels);
+        pSamples.resize(fileReadSamples + chunkSize);
         std::memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
     } else if (std::holds_alternative<drflac_file>(drAudiofile)) {
         auto& flac = *std::get<drflac_file>(drAudiofile).pFlac;
@@ -395,7 +399,8 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
             drflac_close(&flac);
             return false;
         }
-        pSamples.resize(flac.totalPCMFrameCount * flac.channels);
+        fileReadSamples = flac.totalPCMFrameCount * flac.channels;
+        pSamples.resize(fileReadSamples);
         std::memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
     } else {
         error = "Unknown audio file type";
@@ -407,14 +412,27 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
     sample->sampleRate    = sourceSamplerate;
     sample->sampleRate    = targetSamplerate;
 
-    auto guessSamples = samplecount_t(pSamples.size()) / sourceNumChannels;
-    
-    auto numSamples = targetSamplerate == sourceSamplerate ? guessSamples : static_cast<samplecount_t>(guessSamples * targetSamplerate / (double) sourceSamplerate + .5);
+    auto numSamples = getExpectedNumSamples();
     sample->samples.resize(sample->nChannels);
     for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
         sample->samples[ch].resize(numSamples);
     }
     sample->nSamples = numSamples;
+
+    sample->downsampleSteps = 0;
+    for (uint8_t downsampleStep = 1; downsampleStep <= audiosample_t::MAX_DOWNSAMPLE; downsampleStep++) {
+        samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
+        auto& chDown = sample->downsampled.at(downsampleStep - 1);
+        chDown.resize(sample->nChannels);
+        if (lenSamplesDownsampled >= 10) {
+            for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+                auto& chOut = chDown.at(ch);
+                chOut.resize(lenSamplesDownsampled);
+            }
+            sample->downsampleSteps = downsampleStep;
+        }
+    }
+
     this->audiofileVariant = std::move(drAudiofile);
     return true;
 }
@@ -436,25 +454,30 @@ bool audiocache::fileloader::loadFileIncremental() {
             return true;
         }
         bool bFinished = false;
-        if (sample->downsampled.size() < audiocache::maxDownS) {
-            uint8_t downsampleStep = sample->downsampled.size() + 1;
-            samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
-            if (lenSamplesDownsampled >= 10) {
-                std::vector<samplechannel_t> downsampledChannels(2);
+        if (downsampleStep != audiosample_t::MAX_DOWNSAMPLE) {
+            downsampleStep++;
+            auto lenSamplesDownsampled = sample->downsampled.at(downsampleStep - 1).at(0).size();
+            if (lenSamplesDownsampled < 10) {
+                downsampleStep = audiosample_t::MAX_DOWNSAMPLE;
+            } else {
                 for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
-                    samplechannel_t chDownSmpld(static_cast<size_t>(lenSamplesDownsampled));
+                    auto& chIn = sample->samples.at(ch);
+                    auto& chOut = sample->downsampled.at(downsampleStep - 1).at(ch);
+                    dbgassert(chOut.size() >= lenSamplesDownsampled);
+                    if (chOut.size() < lenSamplesDownsampled) {
+                        error = StringFormat("Downsampled buffer too small");
+                        return false;
+                    }
                     downsample(sample->sampleRate,
-                                sample->samples.at(ch).data(),
+                                chIn.data(),
                                 0,
                                 sample->nSamples,
-                                chDownSmpld, downsampleStep);
-                    downsampledChannels[ch] = std::move(chDownSmpld);
+                                chOut,
+                                downsampleStep
+                            );
                 }
-                sample->downsampled.push_back(std::move(downsampledChannels));
-                bFinished = sample->downsampled.size() == audiocache::maxDownS;
-            } else {
-                bFinished = true;
             }
+            bFinished = downsampleStep == audiosample_t::MAX_DOWNSAMPLE;
         }
         if (bFinished) {
             file->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED;
@@ -474,12 +497,6 @@ bool audiocache::fileloader::loadFileIncremental() {
         }
     } else if (std::holds_alternative<drmp3>(audiofileVariant)) {
         auto& mp3 = std::get<drmp3>(audiofileVariant);
-        if (size_t(numSamplesInput * sourceNumChannels) + chunkSize > pSamples.size()) {
-            auto extraSamples = pSamples.size() + chunkSize - (numSamplesInput * sourceNumChannels);
-            error = StringFormat("File %s has %zd more samples than expected", StringAsCStr(file->pathLoaded), extraSamples);
-            log_lf(Log::L_WARN, "%s\n", error.c_str());
-            pSamples.resize(pSamples.size() + extraSamples);
-        }
         auto outputBuffer = pSamples.data() + (numSamplesInput * sourceNumChannels);
         auto numSamplesDecoded = drmp3_read_pcm_frames_f32(&mp3, chunkSize / sourceNumChannels, outputBuffer);
         numSamplesInput += numSamplesDecoded;
@@ -1063,13 +1080,13 @@ float audiocache::fileloader::getProgress() const {
     if (pSamples > 0) {
         progressSampleRead = (numSamplesInput * sourceNumChannels) / float(pSamples);
     }
-    float progressDownsample = file->getSample()->downsampled.size() / float(audiocache::maxDownS);
+    float progressDownsample = downsampleStep / float(audiosample_t::MAX_DOWNSAMPLE);
     auto total = progressSampleRead * 0.33f + progressResample * 0.33f + progressDownsample * 0.33f + 0.01f;
     return total;
 }
 
 samplecount_t audiocache::fileloader::getExpectedNumSamples() const {
-    auto samplesLoaded = samplecount_t(pSamples.size() / sourceNumChannels);
-    auto numSamples = targetSamplerate == sourceSamplerate ? samplesLoaded : static_cast<samplecount_t>(samplesLoaded * targetSamplerate / (double) sourceSamplerate + .5);
+    auto perChannel = fileReadSamples / sourceNumChannels;
+    auto numSamples = targetSamplerate == sourceSamplerate ? perChannel : static_cast<samplecount_t>(perChannel * targetSamplerate / (double) sourceSamplerate + .5);
     return numSamples;
 }

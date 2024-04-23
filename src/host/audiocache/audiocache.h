@@ -88,7 +88,6 @@ class audiocache {
     std::unordered_map<int, audiofile_t*> mapId;
 
 public:
-    static constexpr uint8_t maxDownS = 8;
     static void Downsample(audiosample_t* sample);
     class fileloader {
         static const size_t chunkSize = 1024 * 256;
@@ -99,16 +98,18 @@ public:
         samplerate_t targetSamplerate = 0;
         channelnum_t sourceNumChannels = 0;
         std::vector<float> pSamples;
+        samplecount_t fileReadSamples = 0;
         samplecount_t numSamplesInput = 0;
         std::vector<uint8_t> heapBuffer;
         bool bReadComplete = false;
         bool bResampleComplete = false;
+        int32_t downsampleStep = 0;
         samplecount_t resampleInputOffset = 0;
         samplecount_t resampleOutputOffset = 0;
         void* soxrContext = nullptr;
     public:
         fileloader() = default;
-        bool resolveFile(const String& pathIn, const String& workingDir, bool remapPath);
+        bool resolveFile(const String& pathIn, const String& workingDir, bool remapPath, int32_t id = -1);
         bool preloadFile(struct archive* ar, struct archive_entry* entry);
         bool loadFileIncremental();
         float getProgress() const;
