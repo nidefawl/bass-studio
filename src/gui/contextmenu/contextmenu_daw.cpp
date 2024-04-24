@@ -451,12 +451,14 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
     if (_id == CMD_LOAD_PLUGIN && stage) {
         auto window = parentCtrl->window;
         String path;
-        if (promptUserFilePath(window, 0, FILE_TYPES_PLUGINSNAPSHOT, path)) {
-            ThreadLock lock                                   = dawCtrl->lockPlayThread();
+        String pathPresets = App::Platform::toUserdataPath("presets");
+        if (promptUserFilePath(window, 0, FILE_TYPES_PLUGINSNAPSHOT, path, pathPresets)) {
+            auto daw = dawCtrl->getDaw();
+            ThreadLock lock = daw->lockPlayThread();
             std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
             dbgassert(pluginSnapshot);
             if (pluginSnapshot) {
-                auto* pluginMgr = dawCtrl->getDaw()->getPluginManager();
+                auto* pluginMgr = daw->getPluginManager();
                 DAW::assignFreeStageIds(pluginMgr, *pluginSnapshot);
                 auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
                 if (effect) {
@@ -469,6 +471,11 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
                     effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
                     effect->load(pluginMgr);
                     pluginMgr->insertNewPlugin(stage, effect, -2);// insert at end
+                    stage->pluginsChanged();
+                    daw->onPluginsChanged();
+                    for (auto& gui : stage->gui) {
+                        gui->scrollToPluginGui(effect);
+                    }
                     // host->activateDeferred(effect, 0);
                 }
             }
