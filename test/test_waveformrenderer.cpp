@@ -116,7 +116,6 @@ struct waveform_test {
             w.samplesPerPx = samplesPerPx;
             w.linewidth    = 3.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
             w.method       = SampleMethod::sample_straight;
-            w.clipped      = false;
             renderer->queueUpdate(sample, &ref);
             renderer->renderUpdates(nanovgCtxt, 0);
         }

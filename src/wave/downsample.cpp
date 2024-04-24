@@ -60,14 +60,21 @@ int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, 
                 filters.push_back({sampleRate, downsampleBits, nullptr, 0});
                 auto* filter = &filters.back();
 
-                const double ft     = (filter->sampleRate * 0.45f);
-                const double bt     = 20000 / (float) (1 << filter->downsampleBits);
+                const double ft     = (filter->sampleRate / float(1 << filter->downsampleBits));
+                // const double bt     = ft * 0.5;
                 const double ripple = 0.001;
-                filter->coeffs = calcLPF(filter->sampleRate, ft, ripple, bt, &filter->lenCoeffs);
+                filter->coeffs = calcLPF(ft, ft * 0.5f, ripple, ft * 0.25f, &filter->lenCoeffs);
                 if (!assert_expr(filter->coeffs)) {
                     filters.pop_back();
                     return nullptr;
                 }
+                // // print all coeffs for ft
+                // log_lf(Log::L_DEBUG, "lf: %f\n", ft);
+                // String coeffs = "";
+                // for (int i = 0; i < filter->lenCoeffs; i++) {
+                //     coeffs += StringFormat("%f, ", filter->coeffs[i]);
+                // }
+                // log_lf(Log::L_DEBUG, "coeffs: %s\n", coeffs.c_str());
         
                 return filter;
             };

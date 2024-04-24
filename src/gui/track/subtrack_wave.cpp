@@ -233,7 +233,6 @@ public:
         w.method            = SampleMethod::sample_straight;
         w.audioId           = entry.sample->sampleId;
         w.sampleVersion     = entry.sample->version;
-        w.clipped           = false;
 
         out = newentry;
         return true;
@@ -323,7 +322,7 @@ public:
                 limit.x = updatedEntry.waveform.size.x / 4;
             }
 
-            if (updatedEntry.waveform.clipped || !throttleRefresh) {
+            if (updatedEntry.waveform.samplesClipped || !throttleRefresh) {
                 limit = { 0, 0 };
             }
 

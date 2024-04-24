@@ -1,5 +1,6 @@
 #include "appsettings.h"
 #include "assert_dbg.h"
+#include "host/audiocache/audiocache.h"
 #include "types.h"
 #include "audiotrack.h"
 #include "track_impl.h"
@@ -131,6 +132,11 @@ samplecount_t audiotrack_t::convertToSamples(DAW::Host::Host* host) {
 #endif
                 samplesCopied += srcSize;
             }
+
+            
+#ifdef NDEBUG // too slow in debug
+            audiocache::Downsample(split->getSample(), nullptr, 2);
+#endif
             //log_lf(Log::L_DEBUG, "block #%d copy %d bytes, present %d, resized %d, version %d/%d\n", i, bytesCopied, present, resized, preVersion, data[i]->version);
         }
     }

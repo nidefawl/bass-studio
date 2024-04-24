@@ -207,9 +207,9 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     return pFile;
 }
 
-void audiocache::Downsample(audiosample_t* sample, std::atomic<bool>* abortFlag) {
+void audiocache::Downsample(audiosample_t* sample, std::atomic<bool>* abortFlag, uint8_t numSteps) {
     int64_t timeBeginDownsample = getTimeMicros();
-    for (uint8_t downsampleStep = 1; downsampleStep <= audiosample_t::MAX_DOWNSAMPLE; downsampleStep++) {
+    for (uint8_t downsampleStep = 1; downsampleStep <= numSteps && (!abortFlag || !abortFlag->load()); downsampleStep++) {
         samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
 
         if (lenSamplesDownsampled < 10)

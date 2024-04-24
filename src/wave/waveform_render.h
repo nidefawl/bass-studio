@@ -21,6 +21,7 @@ struct audioclip_texture_t {
     samplecount_t sampleBegin = 0;
     samplecount_t sampleBeginOffset = 0;
     samplecount_t sampleEnd = 0;
+    samplecount_t samplesClipped = 0;
     audioclip_loop_pos_t loopPos;
     double samplesPerPx    = 0;
     int quality            = 1;
@@ -30,7 +31,6 @@ struct audioclip_texture_t {
     SampleMethod method    = SampleMethod::sample_straight;
     int64_t audioId        = -1;
     int64_t sampleVersion  = -1;
-    bool clipped           = false;
     float posPreLoopEnd = 0.0f;
     std::array<sample_fades_t,2> fades{};
 };
@@ -47,7 +47,7 @@ inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_tex
     if ((lhs.sampleEnd - lhs.sampleBegin) != (rhs.sampleEnd - rhs.sampleBegin)) {
         return false;
     }
-    if (lhs.clipped == rhs.clipped && lhs.quality == rhs.quality && lhs.method == rhs.method) {
+    if (lhs.samplesClipped == rhs.samplesClipped && lhs.quality == rhs.quality && lhs.method == rhs.method) {
         if (lhs.fades != rhs.fades)
             return false;
         if (lhs.loopPos != rhs.loopPos)
@@ -64,7 +64,7 @@ inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t
            //lhs.startOffset == rhs.startOffset &&
            lhs.size == rhs.size &&
            lhs.method == rhs.method &&
-           lhs.clipped == rhs.clipped &&
+           lhs.samplesClipped == rhs.samplesClipped &&
            lhs.quality == rhs.quality &&
            lhs.sampleBegin == rhs.sampleBegin &&
            lhs.sampleBeginOffset == rhs.sampleBeginOffset &&

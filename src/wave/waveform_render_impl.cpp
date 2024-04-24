@@ -319,7 +319,7 @@ inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audiocli
         if (lhs.loopPos != rhs.loopPos) {
             return false;
         }
-        if (lhs.clipped || rhs.clipped)
+        if (lhs.samplesClipped || rhs.samplesClipped)
             return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;
         vec2 sd    = vec2(math::absvec2(lhs.size - rhs.size));
         vec2 limit = vec2(lhs.size) / 4.0f;

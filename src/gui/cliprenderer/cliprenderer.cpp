@@ -35,11 +35,13 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     const auto tickBegin   = m_clip->start();
     double tickBeginOffset = grid.screenToTickD(pxBegin);
     double tickEnd         = grid.screenToTickD(pxEnd);
+    audioclip_texture_t w;
     if (size.x == sizeClipped.x) {
         tickBeginOffset = m_clip->start();
         tickEnd         = m_clip->end();
+    } else {
+        w.samplesClipped = tickToSampleConvert<samplecount_t, roundmode::round>(tickBeginOffset - tickBegin, tempo100, samplerate);
     }
-    audioclip_texture_t w;
     w.quality = 1;
 
     double pxPerSample = 1.0 / samplesPerPx;
@@ -48,7 +50,6 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     w.pos                   = pos;
     //w.startOffset = startOffset;
     w.size           = ivec2(math::min(sizeClipped.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
-    w.clipped = size.x != sizeClipped.x;
     if (m_clip->isLoopEnabled()) {
         w.method  = SampleMethod::sample_clip;
         w.loopPos.clipSampleOffset = tickToSampleConvert<samplecount_t, roundmode::floor>(m_clip->offsetStart, tempo100, samplerate);

@@ -1174,7 +1174,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
             if (!canQueue) {
                 limit.x = waveform.size.x / 4;
             }
-            if (waveform.clipped || (dawCtrl && !dawCtrl->isZooming())) {
+            if (waveform.samplesClipped || (dawCtrl && !dawCtrl->isZooming())) {
                 limit = { 0, 0 };
             }
             if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {

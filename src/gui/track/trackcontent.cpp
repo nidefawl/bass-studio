@@ -522,7 +522,7 @@ void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& 
     if (!canQueue) {
         limit.x = waveform.size.x / 4;
     }
-    if (waveform.clipped || (dawCtrl && !dawCtrl->isZooming())) {
+    if (waveform.samplesClipped || (dawCtrl && !dawCtrl->isZooming())) {
         limit = { 0, 0 };
     }
     if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
@@ -664,7 +664,7 @@ void guitooltip<gui_audio_clip>::setContent() {
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform pos" }, waveform.pos } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform size" }, waveform.size } } });
         //table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform startOffset"}, waveform.startOffset}}});
-        table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform clipped" }, tblstr{ (waveform.clipped ? "yes" : "no") } } } });
+        table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform samplesClipped" }, tblint{ (waveform.samplesClipped ? "yes" : "no") } } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform quality" }, tblint{ waveform.quality } } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform scaleX" }, tblfloat{ waveform.scaleX } } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveformRef atlasId" }, tblint{ waveformRef.atlasId } } } });

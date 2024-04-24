@@ -1064,7 +1064,7 @@ audioclip_texture_t makeWaveformFromSample(const int32_t tempo100, const sampler
     //else
     w.method  = SampleMethod::sample_straight;
     w.audioId = clipAudio.idDerived > -1 ? clipAudio.idDerived : clipAudio.id;
-    w.clipped = true;
+    w.samplesClipped = 0;
     //log_lf(Log::L_DEBUG, "waveform %d - %d - %d - %d %f %f %f\n", w.audioId, w.sampleBegin, w.sampleBeginOffset, w.sampleEnd, w.samplesPerPx, grid.zoom, lenSamples);
     //log_lf(Log::L_DEBUG, "waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%f]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scaleX);
 
@@ -1087,7 +1087,7 @@ inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const au
         if (lhs.loopPos != rhs.loopPos) {
             return false;
         }
-        if (lhs.clipped || rhs.clipped)
+        if (lhs.samplesClipped || rhs.samplesClipped)
             return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;
         vec2 sd    = vec2(math::absvec2(lhs.size - rhs.size));
         vec2 limit = vec2(lhs.size) / 4.0f;

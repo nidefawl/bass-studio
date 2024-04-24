@@ -24,7 +24,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
         double samplesPerPx = waveformshape->samplesPerPx;
         const float width   = waveformshape->size.x * (1.0f / waveformshape->scaleX);
         const float height  = waveformshape->size.y;
-        const int nMaxDowns = sample->downsampled.size() + 1;
+        const int nMaxDowns = sample->downsampleSteps + 1;
         samplecount_t nLevel          = 0;
         samplecount_t downsampleScale = 1;
 
@@ -36,12 +36,16 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
             nLevel++;
             downsampleScale *= 2;
         }
+        const auto sampleClipStartOffset = waveformScaled.sampleBeginOffset - waveformScaled.sampleBegin - waveformScaled.samplesClipped;
         waveformScaled.sampleBeginOffset /= downsampleScale;
         waveformScaled.sampleBegin /= downsampleScale;
         waveformScaled.sampleEnd /= downsampleScale;
-        dbgassert(nLevel == 0 || nLevel - 1 < samplecount_t(sample->downsampled.size()));
+        dbgassert(nLevel == 0 || (nLevel - 1 < samplecount_t(sample->downsampled.size()) && nLevel - 1 < samplecount_t(sample->downsampleSteps)));
 
         std::vector<samplechannel_t>& smpCh = nLevel == 0 ? sample->samples : sample->downsampled[nLevel - 1];
+        if (smpCh.size() < sample->nChannels) {
+            return;
+        }
         int stepSize                        = 1;
         double dres                         = samplesPerPx;
         while (dres >= 64.0) {
@@ -51,6 +55,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
 
         const double samplePosClip   = waveformScaled.sampleBegin;
         const double samplePosRender = waveformScaled.sampleBeginOffset;
+        const double renderOffset = math::max(0.0, (double) (samplePosRender - samplePosClip));
 
 
         int verticesPerPx = waveformScaled.quality;
@@ -75,6 +80,8 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
             const float px             = x;
             const float py             = y + channelHeight * iChannel + channelHeight / 2.0f;
             const auto& samplesCh      = smpCh[iChannel];
+            if (samplesCh.empty())
+                continue;
             const float* samplesChPtr  = samplesCh.data();
             const int32_t lenSamplesCh = (int32_t) math::min<size_t>(sample->nSamples, samplesCh.size());
 
@@ -83,7 +90,6 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                 //Quantize start offset to reduce jitter when start offset changes
                 auto samplePosQuantized = math::rounddS64(samplePos - samplePosClip) % stepSize;
                 samplePos -= samplePosQuantized;
-                const double renderOffset = math::max(0.0, (double) (samplePosRender - samplePosClip));
                 float lastPtX             = -vOffset;
                 //log_lf(Log::L_DEBUG, "channel %d offset %f\n", iChannel, lastPtX);
                 float fAbsMax = 0.0f;
@@ -96,7 +102,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                     
                     // TODO: std::round is slow
                     samplecount_t sampleIdx = math::rounddS64(sampleOffset);
-                    samplecount_t sampleOffsetFade = math::rounddS64(math::max(0.0, (double) (samplePos - samplePosRender))) * downsampleScale;
+                    samplecount_t sampleOffsetFade = math::rounddS64(math::max(0.0, double(sampleOffset) * downsampleScale)) - sampleClipStartOffset;
                     
                     dbgassert(sampleIdx % stepSize == 0);
                     float fCurX = float((sampleOffset - renderOffset) * samplesToPx);
@@ -171,7 +177,7 @@ void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audiocli
         const float width   = waveformshape->size.x * (1.0f / waveformshape->scaleX);
         const float height  = waveformshape->size.y;
 
-        const int nMaxDowns = sample->downsampled.size() + 1;
+        const int nMaxDowns = sample->downsampleSteps + 1;
         samplecount_t nLevel          = 0;
         samplecount_t downsampleScale = 1;
 
@@ -186,7 +192,7 @@ void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audiocli
         waveformScaled.sampleBeginOffset /= downsampleScale;
         waveformScaled.sampleBegin /= downsampleScale;
         waveformScaled.sampleEnd /= downsampleScale;
-        dbgassert(nLevel == 0 || nLevel - 1 < samplecount_t(sample->downsampled.size()));
+        dbgassert(nLevel == 0 || (nLevel - 1 < samplecount_t(sample->downsampled.size()) && nLevel - 1 < samplecount_t(sample->downsampleSteps)));
 
         // /* fixed readoffset into backing sample */
         sample_fades_ref_t fades[2] = {
