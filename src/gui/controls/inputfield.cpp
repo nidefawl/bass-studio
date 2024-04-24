@@ -132,6 +132,8 @@ bool gui_numberinput_field_base::handleKeyInput(KeyEvent& kevt) {
                     dir *= 12;
                 }
                 onKeyInputChangeValue(dir);
+                if (parent)
+                    parent->buttonClicked(this);
                 return true;
             }
         }
