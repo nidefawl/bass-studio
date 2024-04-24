@@ -489,6 +489,15 @@ public:
         ctr_Left->removeAllEntries();
         ctr_Center->removeAllEntries();
         ctr_Right->removeAllEntries();
+        ctr_Left.reset();
+        ctr_Center.reset();
+        ctr_Right.reset();
+        ctrEntryTracks.reset();
+        ctrEntryNodes.reset();
+        ctrEntryClipEdit.reset();
+        ctrEntryPlugins.reset();
+        vecClipEditors.clear();
+        topLevelContainers.clear();
     }
 
     guictr_menubar* getMenu() override {
@@ -1147,6 +1156,7 @@ void DawCtrl::destroy() {
         delete view;
         view = nullptr;
     }
+    waveformRenderer->destroy();
     delete waveformRenderer;
     waveformRenderer = nullptr;
 }
@@ -1823,7 +1833,6 @@ void DawCtrl::onPreDestroy() {
     dbgassert(view);
     if (view)
         view->destroy();
-    waveformRenderer->destroy();
 }
 
 void MainCtrl::onPreDestroy() {
@@ -2464,7 +2473,7 @@ public:
     }
 
     void run() override {
-        audiofile = cache->getDerivedSample(clipAudio);
+        audiofile = cache->getDerivedSample(clipAudio, &m_cancelled);
     }
     void finishMainThread(DawInstance* daw) {
         auto clip = clipRef.clip();

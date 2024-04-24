@@ -143,8 +143,12 @@ void waveformrender::releaseQueued(gui_waveform_texture_ref* waveformRef) {
     waveformRef->queued       = false;
 }
 void waveformrender::releaseRendered(gui_waveform_texture_ref* waveformRef) {
-    if (waveformRef->rendered) {
-        dbgassert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int) atlases.size());
+    if (waveformRef->rendered && !this->atlases.empty()) {
+        if (!assert_expr((waveformRef->atlasId >= 0 && waveformRef->atlasId < (int) atlases.size()))) {
+            log_lf(Log::L_ERROR, "waveformRef->atlasId out of bounds\n");
+            return;
+        }
+        
         auto& atlas = this->atlases[waveformRef->atlasId];
         // check if atlas waveform is mapped to was initialized
         dbgassert(atlas.idx > -1);
