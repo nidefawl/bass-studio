@@ -89,7 +89,7 @@ class audiocache {
     std::unordered_map<int, audiofile_t*> mapId;
 
 public:
-    static void Downsample(audiosample_t* sample);
+    static void Downsample(audiosample_t* sample, std::atomic<bool>* abortFlag = nullptr);
     class fileloader {
         static const size_t chunkSize = 1024 * 256;
         std::shared_ptr<audiofile_t> file;
@@ -160,7 +160,7 @@ public:
     }
     void unloadSampleId(int32_t id);
     audiofile_t* getSample(int32_t i);
-    audiofile_t* getDerivedSample(clip_audio_t& clipAudio);
+    audiofile_t* getDerivedSample(clip_audio_t& clipAudio, std::atomic<bool>* abortFlag = nullptr);
     audiofile_t* getDerivedSample(const clip_audio_t& clipAudio) const;
     audiofile_t* getByFilename(const String& pathFile);
     void store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v);

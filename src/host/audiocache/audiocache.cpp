@@ -207,7 +207,7 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     return pFile;
 }
 
-void audiocache::Downsample(audiosample_t* sample) {
+void audiocache::Downsample(audiosample_t* sample, std::atomic<bool>* abortFlag) {
     int64_t timeBeginDownsample = getTimeMicros();
     for (uint8_t downsampleStep = 1; downsampleStep <= audiosample_t::MAX_DOWNSAMPLE; downsampleStep++) {
         samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
@@ -217,7 +217,7 @@ void audiocache::Downsample(audiosample_t* sample) {
         sample->downsampleSteps = downsampleStep - 1;
         auto& chDown = sample->downsampled.at(downsampleStep - 1);
         chDown.resize(sample->nChannels);
-        for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+        for (channelnum_t ch = 0; ch < sample->nChannels && (!abortFlag || !abortFlag->load()); ch++) {
             auto& chIn = sample->samples.at(ch);
             auto& chOut = chDown.at(ch);
             chOut.resize(lenSamplesDownsampled);
@@ -988,7 +988,7 @@ bool audiocache::isEmpty() const {
 }
 
 
-audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio) {
+audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<bool>* abortFlag) {
     if (clipAudio.isEmpty()) {
         return nullptr;
     }
@@ -1015,17 +1015,45 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio) {
             return nullptr;
         }
         const auto& sourceSample = audiofile->sample;
-        auto stretchFactor = double(clipAudio.settings.stretch);
+        const auto MAX_SAMPLES_INPUT = 1024 * 1024 * 4;
+        auto stretchFactor = math::max(double(clipAudio.settings.stretch), 0.05);
+        if (sourceSample->nSamples > MAX_SAMPLES_INPUT || sourceSample->nSamples * stretchFactor > MAX_SAMPLES_INPUT) {
+            log_lf(Log::L_WARN, "getDerivedSample: sample %s too large\n", audiofile->path.c_str());
+            clipAudio.idDerived = -3;
+            return nullptr;
+        }
         signalsmith::stretch::SignalsmithStretch<float> stretch;
         stretch.presetDefault(sourceSample->nChannels, sourceSample->sampleRate);
         auto pitchSemitones = clipAudio.settings.pitch;
         auto pitchLinear = std::pow(2.0, pitchSemitones / 12.0);
+        pitchLinear = math::clamp(pitchLinear, 1.0/32.0, 32.0);
         stretch.setTransposeFactor(pitchLinear);
         samplecount_t preRoll = math::ceildS64(stretch.outputLatency() + stretch.inputLatency() * stretchFactor);
         samplecount_t numSamplesStretched = math::ceildS64(double(sourceSample->nSamples) * stretchFactor);
         auto blockStretched = AudioBlock(sourceSample->nChannels, numSamplesStretched + preRoll);
         blockStretched.clear();
-        stretch.process(sourceSample->samples, sourceSample->nSamples, blockStretched.buf, numSamplesStretched);
+
+        samplecount_t chunkSize = 10000;
+        samplecount_t outputOffset = 0;
+        std::vector<float*> bufIn;
+        for (samplecount_t i = 0; i < sourceSample->nSamples; i += chunkSize) {
+            auto blockOutOffset = blockStretched.getOffsetBlock(outputOffset);
+            bufIn.resize(sourceSample->nChannels);
+            for (channelnum_t c = 0; c < sourceSample->nChannels; c++) {
+                bufIn[c] = sourceSample->samples[c].data() + i;
+            }
+            auto chSizeStr = chunkSize * stretchFactor;
+            auto chunkSizeStretched = math::min<samplecount_t>(math::ceildS64(chSizeStr), blockOutOffset.samples);
+            stretch.process(bufIn.data(), math::min<samplecount_t>(chunkSize, sourceSample->nSamples - i), blockOutOffset.buf, chunkSizeStretched);
+            outputOffset += chunkSizeStretched;
+            if (abortFlag && abortFlag->load()) {
+                return nullptr;
+            }
+        }
+        if (abortFlag && abortFlag->load()) {
+            return nullptr;
+        }
+        // stretch.process(sourceSample->samples, sourceSample->nSamples, blockStretched.buf, numSamplesStretched);
 
         // feed preroll num silent samples
         auto inputSizePreRoll = math::ceildS64(preRoll * (1.0 / stretchFactor));
@@ -1060,7 +1088,7 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio) {
             std::memcpy(ch.data(), blockNoPreRoll.buf[c], blockNoPreRoll.samples * sizeof(float));
         }
         sample->sampleVersion++;
-        Downsample(sample);
+        Downsample(sample, abortFlag);
         clipAudio.idDerived = derivedSample->id;
     }
     return getSample(clipAudio.idDerived);

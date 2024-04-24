@@ -80,6 +80,14 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     add(&btnSelectMuted);
     add(&grooveSettings);
     add(&quantization);
+    auto updatePitchStretch = [this](gui_numberinput_field_base*, float) {
+        clip_t* clip = view.clip();
+        if (clip && clip->clipType == CLIP_AUDIO) {
+            dawCtrl->getDaw()->updateDerivedAudio(clip, clipAudioSettings);
+        }
+    };
+    clipAudioPitch.fnValueEditChanged = updatePitchStretch;
+    clipAudioStretch.fnValueEditChanged = updatePitchStretch;
 }
 
 gui_clipsettings::~gui_clipsettings() {
