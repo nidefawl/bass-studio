@@ -520,6 +520,8 @@ public:
     }
     void sampleAutomation(const DAW::Host::PluginManager *const host, int32_t paramIdx, double dTickBegin, double dTickEnd, playback_state state, samplecount_t numSamples, float* out);
     virtual void updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t processingPos, playback_state state);
+    float getModulatedParameterAt(const DAW::Host::PluginManager* const host, int32_t paramIdx, double tick, playback_state state);
+    
     /**
      * returns: null or temporary reference, do not keep around
      */

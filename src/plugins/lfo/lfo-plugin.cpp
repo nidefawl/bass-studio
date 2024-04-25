@@ -16,6 +16,7 @@
 #include "gui/views/controls.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "host/host.h"
 #include "host/host_pluginmanager.h"
 #include "host/daw/mainctrl.h"
 #include "logging.h"
@@ -139,18 +140,47 @@ namespace PluginLFO {
         int32_t modeRandom = -1;
     };
 
+    thread_local std::vector<const automated_param_t*> stack;
     struct module_lfo::lfo_impl_t final : public PluginLockable {
         struct lfo_sync_settings_t {
             int32_t syncFlags;
             std::vector<SyncRatio> syncRatios;
         };
-        struct lfo_automation_src_synced_t final : public automated_param_t {
+        struct lfo_automation_src : public automated_param_t {
             module_lfo* module = nullptr;
             lfo_sync_settings_t* sync = nullptr;
+            DAW::Host::Host* host = nullptr;
+            std::pair<float, float> getMinMax(double dTick) const {
+                if (stl_contains(stack, this)) {
+                    return {
+                        module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f,
+                        module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f
+                    };
+                }
+                stack.push_back(this);
+                auto state = module->impl->daw->getPlayThread()->getState();
+                auto valMin = module->getModulatedParameterAt(host, PARAM_LFO_MINIMUM, dTick, state) * 2.0f - 1.0f;
+                auto valMax = module->getModulatedParameterAt(host, PARAM_LFO_MAXIMUM, dTick, state) * 2.0f - 1.0f;
+                stack.pop_back();
+                return { valMin, valMax };
+            }
+            std::pair<float, float> getRatePhase(double dTick) const {
+                if (stl_contains(stack, this)) {
+                    return { module->getParamValue(PARAM_LFO_RATE), module->getParamValue(PARAM_LFO_PHASE) };
+                }
+                stack.push_back(this);
+                auto state = module->impl->daw->getPlayThread()->getState();
+                auto valRate = module->getModulatedParameterAt(host, PARAM_LFO_RATE, dTick, state);
+                auto valPhase = module->getModulatedParameterAt(host, PARAM_LFO_PHASE, dTick, state);
+                stack.pop_back();
+                return { valRate, valPhase };
+            }
+        };
+        struct lfo_automation_src_synced_t final : public lfo_automation_src {
             DAW::Shape::shape_t shape;
             float getPhase(double dTick) const {
-                const auto fRate = module->getParamValue(PARAM_LFO_RATE);
-                const auto fPhase = module->getParamValue(PARAM_LFO_PHASE);
+                const auto [fRate, fPhase] = getRatePhase(dTick);
+
                 double fPhaseOffset = 0.0f;
                 if (sync->syncRatios.empty()) {
                     fPhaseOffset = dTick / GetScaledRate(fRate);
@@ -166,8 +196,7 @@ namespace PluginLFO {
             }
             float sampleCurve(double dTick) const {
                 float moduloPhase = getPhase(dTick);
-                auto valMin = module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f;
-                auto valMax = module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f;
+                auto [valMin, valMax] = getMinMax(dTick);
                 auto value = shape.sampleCurve(moduloPhase, false);
                 return value * (valMax - valMin) + valMin;
             }
@@ -238,10 +267,7 @@ namespace PluginLFO {
             void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
             }
         };
-        struct lfo_automation_src_random_t : public automated_param_t {
-            module_lfo* module = nullptr;
-            lfo_sync_settings_t* sync = nullptr;
-
+        struct lfo_automation_src_random_t : public lfo_automation_src {
             float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
                 const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
                 switch (scale.mode) {
@@ -309,8 +335,7 @@ namespace PluginLFO {
             void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
             }
             virtual float getPhase(double dTick) const {
-                const auto fRate = module->getParamValue(PARAM_LFO_RATE);
-                const auto fPhase = module->getParamValue(PARAM_LFO_PHASE);
+                const auto [fRate, fPhase] = getRatePhase(dTick);
                 double fPhaseOffset = 0.0f;
                 if (sync->syncRatios.empty()) {
                     fPhaseOffset = dTick / GetScaledRate(fRate);
@@ -326,9 +351,8 @@ namespace PluginLFO {
             virtual float sampleCurve(double dTick) const = 0;
             virtual int32_t getModeId() const = 0;
 
-            float scaleMinMax(float f) const {
-                const auto valMin = module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f;
-                const auto valMax = module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f;
+            float scaleMinMax(double dTick, float f) const {
+                const auto [valMin, valMax] = getMinMax(dTick);
                 return f * (valMax - valMin) + valMin;
             }
             std::pair<tick_t, tick_t> getPrevNextTick(double dTick) const {
@@ -342,8 +366,6 @@ namespace PluginLFO {
         };
         struct lfo_automation_src_random_smooth_t final : public lfo_automation_src_random_t {
             float sampleCurve(double dTick) const override {
-                const auto valMin = module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f;
-                const auto valMax = module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f;
                 float phase = getPhase(dTick);
                 seq_rand r;
                 auto [prevTick, nextTick] = getPrevNextTick(phase);
@@ -354,8 +376,7 @@ namespace PluginLFO {
                 float v = modf(phase, &phase);
                 v = v * v * (3.0f - 2.0f * v);
                 v = v0 + (v1 - v0) * v;
-                v = v * (valMax - valMin) + valMin;
-                return v;
+                return scaleMinMax(dTick, v);
             }
             int32_t getModeId() const override {
                 return 0;
@@ -373,7 +394,7 @@ namespace PluginLFO {
                 float v = modf(phase, &phase);
                 // v = v * v * (3.0f - 2.0f * v);
                 v = v0 + (v1 - v0) * v;
-                return scaleMinMax(v);
+                return scaleMinMax(dTick, v);
             }
             int32_t getModeId() const override {
                 return 1;
@@ -400,7 +421,7 @@ namespace PluginLFO {
                 }
                 v = ::powf(v, shapeExp);
                 v = v0 + (v1 - v0) * v;
-                return scaleMinMax(v);
+                return scaleMinMax(dTick, v);
             }
             int32_t getModeId() const override {
                 return 2;
@@ -414,7 +435,7 @@ namespace PluginLFO {
                 r.rng_seed(prevTick);
                 auto v0 = r.rng_double();
                 auto v = v0;
-                return scaleMinMax(v);
+                return scaleMinMax(dTick, v);
             }
             int32_t getModeId() const override {
                 return 3;
@@ -426,16 +447,19 @@ namespace PluginLFO {
             std::shared_ptr<lfo_automation_src_random_t> srcRand;
         };
 
+        DawInstance* const daw;
         module_lfo* const module;
         std::array<lfo_channel_t, NUM_CHANNELS> channels;
         explicit lfo_impl_t(DawInstance* _daw, module_lfo* _module, const DAW::Shape::shape_t& initShape) 
             : PluginLockable(_daw),
+            daw(_daw),
             module(_module)
         {
             for (auto& channel : channels) {
                 channel.syncFlags = STRAIGHT | DOTTED | TRIPLET;
                 channel.syncRatios = GetSyncRatios(channel.syncFlags);
                 channel.srcSync.module = module;
+                channel.srcSync.host = daw->getHost();
                 channel.srcSync.sync = &channel;
                 channel.srcSync.shape = initShape;
                 channel.modeIsShape = true;
@@ -469,6 +493,7 @@ namespace PluginLFO {
                     break;
             }
             channel.srcRand->module = module;
+            channel.srcRand->host = daw->getHost();
             channel.srcRand->sync = &channel;
         }
         int32_t getRandomMode(int32_t chIdx) const {
@@ -780,6 +805,7 @@ namespace PluginLFO {
             ctrShapeEditor->id = 2;
             ctrShapeEditor->margin = 0;
             ctrShapeEditor->padding = 2;
+            ctrShapeScope->setHandleMouseDrag(false);
             ctrShapeScope->setFlag(FLG_NO_LAYOUT, true);
             ctrShapeScope->setBackgroundRendered(false);
             ctrShapeScope->setBackgroundRenderedInset(false);
@@ -1295,7 +1321,7 @@ namespace PluginLFO {
                 auto numPoints = samplecount_t(math::clamp(size.x, 16, 1024));
                 shape.pts.resize(numPoints);
                 shape.flags |= DAW::Shape::ShapeFlags::SHAPE_LOCK_POINTS;
-                shape.flags |= DAW::Shape::ShapeFlags::SHAPE_UNCLAMPPED;
+                // shape.flags |= DAW::Shape::ShapeFlags::SHAPE_UNCLAMPPED;
                 auto daw = dawCtrl->getDaw();
                 
                 auto tick = !daw->isPlaying() ? daw->getIdleTickPos() : daw->getPlaybackPos();

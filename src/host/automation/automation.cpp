@@ -575,6 +575,45 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     }
 }
 
+float automatable_t::getModulatedParameterAt(const DAW::Host::PluginManager* const host, int32_t paramIdx, double tick, playback_state state) {
+    if (automationLanes.empty() && inputChannelsModulation.empty()) {
+        return getParamValue(paramIdx);
+    }
+    auto param = getParamUnchecked(paramIdx);
+    if (!param) {
+        return 0.0f;
+    }
+    auto it = mapModulations.find(paramIdx);
+    if (it == mapModulations.end()) {
+        auto automLane = getRegisteredConstAutomation(paramIdx);
+        if (!automLane) {
+            return param->getValue();
+        }
+        float val = param->getValue();
+        if (DAW::isPlaybackState(state)) {
+            auto* autLane = getRegisteredAutomation(paramIdx);
+            if (autLane && autLane->isActive()) {
+                val = autLane->modulateValue(tick, val, param->getAutomationScale());
+            }
+        }
+        return val;
+    }
+    const auto& modulations = mapModulations[paramIdx];
+        
+    float val = param->getValue();
+    auto* autLane = getRegisteredAutomation(paramIdx);
+    if (autLane && autLane->isActive() && DAW::isPlaybackState(state)) {
+        val = autLane->modulateValue(tick, val, param->getAutomationScale());
+    }
+    for (const auto* mod : modulations) {
+        auto ch = DAW::ResolveModulationChannel(host, *mod);
+        if (ch && ch->isActive()) {
+            val = ch->modulateValue(tick, val, mod->scale);
+        }
+    }
+    return val;
+}
+
 float automation_lane_t::modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const {
     const auto valScaled = scale.min + src.getValueAt(tick) * (scale.max - scale.min);
     switch (scale.mode) {

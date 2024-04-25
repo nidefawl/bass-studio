@@ -73,6 +73,7 @@ public:
 class guictr_curve_shape final : public guictr_base, public ShapeEdit {
     friend class guictr_curve_editor;
     shape_t curveInternal;
+    bool bHandleMouseDrag = true;
 public:
     guictr_curve_shape()
     {
@@ -84,6 +85,9 @@ public:
         margin = 4;
         setBackgroundRendered(true);
         setCanMouseHit(true);
+    }
+    void setHandleMouseDrag(bool b) {
+        bHandleMouseDrag = b;
     }
     GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
         return GuiColor::COL_BG_DRKER2;
@@ -103,14 +107,17 @@ public:
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
-        onBeginDragCurveEditor(evt);
+        if (bHandleMouseDrag)
+            onBeginDragCurveEditor(evt);
     }
 
     void handleDraggedMove(MouseEvent& evt) override {
-        onMoveDragCurveEditor(evt);
+        if (bHandleMouseDrag)
+            onMoveDragCurveEditor(evt);
     }
     void handleDraggedRelease(MouseEvent& evt) override {
-        onReleaseDragCurveEditor(evt);
+        if (bHandleMouseDrag)
+            onReleaseDragCurveEditor(evt);
     }
     shape_t& getShape() {
         return curveInternal;

@@ -742,9 +742,6 @@ public:
 };
 
 bool ShapeEdit::onBeginDragCurveEditor(MouseEvent& evt) {
-    if (curve->flags & SHAPE_LOCK_POINTS) {
-        return false;
-    }
     dragged = {};
     curveBegin = *curve;
     curveTmp   = *curve;
@@ -1016,8 +1013,6 @@ void ShapeEdit::setEditorCurve(shape_t* curve) {
 }
 
 bool ShapeEdit::hasControlHandles() const {
-    if (curve->flags & SHAPE_LOCK_POINTS)
-        return false;
     return !curve->pts.empty();
 }
 
