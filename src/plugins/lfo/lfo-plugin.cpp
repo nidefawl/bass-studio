@@ -1189,14 +1189,17 @@ namespace PluginLFO {
                     module->setShapeMode(channel);
                 } else if (_id >= 300) {
                     auto randomIdx = _id - 300;
+                    auto lock = module->impl->lock();
                     module->setRandomMode(channel, randomIdx);
                 } else if (_id >= 200) {
+                    auto lock = module->impl->lock();
                     if (_id == 200) {
                         module->setShapeMode(channel);
                     } else {
                         module->setRandomMode(channel);
                     }
                 } else if (_id >= 100) {
+                    auto lock = module->impl->lock();
                     int flags = module->getSyncRatio(channel);
                     int clicked = _id - 100;
                     if (clicked == 0) {
