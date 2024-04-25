@@ -24,6 +24,7 @@ public:
     void rng_seed(uint64_t seed) {
         seed *= 708169373ULL;
         rng_state = ((seed + 632191u) * 6343u) | 1u;
+        rng_rand();
     }
 };
 class seq_rand_eq_0 {

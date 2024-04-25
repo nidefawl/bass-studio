@@ -696,6 +696,16 @@ namespace test_math {
 
         TEST_END();
     }
+    void test_seq_rand_double() {
+        TEST_BEGIN("test_seq_rand_double");
+        seq_rand rand;
+        for (size_t i = 0; i < 16; i++) {
+            rand.rng_seed(i);
+            double d = rand.rng_double();
+            log_lf(Log::L_INFO, "Seed %d: rng_double %f\n", i, d);
+        }
+        TEST_END();
+    }
 }// namespace test_math
 
 int main() {
@@ -739,6 +749,7 @@ int main() {
         test_math::testFunctions();
         test_math::testVecMath();
         test_math::test_seq_rand();
+        test_math::test_seq_rand_double();
     } catch (std::exception& e) {
         log_printf("Caught exception: %s\n", e.what());
         return -1;
