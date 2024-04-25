@@ -33,6 +33,9 @@ public:
     tick_t& getPlaybackPos() {
         return projectGlobals->playbackPos;
     }
+    tick_t& getIdleTickPos() {
+        return projectGlobals->idleTickPos;
+    }
     uint32_t sigNum() {
         return projectGlobals->signatureNum;
     }

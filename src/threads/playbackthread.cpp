@@ -325,6 +325,7 @@ private:
                         if (m_status != status_stop) {
                             ctrl->getPlaybackPos() = math::rounddS32(tickPos);
                         }
+                        ctrl->getIdleTickPos() = math::rounddS32(tickPos);
                         if (m_status == status_render) {
                             if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
                                 m_status = status_no_process;

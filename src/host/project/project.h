@@ -59,6 +59,8 @@ struct project_globals_t {
     uint32_t signatureDenom = 2;
     /** (synced but not mutex locked) Read only parameter on UI/controller side. Write only on audio processing side */
     tick_t playbackPos = 0;
+    /** (synced but not mutex locked) Read only parameter on UI/controller side. Write only on audio processing side */
+    tick_t idleTickPos = 0;
     /** (synced but not mutex locked)  */
     DAW::Cursor cursor;
     /** (synced but not mutex locked)  */
