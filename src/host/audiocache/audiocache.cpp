@@ -1018,6 +1018,33 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<b
             clipAudio.idDerived = -3;
             return nullptr;
         }
+        samplecount_t numSamplesStretched = math::ceildS64(double(sourceSample->nSamples) * stretchFactor);
+        create_sample_req_t ssr {
+            .format = sampleformat_t{samplerate, 512, sampleformat_bits_t::FLOAT_32},
+            .numChannels = sourceSample->nChannels,
+            .isTemporarySample = true,
+            .path = audiofile->path,
+            .id = -1,
+            .preAllocate = numSamplesStretched,
+        };
+        auto derivedFile = createSample(ssr);
+        if (!derivedFile) {
+            log_lf(Log::L_WARN, "Failed to create derived sample for %s\n", audiofile->path.c_str());
+            return nullptr;
+        }
+        derivedFile->derivedFromId = audiofile->id;
+        derivedFile->settings = clipAudio.settings;
+        derivedFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_DERIVED;
+        derivedFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADING;
+        auto derivedSample = derivedFile->getSample();
+        derivedSample->nSamples = numSamplesStretched;
+        derivedSample->samples.resize(derivedSample->nChannels);
+        for (channelnum_t c = 0; c < derivedSample->nChannels; c++) {
+            auto& ch = derivedSample->samples[c];
+            ch.resize(derivedSample->nSamples);
+        }
+
+
         signalsmith::stretch::SignalsmithStretch<float> stretch;
         stretch.presetDefault(sourceSample->nChannels, sourceSample->sampleRate);
         auto pitchSemitones = clipAudio.settings.pitch;
@@ -1025,7 +1052,6 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<b
         pitchLinear = math::clamp(pitchLinear, 1.0/32.0, 32.0);
         stretch.setTransposeFactor(pitchLinear);
         samplecount_t preRoll = math::ceildS64(stretch.outputLatency() + stretch.inputLatency() * stretchFactor);
-        samplecount_t numSamplesStretched = math::ceildS64(double(sourceSample->nSamples) * stretchFactor);
         auto blockStretched = AudioBlock(sourceSample->nChannels, numSamplesStretched + preRoll);
         blockStretched.clear();
 
@@ -1038,9 +1064,10 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<b
             for (channelnum_t c = 0; c < sourceSample->nChannels; c++) {
                 bufIn[c] = sourceSample->samples[c].data() + i;
             }
-            auto chSizeStr = chunkSize * stretchFactor;
+            auto chSizeIn = math::min<samplecount_t>(chunkSize, sourceSample->nSamples - i);
+            auto chSizeStr = chSizeIn * stretchFactor;
             auto chunkSizeStretched = math::min<samplecount_t>(math::ceildS64(chSizeStr), blockOutOffset.samples);
-            stretch.process(bufIn.data(), math::min<samplecount_t>(chunkSize, sourceSample->nSamples - i), blockOutOffset.buf, chunkSizeStretched);
+            stretch.process(bufIn.data(), chSizeIn, blockOutOffset.buf, chunkSizeStretched);
             outputOffset += chunkSizeStretched;
             if (abortFlag && abortFlag->load()) {
                 return nullptr;
@@ -1052,40 +1079,26 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<b
         // stretch.process(sourceSample->samples, sourceSample->nSamples, blockStretched.buf, numSamplesStretched);
 
         // feed preroll num silent samples
-        auto inputSizePreRoll = math::ceildS64(preRoll * (1.0 / stretchFactor));
-        auto blockSilent = AudioBlock(sourceSample->nChannels, inputSizePreRoll);
-        blockSilent.clear();
+        // auto inputSizePreRoll = math::ceildS64(preRoll * (1.0 / stretchFactor));
+        // auto blockSilent = AudioBlock(sourceSample->nChannels, inputSizePreRoll);
+        // blockSilent.clear();
+        // auto blockOutOffset = blockStretched.getOffsetBlock(numSamplesStretched);
+        // stretch.process(blockSilent.buf, blockSilent.samples, blockOutOffset.buf, preRoll);
+
         auto blockOutOffset = blockStretched.getOffsetBlock(numSamplesStretched);
-        stretch.process(blockSilent.buf, blockSilent.samples, blockOutOffset.buf, preRoll);
+        stretch.flush(blockOutOffset.buf, blockOutOffset.samples);
 
         auto blockNoPreRoll = blockStretched.getOffsetBlock(preRoll);
-        create_sample_req_t ssr {
-            .format = sampleformat_t{samplerate, 512, sampleformat_bits_t::FLOAT_32},
-            .numChannels = blockNoPreRoll.channels,
-            .isTemporarySample = true,
-            .path = audiofile->path,
-            .id = -1,
-            .preAllocate = blockNoPreRoll.samples,
-        };
-        auto derivedSample = createSample(ssr);
-        if (!derivedSample) {
-            log_lf(Log::L_WARN, "Failed to create derived sample for %s\n", audiofile->path.c_str());
-            return nullptr;
-        }
-        derivedSample->derivedFromId = audiofile->id;
-        derivedSample->settings = clipAudio.settings;
-        derivedSample->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_DERIVED;
-        auto sample = derivedSample->getSample();
-        sample->nSamples = blockNoPreRoll.samples;
-        sample->samples.resize(blockNoPreRoll.channels);
-        for (channelnum_t c = 0; c < blockNoPreRoll.channels; c++) {
-            auto& ch = sample->samples[c];
-            ch.resize(blockNoPreRoll.samples);
+        for (channelnum_t c = 0; c < derivedSample->nChannels; c++) {
+            auto& ch = derivedSample->samples[c];
+            // ch.resize(sample->nSamples);
             std::memcpy(ch.data(), blockNoPreRoll.buf[c], blockNoPreRoll.samples * sizeof(float));
         }
-        sample->sampleVersion++;
-        Downsample(sample, abortFlag);
-        clipAudio.idDerived = derivedSample->id;
+
+        derivedSample->sampleVersion++;
+        Downsample(derivedSample, abortFlag);
+        derivedFile->state &= ~audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADING;
+        clipAudio.idDerived = derivedFile->id;
     }
     return getSample(clipAudio.idDerived);
 }
