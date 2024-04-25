@@ -69,4 +69,57 @@ public:
         return vec2{ctrlPt.x, 1.0f - ctrlPt.y};
     }
 };
+
+class guictr_curve_shape final : public guictr_base, public ShapeEdit {
+    friend class guictr_curve_editor;
+    shape_t curveInternal;
+public:
+    guictr_curve_shape()
+    {
+        bIsGridEnabledH = true;
+        bIsGridEnabledV = true;
+        curveInternal.pts.push_back({ { 0, 0 }, 0.5f });
+        setEditorCurve(&curveInternal);
+        padding = 4;
+        margin = 4;
+        setBackgroundRendered(true);
+        setCanMouseHit(true);
+    }
+    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
+        return GuiColor::COL_BG_DRKER2;
+    }
+    void render(NVGcontext* vg) override;
+    void layout() override {
+        auto cs = getSizeContent();
+        layoutEditor(cs);
+        guictr_base::layout();
+    }
+
+    void handleRightClick(MouseEvent& evt) override {
+        if (onRightClickCurveEditor(evt)) {
+            return;
+        }
+        guictr_base::handleRightClick(evt);
+    }
+
+    void handleDraggedBegin(MouseEvent& evt) override {
+        onBeginDragCurveEditor(evt);
+    }
+
+    void handleDraggedMove(MouseEvent& evt) override {
+        onMoveDragCurveEditor(evt);
+    }
+    void handleDraggedRelease(MouseEvent& evt) override {
+        onReleaseDragCurveEditor(evt);
+    }
+    shape_t& getShape() {
+        return curveInternal;
+    }
+    const shape_t& getShape() const {
+        return curveInternal;
+    }
+};
+
+DAW::Shape::guictr_curve_shape* makeShapeCurveView();
+
 } // namespace DAW::Shape

@@ -207,7 +207,7 @@ float guibase::renderText(NVGcontext* vg,
 }
 
 void getNvgMultiLineTextBounds(NVGcontext* vg, const String& s, float maxLineWidth, float lineh, float* bounds) {
-    NVGtextRow rows[16];
+    NVGtextRow rows[16]{};
     int nrows;
     float textBoundsX = 0;
     float textBoundsY = 0;
@@ -449,6 +449,18 @@ void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& 
     ivec2 offset   = ivec2(math::max(0, (size.x - iconW) / 2), math::max(0, (size.y - iconW) / 2));
     ivec2 iconPos  = pos + inset + offset;
     iconW -= inset * 2;
+    if (iconW <= 0) {
+        return;
+    }
+
+    /* nvgSave(vg);
+    nvgTranslate(vg, iconPos.x, iconPos.y);
+    nvgBeginPath(vg);
+    nvgRect(vg, 0, 0, iconW, iconW);
+    nvgFillColor(vg, NVGcolor{1,0,1,0.75f});
+    nvgFill(vg);
+    nvgRestore(vg); */
+
     NVGpaint paintIcon = imagePattern(vg, iconW, extImg, drawParm);
     nvgTranslate(vg, iconPos.x, iconPos.y);
     nvgBeginPath(vg);
@@ -511,6 +523,15 @@ void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& co
     float t = fmod(time, 2000.0f) / 2000.0f;
     float a = 2.0f * M_PI * t;
     RenderResources::NvgImageTexture& image = RenderResources::imgIcons[drawParm];
+
+    /* nvgSave(vg);
+    nvgTranslate(vg, iconPos.x, iconPos.y);
+    nvgBeginPath(vg);
+    nvgRect(vg, 0, 0, iconW, iconW);
+    nvgFillColor(vg, NVGcolor{1,0,1,0.75f});
+    nvgFill(vg);
+    nvgRestore(vg); */
+
     NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image.perContextId[vg], 1.0f);
     nvgSave(vg);
     nvgTranslate(vg, iconPos.x + iconW*0.5f, iconPos.y + iconW*0.5f);
@@ -521,6 +542,67 @@ void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& co
     nvgFillPaint(vg, paintIcon);
     nvgFill(vg);
     nvgRestore(vg);
+}
+
+void drawWaveform(NVGcontext* vg, vec2 pos, vec2 size, int32_t shape, NVGcolor color) {
+    using DAW::Shape::ShapeWaveform;
+    nvgBeginPath(vg);
+    switch (shape) {
+        case ShapeWaveform::SHAPE_SINE:
+        case ShapeWaveform::SHAPE_SINE_INV:
+            for (int i = 0; i < size.x; ++i) {
+                float x = pos.x + i;
+                float v = size.y * (0.5f + std::sinf(i * M_PI * 2.0f / size.x) * 0.5f);
+                float y = pos.y + (shape == ShapeWaveform::SHAPE_SINE ? v : size.y - v);
+                if (i == 0) {
+                    nvgMoveTo(vg, x, y);
+                } else {
+                    nvgLineTo(vg, x, y);
+                }
+            }
+            break;
+        case ShapeWaveform::SHAPE_SQUARE: {
+            nvgMoveTo(vg, pos.x, pos.y + size.y);
+            nvgLineTo(vg, pos.x, pos.y + 0);
+            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + 0);
+            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + size.y);
+            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+            break;
+        }
+        case ShapeWaveform::SHAPE_SQUARE_INV: {
+            nvgMoveTo(vg, pos.x, pos.y + size.y);
+            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + size.y);
+            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + 0);
+            nvgLineTo(vg, pos.x + size.x, pos.y + 0);
+            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+            break;
+        }
+        case ShapeWaveform::SHAPE_SAW: {
+            nvgMoveTo(vg, pos.x, pos.y + size.y);
+            nvgLineTo(vg, pos.x, pos.y);
+            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+            break;
+        }
+        case ShapeWaveform::SHAPE_SAW_INV: {
+            nvgMoveTo(vg, pos.x, pos.y + size.y);
+            nvgLineTo(vg, pos.x + size.x, pos.y);   
+            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+            break;
+        }
+        case ShapeWaveform::SHAPE_TRIANGLE:
+        case ShapeWaveform::SHAPE_TRIANGLE_INV: {
+            bool bInv = shape == ShapeWaveform::SHAPE_TRIANGLE_INV;
+            nvgMoveTo(vg, pos.x, pos.y + (bInv ? 0 : size.y));
+            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + (bInv ? size.y : 0));
+            nvgLineTo(vg, pos.x + size.x, pos.y + (bInv ? 0 : size.y));
+            break;
+        }
+        default:
+            break;
+    }
+    nvgStrokeWidth(vg, 2.0f);
+    nvgStrokeColor(vg, color);
+    nvgStroke(vg);
 }
 
 GuiColor::constant_t guibase::getLabelColor() const {

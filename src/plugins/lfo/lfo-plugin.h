@@ -39,8 +39,12 @@ public:
 
     void getUiSnapshot(snapshot_t& snapshot);
     void setUiSnapshot(snapshot_t& snapshot);
-    DAW::Shape::shape_t& getShape(int idx);
-    int32_t getSyncRatio(int chIdx) const;
-    void setSyncRatio(int chIdx, int32_t ratio);
+    DAW::Shape::shape_t& getShape(int32_t idx);
+    int32_t getSyncRatio(int32_t chIdx) const;
+    bool isShapeMode(int32_t chIdx) const;
+    void setSyncRatio(int32_t chIdx, int32_t ratio);
+    void setShapeMode(int32_t chIdx);
+    void setRandomMode(int32_t chIdx, int32_t mode = -1);
+    int32_t getRandomMode(int32_t chIdx) const;
 };
 }

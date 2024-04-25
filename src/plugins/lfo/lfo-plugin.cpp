@@ -20,6 +20,7 @@
 #include "host/daw/mainctrl.h"
 #include "logging.h"
 #include "math/seq_math.h"
+#include "rand.h"
 #include "renderresources.h"
 #include "seq_time.h"
 #include "seq_util.h"
@@ -27,15 +28,19 @@
 #include "host/shape/shape.h"
 #include "str_util.h"
 #include "byte-buffer.h"
+#include "types.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
+#include <memory>
+#include <nanovg.h>
 #include <utility>
 #include <vector>
 
 namespace PluginLFO {
-    constexpr int32_t NUM_CHANNELS = 12;
-    constexpr int32_t BINARY_SNAPSHOT_VERSION = 3;
+    constexpr int32_t NUM_CHANNELS = 1;
+    constexpr int32_t BINARY_SNAPSHOT_VERSION = 4;
     constexpr int32_t PARAM_LFO_RATE = 16;
     constexpr int32_t PARAM_LFO_PHASE = 17;
     constexpr int32_t PARAM_LFO_MINIMUM = 18;
@@ -130,24 +135,28 @@ namespace PluginLFO {
     struct impl_channel_snapshot_t {
         DAW::Shape::shape_snapshot_t shape;
         int32_t syncFlags = false;
+        bool modeIsShape = true;
+        int32_t modeRandom = -1;
     };
 
     struct module_lfo::lfo_impl_t final : public PluginLockable {
-        struct lfo_automation_src_param_t final : public automated_param_t {
-            module_lfo* module = nullptr;
-            DAW::Shape::shape_t shape;
-            std::vector<SyncRatio> enabledSyncs;
+        struct lfo_sync_settings_t {
             int32_t syncFlags;
             std::vector<SyncRatio> syncRatios;
+        };
+        struct lfo_automation_src_synced_t final : public automated_param_t {
+            module_lfo* module = nullptr;
+            lfo_sync_settings_t* sync = nullptr;
+            DAW::Shape::shape_t shape;
             float getPhase(double dTick) const {
                 const auto fRate = module->getParamValue(PARAM_LFO_RATE);
                 const auto fPhase = module->getParamValue(PARAM_LFO_PHASE);
                 double fPhaseOffset = 0.0f;
-                if (syncRatios.empty()) {
+                if (sync->syncRatios.empty()) {
                     fPhaseOffset = dTick / GetScaledRate(fRate);
                 } else {
-                    auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(syncRatios)), 0, CtrSize(syncRatios) - 1);
-                    auto ratio = syncRatios[index];
+                    auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(sync->syncRatios)), 0, CtrSize(sync->syncRatios) - 1);
+                    auto ratio = sync->syncRatios[index];
                     double barPos = dTick / double(TICKS_BAR);
                     fPhaseOffset = double((barPos * ratio.denominator) / ratio.numerator);
                 }
@@ -229,49 +238,277 @@ namespace PluginLFO {
             void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
             }
         };
-        module_lfo* module;
-        std::array<lfo_automation_src_param_t, NUM_CHANNELS> macroAutomationSrcParams;
-        explicit lfo_impl_t(DawInstance* daw, module_lfo* module, const DAW::Shape::shape_t& initShape) 
-            : PluginLockable(daw),
-            module(module)
+        struct lfo_automation_src_random_t : public automated_param_t {
+            module_lfo* module = nullptr;
+            lfo_sync_settings_t* sync = nullptr;
+
+            float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
+                const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
+                switch (scale.mode) {
+                    case DAW::ModulationMode::ADD:
+                        fIn += valScaled;
+                        break;
+                    case DAW::ModulationMode::MUL:
+                        fIn *= valScaled;
+                        break;
+                    case DAW::ModulationMode::REPLACE:
+                        fIn = valScaled;
+                        break;
+                    default:
+                        break;
+                }
+                if (scale.bClamp) {
+                    fIn = math::clamp(fIn, 0.0f, 1.0f);
+                }
+                return fIn;
+            }
+            void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const override {
+                for (samplecount_t i = 0; i < numSamples; ++i) {
+                    const auto dTickOffset = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
+                    const auto valScaled   = scale.min + sampleCurve(dTickOffset) * (scale.max - scale.min);
+                    switch (scale.mode) {
+                        case DAW::ModulationMode::ADD:
+                            *inOut += valScaled;
+                            break;
+                        case DAW::ModulationMode::MUL:
+                            *inOut *= valScaled;
+                            break;
+                        case DAW::ModulationMode::REPLACE:
+                            *inOut = valScaled;
+                            break;
+                        default:
+                            break;
+                    }
+                    if (scale.bClamp) {
+                        *inOut = math::clamp(*inOut, 0.0f, 1.0f);
+                    }
+                    ++inOut;
+                }
+            }
+            void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) override {
+            }
+            void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const override {
+            }
+            bool isActive() const override { //??
+                return true;
+            }
+            bool isAutomated() const override { //??
+                return true; 
+            }
+            float getValueAt(tick_t tick) const override {
+                return sampleCurve(tick);
+            }
+            float getValueAtExact(double dTick) const override {
+                return sampleCurve(dTick);
+            }
+            String getName() const override {
+                return StringFormat("LFO %d", paramIdx+1);
+            }
+            void deleteTickRange(tick_t tickBegin, tick_t tickEnd) override {
+            }
+            void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
+            }
+            virtual float getPhase(double dTick) const {
+                const auto fRate = module->getParamValue(PARAM_LFO_RATE);
+                const auto fPhase = module->getParamValue(PARAM_LFO_PHASE);
+                double fPhaseOffset = 0.0f;
+                if (sync->syncRatios.empty()) {
+                    fPhaseOffset = dTick / GetScaledRate(fRate);
+                } else {
+                    auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(sync->syncRatios)), 0, CtrSize(sync->syncRatios) - 1);
+                    auto ratio = sync->syncRatios[index];
+                    double barPos = dTick / double(TICKS_BAR);
+                    fPhaseOffset = double((barPos * ratio.denominator) / ratio.numerator);
+                }
+                auto phase = fPhaseOffset + fPhase;
+                return phase;
+            }
+            virtual float sampleCurve(double dTick) const = 0;
+            virtual int32_t getModeId() const = 0;
+
+            float scaleMinMax(float f) const {
+                const auto valMin = module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f;
+                const auto valMax = module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f;
+                return f * (valMax - valMin) + valMin;
+            }
+            std::pair<tick_t, tick_t> getPrevNextTick(double dTick) const {
+                auto prevTick = math::floordS64(dTick);
+                auto nextTick = math::ceildS64(dTick);
+                if (prevTick == nextTick) {
+                    nextTick += 1;
+                }
+                return { prevTick, nextTick };
+            }
+        };
+        struct lfo_automation_src_random_smooth_t final : public lfo_automation_src_random_t {
+            float sampleCurve(double dTick) const override {
+                const auto valMin = module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f;
+                const auto valMax = module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f;
+                float phase = getPhase(dTick);
+                seq_rand r;
+                auto [prevTick, nextTick] = getPrevNextTick(phase);
+                r.rng_seed(prevTick);
+                auto v0 = r.rng_double();
+                r.rng_seed(nextTick);
+                auto v1 = r.rng_double();
+                float v = modf(phase, &phase);
+                v = v * v * (3.0f - 2.0f * v);
+                v = v0 + (v1 - v0) * v;
+                v = v * (valMax - valMin) + valMin;
+                return v;
+            }
+            int32_t getModeId() const override {
+                return 0;
+            }
+        };
+        struct lfo_automation_src_random_linear_t final : public lfo_automation_src_random_t {
+            float sampleCurve(double dTick) const override {
+                float phase = getPhase(dTick);
+                seq_rand r;
+                auto [prevTick, nextTick] = getPrevNextTick(phase);
+                r.rng_seed(prevTick);
+                auto v0 = r.rng_double();
+                r.rng_seed(nextTick);
+                auto v1 = r.rng_double();
+                float v = modf(phase, &phase);
+                // v = v * v * (3.0f - 2.0f * v);
+                v = v0 + (v1 - v0) * v;
+                return scaleMinMax(v);
+            }
+            int32_t getModeId() const override {
+                return 1;
+            }
+        };
+        struct lfo_automation_src_random_exp_t final : public lfo_automation_src_random_t {
+            float sampleCurve(double dTick) const override {
+                float phase = getPhase(dTick);
+                seq_rand r;
+                auto [prevTick, nextTick] = getPrevNextTick(phase);
+                r.rng_seed(prevTick);
+                auto v0 = r.rng_double();
+                auto shape0 = r.rng_double();
+                r.rng_seed(nextTick);
+                auto v1 = r.rng_double();
+                float v = modf(phase, &phase);
+                float shapeBi  = 1.0f - shape0 * 2.0f;
+                float shapeExp = 0.0f;
+                float scale2   = 0.2f + v * 0.8f;
+                if (shapeBi < 0.0f) {
+                    shapeExp = 1.0f + scale2 * std::fabs(shapeBi) * 16.f;
+                } else {
+                    shapeExp = 1.0f / (1.0f + scale2 * std::fabs(shapeBi) * 16.f);
+                }
+                v = ::powf(v, shapeExp);
+                v = v0 + (v1 - v0) * v;
+                return scaleMinMax(v);
+            }
+            int32_t getModeId() const override {
+                return 2;
+            }
+        };
+        struct lfo_automation_src_random_sample_and_hold_t final : public lfo_automation_src_random_t {
+            float sampleCurve(double dTick) const override {
+                float phase = getPhase(dTick);
+                seq_rand r;
+                auto [prevTick, nextTick] = getPrevNextTick(phase);
+                r.rng_seed(prevTick);
+                auto v0 = r.rng_double();
+                auto v = v0;
+                return scaleMinMax(v);
+            }
+            int32_t getModeId() const override {
+                return 3;
+            }
+        };
+        struct lfo_channel_t : public lfo_sync_settings_t {
+            bool modeIsShape = true;
+            lfo_automation_src_synced_t srcSync;
+            std::shared_ptr<lfo_automation_src_random_t> srcRand;
+        };
+
+        module_lfo* const module;
+        std::array<lfo_channel_t, NUM_CHANNELS> channels;
+        explicit lfo_impl_t(DawInstance* _daw, module_lfo* _module, const DAW::Shape::shape_t& initShape) 
+            : PluginLockable(_daw),
+            module(_module)
         {
-            for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
-                macroAutomationSrcParams[i].module = module;
-                macroAutomationSrcParams[i].paramIdx = i;
-                macroAutomationSrcParams[i].shape = initShape;
-                macroAutomationSrcParams[i].syncRatios = GetSyncRatios();
+            for (auto& channel : channels) {
+                channel.syncFlags = STRAIGHT | DOTTED | TRIPLET;
+                channel.syncRatios = GetSyncRatios(channel.syncFlags);
+                channel.srcSync.module = module;
+                channel.srcSync.sync = &channel;
+                channel.srcSync.shape = initShape;
+                channel.modeIsShape = true;
+            }
+            for (int32_t idx = 0; idx < CtrSize(channels); ++idx) {
+                setRandomMode(idx, 0);
+                channels[idx].modeIsShape = true;
             }
         }
-        const lfo_automation_src_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) {
+        void setRandomMode(int32_t chIdx, int32_t mode) {
+            auto& channel = channels[chIdx];
+            channel.modeIsShape = false;
+            switch (mode) {
+                case -1:
+                    if (channel.srcRand) {
+                        break;
+                    }
+                    [[fallthrough]];
+                default:
+                case 0:
+                    channel.srcRand = std::make_shared<lfo_automation_src_random_smooth_t>();
+                    break;
+                case 1:
+                    channel.srcRand = std::make_shared<lfo_automation_src_random_linear_t>();
+                    break;
+                case 2:
+                    channel.srcRand = std::make_shared<lfo_automation_src_random_exp_t>();
+                    break;
+                case 3:
+                    channel.srcRand = std::make_shared<lfo_automation_src_random_sample_and_hold_t>();
+                    break;
+            }
+            channel.srcRand->module = module;
+            channel.srcRand->sync = &channel;
+        }
+        int32_t getRandomMode(int32_t chIdx) const {
+            return channels[chIdx].srcRand->getModeId();
+        }
+        const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) {
             auto chIdx = channel.refSrc.paramIdx;
             if (!assert_expr(chIdx >= 0 && chIdx < NUM_CHANNELS))
                 return nullptr;
-            if (!assert_expr(chIdx < CtrSize(macroAutomationSrcParams)))
+            if (!assert_expr(chIdx < CtrSize(channels)))
                 return nullptr;
-            return &macroAutomationSrcParams[chIdx];
+            auto& ch = channels[chIdx];
+            automated_param_t* src = &ch.srcSync;
+            if (!ch.modeIsShape && ch.srcRand) {
+                src = ch.srcRand.get();
+            }
+            return src;
         }
-        DAW::Shape::shape_t& getShape(int chIdx) {
+        DAW::Shape::shape_t& getShape(int32_t chIdx) {
             static DAW::Shape::shape_t shapeDummy{};
             if (!assert_expr(chIdx >= 0 && chIdx < NUM_CHANNELS))
                 return shapeDummy;
-            if (!assert_expr(chIdx < CtrSize(macroAutomationSrcParams)))
+            if (!assert_expr(chIdx < CtrSize(channels)))
                 return shapeDummy;
-            return this->macroAutomationSrcParams[chIdx].shape;
+            return channels[chIdx].srcSync.shape;
         }
-        int32_t getSyncRatio(int chIdx) const {
+        int32_t getSyncFlags(int32_t chIdx) const {
             dbgassert(chIdx >= 0 && chIdx < NUM_CHANNELS);
-            return this->macroAutomationSrcParams[chIdx].syncFlags;
+            return channels[chIdx].syncFlags;
         }
-        void setSyncRatio(int chIdx, int32_t ratio) {
+        void setSyncFlags(int32_t chIdx, int32_t flags) {
             dbgassert(chIdx >= 0 && chIdx < NUM_CHANNELS);
-            this->macroAutomationSrcParams[chIdx].syncFlags = ratio;
-            this->macroAutomationSrcParams[chIdx].syncRatios = GetSyncRatios(ratio);
+            channels[chIdx].syncFlags = flags;
+            channels[chIdx].syncRatios = GetSyncRatios(flags);
         }
         bool getSnapshot(snapshot_t& snapshot) {
             snapshot.version = BINARY_SNAPSHOT_VERSION;
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
-                auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ i, DAW::Shape::shape_preset_t{2, macroAutomationSrcParams[i].shape} };
-                impl_channel_snapshot_t channelSnapshot{ std::move(shapeSnapshot), macroAutomationSrcParams[i].syncFlags };
+                auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ i, DAW::Shape::shape_preset_t{2, channels[i].srcSync.shape} };
+                impl_channel_snapshot_t channelSnapshot{ std::move(shapeSnapshot), channels[i].syncFlags, channels[i].modeIsShape, channels[i].srcRand ? channels[i].srcRand->getModeId() : -1 };
                 snapshot.channels.push_back(std::move(channelSnapshot));
             }
             return true;
@@ -280,18 +517,24 @@ namespace PluginLFO {
         bool setSnapshot(const snapshot_t& snapshot) {
             for (int32_t i = 0; i < NUM_CHANNELS && i < CtrSize(snapshot.channels); ++i) {
                 auto& channelSnapshot = snapshot.channels[i];
-                macroAutomationSrcParams[i].shape.pts = channelSnapshot.shape.shape.curve.pts;
+                channels[i].srcSync.shape.pts = channelSnapshot.shape.shape.curve.pts;
                 if (snapshot.version > 2) {
-                    setSyncRatio(i, channelSnapshot.syncFlags);
+                    setSyncFlags(i, channelSnapshot.syncFlags);
+                }
+                if (snapshot.version > 3) {
+                    setRandomMode(i, channelSnapshot.modeRandom);
+                    if (channelSnapshot.modeIsShape) {
+                        channels[i].modeIsShape = true;
+                    }
                 }
             }
             return true;
         }
         void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
-                auto& channel = macroAutomationSrcParams[i];
-                float phase = channel.getPhase(tick);
-                channel.shape.renderPhase = phase;
+                auto& channel = channels[i];
+                float phase = channel.srcSync.getPhase(tick);
+                channel.srcSync.shape.renderPhase = phase;
             }
         }
     };
@@ -320,7 +563,7 @@ namespace PluginLFO {
         reg->shortLabel  = "Max";
         reg->unit  = "";
         reg->isBiPolar = true;
-        impl->setSyncRatio(0, TRIPLET|DOTTED|STRAIGHT);
+        impl->setSyncFlags(0, TRIPLET|DOTTED|STRAIGHT);
         outputModChannelsDesc.push_back({0, "LFO 0"});
     }
 
@@ -355,11 +598,13 @@ namespace PluginLFO {
         DAW::ByteBuffer::stream_write<std::vector<std::byte>> out{*shrdHeapVec, 0};
         out.write(size_t(0));
         out.write(snapshot.version);
-        out.write(size_t{snapshot.channels.size()});
         out.write(size_t{snapshot.uiLayout.size()});
+        out.write(size_t{snapshot.channels.size()});
         for (const auto& channel : snapshot.channels) {
             DAW::Shape::writeShape(out, channel.shape);
             out.write(channel.syncFlags);
+            out.write(channel.modeIsShape);
+            out.write(channel.modeRandom);
         }
         for (const auto& modulation : snapshot.uiLayout) {
             out.write(modulation.uiId);
@@ -369,6 +614,7 @@ namespace PluginLFO {
         out.write(size_t(shrdHeapVec->size()));
         return shrdHeapVec;
     }
+
     bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, snapshot_t& snapshotOut) {
         if (!data)
             return false;
@@ -405,6 +651,12 @@ namespace PluginLFO {
                 if (snapshot.version > 2) {
                     if (!in.read(channel.syncFlags))
                         return false;
+                    if (snapshot.version > 3) {
+                        if (!in.read(channel.modeIsShape))
+                            return false;
+                        if (!in.read(channel.modeRandom))
+                            return false;
+                    }
                 } else {
                     bool dummy;
                     if (!in.read(dummy))
@@ -434,6 +686,7 @@ namespace PluginLFO {
         getUiSnapshot(snapshot);
         return serializeSnapshot(snapshot);
     }
+
     bool module_lfo::loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) {
         if (buf->size() > 0) {
             snapshot_t snapshotLoaded;
@@ -453,6 +706,8 @@ namespace PluginLFO {
         guictr_vert_layout firstCtr;
         i_ctr_shape_editor* const shapeEditor;
         guictr_base* ctrShapeEditor;
+        DAW::Shape::guictr_curve_shape* ctrShapeScope;
+        DAW::Shape::shape_t shapeScope;
         gui_textfield editfield;
         void init() {
             setLayoutMode(LAYOUT_HORIZONTAL);
@@ -466,19 +721,10 @@ namespace PluginLFO {
             editfield.setReturnCommits(true);
         }
     public:
-        void layout() override {
-            auto cs = getSizeContent() - ivec2(padding, 0);
-            auto leftSize = math::clamp<int32_t>(math::min(math::roundfS32(cs.y * 0.2f), math::roundfS32(cs.y * 0.2f)), 16, 128);
-            firstCtr.size        = { leftSize, cs.y };
-            ctrShapeEditor->size = { cs.x - leftSize, cs.y };
-            ctrShapeEditor->pos  = { cs.x - ctrShapeEditor->size.x, 0 };
-            for (auto gui : guis) {
-                gui->layout();
-            }
-        }
         explicit guictr_module_lfo(module_lfo* module) : guictr_base(),
             module(module),
-            shapeEditor(makeShapeEditor())
+            shapeEditor(makeShapeEditor()),
+            ctrShapeScope(DAW::Shape::makeShapeCurveView())
         {
             init();
             std::vector<automatable_param_t*> paramsSorted;
@@ -534,49 +780,101 @@ namespace PluginLFO {
             ctrShapeEditor->id = 2;
             ctrShapeEditor->margin = 0;
             ctrShapeEditor->padding = 2;
+            ctrShapeScope->setFlag(FLG_NO_LAYOUT, true);
+            ctrShapeScope->setBackgroundRendered(false);
+            ctrShapeScope->setBackgroundRenderedInset(false);
+            ctrShapeScope->id = 3;
+            ctrShapeScope->margin = 0;
+            ctrShapeScope->padding = 2;
             add(ctrShapeEditor);
             add(&editfield);
         }
 
-        class ctxtmenu_lfo_sync final : public ctxtmenu_entry {
+        ~guictr_module_lfo() override {
+            remove(&editfield);
+            remove(&firstCtr);
+            remove(ctrShapeEditor);
+            remove(ctrShapeScope);
+            destroyGuis();
+            delete ctrShapeEditor;
+            delete ctrShapeScope;
+        }
+
+        void layout() override {
+            auto cs = getSizeContent() - ivec2(padding, 0);
+            auto leftSize = math::clamp<int32_t>(math::min(math::roundfS32(cs.y * 0.2f), math::roundfS32(cs.y * 0.2f)), 16, 128);
+            firstCtr.size        = { leftSize, cs.y };
+            ctrShapeEditor->size = { cs.x - leftSize, cs.y };
+            ctrShapeEditor->pos  = { cs.x - ctrShapeEditor->size.x, 0 };
+            this->ctrShapeScope->pos = this->ctrShapeEditor->pos;
+            this->ctrShapeScope->size = this->ctrShapeEditor->size;
+            for (auto gui : guis) {
+                gui->layout();
+            }
+        }
+
+        void setMode(bool bIsShape) {
+            bool bChanged = false;
+            if (bIsShape) {
+                if (ctrShapeScope->parent) {
+                    remove(ctrShapeScope);
+                    bChanged = true;
+                }
+                if (!ctrShapeEditor->parent) {
+                    add(ctrShapeEditor);
+                    bChanged = true;
+                }
+            } else {
+                if (ctrShapeEditor->parent) {
+                    remove(ctrShapeEditor);
+                    bChanged = true;
+                }
+                if (!ctrShapeScope->parent) {
+                    add(ctrShapeScope);
+                    bChanged = true;
+                }
+            }
+            if (bChanged) {
+                onChildLayoutChanged(this);
+            }
+        }
+        class ctxtmenu_lfo_base : public ctxtmenu_entry {
+        protected:
             module_lfo* const module;
             int32_t channel;
+            int32_t perRowEntries;
 
-            struct _time_sel_entry {
+            struct _entry {
                 int id;
                 int x;
                 int y;
                 int w;
                 String name;
             };
-            std::vector<_time_sel_entry> entries;
+            std::vector<_entry> entries;
 
         public:
             const int pad   = 10;
             const int inset = 5;
         public:
-            ctxtmenu_lfo_sync(module_lfo* _module, int32_t _channel, String _title, int _id)
+            ctxtmenu_lfo_base(module_lfo* _module, int32_t _channel, String _title, int _id)
                 : ctxtmenu_entry(std::move(_title), _id),
                 module(_module), channel(_channel)
             {
-                entries.push_back({ NoteRatio::STRAIGHT, 0, 0, 0, "Straight" });
-                entries.push_back({ NoteRatio::TRIPLET, 0, 0, 0, "Triplet" });
-                entries.push_back({ NoteRatio::DOTTED, 0, 0, 0, "Dotted" });
-                entries.push_back({ 0, 0, 0, 0, "Off" });
             }
 
             void layout(ivec2 size, float _fontSize, determine_string_width& strw) override {
                 width = size.x;
                 this->fontSize = _fontSize;
                 const int h    = math::roundfS32(_fontSize);
-                layoutE(width, h, 3);
+                layoutE(width, h, perRowEntries);
             }
 
             void layoutE(int tw, int h, int perRow) {
                 int iX      = inset;
                 int iY      = h + 2;
                 int elW     = (tw - inset * 2) / perRow;
-                for (_time_sel_entry& e : entries) {
+                for (auto& e : entries) {
                     this->height = iY + h;
                     e.x = iX;
                     e.y = iY;
@@ -589,12 +887,42 @@ namespace PluginLFO {
                 }
             }
 
+            bool contains(ivec2& ctxtSize, ivec2& mouse) const override {
+                return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
+            }
+
+            int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
+                if (contains(ctxtSize, mouse)) {
+                    const auto h = this->fontSize;
+                    for (auto& e : entries) {
+                        if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
+                            return this->id + e.id;
+                        }
+                    }
+                }
+                return -1;
+            }
+        };
+
+        class ctxtmenu_lfo_sync final : public ctxtmenu_lfo_base {
+        public:
+            ctxtmenu_lfo_sync(module_lfo* _module, int32_t _channel, String _title, int _id)
+                : ctxtmenu_lfo_base(_module, _channel, _title, _id)
+            {
+                this->id = 100;
+                entries.push_back({ NoteRatio::STRAIGHT, 0, 0, 0, "Straight" });
+                entries.push_back({ NoteRatio::TRIPLET, 0, 0, 0, "Triplet" });
+                entries.push_back({ NoteRatio::DOTTED, 0, 0, 0, "Dotted" });
+                entries.push_back({ 0, 0, 0, 0, "Off" });
+                perRowEntries = 3;
+            }
+
 
             void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
                 auto h = fontSize * 1.1f;
 
                 int32_t sync = module->getSyncRatio(channel);
-                for (_time_sel_entry& e : entries) {
+                for (auto& e : entries) {
                     if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
                         nvgBeginPath(vg);
                         nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
@@ -618,7 +946,7 @@ namespace PluginLFO {
                                 theme->getColor(GuiColor::COL_TEXT),
                                 NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
-                for (_time_sel_entry& e : entries) {
+                for (auto& e : entries) {
                     renderTextLabel(vg,
                                     vec2(e.x + 20.0f, y + e.y + h * 0.5f),
                                     vec2(width, h),
@@ -629,6 +957,191 @@ namespace PluginLFO {
                                     NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
                 }
             }
+        };
+
+        class ctxtmenu_lfo_mode final : public ctxtmenu_lfo_base {
+        public:
+            ctxtmenu_lfo_mode(module_lfo* _module, int32_t _channel, String _title, int _id)
+                : ctxtmenu_lfo_base(_module, _channel, _title, _id)
+            {
+                this->id = 200;
+                entries.push_back({ 0, 0, 0, 0, "Shape" });
+                entries.push_back({ 1, 0, 0, 0, "Random" });
+                perRowEntries = 2;
+            }
+
+            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
+                auto h = fontSize * 1.1f;
+
+                int32_t isShapeMode = module->isShapeMode(channel);
+                for (auto& e : entries) {
+                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+                        nvgFill(vg);
+                    }
+                    if ((e.id == 0) == isShapeMode) {
+                        nvgBeginPath(vg);
+                        nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
+                        nvgFill(vg);
+                    }
+                }
+
+                renderTextLabel(vg,
+                                vec2(leftOffset(), y + h * 0.5f),
+                                vec2(width, h),
+                                title,
+                                theme,
+                                fontSize,
+                                theme->getColor(GuiColor::COL_TEXT),
+                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+                for (auto& e : entries) {
+                    renderTextLabel(vg,
+                                    vec2(e.x + 20.0f, y + e.y + h * 0.5f),
+                                    vec2(width, h),
+                                    e.name,
+                                    theme,
+                                    fontSize * 0.9f,
+                                    theme->getColor(GuiColor::COL_TEXT),
+                                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                }
+            }
+        };
+
+        class ctxtmenu_lfo_random_mode final : public ctxtmenu_lfo_base {
+        public:
+            ctxtmenu_lfo_random_mode(module_lfo* _module, int32_t _channel, String _title, int _id)
+                : ctxtmenu_lfo_base(_module, _channel, _title, _id)
+            {
+                this->id = 300;
+                entries.push_back({ 0, 0, 0, 0, "Smooth" });
+                entries.push_back({ 1, 0, 0, 0, "Linear" });
+                entries.push_back({ 2, 0, 0, 0, "Exponential" });
+                entries.push_back({ 3, 0, 0, 0, "Sample & Hold" });
+                perRowEntries = 2;
+            }
+
+            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
+                auto h = fontSize * 1.1f;
+
+                int32_t randomMode = module->getRandomMode(channel);
+                for (auto& e : entries) {
+                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+                        nvgFill(vg);
+                    }
+                    if (e.id == randomMode) {
+                        nvgBeginPath(vg);
+                        nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
+                        nvgFill(vg);
+                    }
+                }
+
+                renderTextLabel(vg,
+                                vec2(leftOffset(), y + h * 0.5f),
+                                vec2(width, h),
+                                title,
+                                theme,
+                                fontSize,
+                                theme->getColor(GuiColor::COL_TEXT),
+                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+                for (auto& e : entries) {
+                    renderTextLabel(vg,
+                                    vec2(e.x + 20.0f, y + e.y + h * 0.5f),
+                                    vec2(width, h),
+                                    e.name,
+                                    theme,
+                                    fontSize * 0.9f,
+                                    theme->getColor(GuiColor::COL_TEXT),
+                                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                }
+            }
+        };
+
+        class ctxtmenu_lfo_shape_select final : public ctxtmenu_entry {
+            struct _shape_sel_entry {
+                DAW::Shape::ShapeWaveform shape;
+                int x;
+                int y;
+                int w;
+                String name;
+            };
+            std::vector<_shape_sel_entry> entries;
+
+        public:
+            const int pad   = 10;
+            const int inset = 5;
+        public:
+            ctxtmenu_lfo_shape_select(String _title, int _id)
+                : ctxtmenu_entry(std::move(_title), _id)
+            {
+                this->id = 400;
+                using DAW::Shape::ShapeWaveform;
+                entries.push_back({ ShapeWaveform::SHAPE_SINE, 0, 0, 0, "Sine" });
+                entries.push_back({ ShapeWaveform::SHAPE_TRIANGLE, 0, 0, 0, "Triangle" });
+                entries.push_back({ ShapeWaveform::SHAPE_SAW, 0, 0, 0, "Saw" });
+                entries.push_back({ ShapeWaveform::SHAPE_SQUARE, 0, 0, 0, "Square" });
+                entries.push_back({ ShapeWaveform::SHAPE_SINE_INV, 0, 0, 0, "Sine Inv" });
+                entries.push_back({ ShapeWaveform::SHAPE_TRIANGLE_INV, 0, 0, 0, "Triangle Inv" });
+                entries.push_back({ ShapeWaveform::SHAPE_SAW_INV, 0, 0, 0, "Saw Inv" });
+                entries.push_back({ ShapeWaveform::SHAPE_SQUARE_INV, 0, 0, 0, "Square Inv" });
+            }
+
+            void layout(ivec2 size, float _fontSize, determine_string_width& strw) override {
+                width = size.x;
+                this->fontSize = _fontSize;
+                const int h    = math::roundfS32(_fontSize);
+                layoutE(width, h, 4);
+            }
+
+            void layoutE(int tw, int h, int perRow) {
+                int iX      = inset;
+                int iY      = h + 2;
+                int elW     = (tw - inset * 2) / perRow;
+                for (_shape_sel_entry& e : entries) {
+                    this->height = iY + h;
+                    e.x = iX;
+                    e.y = iY;
+                    e.w = elW;
+                    iX += e.w;
+                    if (iX >= tw - inset * 2) {
+                        iX = inset;
+                        iY += h;
+                    }
+                }
+            }
+
+            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
+                auto h = fontSize * 1.1f;
+
+                renderTextLabel(vg,
+                                vec2(leftOffset(), y + h * 0.5f),
+                                vec2(width, h),
+                                title,
+                                theme,
+                                fontSize,
+                                theme->getColor(GuiColor::COL_TEXT),
+                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                for (_shape_sel_entry& e : entries) {
+                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+                        nvgFill(vg);
+                    }
+                    int inset = 4;
+                    vec2 waveformPos = vec2(e.x, y + e.y) + vec2(inset, inset);
+                    vec2 waveformSize = vec2(e.w, h) - vec2(inset * 2, inset * 2);
+                    drawWaveform(vg, waveformPos, waveformSize, e.shape, theme->getColor(GuiColor::COL_TEXT));
+                }
+            }
 
             bool contains(ivec2& ctxtSize, ivec2& mouse) const override {
                 return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
@@ -637,16 +1150,15 @@ namespace PluginLFO {
             int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
                 if (contains(ctxtSize, mouse)) {
                     const auto h = this->fontSize;
-                    for (_time_sel_entry& e : entries) {
+                    for (_shape_sel_entry& e : entries) {
                         if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
-                            return 100 + e.id;
+                            return this->id + e.shape;
                         }
                     }
                 }
                 return -1;
             }
         };
-
         class guictr_module_lfo_context_menu final : public guictxtmenu {
             module_lfo* const module;
             int32_t channel;
@@ -658,11 +1170,33 @@ namespace PluginLFO {
                 maxHeight = 0;
                 this->fontSize = FONT_SIZE_CTXT_SMALL;
                 this->paddingV = 0;
-                // addEntry(new ctxtmenu_entry("test", 2));
                 addEntry(new ctxtmenu_lfo_sync(module, channel, "Sync", 0));
+                addEntry(new ctxtmenu_lfo_mode(module, channel, "Mode", 1));
+                addEntry(new ctxtmenu_lfo_shape_select("Shape", 2));
+                addEntry(new ctxtmenu_lfo_random_mode(module, channel, "Random", 3));
             }
             bool clickedElement(ctxtmenu_entry* e, int _id) override {
-                if (_id >= 100) {
+                if (_id >= 400) {
+                    using DAW::Shape::ShapeWaveform;
+                    auto shapeIdx = _id - 400;
+                    if (shapeIdx < 0 || shapeIdx > ShapeWaveform::SHAPE_SQUARE_INV) {
+                        return false;
+                    }
+                    auto waveform = static_cast<ShapeWaveform>(shapeIdx);
+                    auto lock = module->impl->lock();
+                    auto& shape = module->getShape(channel);
+                    shape.pts = GetShape(waveform);
+                    module->setShapeMode(channel);
+                } else if (_id >= 300) {
+                    auto randomIdx = _id - 300;
+                    module->setRandomMode(channel, randomIdx);
+                } else if (_id >= 200) {
+                    if (_id == 200) {
+                        module->setShapeMode(channel);
+                    } else {
+                        module->setRandomMode(channel);
+                    }
+                } else if (_id >= 100) {
                     int flags = module->getSyncRatio(channel);
                     int clicked = _id - 100;
                     if (clicked == 0) {
@@ -686,12 +1220,6 @@ namespace PluginLFO {
             parentCtrl->openContextMenu(new guictr_module_lfo_context_menu(module, 0), evt.mousepos);
         }
 
-        ~guictr_module_lfo() override {
-            remove(&editfield);
-            remove(&firstCtr);
-            destroyGuis();
-        }
-
         void getSizeScale(int& w, int& h) const {
             w = 350;
             h = 300;
@@ -701,6 +1229,8 @@ namespace PluginLFO {
             auto shapeWidth = cs.x > cs.y ? cs.y : cs.x*2/3;
             this->ctrShapeEditor->pos = {cs.x-shapeWidth, 0};
             this->ctrShapeEditor->size = {shapeWidth, cs.y};
+            this->ctrShapeScope->pos = this->ctrShapeEditor->pos;
+            this->ctrShapeScope->size = this->ctrShapeEditor->size;
             guictr_base::layoutEntries({}, {cs.x-shapeWidth, cs.y}, dir);
         }
 
@@ -754,11 +1284,37 @@ namespace PluginLFO {
         bool getUiLayout(ui_layout_t& layout) const {
             return true;
         }
+
+        void prerender(NVGcontext* vg) override {
+            guictr_base::prerender(vg);
+            if (!module->isShapeMode(0)) {
+                auto& shape = ctrShapeScope->getShape();
+                auto numPoints = samplecount_t(math::clamp(size.x, 16, 1024));
+                shape.pts.resize(numPoints);
+                shape.flags |= DAW::Shape::ShapeFlags::SHAPE_LOCK_POINTS;
+                shape.flags |= DAW::Shape::ShapeFlags::SHAPE_UNCLAMPPED;
+                auto daw = dawCtrl->getDaw();
+                
+                auto tick = !daw->isPlaying() ? daw->getIdleTickPos() : daw->getPlaybackPos();
+                tick_t range = TICKS_BAR;
+                auto begin = tick - range;
+                for (samplecount_t j = 0; j < samplecount_t(numPoints); ++j) {
+                    auto t = begin + (j * range) / numPoints;
+                    auto v = module->impl->channels[0].srcRand->sampleCurve(t);
+                    auto normalizedT = (t - begin) / float(range);
+                    auto& pt = shape.pts[j];
+                    pt.pos.x = normalizedT;
+                    pt.pos.y = v;
+                }
+            }
+        }
     };
 
     using ViewCtrType = PluginViewContainerBasic<guictr_module_lfo, module_lfo>;
     std::shared_ptr<PluginViewContainer> module_lfo::createViewCtrInternal() {
-        return std::make_shared<ViewCtrType>(this, 100, 150);
+        auto ctr = std::make_shared<ViewCtrType>(this, 100, 150);
+        ctr->getPluginUI().setMode(isShapeMode(0));
+        return ctr;
     }
 
     void module_lfo::getUiSnapshot(snapshot_t& snapshot) {
@@ -798,7 +1354,7 @@ namespace PluginLFO {
         auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
         switch (idx) {
             case PARAM_LFO_RATE: {
-                auto& first = impl->macroAutomationSrcParams[0];
+                auto& first = impl->channels[0];
                 if (first.syncFlags) {
                     auto numSyncRatios = CtrSize(first.syncRatios);
                     for (int32_t i = 0; i < numSyncRatios; ++i) {
@@ -833,9 +1389,9 @@ namespace PluginLFO {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_LFO_RATE) {
-            auto& firstInstance = impl->macroAutomationSrcParams[0];
+            auto& firstInstance = impl->channels[0];
             auto lfoRateStr = FormatSyncRate(firstInstance.syncRatios, firstInstance.syncFlags, value);
-            return {lfoRateStr, impl->getSyncRatio(0) ? "" : param->unit};
+            return {lfoRateStr, impl->getSyncFlags(0) ? "" : param->unit};
         }
         if (param->idx == PARAM_LFO_PHASE) {
             return {StringFormat("%.2f", value*360.0f), param->unit};
@@ -845,11 +1401,35 @@ namespace PluginLFO {
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
-    int32_t module_lfo::getSyncRatio(int chIdx) const {
-        return impl->getSyncRatio(chIdx); 
+    int32_t module_lfo::getSyncRatio(int32_t chIdx) const {
+        return impl->getSyncFlags(chIdx); 
     }
-    void module_lfo::setSyncRatio(int chIdx, int32_t ratio) {
-        impl->setSyncRatio(chIdx, ratio);
+    bool module_lfo::isShapeMode(int32_t chIdx) const {
+        return impl->channels[chIdx].modeIsShape;
+    }
+    void module_lfo::setSyncRatio(int32_t chIdx, int32_t ratio) {
+        impl->setSyncFlags(chIdx, ratio);
+    }
+    void module_lfo::setShapeMode(int32_t chIdx) {
+        impl->channels[chIdx].modeIsShape = true;
+        for (auto& view : views) {
+            auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());
+            if (implCtrType) {
+                implCtrType->ctr_main.setMode(true);
+            }
+        }
+    }
+    void module_lfo::setRandomMode(int32_t chIdx, int32_t mode) {
+        impl->setRandomMode(chIdx, mode);
+        for (auto& view : views) {
+            auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());
+            if (implCtrType) {
+                implCtrType->ctr_main.setMode(false);
+            }
+        }
+    }
+    int32_t module_lfo::getRandomMode(int32_t chIdx) const {
+        return impl->getRandomMode(chIdx);
     }
 }// namespace PluginLFO
 

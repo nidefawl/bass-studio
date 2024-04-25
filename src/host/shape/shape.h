@@ -16,6 +16,18 @@ struct shape_pt_t {
 inline bool operator==(const shape_pt_t& lhs, const shape_pt_t& rhs) {
     return lhs.pos == rhs.pos && lhs.shape == rhs.shape;
 }
+
+enum ShapeWaveform : int32_t {
+    SHAPE_SINE,
+    SHAPE_SINE_INV,
+    SHAPE_TRIANGLE,
+    SHAPE_TRIANGLE_INV,
+    SHAPE_SAW,
+    SHAPE_SAW_INV,
+    SHAPE_SQUARE,
+    SHAPE_SQUARE_INV,
+};
+
 enum ShapeFlags {
     SHAPE_FLAGS_NONE = 0,
     SHAPE_CYCLIC = 1 << 0,
@@ -102,6 +114,7 @@ inline void CutShapeRight(shape_t& shape, float x) {
 shape_t GetShapeSaw(int32_t flags = SHAPE_CYCLIC);
 shape_t GetShapeSawInverse(int32_t flags = SHAPE_CYCLIC);
 shape_t GetShapeTriangle(int32_t flags = SHAPE_CYCLIC);
+std::vector<shape_pt_t> GetShape(ShapeWaveform waveform);
 } // namespace DAW::Shape
 
 

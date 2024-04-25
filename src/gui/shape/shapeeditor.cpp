@@ -106,6 +106,11 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
             nvgFill(vg);
         }
     }
+
+    if (curve.flags & SHAPE_LOCK_POINTS) {
+        return;
+    }
+
     if (hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts - 1) {
         for (int32_t pass = 0; pass < 2; ++pass) {
             int32_t idx = hit.idx;
@@ -256,7 +261,9 @@ void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* t
             nvgStroke(vg);
         }
     }
-
+    if (curve.flags & SHAPE_LOCK_POINTS) {
+        return;
+    }
     nvgBeginPath(vg);
     for (int32_t i = 0; i < nPoints; i++) {
         auto pt = vec2(pts[i].pos.x, 1.0 - pts[i].pos.y) * sizeScaled + pos;
@@ -276,6 +283,8 @@ void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* t
         nvgFillCustomPar(vg, -2);
         nvgFill(vg);
     }
+    if (!pSelectedPoints)
+        return;
     for (auto idx : *pSelectedPoints) {
         if (idx < 0 || idx >= numCurvePts) continue;
         auto pt = vec2(pts[idx].pos.x, 1.0 - pts[idx].pos.y) * sizeScaled + pos;
@@ -515,58 +524,44 @@ void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int 
         }
     }
 }
-class guictr_curve_shape final : public guictr_base, public ShapeEdit {
-    friend class guictr_curve_editor;
-    shape_t curveInternal;
-public:
-    guictr_curve_shape()
-    {
-        bIsGridEnabledH = true;
-        bIsGridEnabledV = true;
-        curveInternal.pts.push_back({ { 0, 0 }, 0.5f });
-        setEditorCurve(&curveInternal);
-        padding = 4;
-        margin = 4;
-        setBackgroundRendered(true);
-        setCanMouseHit(true);
-    }
-    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
-        return GuiColor::COL_BG_DRKER2;
-    }
-    void render(NVGcontext* vg) override {
-        auto cs = getSizeContent();
-        drawBackground(vg, theme, getPosContent(), cs, margin, isBackgroundRenderedInset());
 
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        auto relMousePos = toControlsObjectSpace(parentCtrl->m_mousePos, this);
-        renderEditor(vg, {0, 0}, theme, relMousePos, true);
+class guictr_curve_preset_control final : public guictr_base {
+    friend class guictr_curve_controls;
+    friend class guictr_curve_editor;
+    guidropdown_select_preset selectPreset;
+    guibutton buttonSave;
+public:
+    guictr_curve_preset_control() {
+        padding = 0;
+        margin = 0;
+        buttonSave.drawFn   = drawTextureSymbol;
+        buttonSave.drawParm = ICON_SAVE;
+        buttonSave.setText("Save");
+        add(&selectPreset);
+        add(&buttonSave);
+    }
+    ~guictr_curve_preset_control() {
+        removeGuis();
     }
     void layout() override {
         auto cs = getSizeContent();
-        layoutEditor(cs);
+        vec2 sizePadded = vec2(cs.x - 2, cs.y);
+        float btnWidth = 0.3f;
+        buttonSave.size = vec2(sizePadded.x * btnWidth, sizePadded.y);
+        if (buttonSave.size.x < 40) {
+            buttonSave.size.x = buttonSave.size.y;
+            buttonSave.setText("");
+        } else {
+            buttonSave.setText("Save");
+        }
+        float presetWidth = sizePadded.x - buttonSave.size.x - 2;
+        selectPreset.size = vec2(presetWidth, sizePadded.y);
+        selectPreset.pos = vec2(0, 0);
+        buttonSave.pos = vec2(selectPreset.right() + 2, 0);
         guictr_base::layout();
     }
-
-    void handleRightClick(MouseEvent& evt) override {
-        if (onRightClickCurveEditor(evt)) {
-            return;
-        }
-        guictr_base::handleRightClick(evt);
-    }
-
-    void handleDraggedBegin(MouseEvent& evt) override {
-        onBeginDragCurveEditor(evt);
-    }
-
-    void handleDraggedMove(MouseEvent& evt) override {
-        onMoveDragCurveEditor(evt);
-    }
-    void handleDraggedRelease(MouseEvent& evt) override {
-        onReleaseDragCurveEditor(evt);
-    }
 };
+
 class guictr_curve_grid_control final : public guictr_base {
     friend class guictr_curve_controls;
     friend class guictr_curve_editor;
@@ -582,7 +577,7 @@ public:
         padding = 2;
         margin = 4;
         setCanMouseHit(true);
-        setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        // setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         buttonGrid.setText(axes[axis] + " Grid: " + String(buttonGrid.getState() ? "On" : "Off"));
         inputGridSteps.setLabel("Steps");
         inputGridSteps.fnClamp = [](int32_t value) -> int32_t {
@@ -598,13 +593,31 @@ public:
             buttonGrid.setText(axes[axis] + " Grid: " + String(buttonGrid.getState() ? "On" : "Off"));
         }
     }
+
+    void layout() override {
+        auto cs = getSizeContent();
+        vec2 sizePadded = vec2(cs.x - 2, cs.y);
+        float stepsWidth = 0.3f;
+        inputGridSteps.size = vec2(sizePadded.x * stepsWidth, sizePadded.y);
+        if (inputGridSteps.size.x < 40) {
+            inputGridSteps.size.x = inputGridSteps.size.y;
+            inputGridSteps.setLabel("");
+        } else {
+            inputGridSteps.setLabel("Steps");
+        }
+        float btnWidth = sizePadded.x - inputGridSteps.size.x - 2;
+        buttonGrid.size = vec2(btnWidth, sizePadded.y);
+        buttonGrid.pos = vec2(0, 0);
+        inputGridSteps.pos = vec2(buttonGrid.right() + 2, 0);
+        guictr_base::layout();
+    }
 };
+
 class guictr_curve_controls final : public guictr_base {
     friend class guictr_curve_editor;
+    guictr_curve_preset_control presetControl;
     guictr_curve_grid_control gridControlH;
     guictr_curve_grid_control gridControlV;
-    guidropdown_select_preset selectPreset;
-    guibutton buttonSave;
 
 public:
     guictr_curve_controls()
@@ -615,29 +628,12 @@ public:
         margin = 4;
         setCanMouseHit(true);
         setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
-        buttonSave.drawFn   = drawTextureSymbol;
-        buttonSave.drawParm = ICON_SAVE;
-        buttonSave.setText("Save");
-        buttonSave.setFlag(FLG_NO_LAYOUT, true);
-        add(&selectPreset);
-        add(&buttonSave);
+        add(&presetControl);
         add(&gridControlH);
         add(&gridControlV);
     }
     ~guictr_curve_controls() {
         removeGuis();
-    }
-    void layout() override {
-        guictr_base::layout();
-        buttonSave.size = ivec2{selectPreset.size.y*3, selectPreset.size.y};
-        selectPreset.size.x = selectPreset.size.x - buttonSave.size.x - padding;
-        buttonSave.pos = ivec2(selectPreset.right(), 0);
-        buttonSave.size -= ivec2(4);
-        buttonSave.pos += ivec2(2);
-        selectPreset.size -= ivec2(4);
-        selectPreset.pos += ivec2(2);
-        selectPreset.layout();
-        buttonSave.layout();
     }
 };
 class guictr_curve_editor final : public guictr_base, public i_ctr_shape_editor {
@@ -657,22 +653,22 @@ public:
         controls.gridControlV.inputGridSteps.setRef(&this->shape.gridStepsV);
         controls.gridControlH.buttonGrid.setStateRef(&this->shape.bIsGridEnabledH);
         controls.gridControlV.buttonGrid.setStateRef(&this->shape.bIsGridEnabledV);
-        controls.selectPreset.setPresetManager(presetManager);
-        controls.selectPreset.setCallback([this](const String& path) {
+        controls.presetControl.selectPreset.setPresetManager(presetManager);
+        controls.presetControl.selectPreset.setCallback([this](const String& path) {
             shape_preset_t shapeLoaded{};
             if (loadShapePresetFile(path, shapeLoaded)) {
                 if (shapeLoaded.version) {
                     auto& presetShape = shapeLoaded.curve;
                     shape_t tmp{presetShape.flags, std::move(presetShape.pts), presetShape.name, 0.0f };
                     // tmp.sort();
-                    controls.selectPreset.setString(tmp.name);
+                    controls.presetControl.selectPreset.setString(tmp.name);
                     *shape.curve = tmp;
                     if (shape.callback)
                         shape.callback(*shape.curve, false);
                 }
             }
         });
-        controls.selectPreset.setString("Empty");
+        controls.presetControl.selectPreset.setString("Empty");
         setBackgroundRendered(true);
         rand.rng_seed(static_cast<uint64_t>(getTimeMicros()));
         setCanMouseHit(true);
@@ -721,7 +717,7 @@ public:
             shape.bIsGridEnabledV = !shape.bIsGridEnabledV;
             return;
         }
-        if (&controls.buttonSave == button) {
+        if (&controls.presetControl.buttonSave == button) {
             shape_preset_t shapePreset { 1, *shape.curve };
             String defaultPresetPath = presetManager.getPresetPath();
             CreateDirectoryIfNotExists(defaultPresetPath);
@@ -736,7 +732,7 @@ public:
                     path += FILE_TYPES_SHAPEPRESET.types.front().ext;
                 }
                 shapePreset.curve.name = name;
-                controls.selectPreset.setString(name);
+                controls.presetControl.selectPreset.setString(name);
                 saveShapePresetFile(shapePreset, path);
             }
             return;
@@ -746,6 +742,9 @@ public:
 };
 
 bool ShapeEdit::onBeginDragCurveEditor(MouseEvent& evt) {
+    if (curve->flags & SHAPE_LOCK_POINTS) {
+        return false;
+    }
     dragged = {};
     curveBegin = *curve;
     curveTmp   = *curve;
@@ -1017,7 +1016,24 @@ void ShapeEdit::setEditorCurve(shape_t* curve) {
 }
 
 bool ShapeEdit::hasControlHandles() const {
+    if (curve->flags & SHAPE_LOCK_POINTS)
+        return false;
     return !curve->pts.empty();
+}
+
+void guictr_curve_shape::render(NVGcontext* vg) {
+    auto cs = getSizeContent();
+    drawBackground(vg, theme, getPosContent(), cs, margin, isBackgroundRenderedInset());
+
+    if (!setScissorTransform(vg)) {
+        return;
+    }
+    auto relMousePos = toControlsObjectSpace(parentCtrl->m_mousePos, this);
+    renderEditor(vg, { 0, 0 }, theme, relMousePos, true);
+}
+
+DAW::Shape::guictr_curve_shape* makeShapeCurveView() {
+    return new DAW::Shape::guictr_curve_shape();
 }
 
 }// namespace DAW::Shape

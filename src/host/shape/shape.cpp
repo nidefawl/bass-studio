@@ -78,7 +78,6 @@ namespace DAW::Shape {
     }
 
     float shape_t::sampleCurve(float posX, bool sampleLeftRight) const {
-        dbgassert(!pts.empty());
         if (pts.empty())
             return 0.0f;
         if (pts.size() == 1) {
@@ -330,6 +329,51 @@ namespace DAW::Shape {
         auto pt2 = shape_pt_t{ { 0.5f, 1.0f }, 0.5f };
         auto pt3 = shape_pt_t{ { 1.0f, 0.0f }, 0.5f };
         return shape_t{ flags, { { pt1, pt2, pt3 } }, "Saw", -1.0f };
+    }
+
+    std::vector<shape_pt_t> GetShape(ShapeWaveform waveform) {
+        std::vector<shape_pt_t> pts;
+        switch (waveform) {
+            case ShapeWaveform::SHAPE_SAW:
+            case ShapeWaveform::SHAPE_SAW_INV: {
+                bool bInv = waveform == ShapeWaveform::SHAPE_SAW_INV;
+                pts.push_back({ { 0.0f, bInv ? 0.0f : 1.0f }, 0.5f });
+                pts.push_back({ { 1.0f, bInv ? 1.0f : 0.0f }, 0.5f });
+                break;
+            }
+            case ShapeWaveform::SHAPE_TRIANGLE:
+            case ShapeWaveform::SHAPE_TRIANGLE_INV: {
+                bool bInv = waveform == ShapeWaveform::SHAPE_TRIANGLE_INV;
+                pts.push_back({ { 0.0f, bInv ? 1.0f : 0.0f }, 0.5f });
+                pts.push_back({ { 0.5f, bInv ? 0.0f : 1.0f }, 0.5f });
+                pts.push_back({ { 1.0f, bInv ? 1.0f : 0.0f }, 0.5f });
+                break;
+            }
+            case ShapeWaveform::SHAPE_SQUARE:
+            case ShapeWaveform::SHAPE_SQUARE_INV: {
+                bool bInv = waveform == ShapeWaveform::SHAPE_SQUARE_INV;
+                pts.push_back({ { 0.0f, bInv ? 1.0f : 0.0f }, 0.5f });
+                pts.push_back({ { 0.0f, bInv ? 0.0f : 1.0f }, 0.5f });
+                pts.push_back({ { 0.5f, bInv ? 0.0f : 1.0f }, 0.5f });
+                pts.push_back({ { 0.5f, bInv ? 1.0f : 0.0f }, 0.5f });
+                break;
+            }
+            case ShapeWaveform::SHAPE_SINE:
+            case ShapeWaveform::SHAPE_SINE_INV: {
+                bool bInv = waveform == ShapeWaveform::SHAPE_SINE_INV;
+                auto numPoints = 64;
+                for (int i = 0; i < numPoints; ++i) {
+                    float x = i / float(numPoints - 1);
+                    float v = ::sinf(x * 2.0f * M_PI) * 0.5f + 0.5f;
+                    if (bInv) {
+                        v = 1.0f - v;
+                    }
+                    pts.push_back({ { x, v }, 0.5f });
+                }
+                break;
+            }
+        }
+        return pts;
     }
 
     void shape_t::assertSorted() const {

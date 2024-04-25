@@ -15,7 +15,7 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
         nvgSave(vg);
         setScissorTransform(vg);
 
-        auto minInset = math::min(size.y, size.x) / 8;
+        auto minInset = math::min(size.y, size.x) / 4;
         float strWidth = 0;
         bool insetText = drawFn && str.length();
         ivec2 renderFrame = size;
@@ -24,13 +24,13 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
             renderFrame.x -= minInset*2;
             renderPos.x += minInset*2;
         }
-        if (str.length() > 0) {
+        if (str.length() > 0 && (renderFrame.x > (drawFn ? 20 : 10))) {
             auto fontScale = math::clamp(math::min(size.y, size.x), 4, 48) * FONT_AUTOSCALE;
             strWidth = renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), renderPos, renderFrame);
-            renderFrame = vec2(size.x * 0.5f - strWidth * 0.5f - renderPos.x, size.y);
+            renderFrame.x = renderPos.x + (renderFrame.x - strWidth) * 0.5f;
+            renderPos.x = 0;
         }
-        if (drawFn) {
-            renderPos.x = strWidth > 0 ? minInset : 0;
+        if (drawFn && renderFrame.x > 5) {
             int drawParm2 = isFlag(FLG_RENDER_BUTTON_WITH_LED) ? (getState() ? IMG_LED : IMG_LED_OFF) : -1;
             drawFn(vg, renderPos, renderFrame, theme->getColor(getBackgroundColor()), drawParm, drawParm2);
         }
