@@ -1668,7 +1668,6 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 evt.requestFocus(this);
                 return true;
             }
-            return false;
         }
         for (guibase* gui : guis) {
             if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
