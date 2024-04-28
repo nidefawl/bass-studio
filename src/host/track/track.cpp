@@ -1850,15 +1850,19 @@ namespace DAW {
         return nullptr;
     }
     void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref modChannel, const modulation_scaling_t& scale) {
-        // int32_t numModulations = 0;
-        if (dev->isParamModulated(paramIdx)) {
+        auto param = dev->getParam(paramIdx);
+        if (!param) {
+            return;
+        }
+        if (param->isModulated()) {
             auto* pModulations = dev->getModulations(paramIdx);
-            for (auto mod : *pModulations) {
-                if (mod->refSrc == modChannel.refSrc) {
-                    return;
+            if (pModulations) {
+                for (auto mod : *pModulations) {
+                    if (mod->refSrc == modChannel.refSrc) {
+                        return;
+                    }
                 }
             }
-            // numModulations = CtrSize(inputs);
         }
         auto inputRef = modChannel;
         inputRef.paramIdxDst = paramIdx;
@@ -1867,6 +1871,12 @@ namespace DAW {
 
         if (inputRef.scale.mode == ModulationMode::BYPASS) {
             inputRef.scale.mode = ModulationMode::MUL;
+        }
+        if (param->isBiPolar) {
+            // use ADD and range -0.5 to 0.5
+            inputRef.scale.mode = ModulationMode::ADD;
+            inputRef.scale.min = -0.5f;
+            inputRef.scale.max = 0.5f;
         }
 
         dev->getModulations().push_back(inputRef);
