@@ -121,6 +121,17 @@ enum NVGcompositeOperation {
 	NVG_XOR,
 };
 
+enum NVGBatchedShading {
+	NVG_BATCHED_FLAT = 0,
+    NVG_BATCHED_SHADED = 1,
+    NVG_BATCHED_LINE_VERTICAL = 2,
+    NVG_BATCHED_LINE_HORIZONTAL = 3,
+    NVG_BATCHED_SHADED_BORDER_BRIGHT = 4,
+    NVG_BATCHED_SHADED_BORDER_DARK = 5,
+    NVG_BATCHED_DIAGONAL_STRIPES = 6,
+    NVG_BATCHED_DIAGONAL_STRIPES_ALPHA = 7,
+};
+
 struct NVGcompositeOperationState {
 	int srcRGB;
 	int dstRGB;

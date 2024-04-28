@@ -4901,7 +4901,7 @@ class guicontainer_plugin_synth_voicestates final : public guictr_base {
                 NVGpaint paint{};
                 paint.image      = -1;
                 paint.innerColor = theme->getColor(GuiColor::COL_NOTE_MUTE);
-                paint.customPar  = 1;
+                paint.customPar = NVGBatchedShading::NVG_BATCHED_SHADED;
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
             }
@@ -4914,7 +4914,7 @@ class guicontainer_plugin_synth_voicestates final : public guictr_base {
                 NVGpaint paint{};
                 paint.image      = -1;
                 paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
-                paint.customPar  = 1;
+                paint.customPar = NVGBatchedShading::NVG_BATCHED_SHADED;
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
             }

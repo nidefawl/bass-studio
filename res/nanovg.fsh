@@ -205,6 +205,16 @@ vec4 getShadedBox(vec2 pt, vec2 Border, vec4 color, float intens) {
 #define NSVG_SHADER_IMG 3
 #define NSVG_SHADER_BATCHED_TRI_COLORED 4
 #define NSVG_SHADER_BATCHED_CIRCLE_COLORED 5
+
+#define NVG_BATCHED_FLAT 0
+#define NVG_BATCHED_SHADED 1
+#define NVG_BATCHED_LINE_VERTICAL 2
+#define NVG_BATCHED_LINE_HORIZONTAL 3
+#define NVG_BATCHED_SHADED_BORDER_BRIGHT 4
+#define NVG_BATCHED_SHADED_BORDER_DARK 5
+#define NVG_BATCHED_DIAGONAL_STRIPES 6
+#define NVG_BATCHED_DIAGONAL_STRIPES_ALPHA 7
+
 void main(void) {
 	float scissor = scissorMask(fpos);
 	vec4 result = vec4(0,0,0,1);
@@ -291,18 +301,52 @@ void main(void) {
 		// 0 flat
 		// 1 shaded
 		// 2 aa vertical lines
+        // 3 aa horizontal lines
+        // 4 shaded with border (bright)
+        // 5 shaded with border (dark)
+        // 6 diagonal stripes for muted note rects
+        // 7 diagonal stripes for selected note rects
 		vec4 color = vec4(0.0);
-		if (texType == 1) {
+		if (texType == NVG_BATCHED_SHADED) {
 			color = getShadedBox(fpos.xy, getBoxGradientSmooth(ftcoord.xy), innerCol, 0.3);
-		} else if (texType == 2) {
-			float distCenterX = (abs(0.5 - ftcoord.x) * 4.) * 1.0;
+		} else if (texType == NVG_BATCHED_LINE_VERTICAL) {
+			float distCenterX = abs(0.5 - ftcoord.x) * 4.;
 			float intens = clamp(1.0 - distCenterX, 0., 1.);
 			color = innerCol * intens;
-		} else if (texType == 3) {
-			float distCenterY = (abs(0.5 - ftcoord.y) * 4.) * 1.0;
+		} else if (texType == NVG_BATCHED_LINE_HORIZONTAL) {
+			float distCenterY = abs(0.5 - ftcoord.y) * 4.;
 			float intens = clamp(1.0 - distCenterY, 0., 1.);
 			color = innerCol * intens;
-		} else {
+		} else if (texType == NVG_BATCHED_SHADED_BORDER_BRIGHT) {
+			color = getShadedBox(fpos.xy, getBoxGradientSmooth(ftcoord.xy), innerCol, 1.4);
+		} else if (texType == NVG_BATCHED_SHADED_BORDER_DARK) {
+			color = getShadedBox(fpos.xy, getBoxGradientSmooth(ftcoord.xy), innerCol, 1.2);
+        } else if (texType == NVG_BATCHED_DIAGONAL_STRIPES || texType == NVG_BATCHED_DIAGONAL_STRIPES_ALPHA) {
+            const float lineEach = 9.0;
+            const float lineWidth = 1.5;
+            color = getShadedBox(fpos.xy, getBoxGradientSmooth(ftcoord.xy), innerCol, 0.6);
+            vec2 d = abs(vec2(dFdx(ftcoord.x), dFdy(ftcoord.y)));
+            vec2 p = ftcoord / d;
+            // use gl frag cord to make a diaognal line pattern
+            vec2 fragGLXY = p.xy;
+            if (texType == NVG_BATCHED_DIAGONAL_STRIPES_ALPHA) {
+                fragGLXY.x += ftcoord.y*16;
+            } else {
+                fragGLXY.x -= ftcoord.y*16;
+            }
+            float fragGLXYNorm = mod(fragGLXY.x, lineEach);
+            const float borderWidth = 2.0;
+			float dist = abs(fragGLXYNorm - lineEach/2.0) / borderWidth;
+			float intens = clamp(1.0 - dist, 0., 1.);
+            if (texType == NVG_BATCHED_DIAGONAL_STRIPES_ALPHA) {
+                intens = max(intens, clamp(borderWidth - p.x, 0.0, 1.0));
+                intens = max(intens, clamp(p.x - (1.0/d.x - borderWidth), 0.0, 1.0));
+                intens = max(intens, clamp(borderWidth - p.y, 0.0, 1.0));
+                intens = max(intens, clamp(p.y - (1.0/d.y - borderWidth), 0.0, 1.0));
+                color.a = intens;
+                color.rgb *= intens;
+            }
+        } else {
 			color = innerCol;
 		}
 		result = color * scissor;

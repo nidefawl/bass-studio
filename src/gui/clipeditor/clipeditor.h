@@ -11,6 +11,7 @@
 #include "gui/dropdown/dropdown.h"
 #include "gui/dropdown/dropdown_generic.h"
 #include "gui/shape/shapeeditor.h"
+#include "guicolors.h"
 #include "guiconstant.h"
 #include "layout.h"
 #include "logging.h"
@@ -610,9 +611,9 @@ protected:
 
 class gui_clipcontent_notes final : public gui_clipcontent {
     void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, 
-                                tick_t tickOffset, float scale, float inset, NVGcolor color, int32_t shading, bool renderMuted);
+                                tick_t tickOffset, float scale, float inset, NVGcolor color, NVGBatchedShading shading, bool renderMuted);
     void renderNoteLabels(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, 
-                                tick_t tickOffset, float scale, bool bRenderPosLen, bool bRenderMuted = true);
+                                tick_t tickOffset, float scale, bool bRenderPosLen, bool bRenderMuted = true, GuiColor::constant_t col = GuiColor::COL_NOTE_TEXT);
 public:
     gui_clipcontent_notes(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);

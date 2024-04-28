@@ -1267,7 +1267,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 
     if (nRendered) {
         paint.innerColor = theme->getColor(GuiColor::COL_GRID_DRK);
-        paint.customPar  = 1;
+        paint.customPar = NVGBatchedShading::NVG_BATCHED_SHADED;
         nvgFillPaint(vg, paint);
         nvgBatchedRender(vg);
     }
@@ -1302,7 +1302,7 @@ void guitrack_editor::render(NVGcontext* vg) {
                     paint.innerColor = theme->getColor(GuiColor::COL_LINE_XTH);
                     break;
             }
-            paint.customPar = 2;
+            paint.customPar = NVGBatchedShading::NVG_BATCHED_LINE_VERTICAL;
             nvgFillPaint(vg, paint);
             nvgBatchedRender(vg);
         }

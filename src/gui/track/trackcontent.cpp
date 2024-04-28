@@ -871,7 +871,7 @@ void gui_track::renderTrackFolded(NVGcontext* vg) {
         vec2 pos = vec2(0, 0);
         NVGpaint paint{};
         paint.image     = -1;
-        paint.customPar = 1;
+        paint.customPar = NVGBatchedShading::NVG_BATCHED_SHADED;
         for (auto& child : children) {
             for (auto& entry : child->clipsGuis) {
                 if (entry.first && entry.second) {

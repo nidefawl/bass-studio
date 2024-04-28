@@ -305,7 +305,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
         paint.image      = -1;
         paint.innerColor = theme->getColor(GuiColor::COL_PIANOROLL_BLACK);
         paint.outerColor = paint.innerColor;
-        paint.customPar  = 1;
+        paint.customPar  = NVGBatchedShading::NVG_BATCHED_SHADED;
 
         float yoct = 0;
         for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {

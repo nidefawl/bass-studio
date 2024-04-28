@@ -313,7 +313,7 @@ void renderMidiClipToCache(NVGcontext* vg, noteview_cache_impl_t* impl, const gu
                         paint.image      = -1;
                         paint.innerColor = rgbNote;
                         paint.outerColor = rgbNote;
-                        paint.customPar  = 4;
+                        paint.customPar  = NVGBatchedShading::NVG_BATCHED_SHADED_BORDER_BRIGHT;
                         nvgFillPaint(vg, paint);
                         nvgBatchedRender(vg);
                     }
@@ -363,7 +363,7 @@ void renderMidiClipToCache(NVGcontext* vg, noteview_cache_impl_t* impl, const gu
                             paint.image      = -1;
                             paint.innerColor = j == 0 ? rgbNoteOverlap : rgbNoteMuted;
                             paint.outerColor = j == 0 ? rgbNoteOverlap : rgbNoteMuted;
-                            paint.customPar  = 4;
+                            paint.customPar  = NVGBatchedShading::NVG_BATCHED_SHADED_BORDER_BRIGHT;
                             nvgFillPaint(vg, paint);
                             nvgBatchedRender(vg);
                         }
