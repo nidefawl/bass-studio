@@ -186,6 +186,8 @@ void gui_graph_entry::render(NVGcontext* vg) {
     nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
     nvgTranslateZ(vg, -4.0f);
     for (guibase* gui : guis) {
+        if (!gui->isVisible())
+            continue;
         nvgSave(vg);
         gui->render(vg);
         nvgRestore(vg);
