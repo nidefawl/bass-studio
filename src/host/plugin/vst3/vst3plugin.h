@@ -1082,7 +1082,7 @@ public:
                     switch (midi.StatusMsg()) {
                         case IMidiMsg::kChannelAftertouch: {
                             auto cc = Steinberg::Vst::ControllerNumbers::kAfterTouch;
-                            ParamID paramId = -1;
+                            ParamID paramId = ParamID(-1);
                             if (Steinberg::kResultOk == vst3MidiMapping->getMidiControllerAssignment(midiBusIndex, midiCannel, cc, paramId)) {
                                 auto value = midi.mData1 / 127.0f;
                                 int32_t queueIndex = 0;
@@ -1093,7 +1093,7 @@ public:
                         }
                         case IMidiMsg::kPitchWheel: {
                             auto cc = Steinberg::Vst::ControllerNumbers::kPitchBend;
-                            ParamID paramId = -1;
+                            ParamID paramId = ParamID(-1);
                             if (Steinberg::kResultOk == vst3MidiMapping->getMidiControllerAssignment(midiBusIndex, midiCannel, cc, paramId)) {
                                 auto value = midi.PitchWheel() * 0.5 + 0.5;
                                 int32_t queueIndex = 0;
@@ -1104,7 +1104,7 @@ public:
                         }
                         case IMidiMsg::kControlChange: {
                             auto cc = midi.mData1;
-                            ParamID paramId = -1;
+                            ParamID paramId = ParamID(-1);
                             if (Steinberg::kResultOk == vst3MidiMapping->getMidiControllerAssignment(midiBusIndex, midiCannel, cc, paramId)) {
                                 auto value = midi.mData2 / 127.0f;
                                 int32_t queueIndex = 0;
