@@ -352,8 +352,15 @@ private:
     std::vector<automation_lane_t> automationLanes;//TODO: make this a map
     std::vector<DAW::modulation_channel_ref> inputChannelsModulation;
     std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>> mapModulations;
+    bool bIsBypassModulation = false;
 protected:
     const std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>>& getModulationsMap() const {
+        return mapModulations;
+    }
+    const std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>>& getActiveModulations() const {
+        static std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>> empty;
+        if (bIsBypassModulation)
+            return empty;
         return mapModulations;
     }
     const std::vector<automation_lane_t>& getAutomationLanes() const {
@@ -372,7 +379,24 @@ public:
         mapParams[identifier] = std::move(newParam);
         return &mapParams[identifier];
     }
-
+    void setBypassModulation(bool bBypass) {
+        bool bRestore = !bIsBypassModulation && bBypass;
+        bIsBypassModulation = bBypass;
+        if (bRestore) {
+            for (auto& entry : mapParams) {
+                auto& param = entry.second;
+                if (param.isModulated()) {
+                    auto curVal = param.getValueModulated();
+                    auto newVal = param.getValue();
+                    param.setModulated(newVal);
+                    postSetParameter(param.idx, newVal, curVal, FLG_PAR_UPDATE_USER);
+                }
+            }
+        }
+    }
+    bool isBypassModulation() const {
+        return bIsBypassModulation;
+    }
     void setModulations(const std::vector<DAW::modulation_channel_ref>& inputChannelsModulation);
     void removeModulation(int32_t paramIdx, int32_t modulationIndex);
     void updateModulationMap();

@@ -132,13 +132,25 @@ class vst3plugin final : public effectbase {
         {
             if ((flags & Steinberg::Vst::RestartFlags::kParamValuesChanged) ||
                 (flags & Steinberg::Vst::RestartFlags::kParamTitlesChanged)) {
+                if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
+                    log_lf(Log::L_ERROR, "%s: Requires Main Thread!\n", StringAsCStr(plugin->getName()));
+                    return Steinberg::kResultFalse;
+                }
+                auto& tls = daw_tls::getTls();
+                auto lock = tls.dawInstance->lockPlayThread();
                 plugin->visitParams([editController=plugin->editController](auto& mapEntry) {
                     automatable_param_t& param = mapEntry.second;
                     if (param.internalIdx >= 0) {
                         param.paramNameState |= PARAM_FLAG_DIRTY;
                         param.paramDisplayValState |= PARAM_FLAG_DIRTY;
                         if (editController) {
-                            param.setValue(editController->getParamNormalized(param.internalIdx));
+                            if (param.name.find("A CoarsePit") != std::string::npos) {
+                                auto f = editController->getParamNormalized(param.internalIdx);
+                                log_lf(Log::L_DEBUG, "A CoarsePit: %f\n", f);
+                                param.setValue(f);
+                            } else {
+                                param.setValue(editController->getParamNormalized(param.internalIdx));
+                            }
                             param.paramValueState = PARAM_FLAG_SET;
                         }
                     }
@@ -383,9 +395,9 @@ public:
             automatable_param_t* param = registerParam(paramIdentifier);
             if (info.flags & ParameterInfo::kIsProgramChange) {
                 programChangeParameter = info;
-                param->isHidden = true;
+                param->isHidden = false;
             }
-            if (info.flags & ParameterInfo::kIsHidden) {
+            else if (info.flags & ParameterInfo::kIsHidden) {
                 param->isHidden = true;
             }
             if (info.flags & ParameterInfo::kIsReadOnly) {
@@ -674,7 +686,7 @@ public:
 
         auto& automationLanes = getAutomationLanes();
         // auto& inputChannelsModulation = getModulations();
-        auto& mapModulations = getModulationsMap();
+        auto& mapModulations = getActiveModulations();
 
         auto tempo100 = host->prjGlobals.tempo100;
         // auto samplesToTicks = sampleToTickConvert<double, roundmode::none>(1.0, tempo100, format.sampleRate);
@@ -799,7 +811,22 @@ public:
         }
 
         inputParameterChanges.clearQueue();
-        outputParameterChanges.clearQueue();
+        // print output
+        int32_t outCount = outputParameterChanges.getParameterCount();
+        if (outCount > 0) {
+            for (int32_t i = 0; i < outCount; ++i) {
+                IParamValueQueue* queue = outputParameterChanges.getParameterData(i);
+                if (queue) {
+                    int32_t pointCount = queue->getPointCount();
+                    for (int32_t j = 0; j < pointCount; ++j) {
+                        int32 sampleOffset = 0;
+                        ParamValue value = 0;
+                        queue->getPoint(j, sampleOffset, value);
+                    }
+                }
+            }
+            outputParameterChanges.clearQueue();
+        }
     }
 
     void createSnapshot(plugin_snapshot_t& ps, vst3plugin* plugin, const tracksnapshot_store_opts_t& opts) {

@@ -32,6 +32,7 @@ public:
     guibuttontoggle buttonDelete;
     guibuttontoggle buttonLayout;
     guibuttontoggle buttonSave;
+    guibuttontoggle buttonBypassModulation;
     gui_trackmeter  guiMeter;
     float titlePosX        = 0;
     bool hasDragged        = false;

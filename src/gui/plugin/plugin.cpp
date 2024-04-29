@@ -58,6 +58,7 @@ using Table::tblString;
 void setDraggedPluginsUI(guictr_dragged_plugins& gui, plugin_selection& sel);
 
 guiplugin::~guiplugin() {
+    remove(&buttonBypassModulation);
     remove(&buttonLayout);
     remove(&buttonDelete);
     remove(&buttonBypass);
@@ -112,6 +113,10 @@ void guiplugin::determineSize(ivec2& prefSize) {
 }
 
 void guiplugin::buttonClicked(guibase* _button) {
+    if (_button == &buttonBypassModulation) {
+        effect->setBypassModulation(!effect->isBypassModulation());
+        return;
+    }
     if (_button == &buttonLayout) {
         setLayoutMode((layoutMode + 1) % 2);
         parent->onChildLayoutChanged(this);
@@ -192,11 +197,18 @@ guiplugin::guiplugin(effectbase* _effect)
     buttonLayout.setLabel("Hide");
     buttonSave.icon = ICON_SAVE;
     buttonSave.setLabel("Save");
+    buttonBypassModulation.icon = ICON_MODULATION_INPUT;
+    buttonBypassModulation.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
+    buttonBypassModulation.setLabel("Bypass Modulation");
+    buttonBypassModulation.fnGetState  = [_effect]() {
+        return !_effect->isBypassModulation();
+    };
     add(&guiMeter);
     addGuiBtnTitlebar(&buttonBypass);
     addGuiBtnTitlebar(&buttonLayout);
     addGuiBtnTitlebar(&buttonDelete);
     addGuiBtnTitlebar(&buttonSave);
+    addGuiBtnTitlebar(&buttonBypassModulation);
     setFlag(FLG_SUPPRESS_TOOLTIP, false);
 }
 void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {

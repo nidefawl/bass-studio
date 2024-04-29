@@ -110,6 +110,7 @@ namespace RenderResources {
             load(vg, "icons/warning.png", imgIconsBuf[ICON_WARNING]);
             load(vg, "icons/modulation.png", imgIconsBuf[ICON_MODULATION]);
             load(vg, "icons/loading.png", imgIconsBuf[ICON_LOADING]);
+            load(vg, "icons/modulation_input.png", imgIconsBuf[ICON_MODULATION_INPUT]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];

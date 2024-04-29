@@ -1536,7 +1536,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
 
     auto& automationLanes = getAutomationLanes();
     // auto& inputChannelsModulation = getModulations();
-    auto& mapModulations = getModulationsMap();
+    auto& mapModulations = getActiveModulations();
 
     auto tempo100 = host->prjGlobals.tempo100;
     // auto samplesToTicks = sampleToTickConvert<double, roundmode::none>(1.0, tempo100, format.sampleRate);

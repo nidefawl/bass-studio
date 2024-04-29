@@ -533,7 +533,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     if (automationLanes.empty() && inputChannelsModulation.empty()) {
         return;
     }
-    for (const auto& entry : mapModulations) {
+    for (const auto& entry : getActiveModulations()) {
         int32_t paramIdx = entry.first;
         auto param = getParam(paramIdx);
         if (!param)
@@ -583,6 +583,7 @@ float automatable_t::getModulatedParameterAt(const DAW::Host::PluginManager* con
     if (!param) {
         return 0.0f;
     }
+    auto mapModulations = getActiveModulations();
     auto it = mapModulations.find(paramIdx);
     if (it == mapModulations.end()) {
         auto automLane = getRegisteredConstAutomation(paramIdx);
