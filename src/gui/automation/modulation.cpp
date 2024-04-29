@@ -25,6 +25,7 @@
 #include "window.h"
 #include <array>
 #include <functional>
+#include <nanovg_min.h>
 #include <utility>
 
 namespace DAW::UI::Modulation {
@@ -165,11 +166,62 @@ class guictxtmenu_modulation final : public guictxtmenu {
     }
 
     void gui_dragged_modulation::dragMoveOn(guibase* target, ivec2 mousepos) {
-        target->modulationDragMove(this, toControlsObjectSpace(mousepos, target));
+        automatable_param_ref_t newRef = {.type = AUTOMATABLE_NONE, .paramIdx = -1};
+        automatable_t* newAt = nullptr;
+        if (target->getGuiType() == gui_type::GUI_TYPE_KNOB || target->getGuiType() == gui_type::GUI_TYPE_SLIDER_TEXTFIELD) {
+            auto knob = dynamic_cast<DAW::UI::IModulateable*>(target);
+            int32_t paramIdx = -1;
+            knob->getAutomationRef(newAt, paramIdx);
+            if (newAt) {
+                newRef = newAt->toRef();
+                newRef.paramIdx = paramIdx;
+            }
+        }
+        if (newRef != previewParamRef) {
+            auto daw = dawCtrl->getDaw();
+            auto lock = daw->lockPlayThread();
+            auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
+            if (prevAt) {
+                DAW::DisonnectModulationForParam(prevAt, previewParamRef.paramIdx);
+                // previewParamRef = {};
+            }
+            previewParamRef = newRef;
+            if (newAt) {
+                modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD, .bClamp = false};
+                DAW::ConnectModulationInputChannel(newAt, newRef.paramIdx, getChannelRef(), scale, true);
+            }
+        }
     }
 
     void gui_dragged_modulation::dragReleaseOn(guibase* target, ivec2 mousepos) {
-        target->modulationDragRelease(this, toControlsObjectSpace(mousepos, target));
+        if (previewParamRef.type != AUTOMATABLE_NONE) {
+            auto daw = dawCtrl->getDaw();
+            auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
+            if (prevAt) {
+                auto lock = daw->lockPlayThread();
+                DAW::DisonnectModulationForParam(prevAt, previewParamRef.paramIdx);
+            }
+            previewParamRef = {};
+        }
+        if (target->getGuiType() == gui_type::GUI_TYPE_KNOB || target->getGuiType() == gui_type::GUI_TYPE_SLIDER_TEXTFIELD) {
+            auto knob = dynamic_cast<DAW::UI::IModulateable*>(target);
+            automatable_t* at;
+            int32_t paramIdx;
+            knob->getAutomationRef(at, paramIdx);
+            if (at) {
+                auto lock = dawCtrl->lockPlayThread();
+                modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD, .bClamp = false};
+                DAW::ConnectModulationInputChannel(at, paramIdx, getChannelRef(), scale, false);
+            }
+        }
+        if (target->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
+            auto btn = dynamic_cast<DAW::UI::Modulation::guibutton_modulate*>(target);
+            if (dawCtrl->getEditModulation() == btn) {
+                dawCtrl->setEditModulation({});
+            } else {
+                dawCtrl->setEditModulation(toRef());
+            }
+        }
     }
 
     void gui_dragged_modulation::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
@@ -189,8 +241,24 @@ class guictxtmenu_modulation final : public guictxtmenu {
             textField.render(vg);
         }
     }
-    void guibutton_modulate::handleDraggedMove(MouseEvent& evt) {
+
+    void guibutton_modulate::render(NVGcontext* vg) {
+        if (dawCtrl && dawCtrl->getIsContainerRenderPass() && dawCtrl->getEditModulation() == this) {
+            DawCtrl::ui_modulation_targets_t t;
+            nvgSaveState(vg, &t.state);
+            t.target = toRef();
+            dawCtrl->getUIModulationTargets().push_back(t);
+        }
+        guibutton::render(vg);
+    }
+
+    void guibutton_modulate::handleDraggedBegin(MouseEvent& evt) {
+        guibutton::handleDraggedBegin(evt);
         hasDragged = false;
+        // dawCtrl->setEditModulation(toRef());
+    }
+
+    void guibutton_modulate::handleDraggedMove(MouseEvent& evt) {
         if (!hasDragged) {
             dragged.setChannelRef(ref);
             dragged.setLabel(StringFormat("Modulation Macro %d", ref.paramIdxDst));
@@ -205,8 +273,8 @@ class guictxtmenu_modulation final : public guictxtmenu {
 
     void guibutton_modulate::handleDraggedRelease(MouseEvent& evt) {
         dbgassert(dragged.isDragRendered());
+        dawCtrl->objectDragRelease(&dragged, evt);
         if (hasDragged) {
-            dawCtrl->objectDragRelease(&dragged, evt);
             return;
         }
         if (parent)
@@ -216,11 +284,10 @@ class guictxtmenu_modulation final : public guictxtmenu {
     void guictr_edit_modulation::buttonClicked(guibase* _button) {
         if (_button ==  &btnAddModulation) {
             auto* popup = new DAW::UI::Modulation::guictxtmenu_modulation(dawCtrl);
-             
             popup->fnCallback = [this](const DAW::modulation_channel_ref& ref) -> void {
                 if (dawCtrl && paramAutomatable){
                     auto lock = dawCtrl->lockPlayThread();
-                    DAW::ConnectModulationInputChannel(paramAutomatable, paramIdx, ref, {});
+                    DAW::ConnectModulationInputChannel(paramAutomatable, paramIdx, ref, {}, false);
                     updateSlots();
                     layout();
                     parentCtrl->relayout();
@@ -438,6 +505,22 @@ class guictxtmenu_modulation final : public guictxtmenu {
         updateSlots();
     }
 
+    bool IsEditModulation(const guibase* gui, automatable_t* at, int32_t paramIdx) {
+        if (!at || !gui) {
+            return false;
+        }
+        auto dawCtrl = gui->dawCtrl;
+        if (dawCtrl) {
+            auto editing = dawCtrl->getEditModulation();
+            if (editing) {
+                auto ref = editing->getChannelRef();
+                if (at && at->isParamConnectedTo(paramIdx, ref))
+                    return true;
+            }
+        }
+        return false;
+    }
+
     bool IsHiglightedModulation(const guibase* gui, automatable_t* at, int32_t paramIdx) {
         if (!at || !gui) {
             return false;
@@ -451,6 +534,12 @@ class guictxtmenu_modulation final : public guictxtmenu {
             auto focused = dawCtrl->getFocusedModulation();
             if (focused) {
                 auto ref = focused->getChannelRef();
+                if (at && at->isParamConnectedTo(paramIdx, ref))
+                    return true;
+            }
+            auto editing = dawCtrl->getEditModulation();
+            if (editing) {
+                auto ref = editing->getChannelRef();
                 if (at && at->isParamConnectedTo(paramIdx, ref))
                     return true;
             }

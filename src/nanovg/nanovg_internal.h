@@ -42,16 +42,6 @@ enum NVGtexture {
 	NVG_TEXTURE_RGBA = 0x02,
 };
 
-struct NVGscissor {
-	float xform[6];
-	float extent[2];
-};
-typedef struct NVGscissor NVGscissor;
-struct NVGCachingStructure {
-	int enabled;
-};
-typedef struct NVGCachingStructure NVGCachingStructure;
-
 struct NVGvertex {
 	float x,y,
 #ifdef NVG_3D_MODE

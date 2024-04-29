@@ -74,30 +74,6 @@ enum NVGpointFlags
 	NVG_PR_INNERBEVEL = 0x08,
 };
 
-struct NVGstate {
-	NVGcompositeOperationState compositeOperation;
-	int shapeAntiAlias;
-	NVGpaint fill;
-	NVGpaint stroke;
-	float strokeWidth;
-	float miterLimit;
-	int lineJoin;
-	int lineCap;
-	int tess;
-	float alpha;
-	float xform[6];
-	float zOffset;
-	NVGscissor scissor;
-	float fontSize;
-	float letterSpacing;
-	float lineHeight;
-	float fontBlur;
-	int textAlign;
-	int fontId;
-	NVGCachingStructure commandCache;
-};
-typedef struct NVGstate NVGstate;
-
 struct NVGpoint {
 	float x,y;
 	float dx, dy;
@@ -668,6 +644,20 @@ void nvgRestore(NVGcontext* ctx)
 	if (ctx->nstates <= 1)
 		return;
 	ctx->nstates--;
+}
+
+void nvgSaveState(NVGcontext* ctx, NVGstate* state)
+{ 
+    if (ctx->nstates < 1) return;
+    // copy top of the stack to state
+    memcpy(state, &ctx->states[ctx->nstates-1], sizeof(NVGstate));
+}
+
+void nvgRestoreState(NVGcontext* ctx, NVGstate* state) 
+{
+    if (ctx->nstates < 1) return;
+    // copy state to top of the stack
+    memcpy(&ctx->states[ctx->nstates-1], state, sizeof(NVGstate));
 }
 
 void nvgReset(NVGcontext* ctx)

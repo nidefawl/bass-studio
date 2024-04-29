@@ -3,17 +3,16 @@
 #include "gui/controls/textfield.h"
 #include "guicolors.h"
 #include "math/seq_math.h"
+#include "gui/automation/modulation.h"
 #include <functional>
+#include <nanovg_min.h>
 #include <optional>
 
 struct automatable_t;
 struct automatable_param_t;
 struct param_modulation_range_t;
-namespace DAW::UI::Modulation {
-    class gui_dragged_modulation;
-}
 
-class guiknob : public guibase {
+class guiknob : public guibase, public DAW::UI::IModulateable {
 public:
     enum class knobtype {
         KNOB_LABELED,
@@ -48,6 +47,7 @@ public:
     std::function<void(float, float)> fnValueEditFinish;
     std::function<void(MouseHitEvt&, bool)> fnFocus;
     explicit guiknob(knobtype knobType) : guibase(), knobType(knobType) {
+        setGuiType(gui_type::GUI_TYPE_KNOB);
         setBackgroundRendered(false);
         setCanMouseHit(true);        
     }
@@ -78,6 +78,10 @@ public:
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
+    }
+    void getAutomationRef(automatable_t*& at, int32_t& paramIdx) const override {
+        paramIdx = this->paramIdx;
+        at       = this->paramAutomatable;
     }
     int32_t getParamIdx() const { return paramIdx; }
     void setKnobInternalHandlers();
@@ -154,17 +158,17 @@ public:
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     virtual void setToDefaultValue();
     virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges();
-    void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
-    void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
+    void storeEditModulationTransform(NVGcontext* vg);
 };
 
-class gui_slider_textfield : public gui_textfield {
+class gui_slider_textfield : public gui_textfield, public DAW::UI::IModulateable {
 protected:
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx  = -1;
     float fBeginValue = 0.0f;
 public:
     gui_slider_textfield() : gui_textfield() {
+        setGuiType(gui_type::GUI_TYPE_SLIDER_TEXTFIELD);
         setCanMouseHit(true);
         setAlignment(gui_textfield::Alignment::Center);
         setReturnCommits(true);
@@ -185,12 +189,14 @@ public:
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
     }
+    void getAutomationRef(automatable_t*& at, int32_t& paramIdx) const override {
+        paramIdx = this->paramIdx;
+        at       = this->paramAutomatable;
+    }
     void handleRightClick(MouseEvent& evt) override;
     virtual bool isAutomated();
     virtual bool isModulated();
 
-    void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
-    void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
     void render(NVGcontext* vg) override;
     void layout() override {
         gui_textfield::layout();

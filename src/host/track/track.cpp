@@ -1849,7 +1849,7 @@ namespace DAW {
         dbgassert(0);
         return nullptr;
     }
-    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref modChannel, const modulation_scaling_t& scale) {
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref modChannel, const modulation_scaling_t& scale, bool bIsTemporary) {
         auto param = dev->getParam(paramIdx);
         if (!param) {
             return;
@@ -1868,28 +1868,35 @@ namespace DAW {
         inputRef.paramIdxDst = paramIdx;
         inputRef.refSrc = modChannel.refSrc;
         inputRef.scale = scale;
+        inputRef.bIsTemporary = bIsTemporary;
 
         if (inputRef.scale.mode == ModulationMode::BYPASS) {
             inputRef.scale.mode = ModulationMode::MUL;
-        }
-        if (param->isBiPolar) {
-            // use ADD and range -0.5 to 0.5
-            inputRef.scale.mode = ModulationMode::ADD;
-            inputRef.scale.min = -0.5f;
-            inputRef.scale.max = 0.5f;
+            if (param->isBiPolar) {
+                // use ADD and range -0.5 to 0.5
+                inputRef.scale.mode = ModulationMode::ADD;
+                inputRef.scale.min = -0.5f;
+                inputRef.scale.max = 0.5f;
+            }
         }
 
         dev->getModulations().push_back(inputRef);
         dev->updateModulationMap();
     }
     void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx) {
+        bool bErased = false;
         auto& inputs = dev->getModulations();
         for (int i = 0; i < CtrSize(inputs); i++) {
             if (inputs[i].paramIdxDst == paramIdx) {
                 inputs.erase(inputs.begin() + i);
+                bErased = true;
             }
         }
-        dev->updateModulationMap();
+        if (bErased) {
+            dev->updateModulationMap();
+            auto val = dev->getParam(paramIdx)->getValue();
+            dev->postSetParameter(paramIdx, val, val, FLG_PAR_UPDATE_USER);
+        }
     }
     void DisonnectModulationInputChannel(automatable_t* dev, DAW::modulation_channel_ref modChannel) {
         auto& inputs = dev->getModulations();

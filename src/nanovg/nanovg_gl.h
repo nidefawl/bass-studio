@@ -134,6 +134,7 @@ typedef struct {
  int uniformFragSize;
  int nframebuffers;
  int nframebuffersInUse;
+ int ncallsPerDrawType[5];
 } NVGGLRenderStats;
 
 // Functions to create GL framebuffers

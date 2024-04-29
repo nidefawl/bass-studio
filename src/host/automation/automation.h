@@ -68,6 +68,7 @@ namespace DAW {
         int32_t paramIdxDst = -1;
         automatable_param_ref_t refSrc{};
         modulation_scaling_t scale{};
+        bool bIsTemporary = false;
     };
     enum ModulationChannel : uint8_t {
         NONE = 0,
@@ -316,7 +317,7 @@ public:
     bool isModulated() const {
         return bIsModulated;
     }
-    void setModulated(bool _isModulated) {
+    void setIsModulated(bool _isModulated) {
         bIsModulated = _isModulated;
     }
     DAW::modulation_scaling_t& getAutomationScale() {
@@ -690,7 +691,7 @@ namespace DAW {
 
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
     const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const modulation_channel_ref& ref);
-    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref ref, const modulation_scaling_t& mode);
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref ref, const modulation_scaling_t& scale, bool bIsTemporary);
     void DisonnectModulationInputChannel(automatable_t* dev, modulation_channel_ref ref);
     void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx);
 

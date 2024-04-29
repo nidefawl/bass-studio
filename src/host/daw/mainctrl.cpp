@@ -1906,6 +1906,57 @@ void DawCtrl::setSingleClip(clip_t* clip) {
     });
 }
 
+void DawCtrl::renderContainers(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+    uiModulationTargets.clear();
+    bIsContainerRenderPass = true;
+    auto& renderContainers = getRenderContainers();
+    for (guictr_base* ctr : renderContainers) {
+        if (!ctr->isVisible()) {
+            continue;
+        }
+        if (ctr->size == ivec2{ 0, 0 }) {
+            log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
+            continue;
+        }
+        nvgSave(vg);
+        ctr->render(vg);
+        nvgRestore(vg);
+    }
+    bIsContainerRenderPass = false;
+    auto editModulation = getEditModulation();
+    if (editModulation) {
+        nvgSave(vg);
+        nvgGlobalAlpha(vg, 0.5f);
+        nvgBeginPath(vg);
+        nvgRect(vg, x, y, w, h);
+        nvgPathWinding(vg, NVGwinding::NVG_CW);
+        nvgSave(vg);
+        for (auto& el : uiModulationTargets) {
+            auto gui = safeRefGet(el.target);
+            if (gui) {
+                // NVGstate tmp
+                // nvgSaveState(vg, &tmp);
+                // memcpy(&tmp.xform, &el.state.xform, 6 * sizeof(float));
+
+                el.state.scissor.extent[0] += 4;
+                el.state.scissor.extent[1] += 4;
+                nvgRestoreState(vg, &el.state);
+
+                const auto framePad = 2;
+                const auto posFrame = gui->getLeftTop() - ivec2(framePad);
+                const auto sizeFrame = gui->size + ivec2(framePad * 2);
+                nvgRect(vg, posFrame.x, posFrame.y, sizeFrame.x, sizeFrame.y);
+            }
+        }
+        nvgRestore(vg);
+        nvgPathWinding(vg, NVGwinding::NVG_CCW);
+        nvgFillColor(vg, getTheme()->getColor(GuiColor::COL_BASE_BG_DISABLED));
+        nvgFill(vg);
+        nvgGlobalAlpha(vg, 1.0f);
+        nvgRestore(vg);
+    }
+}
+
 void DawCtrl::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
     view->ctr_clipeditorview.resetCache();
     view->visitEntries([clip, &clipboardView](SPLayoutEntry& entry) {
@@ -1933,7 +1984,6 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
     renderStats.clipsRendered       = 0;
     renderStats.notesRendered       = 0;
     //log_printf("prerender %d\n", seqthreads::getCurrentThreadId());
-
     hires_timer_t timer;
     for (guictr_base* ctr : getRenderContainers()) {
         if (ctr->isVisible()) {

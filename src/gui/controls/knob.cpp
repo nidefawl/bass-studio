@@ -2,6 +2,7 @@
 #include "assert_dbg.h"
 #include "basectrl.h"
 #include "event.h"
+#include "gui/controls/textfield.h"
 #include "knoblabeled.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
@@ -65,8 +66,16 @@ bool guiknob::isModulated() {
     }
     return false;
 }
-
+void guiknob::storeEditModulationTransform(NVGcontext* vg) {
+    if (dawCtrl && dawCtrl->getIsContainerRenderPass() && DAW::UI::Modulation::IsEditModulation(this, paramAutomatable, paramIdx)) {
+        DawCtrl::ui_modulation_targets_t t;
+        nvgSaveState(vg, &t.state);
+        t.target = toRef();
+        dawCtrl->getUIModulationTargets().push_back(t);
+    }
+}
 void guiknob::render(NVGcontext* vg) {
+    storeEditModulationTransform(vg);
     if (!isRenderableSizeAndContext(vg))
         return;
     ivec2 insetP = pos + ivec2(0);
@@ -323,7 +332,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         if (param->isModulated()) {
             type = 2;
             float fScaledModulated = getParamScaled(param, type);
-            const auto bIsModulationHighlighted = DAW::UI::Modulation::IsHiglightedModulation(this, paramAutomatable, paramIdx);
+            const auto bIsModulationHighlighted = DAW::UI::Modulation::IsEditModulation(this, paramAutomatable, paramIdx);
             if (bIsModulationHighlighted) {
                 float highLightMinVal = 0.025f;
                 if (param->isBiPolar) {
@@ -341,7 +350,8 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
             } else {
                 renderRoundKnob(vg, cx, cy, radius-1.0f, start, range, param->isBiPolar, fScaledModulated, theme->getColor(GuiColor::COL_KNOB_MODULATED), lineThickness - 2.0f);
             }
-        }        float fTextValue = 0.0f;
+        }
+        float fTextValue = 0.0f;
         if (parentCtrl->getGuiOverRef() == toRef()) {
             fTextValue = getParamByType(param, 0);
             fScaled = getParamScaled(param, 0);
@@ -551,6 +561,7 @@ void guiknob_labeled_base::layout() {
 }
 
 void guiknob_labeled_base::render(NVGcontext* vg) {
+    storeEditModulationTransform(vg);
     if (!isRenderableSizeAndContext(vg))
         return;
 
@@ -663,7 +674,14 @@ static void renderSlider(NVGcontext* vg, const vec2& insetP, const vec2& insetS,
         nvgFill(vg);
     }
 }
+
 void gui_slider_textfield::render(NVGcontext* vg) {
+    if (dawCtrl && dawCtrl->getIsContainerRenderPass() && DAW::UI::Modulation::IsEditModulation(this, paramAutomatable, paramIdx)) {
+        DawCtrl::ui_modulation_targets_t t;
+        nvgSaveState(vg, &t.state);
+        t.target = toRef();
+        dawCtrl->getUIModulationTargets().push_back(t);
+    }
     if (!isRenderableSizeAndContext(vg))
         return;
     vec2 insetP        = vec2(pos + 1);
@@ -871,19 +889,6 @@ bool gui_slider_textfield::isModulated() {
     return false;
 }
 
-void guiknob::modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
-    
-}
-
-void guiknob::modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
-    if (this->paramAutomatable) {
-#if BUILD_DAW_HOST
-        auto lock = dawCtrl->lockPlayThread();
-        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef(), {});
-#endif
-    }
-}
-
 GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
 #if BUILD_DAW_HOST
     if (DAW::UI::Modulation::IsHiglightedModulation(this, paramAutomatable, paramIdx)) {
@@ -902,17 +907,6 @@ GuiColor::constant_t guiknob::getBackgroundColor() const {
     return guibase::getBackgroundColor();
 }
 
-void gui_slider_textfield::modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
-}
-
-void gui_slider_textfield::modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
-    if (this->paramAutomatable) {
-#if BUILD_DAW_HOST
-        auto lock = dawCtrl->lockPlayThread();
-        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef(), {});
-#endif
-    }
-}
 String gui_slider_textfield::getValueAsString(float param) {
     auto paramValDisplay = paramAutomatable->getParamValueDisplay(paramIdx);
     return paramValDisplay.value + paramValDisplay.unit;

@@ -1283,6 +1283,7 @@ static void glnvg__renderFlush(void* uptr)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	int i;
+	memset(&gl->renderStats, 0, sizeof(NVGGLRenderStats));
 	if (gl->ncalls > 0) {
 
 		// Setup require GL state.
@@ -1368,6 +1369,9 @@ static void glnvg__renderFlush(void* uptr)
 				glnvg__stroke(gl, call);
 			else if (call->type == GLNVG_TRIANGLES)
 				glnvg__triangles(gl, call);
+            if (call->type >= 0 && call->type < 5) {
+                gl->renderStats.ncallsPerDrawType[call->type]++;
+            }
 		}
 
 		glDisableVertexAttribArray(0);
@@ -1387,7 +1391,6 @@ static void glnvg__renderFlush(void* uptr)
 		glnvg__bindTexture(gl, 0);
 	}
 
-	memset(&gl->renderStats, 0, sizeof(NVGGLRenderStats));
 	gl->renderStats.ncalls = gl->ncalls;
 	gl->renderStats.npaths = gl->npaths;
 	gl->renderStats.nverts = gl->nverts;

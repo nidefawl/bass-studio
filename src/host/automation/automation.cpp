@@ -641,7 +641,7 @@ void automatable_t::updateModulationMap() {
         map[ref.paramIdxDst].push_back(&ref);
     }
     visitParams([&map](auto& param) {
-        param.second.setModulated( map.count(param.first) > 0);
+        param.second.setIsModulated( map.count(param.first) > 0);
     });
     this->mapModulations = std::move(map);
 }

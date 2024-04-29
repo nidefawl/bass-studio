@@ -206,6 +206,7 @@ public:
     virtual const std::vector<guictr_base*>& getRenderContainers() const { return containers; }
     virtual void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
     virtual void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+    virtual void renderContainers(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
     virtual bool processGlobalKeyevent(const KeyEvent& event) { return false; }
     virtual bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
         return false;

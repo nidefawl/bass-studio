@@ -171,6 +171,35 @@ enum NVGtess {
 	NVG_TESS_AFD			// Adaptive forward differencing. Try this algorithm for better tessellation performance.
 };
 
+struct NVGscissor {
+	float xform[6];
+	float extent[2];
+};
+typedef struct NVGscissor NVGscissor;
+
+struct NVGstate {
+	NVGcompositeOperationState compositeOperation;
+	int shapeAntiAlias;
+	NVGpaint fill;
+	NVGpaint stroke;
+	float strokeWidth;
+	float miterLimit;
+	int lineJoin;
+	int lineCap;
+	int tess;
+	float alpha;
+	float xform[6];
+	float zOffset;
+	NVGscissor scissor;
+	float fontSize;
+	float letterSpacing;
+	float lineHeight;
+	float fontBlur;
+	int textAlign;
+	int fontId;
+};
+typedef struct NVGstate NVGstate;
+
 // Begin drawing a new frame
 // Calls to nanovg drawing API should be wrapped in nvgBeginFrame() & nvgEndFrame()
 // nvgBeginFrame() defines the size of the window to render to in relation currently
@@ -249,9 +278,12 @@ NVGcolor nvgHSLA(float h, float s, float l, unsigned char a);
 // Pushes and saves the current render state into a state stack.
 // A matching nvgRestore() must be used to restore the state.
 void nvgSave(NVGcontext* ctx);
+void nvgSaveState(NVGcontext* ctx, NVGstate* state);
+
 
 // Pops and restores current render state.
 void nvgRestore(NVGcontext* ctx);
+void nvgRestoreState(NVGcontext* ctx, NVGstate* state);
 
 // Resets current render state to default values. Does not affect the render state stack.
 void nvgReset(NVGcontext* ctx);

@@ -20,6 +20,11 @@ namespace DAW::UI {
         virtual ~IDraggedModulationSource() = default;
         virtual const modulation_channel_ref& getChannelRef() const = 0;
     };
+    class IModulateable {
+    public:
+        virtual ~IModulateable() = default;
+        virtual void getAutomationRef(automatable_t*& at, int32_t& paramIdx) const = 0;
+    };
 }
 namespace DAW::UI::Modulation {
 class guictr_edit_modulation_slot final : public guictr_base {
@@ -96,6 +101,7 @@ class guictr_edit_modulation final : public guictxtmenu_base {
 class gui_dragged_modulation final : 
         public guitooltip<gui_dragged_modulation>, public IDraggedModulationSource {
         DAW::modulation_channel_ref ref;
+        automatable_param_ref_t previewParamRef;
     public:
         gui_dragged_modulation() : guitooltip<gui_dragged_modulation>(this) {
             setGuiType(gui_type::CTR_TYPE_MODULATION_DRAGGED);
@@ -137,8 +143,10 @@ class guibutton_modulate final : public guibutton, public IDraggedModulationSour
             guibase::setControl(parentCtrl);
             dragged.setControl(parentCtrl);
         }
+        void handleDraggedBegin(MouseEvent& evt) override;
         void handleDraggedMove(MouseEvent& evt) override;
         void handleDraggedRelease(MouseEvent& evt) override;
+        void render(NVGcontext* vg) override;
     };
 }
 

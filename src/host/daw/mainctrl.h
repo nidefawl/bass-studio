@@ -660,11 +660,24 @@ protected:
     int32_t layoutIndex = 0;
     size_t dawCtrlWindowIndex = 0; // (dawCtrlWindowIndex > 0) == isCompanion()
     std::array<dawview_layout_t, 10> layouts;
+    SafeRef<guibase> guiEditModulation;
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;
     std::vector<guictr_base*> viewAsyncProgress = {&guiCtrProgress};
     std::vector<guictr_base*> viewRender;
+    struct ui_modulation_targets_t {
+        SafeRef<guibase> target;
+        NVGstate state;
+    };
+    bool bIsContainerRenderPass = false;
+    bool getIsContainerRenderPass() const {
+        return bIsContainerRenderPass;
+    }
+    std::vector<ui_modulation_targets_t> uiModulationTargets;
+    std::vector<ui_modulation_targets_t>& getUIModulationTargets() {
+        return uiModulationTargets;
+    }
     const std::vector<guictr_base*>& getRenderContainers() const override { return viewRender; }
     String lastKeyDebug;
     DawViewContainersMain* view = nullptr;
@@ -822,6 +835,21 @@ public:
         }
         return nullptr;
     }
+    DAW::UI::IDraggedModulationSource* getEditModulation() {
+        auto guiDragged = safeRefGet(guiEditModulation);
+        if (guiDragged) {
+            if (guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
+                return dynamic_cast<DAW::UI::IDraggedModulationSource*>(guiDragged);
+            }
+            if (guiDragged->parent && guiDragged->parent->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
+                return dynamic_cast<DAW::UI::IDraggedModulationSource*>(guiDragged->parent);
+            }
+        }
+        return nullptr;
+    }
+    void setEditModulation(const SafeRef<guibase>& ref) {
+        guiEditModulation = ref;
+    }
     DAW::UI::IDraggedModulationSource* getFocusedModulation() {
         auto guiOver = getGuiOver();
         if (guiOver && guiOver->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
@@ -836,9 +864,12 @@ public:
         }
         return {};
     }
+    
+    void renderContainers(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
 };
 namespace DAW::UI::Modulation {
     bool IsHiglightedModulation(const guibase* gui, automatable_t* at, int32_t paramIdx);
+    bool IsEditModulation(const guibase* gui, automatable_t* at, int32_t paramIdx);
 };
 
 class ProjectGraphMonitor {

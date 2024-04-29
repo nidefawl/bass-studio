@@ -120,6 +120,7 @@ enum gui_type : uint16_t {
     GUI_TYPE_SCROLLBAR,
     GUI_TYPE_TEXTFIELD,
     GUI_CLIPEDITOR_CLIPHANDLES,
+    GUI_TYPE_SLIDER_TEXTFIELD,
     GUI_TYPE_CLIP,
     GUI_TYPE_LIST_FOLDER,
     CTR_TYPE_UNKNOWN = 100,
@@ -457,10 +458,6 @@ public:
     virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos) {
     }
     virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
-    }
-    virtual void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
-    }
-    virtual void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
     }
     virtual void dragBeginOn(guibase* target, ivec2 mousepos) {
     }

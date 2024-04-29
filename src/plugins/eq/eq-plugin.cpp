@@ -1058,7 +1058,7 @@ namespace PluginEQ {
 
             if (nRendered) {
                 paint.innerColor = theme->getColor(GuiColor::COL_GRID_DRK);
-                paint.customPar  = 1;
+                paint.customPar = NVGBatchedShading::NVG_BATCHED_SHADED;
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
             }
@@ -1071,7 +1071,7 @@ namespace PluginEQ {
             float heightLegendBottom = gridStepY * 0.5f;
             nvgIntersectScissor(vg, pos.x + widthLegendLeft, pos.y, size.x - widthLegendLeft, size.y - heightLegendBottom);
             nRendered = 0;
-            paint.customPar = 2;
+            paint.customPar = NVGBatchedShading::NVG_BATCHED_LINE_VERTICAL;
             const float lineThickness = 4.0f;
             for (int32_t i = 0; i < numStopPoints - 1; ++i) {
                 nvgBatchedRect(vg, stopPoints[i] - lineThickness * 0.5f, pos.y, lineThickness, size.y);
@@ -1084,7 +1084,7 @@ namespace PluginEQ {
                 nvgBatchedRender(vg);
             }
             nRendered = 0;
-            paint.customPar = 3;
+            paint.customPar = NVGBatchedShading::NVG_BATCHED_LINE_HORIZONTAL;
             for (int32_t i = 0; i < numStepsY; ++i) {
                 nvgBatchedRect(vg, pos.x, pos.y + gridStepY * i - lineThickness * 0.5f, size.x, lineThickness);
                 paint.feather = 2.5f - 1 * 0.75f;
