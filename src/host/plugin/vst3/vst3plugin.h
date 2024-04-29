@@ -456,7 +456,7 @@ public:
         effectbase::postSetParameter(idx, preVal, val, flags);
         automatable_param_t* param = getParamUnchecked(idx);
         if (param->internalIdx >= 0) {
-            if (!(flags & FLG_PAR_UPDATE_FROM_CLIENT) && editController) {
+            if (!(flags & (FLG_PAR_UPDATE_FROM_CLIENT | FLG_PAR_UPDATE_MODULATED | FLG_PAR_UPDATE_AUTOMATED)) && editController) {
                 editController->setParamNormalized(param->internalIdx, val);
                 int32_t index;
                 inputParameterChanges.addParameterData(param->internalIdx, index)->addPoint(0, val, index);
