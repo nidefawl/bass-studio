@@ -79,7 +79,7 @@ else()
   set_property(CACHE PROJECT_CFG_OPTIMIZE PROPERTY STRINGS "OFF" "x86-64-v3" "native")
 
   if (NOT APPLE)
-    # add_link_options(-Wl,--gc-sections)
+    add_link_options(-Wl,--gc-sections)
   endif()
 
   if(NOT PROJECT_CFG_FSANITIZE STREQUAL "")
