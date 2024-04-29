@@ -400,7 +400,7 @@ void automatable_t::setAutomatableParam(automatable_param_t* param, float val, i
 float automatable_t::getParamValue(int32_t idx) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
-    if (param->isModulated()) {
+    if (param->isModulated() && !bIsBypassModulation) {
         return param->getValueModulated();
     }
     auto autLane = getRegisteredAutomation(param->idx);
@@ -414,7 +414,7 @@ param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
     float val = param->getValue();
-    if (param->isModulated()) {
+    if (param->isModulated() && !bIsBypassModulation) {
         val = param->getValueModulated();
     }
     auto autLane = getRegisteredAutomation(param->idx);
@@ -519,11 +519,15 @@ void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host,
     } else {
     }
     if (param->isModulated()) {
-        auto mods = getModulations(paramIdx);
-        for (const auto& mod : *mods) {
-            auto ch = DAW::ResolveModulationChannel(host, *mod);
-            if (ch && ch->isActive()) {
-                ch->sampleAutomation(dTickBegin, dTickEnd, numSamples, mod->scale, buffer);
+        const auto& activeMods = getActiveModulations();
+        const auto it = activeMods.find(paramIdx);
+        if (it != activeMods.cend()) {
+            const auto& mods = it->second;
+            for (const auto* mod : mods) {
+                const auto* ch = DAW::ResolveModulationChannel(host, *mod);
+                if (ch && ch->isActive()) {
+                    ch->sampleAutomation(dTickBegin, dTickEnd, numSamples, mod->scale, buffer);
+                }
             }
         }
     }
@@ -533,7 +537,8 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     if (automationLanes.empty() && inputChannelsModulation.empty()) {
         return;
     }
-    for (const auto& entry : getActiveModulations()) {
+    auto& mapActiveModulations = getActiveModulations();
+    for (const auto& entry : mapActiveModulations) {
         int32_t paramIdx = entry.first;
         auto param = getParam(paramIdx);
         if (!param)
@@ -558,7 +563,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     if (DAW::isPlaybackState(state)) {
         for (const auto& automLane : automationLanes) {
             if (automLane.isActive()) {
-                if (mapModulations.count(automLane.paramIdx) > 0) {
+                if (mapActiveModulations.count(automLane.paramIdx) > 0) {
                     continue;
                 }
                 int32_t paramIdx = automLane.paramIdx;

@@ -1854,16 +1854,15 @@ namespace DAW {
         if (!param) {
             return;
         }
-        if (param->isModulated()) {
-            auto* pModulations = dev->getModulations(paramIdx);
-            if (pModulations) {
-                for (auto mod : *pModulations) {
-                    if (mod->refSrc == modChannel.refSrc) {
-                        return;
-                    }
+        auto* pModulations = dev->getModulations(paramIdx);
+        if (pModulations) {
+            for (auto mod : *pModulations) {
+                if (mod->refSrc == modChannel.refSrc) {
+                    return;
                 }
             }
         }
+
         auto inputRef = modChannel;
         inputRef.paramIdxDst = paramIdx;
         inputRef.refSrc = modChannel.refSrc;

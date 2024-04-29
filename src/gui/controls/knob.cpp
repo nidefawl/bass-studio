@@ -330,7 +330,9 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
             }
         }
         if (param->isModulated()) {
-            type = 2;
+            if (!paramAutomatable->isBypassModulation()) {
+                type = 2;
+            }
             float fScaledModulated = getParamScaled(param, type);
             const auto bIsModulationHighlighted = DAW::UI::Modulation::IsEditModulation(this, paramAutomatable, paramIdx);
             if (bIsModulationHighlighted) {
