@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -386,10 +387,7 @@ public:
             for (auto& entry : mapParams) {
                 auto& param = entry.second;
                 if (param.isModulated()) {
-                    auto curVal = param.getValueModulated();
-                    auto newVal = param.getValue();
-                    param.setModulated(newVal);
-                    postSetParameter(param.idx, newVal, curVal, FLG_PAR_UPDATE_USER);
+                    restoreModulatedParameter(param.idx);
                 }
             }
         }
@@ -427,6 +425,13 @@ public:
         }
         for (auto it = inputChannelsModulation.begin(); it != inputChannelsModulation.end();) {
             if (it->refSrc.refId == refSrc.refId && it->refSrc.type == refSrc.type) {
+                auto countModulationsParam = std::count_if(inputChannelsModulation.begin(), inputChannelsModulation.end(), [it](const DAW::modulation_channel_ref& mod) {
+                    return mod.paramIdxDst == it->paramIdxDst;
+                });
+                if (countModulationsParam == 1) {
+                    // removed last modulator
+                    restoreModulatedParameter(it->paramIdxDst);
+                }
                 it = inputChannelsModulation.erase(it);
                 ++numRemoved;
             } else {
@@ -641,6 +646,13 @@ public:
     virtual void postSetParameter(int32_t idx, float preVal, float val, int flags) {
         dbgassert(!fp_math::isNanOrInfd(val));
     }
+    virtual void restoreModulatedParameter(int32_t paramIdx) {
+        auto param = getParam(paramIdx);
+        auto valMod = param->getValueModulated();
+        auto val = param->getValue();
+        param->setModulated(val);
+        postSetParameter(paramIdx, valMod, val, FLG_PAR_UPDATE_USER);
+    }
     std::pair<float, float> getParamMinMaxAutomated(int32_t paramIdx) {
         auto it = std::find_if(automationLanes.begin(), automationLanes.end(), [paramIdx](automation_lane_t& ap) {
             return ap.paramIdx == paramIdx;
@@ -718,7 +730,6 @@ namespace DAW {
     void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref ref, const modulation_scaling_t& scale, bool bIsTemporary);
     void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx);
     void DisonnectModulation(automatable_t* dev, const DAW::modulation_channel_ref& modChannel);
-    void DisonnectModulationInputChannel(automatable_t* dev, const DAW::modulation_channel_ref& modChannel);
     inline bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {
         return dev->isParamModulated(paramIdx);
     }

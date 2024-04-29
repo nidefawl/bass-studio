@@ -182,11 +182,13 @@ class guictxtmenu_modulation final : public guictxtmenu {
             auto lock = daw->lockPlayThread();
             auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
             if (prevAt) {
-                DAW::DisonnectModulation(prevAt, {.paramIdxDst = previewParamRef.paramIdx, .refSrc = previewParamRef});
+                auto refCopy = getChannelRef();
+                refCopy.paramIdxDst = previewParamRef.paramIdx;
+                DAW::DisonnectModulation(prevAt, refCopy);
             }
             previewParamRef = newRef;
             if (newAt) {
-                modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD, .bClamp = false};
+                modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD};
                 DAW::ConnectModulationInputChannel(newAt, newRef.paramIdx, getChannelRef(), scale, true);
             }
         }
@@ -198,7 +200,9 @@ class guictxtmenu_modulation final : public guictxtmenu {
             auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
             if (prevAt) {
                 auto lock = daw->lockPlayThread();
-                DAW::DisonnectModulation(prevAt, {.paramIdxDst = previewParamRef.paramIdx, .refSrc = previewParamRef});
+                auto refCopy = getChannelRef();
+                refCopy.paramIdxDst = previewParamRef.paramIdx;
+                DAW::DisonnectModulation(prevAt, refCopy);
             }
             previewParamRef = {};
         }
@@ -209,7 +213,7 @@ class guictxtmenu_modulation final : public guictxtmenu {
             knob->getAutomationRef(at, paramIdx);
             if (at) {
                 auto lock = dawCtrl->lockPlayThread();
-                modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD, .bClamp = false};
+                modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD};
                 DAW::ConnectModulationInputChannel(at, paramIdx, getChannelRef(), scale, false);
             }
         }

@@ -685,8 +685,7 @@ public:
         processData.numSamples = numSamples;
 
         auto& automationLanes = getAutomationLanes();
-        // auto& inputChannelsModulation = getModulations();
-        auto& mapModulations = getActiveModulations();
+        const auto& mapModulations = getActiveModulations();
 
         auto tempo100 = host->prjGlobals.tempo100;
         // auto samplesToTicks = sampleToTickConvert<double, roundmode::none>(1.0, tempo100, format.sampleRate);

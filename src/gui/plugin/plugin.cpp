@@ -114,6 +114,7 @@ void guiplugin::determineSize(ivec2& prefSize) {
 
 void guiplugin::buttonClicked(guibase* _button) {
     if (_button == &buttonBypassModulation) {
+        ThreadLock lock = dawCtrl->lockPlayThread();
         effect->setBypassModulation(!effect->isBypassModulation());
         return;
     }

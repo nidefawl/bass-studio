@@ -537,7 +537,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     if (automationLanes.empty() && inputChannelsModulation.empty()) {
         return;
     }
-    auto& mapActiveModulations = getActiveModulations();
+    const auto& mapActiveModulations = getActiveModulations();
     for (const auto& entry : mapActiveModulations) {
         int32_t paramIdx = entry.first;
         auto param = getParam(paramIdx);
@@ -588,7 +588,7 @@ float automatable_t::getModulatedParameterAt(const DAW::Host::PluginManager* con
     if (!param) {
         return 0.0f;
     }
-    auto mapModulations = getActiveModulations();
+    const auto& mapModulations = getActiveModulations();
     auto it = mapModulations.find(paramIdx);
     if (it == mapModulations.end()) {
         auto automLane = getRegisteredConstAutomation(paramIdx);
@@ -604,7 +604,7 @@ float automatable_t::getModulatedParameterAt(const DAW::Host::PluginManager* con
         }
         return val;
     }
-    const auto& modulations = mapModulations[paramIdx];
+    const auto& modulations = it->second;
         
     float val = param->getValue();
     auto* autLane = getRegisteredAutomation(paramIdx);
@@ -672,6 +672,9 @@ void automatable_t::removeModulation(int32_t paramIdx, int32_t modulationIndex) 
             if (curIdx++ == modulationIndex) {
                 inputChannelsModulation.erase(it);
                 updateModulationMap();
+                if (!getModulations(paramIdx)) {
+                    restoreModulatedParameter(paramIdx);
+                }
                 return;
             }
         }

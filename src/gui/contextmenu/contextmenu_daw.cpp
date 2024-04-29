@@ -127,7 +127,7 @@ public:
             closeContextMenu();
             auto lock = dawCtrl->lockPlayThread();
             auto ref = static_cast<ctxtmenu_modulation_entry*>(entries[_id])->getRef();
-            DAW::DisonnectModulationInputChannel(atl, ref);
+            DAW::DisonnectModulation(atl, ref);
             return true;
         }
         closeContextMenu();

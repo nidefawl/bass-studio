@@ -1836,14 +1836,12 @@ namespace DAW {
             }
     #ifndef NDEBUG
             auto effMod = dynamic_cast<internal_modulator*>(effBase);
-            if (!assert_expr(effMod))
-                return nullptr;
     #else
             auto effMod = static_cast<internal_modulator*>(effBase);
     #endif
-            auto p = effMod->getModulationOutputData(modChannel);
             if (!assert_expr(effMod))
                 return nullptr;
+            auto p = effMod->getModulationOutputData(modChannel);
             return p;
         }
         dbgassert(0);
@@ -1885,46 +1883,35 @@ namespace DAW {
     void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx) {
         bool bErased = false;
         auto& inputs = dev->getModulations();
-        for (int i = 0; i < CtrSize(inputs); i++) {
+        for (int i = 0; i < CtrSize(inputs);) {
             if (inputs[i].paramIdxDst == paramIdx) {
                 inputs.erase(inputs.begin() + i);
                 bErased = true;
+            } else {
+                i++;
             }
         }
         if (bErased) {
+            dev->restoreModulatedParameter(paramIdx);
             dev->updateModulationMap();
-            auto val = dev->getParam(paramIdx)->getValue();
-            dev->postSetParameter(paramIdx, val, val, FLG_PAR_UPDATE_USER);
         }
     }
     void DisonnectModulation(automatable_t* dev, const DAW::modulation_channel_ref& modChannel) {
         bool bErased = false;
         auto& inputs = dev->getModulations();
-        for (int i = 0; i < CtrSize(inputs); i++) {
+        for (int i = 0; i < CtrSize(inputs);) {
             if (modChannel.refSrc == inputs[i].refSrc && modChannel.paramIdxDst == inputs[i].paramIdxDst) {
                 inputs.erase(inputs.begin() + i);
                 bErased = true;
+            } else {
+                i++;
             }
         }
         if (bErased) {
             dev->updateModulationMap();
-            auto val = dev->getParam(modChannel.paramIdxDst)->getValue();
-            dev->postSetParameter(modChannel.paramIdxDst, val, val, FLG_PAR_UPDATE_USER);
-        }
-    }
-    void DisonnectModulationInputChannel(automatable_t* dev, const DAW::modulation_channel_ref& modChannel) {
-        bool bErased = false;
-        auto& inputs = dev->getModulations();
-        for (int i = 0; i < CtrSize(inputs); i++) {
-            if (modChannel.refSrc == inputs[i].refSrc) {
-                inputs.erase(inputs.begin() + i);
-                bErased = true;
+            if (!dev->getModulations(modChannel.paramIdxDst)) {
+                dev->restoreModulatedParameter(modChannel.paramIdxDst);
             }
-        }
-        if (bErased) {
-            dev->updateModulationMap();
-            auto val = dev->getParam(modChannel.paramIdxDst)->getValue();
-            dev->postSetParameter(modChannel.paramIdxDst, val, val, FLG_PAR_UPDATE_USER);
         }
     }
 }
