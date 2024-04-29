@@ -716,9 +716,9 @@ namespace DAW {
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
     const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const modulation_channel_ref& ref);
     void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref ref, const modulation_scaling_t& scale, bool bIsTemporary);
-    void DisonnectModulationInputChannel(automatable_t* dev, modulation_channel_ref ref);
     void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx);
-
+    void DisonnectModulation(automatable_t* dev, const DAW::modulation_channel_ref& modChannel);
+    void DisonnectModulationInputChannel(automatable_t* dev, const DAW::modulation_channel_ref& modChannel);
     inline bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {
         return dev->isParamModulated(paramIdx);
     }

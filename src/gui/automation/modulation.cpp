@@ -182,8 +182,7 @@ class guictxtmenu_modulation final : public guictxtmenu {
             auto lock = daw->lockPlayThread();
             auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
             if (prevAt) {
-                DAW::DisonnectModulationForParam(prevAt, previewParamRef.paramIdx);
-                // previewParamRef = {};
+                DAW::DisonnectModulation(prevAt, {.paramIdxDst = previewParamRef.paramIdx, .refSrc = previewParamRef});
             }
             previewParamRef = newRef;
             if (newAt) {
@@ -199,7 +198,7 @@ class guictxtmenu_modulation final : public guictxtmenu {
             auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
             if (prevAt) {
                 auto lock = daw->lockPlayThread();
-                DAW::DisonnectModulationForParam(prevAt, previewParamRef.paramIdx);
+                DAW::DisonnectModulation(prevAt, {.paramIdxDst = previewParamRef.paramIdx, .refSrc = previewParamRef});
             }
             previewParamRef = {};
         }

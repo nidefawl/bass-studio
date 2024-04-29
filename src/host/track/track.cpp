@@ -1897,14 +1897,35 @@ namespace DAW {
             dev->postSetParameter(paramIdx, val, val, FLG_PAR_UPDATE_USER);
         }
     }
-    void DisonnectModulationInputChannel(automatable_t* dev, DAW::modulation_channel_ref modChannel) {
+    void DisonnectModulation(automatable_t* dev, const DAW::modulation_channel_ref& modChannel) {
+        bool bErased = false;
         auto& inputs = dev->getModulations();
         for (int i = 0; i < CtrSize(inputs); i++) {
-            if (inputs[i].refSrc == modChannel.refSrc) {
+            if (modChannel.refSrc == inputs[i].refSrc && modChannel.paramIdxDst == inputs[i].paramIdxDst) {
                 inputs.erase(inputs.begin() + i);
+                bErased = true;
             }
         }
-        dev->updateModulationMap();
+        if (bErased) {
+            dev->updateModulationMap();
+            auto val = dev->getParam(modChannel.paramIdxDst)->getValue();
+            dev->postSetParameter(modChannel.paramIdxDst, val, val, FLG_PAR_UPDATE_USER);
+        }
+    }
+    void DisonnectModulationInputChannel(automatable_t* dev, const DAW::modulation_channel_ref& modChannel) {
+        bool bErased = false;
+        auto& inputs = dev->getModulations();
+        for (int i = 0; i < CtrSize(inputs); i++) {
+            if (modChannel.refSrc == inputs[i].refSrc) {
+                inputs.erase(inputs.begin() + i);
+                bErased = true;
+            }
+        }
+        if (bErased) {
+            dev->updateModulationMap();
+            auto val = dev->getParam(modChannel.paramIdxDst)->getValue();
+            dev->postSetParameter(modChannel.paramIdxDst, val, val, FLG_PAR_UPDATE_USER);
+        }
     }
 }
 
