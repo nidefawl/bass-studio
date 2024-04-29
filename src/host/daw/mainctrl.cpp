@@ -1853,22 +1853,6 @@ void MainCtrl::destroy() {
     daw.destroy();
 }
 
-void CompanionCtrl::destroy() {
-    {
-        auto ctrTracks = getTrackContainer();
-        //TODO: layout settings should be handled on editor container level
-        if (ctrTracks) {
-            auto& settings = daw_tls::getSettings();
-            while (settings.windowSettings.size() <= dawCtrlWindowIndex) {
-                settings.windowSettings.push_back({});
-            }
-            settings.windowSettings[dawCtrlWindowIndex].dens = ctrTracks->getGrid().grid_dens;
-        }
-        ctrTracks.reset();
-    }
-    DawCtrl::destroy();
-}
-
 void DawCtrl::layoutView() {
 }
 

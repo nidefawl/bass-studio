@@ -926,7 +926,6 @@ public:
         dbgassert(windowIndex > 0);
     }
     ~CompanionCtrl() override = default;
-    void destroy() override;
     DAW::Cursor& getCursor() override { return cursor; };
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override {
         return DawCtrl::initAppWindow(window, nanovg);
