@@ -52,7 +52,7 @@
 #include <vector>
 
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
-constexpr int32_t PIANOROLL_MIN_SCALE = 4;
+constexpr int32_t PIANOROLL_MIN_SCALE = 1;
 constexpr int32_t PIANOROLL_MAX_SCALE = 48;
 constexpr int32_t NOTES_LABEL_MIN_HEIGHT = 10;
 
