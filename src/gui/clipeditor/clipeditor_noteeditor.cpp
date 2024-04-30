@@ -667,12 +667,12 @@ void guictr_noteeditor::relayout() {
     } else if (bIsAbsMode && !view.m_selectionView.editorLayout.noLayout && view.m_selectionView.totalClipCount) {
         layout = view.m_selectionView.editorLayout;
     }
-    
-    if (layout.noLayout) {
-        zoomPianoRollToClipsNoteRange(nullptr);
-    } else {
+
+    if (!layout.noLayout) {
         setLayout(layout.layoutPianoRoll);
     }
+
+    zoomPianoRollToClipsNoteRange(nullptr);
 }
 
 void guictr_editor_base::relayout() {
