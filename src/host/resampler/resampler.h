@@ -194,7 +194,7 @@ struct resampler_t {
             auto maxCopy            = math::min<samplecount_t>(b->samplesAvail - b->readOffset, blockOut.samples - writeOffset);
 
             auto srcBlock = ptrBlockResampled->SubChannelsSamplesBlock(0, ptrBlockResampled->channels, b->readOffset, maxCopy);
-            blockOut.SubChannelsSamplesBlock(0, numChannels, writeOffset, maxCopy).addFromOp(&srcBlock, AudioBlock::mix_op::MIX, 1.0f);
+            blockOut.SubChannelsSamplesBlock(0, numChannels, writeOffset, maxCopy).addFromOp(&srcBlock, mix_op::MIX, 1.0f);
             timeinfo = b->timeInfo;
 
             b->readOffset += maxCopy;

@@ -22,7 +22,6 @@
 class guiplugin;
 class PluginViewContainer;
 class track_t;
-struct AudioBlock;
 struct handles_t;
 struct track_impl_t;
 

@@ -78,7 +78,7 @@ namespace PluginGain {
                 }
                 /* fast path: center pan */
                 if (math::abs(fPanTrack - 0.5f) < 0.005f) {
-                    out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
+                    out->addFromOp(in, mix_op::ADD, fGain);
                 } else {
                     DAW::Panning::MultiplyConstant(in, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
                 }

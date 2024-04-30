@@ -15,17 +15,22 @@
 #include "assert_dbg.h"
 #include "logging.h"
 
-void AudioBlock::BeginTrace() {
+template<typename FPType>
+void AudioBlockBase<FPType>::BeginTrace() {
 #if TRACK_ALLOCATIONS_AUDIOBLOCK
-    AudioBlock::instanceCstrd = 0;
-    AudioBlock::numAllocs = 0;
-    AudioBlock::recordAllocs = true;
+    auto& stats = allocStats();
+    stats.instanceCstrd = 0;
+    stats.numAllocs = 0;
+    stats.recordAllocs = true;
 #endif
 }
-void AudioBlock::EndTrace() {
+
+template<typename FPType>
+void AudioBlockBase<FPType>::EndTrace() {
 #if TRACK_ALLOCATIONS_AUDIOBLOCK
-    AudioBlock::recordAllocs = false;
-    log_printf("AudioBlock stats: %d blocks, %d allocs\n", AudioBlock::instanceCstrd.load(), AudioBlock::numAllocs.load());
+    auto& stats = allocStats();
+    stats.recordAllocs = false;
+    log_printf("AudioBlock stats: %d blocks, %d allocs\n", stats.instanceCstrd.load(), stats.numAllocs.load());
 #endif
 }
 
@@ -49,34 +54,39 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
         }
     }
 }
-void AudioBlock::fillNoise(seq_rand& rnd, float gain) {
+
+template<typename FPType>
+void AudioBlockBase<FPType>::fillNoise(seq_rand& rnd, double gain) {
     for (channelnum_t i = 0; i < channels; i++) {
         for (samplecount_t s = 0; s < samples; s++) {
-            buf[i][s] = (rnd.rng_rand(1<<16)/(float)(1<<16))*gain;
+            buf[i][s] = FPType((rnd.rng_rand(1 << 16) / FPType(1 << 16)) * gain);
         }
     }
 }
+
 #define DEBUG_PRINT_AUDIOBUFFER_ALLOC 0
-void AudioBlock::realloc(samplecount_t _samples) {
+
+template<typename FPType>
+void AudioBlockBase<FPType>::realloc(samplecount_t _samples) {
 
     if (samples != _samples) {
         if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
 #if TRACK_ALLOCATIONS_AUDIOBLOCK
-            if (recordAllocs)
-                numAllocs++;
+            if (allocStats().recordAllocs)
+                allocStats().numAllocs++;
 #endif
             for (channelnum_t i = 0; i < channels; i++) {
-                float* const newBuf = static_cast<float*>(DAW::aligned_malloc(sizeof(float) * _samples, 512));
+                FPType* const newBuf = static_cast<FPType*>(DAW::aligned_malloc(sizeof(FPType) * _samples, 512));
 #if DEBUG_PRINT_AUDIOBUFFER_ALLOC
                 log_lf(Log::L_TRACE, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
 #endif
                 if (!newBuf) {
-                    DAW::handleFailedAllocation(0x1000, _samples * sizeof(float));
+                    DAW::handleFailedAllocation(0x1000, _samples * sizeof(FPType));
                 } else {
-                    memset(newBuf, 0, sizeof(float) * _samples);
+                    memset(newBuf, 0, sizeof(FPType) * _samples);
                     if (buf[i]) {
                         if (math::min(_samples, samples) > 0) {
-                            memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
+                            memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(FPType));
                         }
 #if DEBUG_PRINT_AUDIOBUFFER_ALLOC
                         log_lf(Log::L_TRACE, "AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
@@ -93,7 +103,8 @@ void AudioBlock::realloc(samplecount_t _samples) {
     }
 }
 
-AudioBlock& AudioBlock::operator=(AudioBlock&& other) noexcept {
+template<typename FPType>
+AudioBlockBase<FPType>& AudioBlockBase<FPType>::operator=(AudioBlockBase<FPType>&& other) noexcept {
     // more trivial implementation: deallocates *this and does leaves other as empty
     // this could possibly be implemented as full swap, but it's not needed
     if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
@@ -115,7 +126,7 @@ AudioBlock& AudioBlock::operator=(AudioBlock&& other) noexcept {
     std::swap(channels, other.channels);
     std::swap(samples, other.samples);
     if (other.channelsAlloc <= stack) {
-        memcpy(heapBuf.data(), other.heapBuf.data(), sizeof(float*) * heapBuf.size());
+        memcpy(heapBuf.data(), other.heapBuf.data(), sizeof(FPType*) * heapBuf.size());
         buf = heapBuf.data();
     } else {
         std::swap(buf, other.buf);
@@ -125,35 +136,8 @@ AudioBlock& AudioBlock::operator=(AudioBlock&& other) noexcept {
     return *this;
 }
 
-void AudioBlock::copyFromPosToPos(const float* const* const srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len, channelnum_t srcChannels) {
-    dbgassert(srcChannels > 0);
-    const channelnum_t nChannels = channels;
-    const samplecount_t nSamples = math::min(len, samples);
-    dbgassert(offsetOut + nSamples <= samples);
-    for (channelnum_t i = 0; i < nChannels; i++) {
-        auto srcChannelIdx   = srcChannels < 1 ? 0 : math::min<channelnum_t>(srcChannels - 1, i);
-        auto dstChannelIdx   = channels < 1 ? 0 : math::min<channelnum_t>(channels - 1, i);
-        auto srcBufChannel   = srcBuf[srcChannelIdx];
-        float* dstBufChannel = buf[dstChannelIdx];
-        //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
-
-        // this memcpy would do overlapping copies, which is undefined behavior
-        // memcpy(dstBufChannel + offsetOut, srcBufChannel + offsetIn, nSamples * sizeof(float));
-
-        // detect if we are copying to overlapping memory, otherwise use memcpy
-        if (dstBufChannel + offsetOut >= srcBufChannel + offsetIn + nSamples || dstBufChannel + offsetOut + nSamples <= srcBufChannel + offsetIn) {
-            memcpy(dstBufChannel + offsetOut, srcBufChannel + offsetIn, nSamples * sizeof(float));
-        } else {
-            // copy the samples one by one
-            for (samplecount_t j = 0; j < nSamples; j++) {
-                dstBufChannel[offsetOut + j] = srcBufChannel[offsetIn + j];
-            }
-        }
-    }
-}
-
-
-void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, float gain) {
+template<typename FPType>
+void AudioBlockBase<FPType>::addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, double gain) {
     auto& delayBlock = delayLine->getBlock();
     const auto readSamples = this->samples;
     const auto delayLineSize = delayBlock.samples;
@@ -166,12 +150,12 @@ void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplecount_t de
     if (readPos + readSamples > delayLineSize) {
         const auto read1Len = delayLineSize - readPos;
         const auto read2Len = readSamples - read1Len;
-        AudioBlock subBlock1 = delayBlock.SubChannelsSamplesBlock(0, this->channels, readPos, read1Len);
+        auto subBlock1 = delayBlock.SubChannelsSamplesBlock(0, this->channels, readPos, read1Len);
         this->addFromOp(&subBlock1, op, gain);
-        AudioBlock subBlock2 = delayBlock.SubChannelsSamplesBlock(0, this->channels, 0, read2Len);
+        auto subBlock2 = delayBlock.SubChannelsSamplesBlock(0, this->channels, 0, read2Len);
         this->SubChannelsSamplesBlock(0, this->channels, read1Len, read2Len).addFromOp(&subBlock2, op, gain);
     } else {
-        AudioBlock subBlock = delayBlock.SubChannelsSamplesBlock(0, this->channels, readPos, this->samples);
+        auto subBlock = delayBlock.SubChannelsSamplesBlock(0, this->channels, readPos, this->samples);
         this->addFromOp(&subBlock, op, gain);
     }
 }
@@ -207,24 +191,20 @@ void DelayLine::write(AudioBlock* input, samplecount_t delay) {
 
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplecount_t delay) {
     delayLine->write(input, delay);
-    output->addFromDelayLineOp(delayLine, delay, AudioBlock::MIX, 1.0f);
+    output->addFromDelayLineOp(delayLine, delay, mix_op::MIX, 1.0f);
 }
 
 
 #if TRACK_ALLOCATIONS_AUDIOBLOCK
 std::atomic<int32_t> DelayLine::instanceCount{ 0 };
-std::atomic<int32_t> AudioBlock::instanceCstrd{ 0 };
-std::atomic<int32_t> AudioBlock::numAllocs{ 0 };
-std::atomic<int32_t> AudioBlock::instanceCount{ 0 };
-volatile bool AudioBlock::recordAllocs{ false };
 #endif
-
 
 void printLeakedAudioBuffers() {
 #if TRACK_ALLOCATIONS_AUDIOBLOCK
-    log_printf("AudioBlock::instanceCstrd: %d\n", AudioBlock::instanceCstrd.load());
-    log_printf("AudioBlock::instanceCount: %d\n", AudioBlock::instanceCount.load());
-    log_printf("AudioBlock::numAllocs: %d\n", AudioBlock::numAllocs.load());
+    auto& stats = AudioBlock::allocStats();
+    log_printf("AudioBlock::instanceCstrd: %d\n", stats.instanceCstrd.load());
+    log_printf("AudioBlock::instanceCount: %d\n", stats.instanceCount.load());
+    log_printf("AudioBlock::numAllocs: %d\n", stats.numAllocs.load());
     log_printf("DelayLine::instanceCount: %d\n", DelayLine::instanceCount.load());
 #endif
 }
@@ -301,3 +281,5 @@ void handleFailedAllocation(int allocId, size_t allocSize) {
     dbgassert(0);
 }
 }
+template struct AudioBlockBase<float>;
+template struct AudioBlockBase<double>;

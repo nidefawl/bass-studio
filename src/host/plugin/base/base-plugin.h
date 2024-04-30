@@ -18,6 +18,7 @@
 #include "gui/table/table_fwd.h"
 #include "gui/plugin/pluginviewcontainers.h"
 #include "plugins/synth/IPlugMidi.h"
+#include "host/audiobuffer/audioblock.h"
 
 namespace DAW::Host {
     class Host;
@@ -29,7 +30,6 @@ class guiplugin;
 class host_plugin_window;
 class track_t;
 struct audio_stage_t;
-struct AudioBlock;
 struct handles_t;
 
 extern bool storePluginPresetWithSnapshot;// = true;

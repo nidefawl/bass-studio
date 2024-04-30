@@ -253,7 +253,10 @@ float distancePointLine(const vec2 pt, const vec2 a, const vec2 b) {
 }// namespace math
 
 namespace DAW::Panning {
-    void MultiplyConstant(AudioBlock* src, AudioBlock* dst, float gain, float pan) {
+    
+
+    template<typename FPTypeSrc, typename FPTypeDst>
+    void MultiplyConstant(AudioBlockBase<FPTypeSrc>* src, AudioBlockBase<FPTypeDst>* dst, float gain, float pan) {
         auto srcSamples  = src->samples;
         auto srcChannels = src->channels;
         auto channels    = dst->channels;
@@ -282,14 +285,16 @@ namespace DAW::Panning {
         for (channelnum_t i = 0; i < nChannels; i++) {
             channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
             channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
-            auto srcBufChannel         = srcBuf[srcChannelIdx];
-            float* dstBufChannel       = buf[dstChannelIdx];
+            auto srcBufChannel = srcBuf[srcChannelIdx];
+            auto dstBufChannel = buf[dstChannelIdx];
             for (samplecount_t j = 0; j < nSamples; j++) {
-                dstBufChannel[j] += srcBufChannel[j] * srcGain * gain * panLR[i % 2];
+                dstBufChannel[j] += FPTypeDst(srcBufChannel[j]) * srcGain * gain * panLR[i % 2];
             }
         }
     }
-    void MultiplyAutomation(AudioBlock* src, AudioBlock* dst, float* pGain, float** pPan) {
+
+    template<typename FPTypeSrc, typename FPTypeDst>
+    void MultiplyAutomation(AudioBlockBase<FPTypeSrc>* src, AudioBlockBase<FPTypeDst>* dst, float* pGain, float** pPan) {
         auto srcSamples  = src->samples;
         auto srcChannels = src->channels;
         auto channels    = dst->channels;
@@ -311,14 +316,22 @@ namespace DAW::Panning {
         for (channelnum_t i = 0; i < nChannels; i++) {
             channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
             channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
-            auto srcBufChannel         = srcBuf[srcChannelIdx];
-            float* dstBufChannel       = buf[dstChannelIdx];
-            float* gain                = pGain;
-            float* panChannel          = pPan[i % 2];
+            auto srcBufChannel = srcBuf[srcChannelIdx];
+            auto dstBufChannel = buf[dstChannelIdx];
+            float* gain       = pGain;
+            float* panChannel = pPan[i % 2];
             for (samplecount_t j = 0; j < nSamples; j++) {
-                dstBufChannel[j] += srcBufChannel[j] * srcGain * (*gain++) * (*panChannel++);
+                dstBufChannel[j] += FPTypeDst(srcBufChannel[j]) * srcGain * (*gain++) * (*panChannel++);
             }
         }
     }
-
+    //explicit instantiation
+    template void MultiplyAutomation<float, float>(AudioBlockBase<float>* src, AudioBlockBase<float>* dst, float* pGain, float** pPan);
+    template void MultiplyAutomation<double, double>(AudioBlockBase<double>* src, AudioBlockBase<double>* dst, float* pGain, float** pPan);
+    template void MultiplyAutomation<double, float>(AudioBlockBase<double>* src, AudioBlockBase<float>* dst, float* pGain, float** pPan);
+    template void MultiplyAutomation<float, double>(AudioBlockBase<float>* src, AudioBlockBase<double>* dst, float* pGain, float** pPan);
+    template void MultiplyConstant<float, float>(AudioBlockBase<float>* src, AudioBlockBase<float>* dst, float gain, float pan);
+    template void MultiplyConstant<double, double>(AudioBlockBase<double>* src, AudioBlockBase<double>* dst, float gain, float pan);
+    template void MultiplyConstant<double, float>(AudioBlockBase<double>* src, AudioBlockBase<float>* dst, float gain, float pan);
+    template void MultiplyConstant<float, double>(AudioBlockBase<float>* src, AudioBlockBase<double>* dst, float gain, float pan);
 } // namespace DAW::Panning

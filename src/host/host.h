@@ -20,8 +20,8 @@
 #include "hires_timer.h"
 #include "host/project/project.h"
 #include "audio_config.h"
-#include "host/audiobuffer/audiobuffer.h"
 #include "host/audiobuffer/audioblock.h"
+#include "host/audiobuffer/audiobuffer.h"
 #include "saferef.h"
 #include "host/track/track.h"
 #include "host/graph/track_graph.h"
@@ -33,7 +33,6 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 
 class audiocache;
-struct AudioBlock;
 
 namespace DAW::Host {
 class Host;
@@ -42,6 +41,7 @@ struct process_scratch_buf_t {
     VstTimeInfo timeinfo{};
     hires_timer_t timer;// timer for cpu-time profiling
     AudioBlock block;
+    AudioBlockBase<double> blockSumming;
     std::vector<std::vector<float>> scratchBuffers;
     std::vector<midievent_note_t> noteEventsTemp;
     std::vector<midievent_ctrl_t> ctrlEventsTemp;
@@ -114,6 +114,7 @@ public:
     std::atomic<int32_t> bypassPlaybackProcessing{ false };
     std::atomic<int32_t> bypassSampleConversion{ false };
     std::atomic<int32_t> cacheAudioGraph{ false };
+    std::atomic<bool> bSummingIn64Bit{ true };
 #if DAW_DEBUG_AUDIOGRAPH
     std::shared_ptr<DAW::track_graph_t> lastTrackGraph;
     std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
@@ -205,6 +206,7 @@ public:
 }
 
 namespace DAW::Host {
-    void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, playback_state state, float MTR_CEIL, float DBFS_MUTE_POS);
+    template<typename FPTypeSrc, typename FPTypeDst>
+    void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlockBase<FPTypeSrc>* in, AudioBlockBase<FPTypeDst>* out, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, playback_state state, float MTR_CEIL, float DBFS_MUTE_POS);
     void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlobals, const std::vector<clip_t*>& clips, const sampleformat_t& dstSampleFormat, samplecount_t samplePosBegin, AudioBlock& out);
 }

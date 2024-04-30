@@ -565,7 +565,7 @@ namespace PluginEQ {
                 }
                 /* fast path: center pan */
                 if (math::abs(fPanTrack - 0.5f) < 0.005f) {
-                    blockOut->addFromOp(bufEqd, AudioBlock::mix_op::ADD, fGain);
+                    blockOut->addFromOp(bufEqd, mix_op::ADD, fGain);
                 } else {
                     DAW::Panning::MultiplyConstant(bufEqd, blockOut, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
                 }

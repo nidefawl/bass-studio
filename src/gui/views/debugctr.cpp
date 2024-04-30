@@ -67,6 +67,7 @@ enum ID_BTN : int32_t {
     ID_BTN_UNLOAD_UNREFERENCED_AUDIOCACHE,
     ID_BTN_RESET_RESAMPLERS,
     ID_BTN_TOGGLE_CLAP_SAMPLEACCURATE_MODULATION,
+    ID_BTN_TOGGLE_64_BIT_SUMMING
 };
 struct gui_ctr_debug::ctr_debug_impl_t {
     std::vector<guibase*> debugGuis;
@@ -245,6 +246,12 @@ gui_ctr_debug::gui_ctr_debug(create_ctr_t ctxt, DebugCtrType debugCtrType)
             btn3->id  = ID_BTN_TOGGLE_CLAP_SAMPLEACCURATE_MODULATION;
             btn3->setText("Clap sampleaccurate modulation (OFF)");
             btn3->setText(String(DAW::gClapUseSampleAccurateModulation ? "Clap: Sample accurate modulation (ON)" : "Clap: Sample accurate modulation (OFF)"));
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_TOGGLE_64_BIT_SUMMING;
+            btn3->setText(String(ctxt.daw->getHost()->bSummingIn64Bit ? "64 bit summing (ON)" : "64 bit summing (OFF)"));
             debugGuis.push_back(btn3);
         }
     }
@@ -616,6 +623,10 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
         case ID_BTN_TOGGLE_AUDIOGRAPHCACHE:
             host->cacheAudioGraph = !host->cacheAudioGraph;
             static_cast<guibutton*>(button)->setText(String(host->cacheAudioGraph ? "Use Audio Graph Cache (ON)" : "Use Audio Graph Cache (OFF)"));
+            break;
+        case ID_BTN_TOGGLE_64_BIT_SUMMING:
+            host->bSummingIn64Bit = !host->bSummingIn64Bit;
+            static_cast<guibutton*>(button)->setText(String(host->bSummingIn64Bit ? "64 bit summing (ON)" : "64 bit summing (OFF)"));
             break;
         case ID_BTN_TOGGLE_EFFECTPROCESSING:
             host->bypassEffectProcessing = !host->bypassEffectProcessing;

@@ -293,7 +293,7 @@ void module_group::process(const DAW::Host::Host* const host, AudioBlock* in, Au
     /* Calculate group gain level */
     float fGain;
     if (dsp_util::getGainLvl(getParamValue(PARAM_GAIN), fGain)) {
-        audio->outputPost.addFromOp(&audio->output, AudioBlock::mix_op::ADD, math::clamp(fGain, 0.0f, 1.0f));
+        audio->outputPost.addFromOp(&audio->output, mix_op::ADD, math::clamp(fGain, 0.0f, 1.0f));
     }
     out->copyFrom(&audio->outputPost);
 }

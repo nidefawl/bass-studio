@@ -2,8 +2,8 @@
 #include "types.h"
 #include <atomic>
 #include "assert_dbg.h"
+#include "host/audiobuffer/audioblock.h"
 
-struct AudioBlock;
 struct AudioBufferTimeInfo {
     samplecount_t samplePosInput{};
     samplecount_t samplePosOutput{};

@@ -2,8 +2,8 @@
 #include "types.h"
 #include "samplerate.h"
 #include "math/seq_math.h"
+#include "host/audiobuffer/audioblock.h"
 
-struct AudioBlock;
 namespace dsp_util {
 
     float Saturate(float input, float fMax);
@@ -92,8 +92,9 @@ namespace DAW::Panning {
     constexpr float GetCenterGain() {
         return CenterGain<PanLaw::SIN_4_5DB>();
     }
+    template<typename FPTypeSrc, typename FPTypeDst>
+    void MultiplyAutomation(AudioBlockBase<FPTypeSrc>* src, AudioBlockBase<FPTypeDst>* dst, float* pGain, float** pPan);
 
-    void MultiplyAutomation(AudioBlock* src, AudioBlock* dst, float* pGain, float** pPan);
-
-    void MultiplyConstant(AudioBlock* src, AudioBlock* dst, float gain, float pan);
+    template<typename FPTypeSrc, typename FPTypeDst>
+    void MultiplyConstant(AudioBlockBase<FPTypeSrc>* src, AudioBlockBase<FPTypeDst>* dst, float gain, float pan);
 }

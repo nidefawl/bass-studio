@@ -14,7 +14,6 @@
 #include "snapshot/snapshot.h"
 #include "host/plugin/base/base-plugin.h"
 
-struct AudioBlock;
 struct handles_t;
 class track_t;
 class guibase;

@@ -39,7 +39,6 @@
 #include "tls.h"
 #include "types.h"
 
-struct AudioBlock;
 class track_t;
 class guibase;
 struct track_impl_t;

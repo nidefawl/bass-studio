@@ -84,6 +84,135 @@ namespace DebugAlloc {
     void endTrace();
 }
 
+
+namespace DAW {
+bool resolveEffectDefaultConnection(const Host::PluginManager* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
+    if (effect && effect->inputChannelsDesc.empty()) {
+        out = DAW::ChannelNone();
+        return true;
+    }
+    int32_t effIdx = 0;
+    if (effect) {
+        effIdx = indexOfCtr(stage->effects, effect);
+    } else {
+        effIdx = static_cast<int32_t>(stage->effects.size());
+    }
+    while (effIdx > 0) {
+        auto effectBefore = stage->effects[effIdx - 1];
+        if (!effectBefore->outputChannelsDesc.empty()) {
+            auto dstChDesc = effect ? effect->inputChannelsDesc.front() : DAW::channel_desc{};
+            out = DAW::ChannelAudioEffect(effectBefore, stage_bufferpoint::OUTPUT_POST, effectBefore->outputChannelsDesc.front(), dstChDesc);
+            return true;
+        }
+        effIdx -= 1;
+    }
+    out = DAW::ChannelStage(stage, stage_bufferpoint::INPUT);
+    return true;
+}
+
+bool resolveDefaultConnection(const Host::PluginManager* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
+    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
+        int32_t idx = 0;
+        auto type = AudioIO::getTrackTypeFromNumChannels(trImpl->outputPost.channels);
+        String name = "External "+AudioIO::getExternalIOName(type, idx, stage_bufferpoint::OUTPUT_POST);
+        out = ChannelAudioInput(idx, 0, name, type);
+        return true;
+    }
+    const track_t* const firstMaster = !project->trackMasterCtr.empty() ? project->trackMasterCtr.front() : nullptr;
+    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_RETURN) {
+        if (firstMaster) {
+            out = ChannelStage(firstMaster->audio, stage_bufferpoint::INPUT);
+            return true;
+        }
+    }
+    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MIDIAUDIO) {
+        const track_t* const dstTrack = trImpl->track->parent ? trImpl->track->parent : firstMaster;
+        if (dstTrack) {
+            out = ChannelStage(dstTrack->audio, stage_bufferpoint::INPUT);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
+    if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
+        if (ptrExternalInputs != nullptr) {
+            const auto idx = inputChannel.srcChannelOffset;
+            const auto size = math::min<channelnum_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
+            if (idx+size <= ptrExternalInputs->channels) {
+                out.channels.clear();
+                for (channelnum_t ch = 0; ch < size; ++ch) {
+                    out.channels.push_back(ptrExternalInputs->buf[idx+ch]);
+                }
+                out.sampleFormat = host->m_sampleFormatExternal;
+                out.samples = ptrExternalInputs->samples;
+                return true;
+            }
+        }
+    }
+    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
+        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
+        if (stage) {
+            track_audio_src src;
+            out.channels.clear();
+            auto* buff = &stage->input;
+            switch (inputChannel.stage.buffer) {
+            case stage_bufferpoint::INPUT:
+                buff = &stage->input;
+                break;
+            case stage_bufferpoint::OUTPUT:
+                buff = &stage->output;
+                break;
+            case stage_bufferpoint::OUTPUT_POST:
+                buff = &stage->outputPost;
+                break;
+            }
+            auto numChannels = DAW::AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType);
+            for (uint32_t i = 0; i < numChannels && i + inputChannel.srcChannelOffset < buff->channels; ++i) {
+                out.channels.emplace_back(buff->buf[i + inputChannel.srcChannelOffset]);
+            }
+            out.sampleFormat = stage->sampleFormat;
+            out.samples = buff->samples;
+            return true;
+        }
+    }
+
+    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
+        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
+        if (stage) {
+            effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
+            if (!eff) {
+                log_lf(Log::L_WARN, "Effect with id %d is not found on stage\n", inputChannel.projectGlobalId);
+                return false;
+            }
+            if (!eff->blockOutputs) {
+                log_lf(Log::L_WARN, "%s Output buffer is null\n", StringAsCStr(eff->getName()));
+                return false;
+            }
+            for (auto& desc : eff->outputChannelsDesc) {
+                if (desc.offset == inputChannel.srcChannelOffset) {
+                    out.channels.clear();
+                    for (auto chIdx = desc.offset; chIdx < desc.offset+desc.count; ++chIdx) {
+                        if (chIdx >= eff->blockOutputs->channels) {
+                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %u channels, found %u\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
+                            return false;
+                        }
+                        out.channels.push_back(eff->blockOutputs->buf[chIdx]);
+                    }
+                    out.sampleFormat = stage->sampleFormat;
+                    out.samples = eff->blockOutputs->samples;
+                    return true;
+                }
+            }
+            log_lf(Log::L_WARN, "%s Does not have output with offset %u\n", StringAsCStr(eff->getName()), inputChannel.srcChannelOffset);
+        }
+    }
+    return false;
+};
+
+} // namespace DAW
+
 namespace DAW::Host {
 
 void UpdateClapTime(clap_event_transport_t& timeinfo, const sampleformat_t& m_sampleFormatInternal, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) {
@@ -738,7 +867,17 @@ AudioBlock& AllocateScratchAudioBuffer(process_scratch_buf_t& tmp, channelnum_t 
     }
     return tmp.block;
 }
-void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, playback_state state, float MTR_CEIL, float DBFS_MUTE_POS) {
+AudioBlockBase<double>& AllocateSummingAudioBuffer(process_scratch_buf_t& tmp, channelnum_t numChannels, samplecount_t numSamples) {
+    if (tmp.blockSumming.channels < numChannels) {
+        tmp.blockSumming = AudioBlockBase<double>(numChannels, numSamples);
+    } else {
+        tmp.blockSumming.realloc(numSamples);
+    }
+    return tmp.blockSumming;
+}
+
+template<typename FPTypeSrc, typename FPTypeDst>
+void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlockBase<FPTypeSrc>* in, AudioBlockBase<FPTypeDst>* out, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, playback_state state, float MTR_CEIL, float DBFS_MUTE_POS) {
     dbgassert(autParGain.atl);
     dbgassert(autParPan.atl);
     const auto numSamples = out->samples;
@@ -759,10 +898,15 @@ void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, A
 
 void MixInputs(const Host* host, const processing_track_node_t& node, process_scratch_buf_t& tmp, IDelayLineStorage* delayLines, AudioBlock* ptrBlockMixDst, const std::vector<DAW::track_source_t>& allSources, channelnum_t numChannelsTrack, samplerate_t trackNodeInputLatency, double processingPos, double tickBlockEnd, playback_state state, AudioBlock* ptrExternalInputs) {
     bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
-
+    const bool is64BitSumming = host->bSummingIn64Bit;
     AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, ptrBlockMixDst->channels, ptrBlockMixDst->samples);
+    AudioBlockBase<double>* tmpBlockSumming = nullptr;
+    if (is64BitSumming) {
+        tmpBlockSumming = &AllocateSummingAudioBuffer(tmp, ptrBlockMixDst->channels, ptrBlockMixDst->samples);
+    }
     static thread_local track_audio_src srcTemp{};
     auto& src = srcTemp;
+    int32_t numMixed = 0;
     for (const DAW::track_source_t& tracksrc : allSources)
     {
         if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
@@ -806,35 +950,50 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                 if (node.type == DAW::track_node_type_t::TRACK) {
                     dstChannelCount = AudioIO::getNumChannelsFromTrackType(AudioIO::getTrackTypeFromNumChannels(ptrBlockMixDst->channels));
                 }
-                auto blockMixToOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
-                if (autParGain.type <= automation_routing_type::ROUTING_CONSTANT 
-                    && (autParPan.type == automation_routing_type::ROUTING_NONE 
-                        ||  (autParPan.type == automation_routing_type::ROUTING_CONSTANT && autParPan.atl->getParamValue(autParPan.paramIdx) == 0.5f))) {
-                    float fGainTrack = 1.0f;
-                    bool bIsNotMuted = true;
-                    if (autParGain.type != automation_routing_type::ROUTING_NONE) {
-                        bIsNotMuted = dsp_util::getGainLvl(autParGain.atl->getParamValue(autParGain.paramIdx), fGainTrack);
-                    }
-                    /* Fast path */
-                    if (bIsNotMuted) {
-                        if (delayToMaxInputLatency > 0) {
-                            dbgassert(delayLine);
-                            blockMixToOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
-                        } else {
-                            blockMixToOffset.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
+                auto mixWithAutomation = [&](auto* blockMixToOffset) {
+                    if (autParGain.type <= automation_routing_type::ROUTING_CONSTANT 
+                        && (autParPan.type == automation_routing_type::ROUTING_NONE 
+                            ||  (autParPan.type == automation_routing_type::ROUTING_CONSTANT && autParPan.atl->getParamValue(autParPan.paramIdx) == 0.5f))) {
+                        float fGainTrack = 1.0f;
+                        bool bIsNotMuted = true;
+                        if (autParGain.type != automation_routing_type::ROUTING_NONE) {
+                            bIsNotMuted = dsp_util::getGainLvl(autParGain.atl->getParamValue(autParGain.paramIdx), fGainTrack);
                         }
+                        /* Fast path */
+                        if (bIsNotMuted) {
+                            if (delayToMaxInputLatency > 0) {
+                                dbgassert(delayLine);
+                                blockMixToOffset->addFromDelayLineOp(delayLine, delayToMaxInputLatency, mix_op::ADD, fGainTrack);
+                            } else {
+                                blockMixToOffset->addFromOp(&srcBlock, mix_op::ADD, fGainTrack);
+                            }
+                        }
+                    } else {
+                        AudioBlock* inputBlock = &srcBlock;
+                        if (delayToMaxInputLatency > 0) {
+                            tmpBlock.clear();
+                            tmpBlock.addFromDelayLineOp(delayLine, delayToMaxInputLatency, mix_op::ADD, 1.0);
+                            inputBlock = &tmpBlock;
+                        }
+                        MixWithGainAndPanAutomation(host, tmp, inputBlock, blockMixToOffset, autParGain, autParPan, processingPos, tickBlockEnd, state, dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS);
                     }
+                };
+                if (is64BitSumming) {
+                    if (numMixed == 0 && tmpBlockSumming) {
+                        tmpBlockSumming->clear();
+                    }
+                    auto blockMixToOffset = tmpBlockSumming->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
+                    mixWithAutomation(&blockMixToOffset);
                 } else {
-                    AudioBlock* inputBlock = &srcBlock;
-                    if (delayToMaxInputLatency > 0) {
-                        tmpBlock.clear();
-                        tmpBlock.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, 1.0f);
-                        inputBlock = &tmpBlock;
-                    }
-                    MixWithGainAndPanAutomation(host, tmp, inputBlock, &blockMixToOffset, autParGain, autParPan, processingPos, tickBlockEnd, state, dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS);
+                    auto blockMixToOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
+                    mixWithAutomation(&blockMixToOffset);
                 }
+                numMixed++;
             }
         }
+    }
+    if (is64BitSumming && numMixed > 0 && tmpBlockSumming) {
+        ptrBlockMixDst->copyFrom(tmpBlockSumming);
     }
 }
 
@@ -939,7 +1098,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
                 auto routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                 auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
                 impl->blockOutput.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
-                        .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
+                        .addFromOp(&trackSubChannelOutput, mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
 
             }
         }
@@ -1190,7 +1349,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
                         int routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                         auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
                         blockExtOut.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
-                                    .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
+                                    .addFromOp(&trackSubChannelOutput, mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
                     }
                 }
             }
@@ -1461,7 +1620,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, trackImpl->input.channels, trackImpl->input.samples);
         tmpBlock.clear();
         trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, sampleLatencyCompensated, tmpBlock.samples, tmpBlock);
-        trackImpl->input.addFromOp(&tmpBlock, AudioBlock::mix_op::ADD, 1.0f);
+        trackImpl->input.addFromOp(&tmpBlock, mix_op::ADD, 1.0f);
     }
     trackImpl->procStats.timeTrackFillAudioClips = tmp.timer.getTime();
 
@@ -1521,7 +1680,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             }
             /* Fast path */
             if (bIsNotMuted) {
-                trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
+                trackImpl->outputPost.addFromOp(&trackImpl->output, mix_op::ADD, fGainTrack);
             }
         } else {
             MixWithGainAndPanAutomation(this, tmp, &trackImpl->output, &trackImpl->outputPost, autParGain, autParPan, postStageTickLatencyCompensated, postStageTickEnd, playbackState, dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS);
@@ -2206,131 +2365,3 @@ std::shared_ptr<DAW::rmsmeter> Host::getMeterOutput() {
 }
 
 }// namespace DAW::Host
-
-namespace DAW {
-bool resolveEffectDefaultConnection(const Host::PluginManager* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
-    if (effect && effect->inputChannelsDesc.empty()) {
-        out = DAW::ChannelNone();
-        return true;
-    }
-    int32_t effIdx = 0;
-    if (effect) {
-        effIdx = indexOfCtr(stage->effects, effect);
-    } else {
-        effIdx = static_cast<int32_t>(stage->effects.size());
-    }
-    while (effIdx > 0) {
-        auto effectBefore = stage->effects[effIdx - 1];
-        if (!effectBefore->outputChannelsDesc.empty()) {
-            auto dstChDesc = effect ? effect->inputChannelsDesc.front() : DAW::channel_desc{};
-            out = DAW::ChannelAudioEffect(effectBefore, stage_bufferpoint::OUTPUT_POST, effectBefore->outputChannelsDesc.front(), dstChDesc);
-            return true;
-        }
-        effIdx -= 1;
-    }
-    out = DAW::ChannelStage(stage, stage_bufferpoint::INPUT);
-    return true;
-}
-
-bool resolveDefaultConnection(const Host::PluginManager* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
-    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
-        int32_t idx = 0;
-        auto type = AudioIO::getTrackTypeFromNumChannels(trImpl->outputPost.channels);
-        String name = "External "+AudioIO::getExternalIOName(type, idx, stage_bufferpoint::OUTPUT_POST);
-        out = ChannelAudioInput(idx, 0, name, type);
-        return true;
-    }
-    const track_t* const firstMaster = !project->trackMasterCtr.empty() ? project->trackMasterCtr.front() : nullptr;
-    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_RETURN) {
-        if (firstMaster) {
-            out = ChannelStage(firstMaster->audio, stage_bufferpoint::INPUT);
-            return true;
-        }
-    }
-    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MIDIAUDIO) {
-        const track_t* const dstTrack = trImpl->track->parent ? trImpl->track->parent : firstMaster;
-        if (dstTrack) {
-            out = ChannelStage(dstTrack->audio, stage_bufferpoint::INPUT);
-            return true;
-        }
-    }
-    return false;
-}
-
-bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
-    if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-        if (ptrExternalInputs != nullptr) {
-            const auto idx = inputChannel.srcChannelOffset;
-            const auto size = math::min<channelnum_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
-            if (idx+size <= ptrExternalInputs->channels) {
-                out.channels.clear();
-                for (channelnum_t ch = 0; ch < size; ++ch) {
-                    out.channels.push_back(ptrExternalInputs->buf[idx+ch]);
-                }
-                out.sampleFormat = host->m_sampleFormatExternal;
-                out.samples = ptrExternalInputs->samples;
-                return true;
-            }
-        }
-    }
-    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
-        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
-        if (stage) {
-            track_audio_src src;
-            out.channels.clear();
-            auto* buff = &stage->input;
-            switch (inputChannel.stage.buffer) {
-            case stage_bufferpoint::INPUT:
-                buff = &stage->input;
-                break;
-            case stage_bufferpoint::OUTPUT:
-                buff = &stage->output;
-                break;
-            case stage_bufferpoint::OUTPUT_POST:
-                buff = &stage->outputPost;
-                break;
-            }
-            auto numChannels = DAW::AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType);
-            for (uint32_t i = 0; i < numChannels && i + inputChannel.srcChannelOffset < buff->channels; ++i) {
-                out.channels.emplace_back(buff->buf[i + inputChannel.srcChannelOffset]);
-            }
-            out.sampleFormat = stage->sampleFormat;
-            out.samples = buff->samples;
-            return true;
-        }
-    }
-
-    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
-        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
-        if (stage) {
-            effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
-            if (!eff) {
-                log_lf(Log::L_WARN, "Effect with id %d is not found on stage\n", inputChannel.projectGlobalId);
-                return false;
-            }
-            if (!eff->blockOutputs) {
-                log_lf(Log::L_WARN, "%s Output buffer is null\n", StringAsCStr(eff->getName()));
-                return false;
-            }
-            for (auto& desc : eff->outputChannelsDesc) {
-                if (desc.offset == inputChannel.srcChannelOffset) {
-                    out.channels.clear();
-                    for (auto chIdx = desc.offset; chIdx < desc.offset+desc.count; ++chIdx) {
-                        if (chIdx >= eff->blockOutputs->channels) {
-                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %u channels, found %u\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
-                            return false;
-                        }
-                        out.channels.push_back(eff->blockOutputs->buf[chIdx]);
-                    }
-                    out.sampleFormat = stage->sampleFormat;
-                    out.samples = eff->blockOutputs->samples;
-                    return true;
-                }
-            }
-            log_lf(Log::L_WARN, "%s Does not have output with offset %u\n", StringAsCStr(eff->getName()), inputChannel.srcChannelOffset);
-        }
-    }
-    return false;
-};
-
-} // namespace DAW
