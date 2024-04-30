@@ -86,7 +86,7 @@ public:
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
-    void updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t processingPos, playback_state state) override;
+    void updateAutomatedParameters(const DAW::Host::PluginManager *const host, double tick, playback_state state) override;
     void processMidiMessages(std::vector<IMidiMsg>& midiEvents) override;
     void sendNotesOff() override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;

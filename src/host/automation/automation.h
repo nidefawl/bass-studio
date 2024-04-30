@@ -158,7 +158,7 @@ struct automated_param_t {
     virtual ~automated_param_t() = default;
     virtual bool isActive() const = 0;
     virtual bool isAutomated() const = 0;
-    virtual float modulateValue(tick_t tick, float f, const DAW::modulation_scaling_t& scale) const = 0;
+    virtual float modulateValue(double tick, float f, const DAW::modulation_scaling_t& scale) const = 0;
     virtual float getValueAt(tick_t tick) const = 0;
     virtual float getValueAtExact(double dTick) const = 0;
     virtual void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const = 0;
@@ -186,7 +186,7 @@ struct automation_lane_t final : public automated_param_t {
     bool isAutomated() const override {
         return !src.points.empty();
     }
-    float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override;
+    float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override;
     float getValueAt(tick_t tick) const override {
         return src.getValueAt(tick);
     }
@@ -549,7 +549,7 @@ public:
         }
     }
     void sampleAutomation(const DAW::Host::PluginManager *const host, int32_t paramIdx, double dTickBegin, double dTickEnd, playback_state state, samplecount_t numSamples, float* out);
-    virtual void updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t processingPos, playback_state state);
+    virtual void updateAutomatedParameters(const DAW::Host::PluginManager *const host, double tick, playback_state state);
     float getModulatedParameterAt(const DAW::Host::PluginManager* const host, int32_t paramIdx, double tick, playback_state state);
     
     /**

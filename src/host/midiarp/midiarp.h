@@ -139,7 +139,7 @@ public:
     void allNotesOff(std::vector<midievent_note_t>& noteEvents);
     void onStartPlayback();
 
-    void updateAutomatedParameters(const Host::PluginManager* const host, tick_t tick, playback_state state) override;
+    void updateAutomatedParameters(const Host::PluginManager* const host, double tick, playback_state state) override;
 
     automatable_param_ref_t toRef() const override {
         automatable_param_ref_t ref;

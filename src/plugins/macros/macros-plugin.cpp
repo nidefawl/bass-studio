@@ -325,7 +325,7 @@ struct macro_automation_src_param_t final : public automated_param_t {
             String getName() const override {
                 return StringFormat("Macro %d", paramIdx+1);
             }
-            float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
+            float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
                 const auto valScaled = scale.min + module->getParamValue(PARAM_MACROS_FIRST + paramIdx) * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:

@@ -1755,7 +1755,7 @@ void clapplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed
     effectbase::postProcess(out, samples, hasProcessed);
 }
 
-void clapplugin::updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t tick, playback_state state) {
+void clapplugin::updateAutomatedParameters(const DAW::Host::PluginManager *const host, double tick, playback_state state) {
     if (!DAW::gClapUseSampleAccurateModulation) {
         effectbase::updateAutomatedParameters(host, tick, state);
     }

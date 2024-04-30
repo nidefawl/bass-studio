@@ -200,7 +200,7 @@ namespace PluginLFO {
                 auto value = shape.sampleCurve(moduloPhase, false);
                 return value * (valMax - valMin) + valMin;
             }
-            float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
+            float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
                 const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
@@ -268,7 +268,7 @@ namespace PluginLFO {
             }
         };
         struct lfo_automation_src_random_t : public lfo_automation_src {
-            float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
+            float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
                 const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:

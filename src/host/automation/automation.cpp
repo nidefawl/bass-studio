@@ -533,7 +533,7 @@ void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host,
     }
 }
 
-void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t tick, playback_state state) {
+void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *const host, double tick, playback_state state) {
     if (automationLanes.empty() && inputChannelsModulation.empty()) {
         return;
     }
@@ -620,7 +620,7 @@ float automatable_t::getModulatedParameterAt(const DAW::Host::PluginManager* con
     return val;
 }
 
-float automation_lane_t::modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const {
+float automation_lane_t::modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const {
     const auto valScaled = scale.min + src.getValueAt(tick) * (scale.max - scale.min);
     switch (scale.mode) {
         case DAW::ModulationMode::ADD:

@@ -502,7 +502,7 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
     }
 }
 
-void track_impl_t::updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos, playback_state state) {
+void track_impl_t::updateAutomatableTargets(DAW::Host::Host* const host, double processingPos, playback_state state) {
     mixer.updateAutomatedParameters(host, processingPos, state);
     if (arp) {
         arp->updateAutomatedParameters(host, processingPos, state);

@@ -923,7 +923,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
     (void) nSend;
 }
 
-void midiarp::updateAutomatedParameters(const Host::PluginManager* const host, tick_t tick, playback_state state) {
+void midiarp::updateAutomatedParameters(const Host::PluginManager* const host, double tick, playback_state state) {
     // parameter automation updates are done internally
 }
 

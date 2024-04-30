@@ -1384,7 +1384,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     /**
      * Read and apply automation.
      */
-    trackImpl->updateAutomatableTargets(this, processingPos, playbackState);
+    trackImpl->updateAutomatableTargets(this, tickLatencyCompensated, playbackState);
 
     track->getStage()->procStats.timeTrackApplyAutomation = tmp.timer.getTime();
     dbgassert(tickBlockEnd-processingPos < math::ceildS32(ticksPerBlock+1));
@@ -2003,7 +2003,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     auto& pluginLocalContext = static_cast<vst3plugin*>(effect)->getVst3ProcessContext();
                     pluginLocalContext = procContext;
                 }
-                effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);
+                effect->updateAutomatedParameters(this, tickLatencyCompensated, playbackState);
                 if (isBypass || bypassEffectProcessing) {
                     auto delay = effect->getPluginLatency();
                     if (delay > 0) {
