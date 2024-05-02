@@ -637,6 +637,10 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
             -E copy
             "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
             "${PATH_DIST}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
+          COMMAND ${CMAKE_COMMAND} 
+            -E copy
+            "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
+            "${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
           # COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
         )
       else()

@@ -190,6 +190,7 @@ Section "Install C++ Runtimes"
 SetOutPath $InstDir
 File "${DIST_LOC}\libsoxr-clang-release.dll"
 File "${DIST_LOC}\libc++.dll"
+File "${DIST_LOC}\libunwind.dll"
 SectionEnd
 !endif
 
@@ -240,6 +241,7 @@ Delete "$INSTDIR\daw-pluginscanner.exe"
 Delete "$INSTDIR\libsoxr-clang-release.dll"
 Delete "$INSTDIR\soxr-msvc-release.dll"
 Delete "$INSTDIR\libc++.dll"
+Delete "$INSTDIR\libunwind.dll"
 Delete "$INSTDIR\python311.dll"
 Delete "$INSTDIR\python311.zip"
 Delete "$INSTDIR\res\cursors.png"
