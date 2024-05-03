@@ -24,7 +24,7 @@ struct clip_clipboard {
     std::vector<std::shared_ptr<track_clipboard_t>> tracks;
     std::vector<automation_clipboard_t> automationLanes;
     tick_t srcPos         = 0;
-    tick_t srcTrack       = 0;
+    int32_t srcTrack      = 0;
     int32_t selRange      = 0;
     int32_t selTrackRange = 0;
     clipboard_type_e type = ClipboardFull;

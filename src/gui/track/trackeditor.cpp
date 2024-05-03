@@ -405,6 +405,9 @@ namespace DAW {
                     cursor.setLeftAligned();
 
                     DAW::insertTime(daw, iGuiMgr, cursorCopy, clipboard->selRange);
+                    if (clipboard->srcTrack != cursor.cursorTrack) {
+                        bCopyAutomation = false;
+                    }
                     DAW::pasteClipboard(daw, iGuiMgr, clipboard.get(), cursor, bCopyAutomation);
                     cursor.selTrackRange = clipboard->selTrackRange;
                     cursor.selRange      = clipboard->selRange;
@@ -525,6 +528,9 @@ namespace DAW {
                     cursor.setLeftAligned();
                     if (clipboard->type == clip_clipboard::ClipboardFull)
                         DAW::cutSelection(daw, iGuiMgr, cursor, bCopyAutomation);
+                    if (clipboard->srcTrack != cursor.cursorTrack) {
+                        bCopyAutomation = false;
+                    }
                     DAW::pasteClipboard(daw, iGuiMgr, clipboard.get(), cursor, bCopyAutomation);
                     cursor.selTrackRange = clipboard->selTrackRange;
                     cursor.selRange      = clipboard->selRange;
@@ -990,6 +996,9 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
                     DAW::cutSelection(daw, iGuiMgr, cursorBegin, bCopyAutomation);
                 }
                 int32_t trackGuiIdx = dstTrack - trackOffset;
+                if (clipboard->srcTrack != cursor.cursorTrack) {
+                    bCopyAutomation = false;
+                }
                 DAW::pasteFullClipboard(daw, iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
                 daw->updateVisibleTrackContents();
                 gui      = nullptr;

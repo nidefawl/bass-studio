@@ -160,14 +160,14 @@ public:
 
 struct consolidate_task_t final : public async_task_t {
     SafeRef<guibase> refGui;
-    DawCtrl* dawCtrl;
-    DawInstance* daw;
-    track_gui_manager_i* iGuiMgr;
-    DAW::Cursor cursor;
+    DawCtrl* dawCtrl = nullptr;
+    DawInstance* daw = nullptr;
+    track_gui_manager_i* iGuiMgr = nullptr;
+    DAW::Cursor cursor{};
     std::map<int32_t, std::array<int32_t, 2>> mapTrClCount;
     std::shared_ptr<clip_clipboard> clipboardCopy;
     std::shared_ptr<clip_clipboard> clipboardConsolidated;
-    bool bCopyAutomation;
+    bool bCopyAutomation = false;
     int32_t numTracks = 0;
     int32_t currentTrack = 0;
     std::shared_ptr<consolidate_fill_audio_t> fillAudio;
