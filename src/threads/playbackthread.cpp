@@ -222,6 +222,7 @@ private:
                                 }
                             }
                             m_status = reqState;
+                            host->getHostCallback()->m_playbackState = playback_state::status_no_process;
                         } break;
                         case GUI_CALL:
                             req->fn();
@@ -329,6 +330,7 @@ private:
                         if (m_status == status_render) {
                             if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
                                 m_status = status_no_process;
+                                host->getHostCallback()->m_playbackState = playback_state::status_no_process;
                                 ctrl->getGlobals().recordArmed = false;
                                 host->onStopPlayback(this->m_prjCtrl);
                                 host->postExportEnd(ctrl, exportSettingsLocal, false);

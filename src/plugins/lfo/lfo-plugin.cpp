@@ -149,27 +149,28 @@ namespace PluginLFO {
         struct lfo_automation_src : public automated_param_t {
             module_lfo* module = nullptr;
             lfo_sync_settings_t* sync = nullptr;
-            DAW::Host::Host* host = nullptr;
             std::pair<float, float> getMinMax(double dTick) const {
-                if (stl_contains(stack, this)) {
+                auto host = module->getPluginManager();
+                if (!host || stl_contains(stack, this)) {
                     return {
                         module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f,
                         module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f
                     };
                 }
                 stack.push_back(this);
-                auto state = module->impl->daw->getPlayThread()->getState();
+                auto state = module->hostCallback->m_playbackState;
                 auto valMin = module->getModulatedParameterAt(host, PARAM_LFO_MINIMUM, dTick, state) * 2.0f - 1.0f;
                 auto valMax = module->getModulatedParameterAt(host, PARAM_LFO_MAXIMUM, dTick, state) * 2.0f - 1.0f;
                 stack.pop_back();
                 return { valMin, valMax };
             }
             std::pair<float, float> getRatePhase(double dTick) const {
-                if (stl_contains(stack, this)) {
+                auto host = module->getPluginManager();
+                if (!host || stl_contains(stack, this)) {
                     return { module->getParamValue(PARAM_LFO_RATE), module->getParamValue(PARAM_LFO_PHASE) };
                 }
                 stack.push_back(this);
-                auto state = module->impl->daw->getPlayThread()->getState();
+                auto state = module->hostCallback->m_playbackState;
                 auto valRate = module->getModulatedParameterAt(host, PARAM_LFO_RATE, dTick, state);
                 auto valPhase = module->getModulatedParameterAt(host, PARAM_LFO_PHASE, dTick, state);
                 stack.pop_back();
@@ -447,19 +448,16 @@ namespace PluginLFO {
             std::shared_ptr<lfo_automation_src_random_t> srcRand;
         };
 
-        DawInstance* const daw;
         module_lfo* const module;
         std::array<lfo_channel_t, NUM_CHANNELS> channels;
         explicit lfo_impl_t(DawInstance* _daw, module_lfo* _module, const DAW::Shape::shape_t& initShape) 
             : PluginLockable(_daw),
-            daw(_daw),
             module(_module)
         {
             for (auto& channel : channels) {
                 channel.syncFlags = STRAIGHT | DOTTED | TRIPLET;
                 channel.syncRatios = GetSyncRatios(channel.syncFlags);
                 channel.srcSync.module = module;
-                channel.srcSync.host = daw->getHost();
                 channel.srcSync.sync = &channel;
                 channel.srcSync.shape = initShape;
                 channel.modeIsShape = true;
@@ -493,7 +491,6 @@ namespace PluginLFO {
                     break;
             }
             channel.srcRand->module = module;
-            channel.srcRand->host = daw->getHost();
             channel.srcRand->sync = &channel;
         }
         int32_t getRandomMode(int32_t chIdx) const {

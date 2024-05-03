@@ -1,5 +1,6 @@
 #pragma once
 #include "samplerate.h"
+#include "seq_time.h"
 #include "types.h"
 #include "assert_dbg.h"
 #include <vstsdk-host-2.4/aeffectx.h>
@@ -36,6 +37,7 @@ class IHostCallback {
     int32_t vstShellCurrentUniqueId = 0;
     VstTimeInfo m_vstTimeInfo{};
     bool isOfflineRendering = false;
+    playback_state m_playbackState = playback_state::status_no_process;
     virtual ~IHostCallback() = default;
     virtual void onLatencyChanged(effectbase* effect) = 0;
     virtual void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) = 0;

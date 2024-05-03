@@ -1,4 +1,5 @@
 #pragma once
+#include "host/host_pluginmanager.h"
 #include "types.h"
 #include <memory>
 #include <utility>
@@ -117,6 +118,7 @@ public:
     SafeRef<effectbase> makeSafeRef();
     String getName() const { return sName; };
     String getProductName() const { return sProductName; };
+    DAW::Host::PluginManager* getPluginManager() const { return pluginMgr; }
     void setProductName(String _name) {
         replaceString(_name, "[jBridge]", "");
         this->sProductName = std::move(_name);
