@@ -2824,6 +2824,15 @@ static void nvg__renderText(NVGcontext* ctx, NVGvertex* verts, int nverts)
 	ctx->textTriCount += nverts/3;
 }
 
+int nvg_getFontImageId(NVGcontext* ctx) {
+    return ctx->fontImageId;
+}
+void nvg_getFontAtlasSize(NVGcontext* ctx, int *width, int *height) {
+    if (ctx->fs && width && height) {
+        fonsGetAtlasSize(ctx->fs, width, height);
+    }
+}
+
 static int nvg__isTransformFlipped(const float *xform)
 {
 	float det = xform[0] * xform[3] - xform[2] * xform[1];
@@ -2833,10 +2842,15 @@ static int nvg__isTransformFlipped(const float *xform)
 float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const char* string, const char* end)
 {
 	NVGstate* state = nvg__getState(ctx);
+	if (state->fontId == FONS_INVALID) return x;
+
 	FONStextIter iter;
 	FONSquad q;
 	NVGvertex* verts;
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
+    float scaledFontSize = state->fontSize * scale;
+	if (scaledFontSize < 2.0f) return x;
+
 	float invscale = 1.0f / scale;
 	int cverts = 0;
 	int nverts = 0;
@@ -2845,9 +2859,7 @@ float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const
 	if (end == NULL)
 		end = string + strlen(string);
 
-	if (state->fontId == FONS_INVALID) return x;
-
-	fonsSetSize(ctx->fs, state->fontSize*scale);
+	fonsSetSize(ctx->fs, scaledFontSize);
 	fonsSetSpacing(ctx->fs, state->letterSpacing*scale);
 	fonsSetBlur(ctx->fs, state->fontBlur*scale);
 	fonsSetAlign(ctx->fs, state->textAlign);
@@ -3073,13 +3085,16 @@ void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const ch
 int nvgTextGlyphPositions(NVGcontext* ctx, float x, float y, const char* string, const char* end, NVGglyphPosition* positions, int maxPositions)
 {
 	NVGstate* state = nvg__getState(ctx);
+	if (state->fontId == FONS_INVALID) return 0;
+
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
+    float scaledFontSize = state->fontSize * scale;
+	if (scaledFontSize < 2.0f) return 0;
+
 	float invscale = 1.0f / scale;
 	FONStextIter iter;
 	FONSquad q;
 	int npos = 0;
-
-	if (state->fontId == FONS_INVALID) return 0;
 
 	if (end == NULL)
 		end = string + strlen(string);
@@ -3087,7 +3102,7 @@ int nvgTextGlyphPositions(NVGcontext* ctx, float x, float y, const char* string,
 	if (string == end)
 		return 0;
 
-	fonsSetSize(ctx->fs, state->fontSize*scale);
+	fonsSetSize(ctx->fs, scaledFontSize);
 	fonsSetSpacing(ctx->fs, state->letterSpacing*scale);
 	fonsSetBlur(ctx->fs, state->fontBlur*scale);
 	fonsSetAlign(ctx->fs, state->textAlign);
@@ -3123,7 +3138,12 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 		return 0;
 
 	NVGstate* state = nvg__getState(ctx);
+	if (state->fontId == FONS_INVALID) return 0;
+
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
+    float scaledFontSize = state->fontSize * scale;
+	if (scaledFontSize < 2.0f) return 0;
+
 	float invscale = 1.0f / scale;
 	FONStextIter iter;
 	FONSquad q;
@@ -3144,14 +3164,13 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 	unsigned int pcodepoint = 0;
 
 	if (maxRows == 0) return 0;
-	if (state->fontId == FONS_INVALID) return 0;
 
 	if (end == NULL)
 		end = string + strlen(string);
 
 	if (string == end) return 0;
 
-	fonsSetSize(ctx->fs, state->fontSize*scale);
+	fonsSetSize(ctx->fs, scaledFontSize);
 	fonsSetSpacing(ctx->fs, state->letterSpacing*scale);
 	fonsSetBlur(ctx->fs, state->fontBlur*scale);
 	fonsSetAlign(ctx->fs, state->textAlign);
