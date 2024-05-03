@@ -11,7 +11,7 @@
 #include "samplerate.h"
 #include "types.h"
 
-#define TRACK_ALLOCATIONS_AUDIOBLOCK 1
+#define TRACK_ALLOCATIONS_AUDIOBLOCK 0
 
 enum alloc_type {
     empty = 0,
