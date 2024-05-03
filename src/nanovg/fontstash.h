@@ -19,6 +19,10 @@
 #ifndef FONS_H
 #define FONS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define FONS_INVALID -1
 
 #include "assert_dbg.h"
@@ -104,6 +108,7 @@ void fonsGetAtlasSize(FONScontext* s, int* width, int* height);
 int fonsExpandAtlas(FONScontext* s, int width, int height);
 // Resets the whole stash.
 int fonsResetAtlas(FONScontext* stash, int width, int height);
+void fonsUnloadUnused(FONScontext* stash);
 
 // Add fonts
 int fonsAddFont(FONScontext* s, const char* name, const char* path, int fontIndex);
@@ -143,8 +148,6 @@ int fonsValidateTexture(FONScontext* s, int* dirty);
 void fonsDrawDebug(FONScontext* s, float x, float y);
 
 #endif // FONTSTASH_H
-
-#define FONTSTASH_IMPLEMENTATION
 
 #ifdef FONTSTASH_IMPLEMENTATION
 
@@ -235,6 +238,7 @@ struct FONSglyph
     short size, blur;
     short x0,y0,x1,y1;
     short xadv,xoff,yoff;
+    short framesRendered;
 };
 typedef struct FONSglyph FONSglyph;
 
@@ -784,7 +788,7 @@ FONScontext* fonsCreateInternal(FONSparams* params)
     stash->dirtyRect[3] = 0;
 
     // Add white rect at 0,0 for debug drawing.
-    fons__addWhiteRect(stash, 2,2);
+    // fons__addWhiteRect(stash, 2,2);
 
     fonsPushState(stash);
     fonsClearState(stash);
@@ -1106,6 +1110,8 @@ static FONSglyph* fons__getGlyph(FONScontext* stash, FONSfont* font, unsigned in
     while (i != -1) {
         if (font->glyphs[i].codepoint == codepoint && font->glyphs[i].size == isize && font->glyphs[i].blur == iblur) {
             glyph = &font->glyphs[i];
+            if (glyph->framesRendered < 25)
+                glyph->framesRendered = 25;
             if (bitmapOption == FONS_GLYPH_BITMAP_OPTIONAL || (glyph->x0 >= 0 && glyph->y0 >= 0)) {
                 return glyph;
             }
@@ -1155,6 +1161,7 @@ static FONSglyph* fons__getGlyph(FONScontext* stash, FONSfont* font, unsigned in
     // Init glyph.
     if (glyph == NULL) {
         glyph = fons__allocGlyph(font);
+        glyph->framesRendered = 0;
         glyph->codepoint = codepoint;
         glyph->size = isize;
         glyph->blur = iblur;
@@ -1213,6 +1220,8 @@ static FONSglyph* fons__getGlyph(FONScontext* stash, FONSfont* font, unsigned in
     stash->dirtyRect[1] = fons__mini(stash->dirtyRect[1], glyph->y0);
     stash->dirtyRect[2] = fons__maxi(stash->dirtyRect[2], glyph->x1);
     stash->dirtyRect[3] = fons__maxi(stash->dirtyRect[3], glyph->y1);
+    if (glyph->framesRendered < 25)
+        glyph->framesRendered = 25;
 
     return glyph;
 }
@@ -1797,10 +1806,36 @@ int fonsResetAtlas(FONScontext* stash, int width, int height)
     stash->ith = 1.0f/stash->params.height;
 
     // Add white rect at 0,0 for debug drawing.
-    fons__addWhiteRect(stash, 2,2);
+    // fons__addWhiteRect(stash, 2,2);
 
     return 1;
 }
 
+void fonsUnloadUnused(FONScontext* stash)
+{
+    /* check how many glyphs are in use */
+    for (int i = 0; i < stash->nfonts; i++) {
+        int glyphsused = 0;
+        FONSfont* font = stash->fonts[i];
+        FONSglyph* glyphs = font->glyphs;
+        int nglyphs = font->nglyphs;
+        for (int j = 0; j < nglyphs; j++) {
+            glyphs[j].framesRendered -= fons__mini(glyphs[j].framesRendered, 10);
+            if (glyphs[j].framesRendered > 0) {
+                glyphsused++;
+            }
+        }
+        /* Reset atlas if more than 1/8th of loaded glyphs are not in use */
+        int unused = nglyphs - glyphsused;
+        if (unused * 8 > nglyphs) {
+            fonsResetAtlas(stash, stash->params.width, stash->params.height);
+        }
+    }
+}
 
+#endif
+
+
+#ifdef __cplusplus
+}
 #endif

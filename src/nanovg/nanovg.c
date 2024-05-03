@@ -29,9 +29,13 @@
 #endif
 
 #include "nanovg_internal.h"
+
+#define FONTSTASH_IMPLEMENTATION
 #include "fontstash.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
+
 #include "config.h"
 
 #ifdef _MSC_VER
@@ -431,6 +435,11 @@ void nvgEndFrame(NVGcontext* ctx)
 {
 	nvg__flushTextTexture(ctx);
 	ctx->params.renderFlush(ctx->params.userPtr);
+}
+
+struct FONScontext* nvgGetFontstash(NVGcontext* ctx)
+{
+    return ctx->fs;
 }
 
 NVGcolor nvgRGB(unsigned char r, unsigned char g, unsigned char b)
@@ -2772,6 +2781,15 @@ static void nvg__flushTextTexture(NVGcontext* ctx)
 			int h = dirty[3] - dirty[1];
 			ctx->params.renderUpdateTexture(ctx->params.userPtr, ctx->fontImageId, x,y, w,h, data);
 		}
+	}
+}
+
+void nvg__resetFontAtlas(NVGcontext* ctx)
+{
+	int iw, ih;
+	int found = ctx->params.renderGetTextureSize(ctx->params.userPtr, ctx->fontImageId, &iw, &ih);
+	if (found) {
+        fonsResetAtlas(ctx->fs, iw, ih);
 	}
 }
 

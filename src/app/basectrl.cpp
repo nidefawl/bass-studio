@@ -31,6 +31,8 @@
 #include "tls.h"
 #include "types.h"
 #include "window.h"
+#include "nanovg/fontstash.h"
+
 
 String getModKeyName(int modKey) {
     switch (modKey) {
@@ -352,12 +354,26 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
     return false;
 }
 
+#define RENDER_DBG_FONT_ATLAS 0
+extern "C" {
+struct FONScontext* nvgGetFontstash(NVGcontext* ctx);
+#if RENDER_DBG_FONT_ATLAS
+int nvg_getFontImageId(NVGcontext* ctx);
+void nvg_getFontAtlasSize(NVGcontext* ctx, int *width, int *height);
+#endif
+}
+
 void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
     auto& renderContainers = getRenderContainers();
     for (guictr_base* ctr : renderContainers) {
         if (ctr->isVisible()) {
             ctr->prerender(vg);
         }
+    }
+    auto fontStash = nvgGetFontstash(vg);
+    if (fontStash && ++framesSinceFontUnload >= 10) {
+        framesSinceFontUnload = 0;
+        fonsUnloadUnused(fontStash);
     }
 }
 
@@ -387,6 +403,36 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 
 
     renderContainers(vg, x, y, w, h, ratio);
+
+#if RENDER_DBG_FONT_ATLAS
+    nvgBeginFrame(vg, w, h, ratio);
+    nvgGlobalAlpha(vg, 0.5f);
+    nvgScale(vg, m_scale, m_scale);
+    ivec2 atlasSize;
+    nvg_getFontAtlasSize(vg, &atlasSize.x, &atlasSize.y);
+    auto s = vec2(atlasSize);
+    if (s.x > w || s.y > h) {
+        // rescale to fit inside w,h
+        float r = math::min(w / s.x, h / s.y);
+        s *= r;
+    }
+    auto p = (vec2(m_size) - s) * 0.5f;
+    NVGpaint paint{};
+    paint.innerColor = {0,0,0,1};
+    nvgBeginPath(vg);
+    nvgRect(vg, p.x, p.y, s.x, s.y);
+    nvgSetShapeExtents(vg, p.x, p.y, s.x, s.y);
+    nvgFillPaint(vg, paint);
+    nvgFill(vg);
+    NVGpaint paint2 = nvgImagePattern(vg, p.x, p.y, s.x, s.y, 0, nvg_getFontImageId(nanovgCtxt), 1);
+    nvgBeginPath(vg);
+    nvgRect(vg, p.x, p.y, s.x, s.y);
+    nvgSetShapeExtents(vg, p.x, p.y, s.x, s.y);
+    nvgFillPaint(vg, paint2);
+    nvgFill(vg);
+    nvgGlobalAlpha(vg, 1.0f);
+    nvgEndFrame(vg);
+#endif
 
     if (dragDropTargets_ContainerMove.size()) {
         for (std::weak_ptr<DropAreaUILayout>& weakPtrTarget : dragDropTargets_ContainerMove) {

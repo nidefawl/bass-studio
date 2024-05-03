@@ -135,6 +135,7 @@ public:
     const SafeRef<guibase>& getGuiCtrFocusedRef() const { return guiCtrFocused; }
 
     MouseEvent lastMouseEvent{};
+    int32_t framesSinceFontUnload = 0;
 
     bool bShowDebugFrames      = false;
     bool canTakeInputFocus = true; // TODO: use flags

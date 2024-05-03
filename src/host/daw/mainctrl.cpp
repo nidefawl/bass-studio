@@ -1952,39 +1952,8 @@ void DawCtrl::setEditorSelection(clip_t* clip, const editor_view_selection_t& cl
     });
 }
 
-#define RENDER_DBG_FONT_ATLAS 0
-#if RENDER_DBG_FONT_ATLAS
-extern "C" {
-int nvg_getFontImageId(NVGcontext* ctx);
-void nvg_getFontAtlasSize(NVGcontext* ctx, int *width, int *height);
-}
-#endif
-
 void MainCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
     DawCtrl::render(nanovgCtxt, x, y, w, h, ratio);
-
-#if RENDER_DBG_FONT_ATLAS
-    nvgBeginFrame(vg, w, h, ratio);
-    nvgScale(vg, m_scale, m_scale);
-    ivec2 atlasSize;
-    nvg_getFontAtlasSize(vg, &atlasSize.x, &atlasSize.y);
-    auto s = vec2(atlasSize);
-    auto p = vec2(m_size - atlasSize) * 0.5f;
-    NVGpaint paint{};
-    paint.innerColor = {0,0,0,1};
-    nvgBeginPath(vg);
-    nvgRect(vg, p.x, p.y, s.x, s.y);
-    nvgSetShapeExtents(vg, p.x, p.y, s.x, s.y);
-    nvgFillPaint(vg, paint);
-    nvgFill(vg);
-    NVGpaint paint2 = nvgImagePattern(vg, p.x, p.y, s.x, s.y, 0, nvg_getFontImageId(nanovgCtxt), 1);
-    nvgBeginPath(vg);
-    nvgRect(vg, p.x, p.y, s.x, s.y);
-    nvgSetShapeExtents(vg, p.x, p.y, s.x, s.y);
-    nvgFillPaint(vg, paint2);
-    nvgFill(vg);
-    nvgEndFrame(vg);
-#endif
 
     daw_tls::tlsinstance& tls = daw_tls::getTls();
     Profiling::profilingCommitStats(this, 0, tls.runtime->renderStats);
@@ -2001,12 +1970,8 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
     renderStats.notesRendered       = 0;
     //log_printf("prerender %d\n", seqthreads::getCurrentThreadId());
     hires_timer_t timer;
-    for (guictr_base* ctr : getRenderContainers()) {
-        if (ctr->isVisible()) {
-            ctr->prerender(nanovgCtxt);
-        }
-    }
-    
+    BaseCtrl::prerender(nanovgCtxt, x, y, w, h, pixelRatio);
+
     renderStats.timePrerender = timer.getTime();
 
     // auto tmNow = getTimeMillis();
