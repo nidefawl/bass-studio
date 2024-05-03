@@ -434,11 +434,17 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
     bool fillLoop  = loopEnabled && localEnd > preLoopLen;
     bool inPreLoop = localStart < preLoopLen;
     static thread_local std::vector<note_t> listLoop;
-    auto project = daw_tls::getTls().project;
     auto grooveIdx = selectedGroove;
     auto groove = groove_data_t{};
-    if (project && grooveIdx >= 0) {
-        groove = project->getGrooveData(selectedGroove);
+    if (grooveIdx >= 0) {
+        if (daw_tls::isTlsInitialized()) {
+            auto project = daw_tls::getTls().project;
+            if (project) {
+                groove = project->getGrooveData(selectedGroove);
+            } else {
+                grooveIdx = -1;
+            }
+        }
     }
 
     if (listLoop.capacity() == 0) {
