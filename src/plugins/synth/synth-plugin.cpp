@@ -4963,9 +4963,9 @@ class guicontainer_plugin_synth_header final : public guictr_base {
             add(&prev);
             add(&next);
             selectPreset.setPresetManager(synth->getPresetManager());
-            selectPreset.setCallback([this](const String& path) {
+            selectPreset.setCallback([this](const PresetManager::Preset& preset) {
                 ThreadLock lock = synth->lock();
-                this->synth->loadPreset(path);
+                this->synth->loadPreset(preset.path);
                 this->selectPreset.setString(synth->getPreset().name);
             });
         }

@@ -654,9 +654,9 @@ public:
         controls.gridControlH.buttonGrid.setStateRef(&this->shape.bIsGridEnabledH);
         controls.gridControlV.buttonGrid.setStateRef(&this->shape.bIsGridEnabledV);
         controls.presetControl.selectPreset.setPresetManager(presetManager);
-        controls.presetControl.selectPreset.setCallback([this](const String& path) {
+        controls.presetControl.selectPreset.setCallback([this](const PresetManager::Preset& path) {
             shape_preset_t shapeLoaded{};
-            if (loadShapePresetFile(path, shapeLoaded)) {
+            if (loadShapePresetFile(path.path, shapeLoaded)) {
                 if (shapeLoaded.version) {
                     auto& presetShape = shapeLoaded.curve;
                     shape_t tmp{presetShape.flags, std::move(presetShape.pts), presetShape.name, 0.0f };

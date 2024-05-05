@@ -11,7 +11,7 @@
 class guidropdown_select_preset_file final : public guictxtmenu {
 public:
 struct select_preset_cb_t {
-    std::function<void(const String& path)> loadPreset;
+    std::function<void(const PresetManager::Preset& path)> loadPreset;
     bool bValid = false;
 };
 private:
@@ -66,6 +66,9 @@ class ctxtmenu_entry_preset final : public ctxtmenu_entry {
         bool isFolder() const { return false; }
         String getPath() const { return preset.path; }
         String getName() const { return preset.name; }
+        const PresetManager::Preset getPreset() const {
+            return preset;
+        }
         ctxtmenu_entry_preset(const PresetManager::Preset& _preset, int id)
             : ctxtmenu_entry(_preset.name, id),
                 preset(_preset) {
@@ -124,7 +127,7 @@ public:
             auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_preset*>(e);
             if (!ctxtEndpointEntry->isFolder()) {
                 if (cb && cb->bValid)
-                    cb->loadPreset(ctxtEndpointEntry->getPath());
+                    cb->loadPreset(ctxtEndpointEntry->getPreset());
             }
         }
         return true;
@@ -152,7 +155,7 @@ public:
     void setPresetManager(PresetManager presetManager) {
         this->presetManager = std::move(presetManager);
     }
-    void setCallback(std::function<void(const String&)> cbFn) {
+    void setCallback(std::function<void(const PresetManager::Preset&)> cbFn) {
         if (cb) cb->bValid = false;
         cb = std::make_shared<guidropdown_select_preset_file::select_preset_cb_t>();
         cb->loadPreset = std::move(cbFn);
