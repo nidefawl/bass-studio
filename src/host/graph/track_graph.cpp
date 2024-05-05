@@ -321,6 +321,15 @@ namespace DAW {
                 }
             }
         }
+        /* Assign correct latencies for external output pulls */
+        for (track_source_t& pulls : graph.trackGraph->externalOutputRouting) {
+            if (isChannelConnected(pulls.channel) && pulls.channel.getType() == stage_type::INPUT_AUDIOSTAGE) {
+                const auto pullId = pulls.channel.stage.stageRef.stageId;
+                const auto ptrChNode = getNodeConst(graph.nodesFlatOrdered, pullId);
+                dbgassert(ptrChNode);
+                pulls.latency  = ptrChNode->inputLatency + ptrChNode->internalLatency;
+            }
+        }
         out_procgraph = shrdPtrProcGraph;
         return true;
     }
