@@ -278,18 +278,15 @@ private:
 
                     const auto props = host->updateAudioStreamProperties();
 
-
-                    const bool isLoopAround = tickPos + props.ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
-
                     int32_t numBlocksProcessed = 0;
 
                     bool inLoop = m_status == status_playback && projGlobals.loopEnabled && (tickPos >= projGlobals.loopStart) && (tickPos < projGlobals.loopStart + projGlobals.loopLen);
 
 
                     if (m_status != playback_state::status_render) {
-                        midiHost->processMidi(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+                        midiHost->processMidi(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
                         if (!host->bypassPlaybackProcessing) {
-                            numBlocksProcessed = host->processPlayback(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+                            numBlocksProcessed = host->processPlayback(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
                             timer2.reset();
                         } else {
                             numBlocksProcessed = 0;

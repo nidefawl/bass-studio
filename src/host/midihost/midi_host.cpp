@@ -273,7 +273,7 @@ int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
    Sysex messages from either source block messages from the other.
  */
 int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state,
-                              bool inLoop, bool isLoopAround) {
+                              bool inLoop) {
     PmError result;
     PmEvent buffer; /* just one message at a time */
     /* if (current_timestamp % 1000 == 0)

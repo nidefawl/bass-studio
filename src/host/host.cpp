@@ -1068,7 +1068,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
         timerProfile.reset();
     }
 
-    nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &impl->blockInput, &impl->blockOutput, samplePosProcess, tickPosProcess, state, false, false);
+    nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &impl->blockInput, &impl->blockOutput, samplePosProcess, tickPosProcess, state, false);
     dbgassert(nBlocksProcessed >= 1);
 
     if (enableProfiling) {
@@ -1192,7 +1192,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
     return nBlocksProcessed;
 }
 
-int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop) {
     dbgassert(ctrl);
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
@@ -1312,7 +1312,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             if (enableProfiling) {
                 timerProfile.reset();
             }
-            nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &impl->blockInput, &impl->blockExtOut, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
+            nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &impl->blockInput, &impl->blockExtOut, samplePosProcess, tickPosProcess, state, inLoop);
 
             if (enableProfiling) {
                 timeProcessing += timerProfile.getTimeReset();
@@ -1802,8 +1802,7 @@ int32_t Host::processGraph(project_controller_t* ctrl,
                               int32_t samplePosProcess,
                               double tickPosProcess,
                               playback_state playbackState,
-                              bool inLoop,
-                              bool isLoopAround)
+                              bool inLoop)
 {
     dbgassert(ctrl);
     project_t* const project = ctrl->getProject();

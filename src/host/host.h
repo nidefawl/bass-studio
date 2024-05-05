@@ -134,7 +134,7 @@ private:
 
 private:
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
-    int32_t processGraph(project_controller_t* ctrl, const audiostream_properties_t& audioProp, processing_graph_t* processingGraph, AudioBlock* ptrExternalInputs, AudioBlock* ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop, bool isLoopAround);
+    int32_t processGraph(project_controller_t* ctrl, const audiostream_properties_t& audioProp, processing_graph_t* processingGraph, AudioBlock* ptrExternalInputs, AudioBlock* ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop);
     int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples);
     uint32_t finishTreadTasks(uint32_t tasksRunning, bool wait);
 public:
@@ -165,7 +165,7 @@ public:
     bool isStreaming();
 
     int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
-    int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
+    int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop);
     int32_t processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
     void processAudio(process_scratch_buf_t& tmp, audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const project_globals_t& globals, const double tickLatencyCompensated, const samplecount_t sampleLatencyCompensated, int32_t numSamples, playback_state state, const effect_processing_graph_t* const processingGraph, IDelayLineStorage* delayLines) const;
 
