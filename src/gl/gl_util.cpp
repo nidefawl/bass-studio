@@ -168,7 +168,6 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int32_t fixedStride) {
     size_t offset = 0;
     for (auto & attr : attrs) {
         if (attr.bindingPt < 0 || attr.bindingPt >= CtrSize(attrs)) {
-            dbgassert(0);
             continue;
         }
         glVertexAttribPointer(attr.bindingPt,

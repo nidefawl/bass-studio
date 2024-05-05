@@ -293,7 +293,9 @@ int readall(FILE* in, char** dataptr, size_t* sizeptr) {
 
 int64_t ReadFileText(const String& filename, String& out, int resourceType) {
     String fileResPath;
-    if (resourceType == 0) {
+    if (resourceType == -1) {
+        fileResPath = filename;
+    } else if (resourceType == 0) {
         fileResPath = App::Platform::toResourcePath(filename);
     } else {
         fileResPath = App::Platform::toUserdataPath(filename);

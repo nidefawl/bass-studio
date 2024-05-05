@@ -15,7 +15,7 @@ struct glshader_src {
 };
 struct glshader_srcloader {
     std::vector<glshader_src> sources;
-    bool addStageSrc(int32_t type, const char* fname);
+    bool addStageSrc(int32_t type, const char* fname, int resourceType);
     bool setStageSrc(int32_t type, const String& fname, const String& strSrc);
     bool reload();
 };
@@ -23,11 +23,11 @@ struct glshader_srcloader {
 int32_t prependGLSL(String& s, const String& src);
 int32_t buildShaderProgram(const std::vector<glshader_src>& srcList);
 template<typename T>
-int compileShaderCombo(T* owner, const char* fnameVsh, const char* fnameFsh) {
+int compileShaderCombo(T* owner, const char* fnameVsh, const char* fnameFsh, int resourceType = 0) {
     auto glSourceLoader = std::make_unique<glshader_srcloader>();
-    if (!glSourceLoader->addStageSrc(GL_VERTEX_SHADER, fnameVsh))
+    if (!glSourceLoader->addStageSrc(GL_VERTEX_SHADER, fnameVsh, resourceType))
         return -2;
-    if (!glSourceLoader->addStageSrc(GL_FRAGMENT_SHADER, fnameFsh))
+    if (!glSourceLoader->addStageSrc(GL_FRAGMENT_SHADER, fnameFsh, resourceType))
         return -2;
     owner->preprocessSources(glSourceLoader->sources);
     return buildShaderProgram(glSourceLoader->sources);

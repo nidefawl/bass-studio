@@ -12,12 +12,14 @@ int32_t prependGLSL(String& s, const String& src) {
             s.insert(it, src);
             return static_cast<int>(it);
         }
+    } else {
+        s = src + s;
     }
     return -1;
 }
-bool glshader_srcloader::addStageSrc(int32_t type, const char* fname) {
+bool glshader_srcloader::addStageSrc(int32_t type, const char* fname, int resourceType) {
     String strSrc;
-    int64_t ret = ReadFileText(fname, strSrc);
+    int64_t ret = ReadFileText(fname, strSrc, resourceType);
     if (ret > 0) {
         sources.push_back({type, fname, strSrc});
         return true;
