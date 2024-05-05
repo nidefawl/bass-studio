@@ -663,6 +663,7 @@ protected:
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;
+    gui_notify* guiNotify = nullptr;
     std::vector<guictr_base*> viewAsyncProgress = {&guiCtrProgress};
     std::vector<guictr_base*> viewRender;
     struct ui_modulation_targets_t {

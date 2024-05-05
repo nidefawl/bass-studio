@@ -1334,21 +1334,15 @@ void MainCtrl::onTick() {
     daw.onTick();
     DawCtrl::onTick();
     graphMonitor.onTick(this);
-    auto notify = graphMonitor.getNotifyError();
-    bool bIsInContainers = stl_contains(this->containers, notify);
-    if (notify && (notify->isVisible() != bIsInContainers)) {
-        if (!bIsInContainers) {
-            containers.push_back(notify);
-            notify->setControl(this);
-        } else {
-            removeEntry(containers, notify);
-            notify->setControl(nullptr);
-        }
+    guiNotify = graphMonitor.getNotifyError();
+    bool bIsInContainers = stl_contains(this->containers, guiNotify);
+    if (guiNotify && (guiNotify->isVisible() != bIsInContainers)) {
+        updateViewGuiContainers();
     }
-    if (notify && notify->isVisible()) {
-        notify->size = ivec2(m_size.x/3, 90);
-        notify->pos = (m_size - notify->size) / 2;
-        notify->layout();
+    if (guiNotify && guiNotify->isVisible()) {
+        guiNotify->size = ivec2(m_size.x/3, 90);
+        guiNotify->pos = (m_size - guiNotify->size) / 2;
+        guiNotify->layout();
     }
 
     auto guiCaptured = getGuiCaptured();
@@ -2142,6 +2136,15 @@ void DawCtrl::updateZoomLevel(float f) {
 
 void DawCtrl::updateViewGuiContainers() {
     viewRender = viewGuiContainers;
+    auto notify = guiNotify;
+    if (guiNotify) {
+        if (guiNotify->isVisible()) {
+            viewRender.push_back(guiNotify);
+            notify->setControl(this);
+        } else {
+            notify->setControl(nullptr);
+        }
+    }
     if (daw.getAsyncTask()) {
         resetMouseContext();
         viewRender.push_back(&guiCtrProgress);
