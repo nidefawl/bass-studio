@@ -33,7 +33,10 @@ public:
         presetPath = path;
         presets.clear();
         favorites.clear();
+        loadPath(path);
+    }
 
+    void loadPath(const String& path) {
         std::vector<FileFound> files;
         findFilesWithExt(path, fileExtension, true, files);
         for (const auto& file : files) {
@@ -46,6 +49,7 @@ public:
             return a.path < b.path;
         });
     }
+
     void reload() {
         load(presetPath);
     }
