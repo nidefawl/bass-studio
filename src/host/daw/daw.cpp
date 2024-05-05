@@ -1042,12 +1042,6 @@ void DawInstance::setAsyncTask(DAW::async_task_t* task) {
     }
 }
 
-void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
-    for (auto& dawCtrl : dawCtrls) {
-        dawCtrl->getTrackContainers(trackContainers);
-    }
-}
-
 void DawInstance::setMainControl(MainCtrl* _mainCtrl) {
     dbgassert(!tls.mainCtrl);
     tls.mainCtrl = _mainCtrl;

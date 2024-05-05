@@ -173,8 +173,8 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, const tracksnapsho
     }
 }
 
-void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot);
-void saveTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, tracklayout_settings_t& settings);
+void saveSubtrackLayout(track_gui_entry_t* entry, track_layout_snapshot_t& snapshot);
+void saveTrackLayoutSettings(track_gui_entry_t* entry, tracklayout_settings_t& settings);
 
 track_id_snapshot_t saveTrackIdSnapshot(const audio_stage_id_t& stageId) {
     return {
@@ -206,20 +206,12 @@ track_snapshot_t::track_snapshot_t(const track_t* track, const tracksnapshot_sto
 
     track_impl_t* p = track->audio;
     if (p) {
-        // get all trackcointainer instances
-        std::vector<guictr_tracks*> trackContainers;
-        DawInstance::get()->getTrackContainers(trackContainers);
         int32_t trackCtrIdx = 0;
-        for (auto* ctr : trackContainers) {
-            if (ctr) {
-                track_gui_entry_t* out;
-                if (ctr->guiMgr.getTrackEntry(track, &out)) {
-                    track_layout_snapshot_t snapshot;
-                    saveTrackLayoutSettings(ctr, out, snapshot.layout);
-                    saveSubtrackLayout(ctr, out, snapshot);
-                    layouts[trackCtrIdx] = snapshot;
-                }
-            }
+        for (auto* entry : p->guiInstances) {
+            track_layout_snapshot_t snapshot;
+            saveTrackLayoutSettings(entry, snapshot.layout);
+            saveSubtrackLayout(entry, snapshot);
+            layouts[trackCtrIdx] = snapshot;
             trackCtrIdx++;
         }
     }
@@ -900,15 +892,15 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
     }
 }
 
-void saveTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, tracklayout_settings_t& settings) {
+void saveTrackLayoutSettings(track_gui_entry_t* entry, tracklayout_settings_t& settings) {
     settings = entry->layout;
 }
 
-void loadTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, const tracklayout_settings_t& settings) {
+void loadTrackLayoutSettings(track_gui_entry_t* entry, const tracklayout_settings_t& settings) {
     entry->layout = settings;
 }
 
-void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot) {
+void saveSubtrackLayout(track_gui_entry_t* entry, track_layout_snapshot_t& snapshot) {
     snapshot.subtracks.reserve(entry->subtracks.size());
     for (auto* subtrack : entry->subtracks) {
         automatable_param_ref_t atlRef{};
@@ -932,7 +924,7 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry
     entry->state.wasInHide = hide;
     if (hide) {
         entry->state.layoutSaved = track_layout_snapshot_t();
-        saveSubtrackLayout(guiTracks, entry, entry->state.layoutSaved);
+        saveSubtrackLayout(entry, entry->state.layoutSaved);
         guiTracks->removeAllSubtracks(entry);
         DAW::Cursor& cursor = entry->parentCtrl->getCursor();
         if (cursor.inSubTrackAny(entry->track->projectIdx)) {

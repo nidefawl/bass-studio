@@ -1442,15 +1442,6 @@ void DawCtrl::dragContainerRelayout(drag_ctr_event evt) {
     }
 }
 
-void DawCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
-    view->visitEntries([&trackContainers](SPLayoutEntry& entry) {
-        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
-            trackContainers.push_back(guictr_cast<guictr_tracks>(entry));
-        }
-        return true;
-    });
-}
-
 std::shared_ptr<guictr_tracks> DawCtrl::getTrackContainer() {
     auto entry = view->findByTagOrGuiType(GuiContainerTag::TAG_TRACKS, gui_type::CTR_TYPE_TRACKS);
     if (entry) {

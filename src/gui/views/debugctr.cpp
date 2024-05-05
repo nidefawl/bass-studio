@@ -552,8 +552,6 @@ void gui_ctr_debug::layout() {
 
 int32_t getNumClipAllocations();//clip.cpp
 void resetHistAndCheck(DawInstance* daw) {
-    std::vector<guictr_tracks *> trackContainers;
-    daw->getTrackContainers(trackContainers);
     daw->setEmptyClipboard();
     daw->getHist().clear(daw);
 

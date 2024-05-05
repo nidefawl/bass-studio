@@ -622,7 +622,6 @@ public:
     void processTasksMainThread();
     void setMainControl(MainCtrl*);
     MainCtrl* getMainControl();
-    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers);
     void updateVisibleTrackContents();
     /* called after 1-n plugins were added, removed, moved or rerouted */
     void onPluginsChanged();
@@ -819,7 +818,6 @@ public:
     std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
                                                         std::shared_ptr<guictr_layout> newContainer) override;
     void dragContainerRelayout(drag_ctr_event evt) override;
-    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers);
     std::shared_ptr<guictr_tracks> getTrackContainer();
     std::shared_ptr<guictr_clipeditor> getClipEditor();
 

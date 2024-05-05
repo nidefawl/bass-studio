@@ -210,7 +210,7 @@ void guictr_tracks::resetView() {
 }
 
 void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot);
-void loadTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, const tracklayout_settings_t& settings);
+void loadTrackLayoutSettings(track_gui_entry_t* entry, const tracklayout_settings_t& settings);
 
 void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
     entry->subtracks.clear();
@@ -220,7 +220,7 @@ void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const t
         entry->state.wasInHide   = true;
     } else {
         entry->state.wasInHide = false;
-        loadTrackLayoutSettings(guiTracks, entry, snapshot.layout);
+        loadTrackLayoutSettings(entry, snapshot.layout);
         loadSubtrackLayout(guiTracks, entry, snapshot);
         entry->state.layoutSaved = track_layout_snapshot_t();
     }
