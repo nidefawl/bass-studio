@@ -123,8 +123,8 @@ public:
         auto now = getTimeMillis();
         rnd.rng_seed(static_cast<uint64_t>(now));
         presetManager.setFileExtension("fsh");
-        presetManager.loadPath(App::Platform::toResourcePath("shaders"));
-        presetManager.loadPath(App::Platform::toUserdataPath("shaders"));
+        presetManager.load(App::Platform::toResourcePath("shaders"));
+        presetManager.load(App::Platform::toUserdataPath("shaders"));
         auto& presets = presetManager.getPresets();
         if (!presets.empty()) {
             currentPreset = presets[0];

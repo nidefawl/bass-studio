@@ -99,20 +99,42 @@ public:
         int32_t idx = 0;
         std::vector<String> paths;
         std::vector<ctxtmenu_entry_preset*> presetsCurrent;
-        for (auto& preset : presetManager.getPresets()) {
-            if (StrStartsWith(preset.path, presetPath)) {
-                String partPath = presetPath.length() + 1 < preset.path.length() ? preset.path.substr(presetPath.length() + 1) : preset.path;
-                String presetSubPath;
-                SplitPath(partPath, &presetSubPath, nullptr, nullptr);
-                String folderName;
-                SplitPath(presetSubPath, nullptr, &folderName, nullptr);
+        if (lvl == 0) {
+            
+            for (auto& presetPath : presetManager.getPresetPaths()) {
+                for (auto& preset : presetManager.getPresets()) {
+                    if (StrStartsWith(preset.path, presetPath)) {
+                        String partPath = presetPath.empty() ? preset.path : (presetPath.length() + 1 < preset.path.length() ? preset.path.substr(presetPath.length() + 1) : preset.path);
+                        String presetSubPath;
+                        SplitPath(partPath, &presetSubPath, nullptr, nullptr);
+                        String folderName;
+                        SplitPath(presetSubPath, nullptr, &folderName, nullptr);
 
-                if (folderName.length() && folderName == presetSubPath && !stl_contains(paths, presetSubPath)) {
-                    paths.push_back(presetSubPath);
-                    addEntry(new ctxtmenu_entry_folder(folderName, presetPath + FILE_PATHSEP_STR + presetSubPath, (idx++) << 1 | 1));
+                        if (folderName.length() && folderName == presetSubPath && !stl_contains(paths, presetSubPath)) {
+                            paths.push_back(presetSubPath);
+                            addEntry(new ctxtmenu_entry_folder(folderName, presetPath + FILE_PATHSEP_STR + presetSubPath, (idx++) << 1 | 1));
+                        }
+                        if (presetSubPath.empty())
+                            presetsCurrent.push_back(new ctxtmenu_entry_preset(preset, (idx++) << 1));
+                    }
                 }
-                if (presetSubPath.empty())
-                    presetsCurrent.push_back(new ctxtmenu_entry_preset(preset, (idx++) << 1));
+            }
+        } else {
+            for (auto& preset : presetManager.getPresets()) {
+                if (StrStartsWith(preset.path, presetPath)) {
+                    String partPath = (presetPath.length() + 1 < preset.path.length() ? preset.path.substr(presetPath.length() + 1) : preset.path);
+                    String presetSubPath;
+                    SplitPath(partPath, &presetSubPath, nullptr, nullptr);
+                    String folderName;
+                    SplitPath(presetSubPath, nullptr, &folderName, nullptr);
+
+                    if (folderName.length() && folderName == presetSubPath && !stl_contains(paths, presetSubPath)) {
+                        paths.push_back(presetSubPath);
+                        addEntry(new ctxtmenu_entry_folder(folderName, presetPath + FILE_PATHSEP_STR + presetSubPath, (idx++) << 1 | 1));
+                    }
+                    if (presetSubPath.empty())
+                        presetsCurrent.push_back(new ctxtmenu_entry_preset(preset, (idx++) << 1));
+                }
             }
         }
         for (auto preset : presetsCurrent) {
@@ -181,7 +203,7 @@ public:
             return;
         }
         presetManager.reload();
-        auto* popup         = new guidropdown_select_preset_file(cb, presetManager, presetManager.getPresetPath());
+        auto* popup         = new guidropdown_select_preset_file(cb, presetManager, "");
         popup->size         = size;
         auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
         popup->setFontSize(fontSizeScaled);

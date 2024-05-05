@@ -14,27 +14,9 @@ public:
 
 private:
     String fileExtension = "preset";
-    String presetPath;
     std::vector<Preset> presets;
     std::vector<Preset> favorites;
-
-public:
-    const String& getPresetPath() const {
-        return presetPath;
-    }
-    const String& getFileExtension() const {
-        return fileExtension;
-    }
-    void setFileExtension(const String& ext) {
-        fileExtension = ext;
-    }
-
-    void load(const String& path) {
-        presetPath = path;
-        presets.clear();
-        favorites.clear();
-        loadPath(path);
-    }
+    std::vector<String> presetPaths;
 
     void loadPath(const String& path) {
         std::vector<FileFound> files;
@@ -49,9 +31,31 @@ public:
             return a.path < b.path;
         });
     }
+public:
+    const std::vector<String>& getPresetPaths() const {
+        return presetPaths;
+    }
+    const String& getFileExtension() const {
+        return fileExtension;
+    }
+    void setFileExtension(const String& ext) {
+        fileExtension = ext;
+    }
+
+    void clear() {
+        presets.clear();
+        favorites.clear();
+    }
+    void load(const String& path) {
+        presetPaths.push_back(path);
+        loadPath(path);
+    }
 
     void reload() {
-        load(presetPath);
+        clear();
+        for (auto& path : presetPaths) {
+            loadPath(path);
+        }
     }
     const std::vector<Preset>& getPresets() const {
         return presets;

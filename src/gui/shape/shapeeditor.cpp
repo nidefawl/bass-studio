@@ -719,7 +719,11 @@ public:
         }
         if (&controls.presetControl.buttonSave == button) {
             shape_preset_t shapePreset { 1, *shape.curve };
-            String defaultPresetPath = presetManager.getPresetPath();
+            String defaultPresetPath = "";
+            auto& paths = presetManager.getPresetPaths();
+            if (!paths.empty()) {
+                defaultPresetPath = paths.front();
+            }
             CreateDirectoryIfNotExists(defaultPresetPath);
             String path;
             auto window = parentCtrl->window;
