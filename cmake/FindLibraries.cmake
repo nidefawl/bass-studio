@@ -39,11 +39,14 @@ message(STATUS "PROJECT_DEPS_INSTALL_PATH ${PROJECT_DEPS_INSTALL_PATH}")
 # Force linkage against Release if no explicit import target for config is provided
 set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL "MinSizeRel;Release;")
 set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO "RelWithDebInfo;Release;")
-if (NOT APPLE)
-  add_subdirectory("${PROJECT_DEPS_PATH}/slowstacktrace" "libstracktrace")
+# check if variable PROJECT_SKIP_LIBS is set
+if (NOT DEFINED PROJECT_SKIP_LIBS OR NOT PROJECT_SKIP_LIBS)
+  if (NOT APPLE)
+    add_subdirectory("${PROJECT_DEPS_PATH}/slowstacktrace" "libstracktrace")
+  endif()
+  add_subdirectory("${PROJECT_DEPS_PATH}/zlib-cmake-build" "zlib")
+  add_subdirectory("${PROJECT_DEPS_PATH}/libarchive-cmake-build" "libarchive")
 endif()
-add_subdirectory("${PROJECT_DEPS_PATH}/zlib-cmake-build" "zlib")
-add_subdirectory("${PROJECT_DEPS_PATH}/libarchive-cmake-build" "libarchive")
 find_package(Threads REQUIRED)
 
 
