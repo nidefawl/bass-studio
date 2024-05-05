@@ -326,6 +326,10 @@ namespace DAW {
             if (isChannelConnected(pulls.channel) && pulls.channel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                 const auto pullId = pulls.channel.stage.stageRef.stageId;
                 const auto ptrChNode = getNodeConst(graph.nodesFlatOrdered, pullId);
+                if (!ptrChNode) {
+                    log_lf(Log::L_ERROR, "External output routing to non existing stage\n");
+                    continue;
+                }
                 dbgassert(ptrChNode);
                 pulls.latency  = ptrChNode->inputLatency + ptrChNode->internalLatency;
             }
