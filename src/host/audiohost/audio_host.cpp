@@ -188,10 +188,18 @@ class audiohost_callback {
                 numOutChannelsWritten = channels;
                 timings.samplePosProcOut += block->output->samples;
             }
-            // if (stream->firstInputTimeSeconds < 0.0) {
-            //     stream->firstInputTimeSeconds = timeInfo->outputBufferDacTime;
-            // }
             stream->outputTimeSeconds = block->time.inputTimeSeconds;
+            if (block->time.bResyncPos) {
+                double seconds = stream->getPlaybackTimeSeconds();
+                double samples = secondsToSamplesConvert<double, roundmode::none>(seconds, stream->getSampleRate());
+                log_lf(Log::L_DEBUG, "First output after %f seconds %f \n", seconds, samples);
+            }
+            if (block->time.bResyncPos || (stream->numInvocations % 100 == 0)) {
+                stream->playbackBeginTickPos = block->time.outputTickPos;
+                stream->playbackBeginTimeSeconds = getTimeSecondsD();
+            }
+            stream->outputTickPos = block->time.outputTickPos;
+            block->time.bResyncPos = false;
             block->inUse = false;
         } else {
             stream->bufferUnderuns++;
@@ -677,6 +685,9 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     auto info = Pa_GetStreamInfo(paStream);
     if (info->sampleRate > 0)
         samplerate = static_cast<samplerate_t>(info->sampleRate);
+    stream->streamInputLatency = info->inputLatency * samplerate;
+    stream->streamOutputLatency = info->outputLatency * samplerate;
+
     err = Pa_SetStreamFinishedCallback(paStream, &StreamFinished);
     if (err != paNoError)
         return onError("Pa_SetStreamFinishedCallback", err);

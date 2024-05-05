@@ -74,8 +74,8 @@ struct oversampler_t final : public oversample_config_t {
             soxr_clear(soxr);
         }
     }
-    samplecount_t getResamplerDelay() {
-        return math::ceildS64(sampleDelay);
+    double getResamplerDelay() {
+        return sampleDelay;
     }
     bool runResample(AudioBlock& srcBlock, AudioBlock& dstBlock, uint32_t& nOutputProcessed);
     ~oversampler_t() {
@@ -116,7 +116,7 @@ struct resampler_t {
         }
     }
     samplecount_t getResamplerDelay() {
-        return static_cast<samplecount_t>(resampler.getResamplerDelay());
+        return math::ceildS64(resampler.getResamplerDelay());
     }
     void resetResampler() {
         resampler.resetResampler();

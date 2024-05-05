@@ -1135,9 +1135,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
         stats.timings["Block.UpdateMeters"] = timerProfile.getTimeReset();
     }
 #endif
-#ifndef NDEBUG
-    lastTickEndPos = posDouble + audioProp.ticksPerBlock*nBlocksProcessed;
-#endif
+
 #if 1
     double tmSinceStageTick = timerAudioTick.getTimeDoubleReset();
     for (track_t* tr : project->trackList) {
@@ -1293,8 +1291,11 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
         int64_t timeRouting = 0;
         int64_t timeProcessing = 0;
         int64_t timeResampleOutput = 0;
-
         auto processingGraph = impl->processingGraph; // we need to make a copy
+        // auto ticksLatency = sampleToTickConvert<double, roundmode::none>(processingGraph->trackGraph->maxLatencySamples, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
+        const auto samplesLatencyOutput = resamplerOutput->getResamplerDelay() + (stream ? stream->getStreamOutputLatency() : 0);
+        const auto ticksLatencyOutput = sampleToTickConvert<double, roundmode::none>(samplesLatencyOutput, prjGlobals.tempo100, m_sampleFormatExternal.sampleRate);
+        const auto ticksLatencyInput = sampleToTickConvert<double, roundmode::none>(processingGraph->trackGraph->maxLatencySamples, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
         for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
             int32_t samplePosProcess = sample + sampleFormat.blockSize*i; //TODO: inspect precision
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
@@ -1318,47 +1319,19 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
                 timeProcessing += timerProfile.getTimeReset();
             }
             auto& allSources = processingGraph->trackGraph->externalOutputRouting;
-            const auto ticksTotalLatency = sampleToTickConvert<double, roundmode::none>(processingGraph->trackGraph->maxLatencySamples, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
 
             processing_track_node_t trackNode{};
             trackNode.type = track_node_type_t::TRACK;
-            trackNode.type = track_node_type_t::TRACK;
             trackNode.inputLatency = processingGraph->trackGraph->maxLatencySamples;
-            MixInputs(this, trackNode, impl->singleThreadedBuf, this->impl, &impl->blockExtOut, allSources, impl->blockExtOut.channels, trackNode.inputLatency, tickPosProcess - ticksTotalLatency, tickPosProcess - ticksTotalLatency + audioProp.ticksPerBlock, state, &impl->blockInput);
-
-#if 0
-            for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
-                const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
-                const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
-                track_t* const track = trackNode.trackOptional;
-                track_impl_t* const trackImpl = track->audio;
-                if (trackImpl->mixer.isEnabled()) {
-                    auto tracDst = trackImpl->outputChannel;
-                    if (tracDst.type == DAW::stage_type::INPUT_DEFAULT) {
-                        DAW::channel_ref_t tmp;
-                        if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
-                            tracDst = tmp;
-                        }
-                    }
-                    if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::stage_type::INPUT_EXTERNAL_AUDIO) {
-                        // TODO: latency compensate (add external output nodes to graph)
-                        /* Calculate master tracks gain level */
-                        float fGainMaster;
-                        if (dsp_util::getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
-                        }
-                        int routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
-                        auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-                        blockExtOut.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
-                                    .addFromOp(&trackSubChannelOutput, mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
-                    }
-                }
-            }
-#endif
+            MixInputs(this, trackNode, impl->singleThreadedBuf, this->impl, &impl->blockExtOut, allSources, impl->blockExtOut.channels, trackNode.inputLatency, tickPosProcess - ticksLatencyInput, tickPosProcess - ticksLatencyInput + audioProp.ticksPerBlock, state, &impl->blockInput);
             if (enableProfiling) {
                 timeRouting += timerProfile.getTimeReset();
             }
             impl->meterOutput->update(&impl->blockExtOut, 1.0f);
             impl->meterOutput->onTick(impl->blockExtOut.samples / double(m_sampleFormatInternal.sampleRate));
+            bufferTimeInfo.outputTickPos = tickPosProcess - (ticksLatencyInput + ticksLatencyOutput);
+            bufferTimeInfo.bResyncPos = this->bResyncOutputTime;
+            this->bResyncOutputTime = false;
             resamplerOutput->push(impl->blockExtOut, bufferTimeInfo);
             if (enableProfiling) {
                 timeResampleOutput += timerProfile.getTimeReset();
@@ -1439,9 +1412,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
         if (enableProfiling) {
             stats.timings["Block.UpdateMeters"] = timerProfile.getTimeReset();
         }
-#ifndef NDEBUG
-        lastTickEndPos = posDouble + audioProp.ticksPerBlock*nBlocksProcessed;
-#endif
+
         double tmSinceStageTick = timerAudioTick.getTimeDoubleReset();
         for (track_t* tr : project->trackList) {
             track_impl_t* trAudio = tr->audio;
@@ -2024,7 +1995,7 @@ void Host::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePo
 }
 
 void Host::onStartPlayback(project_controller_t* ctrl) {
-    lastTickEndPos = 0;
+    bResyncOutputTime = true;
     project_t* project = ctrl->getProject();
     for (track_t* track : project->trackList) {
         auto trackImpl = track->audio;
@@ -2032,6 +2003,9 @@ void Host::onStartPlayback(project_controller_t* ctrl) {
         {
             trackImpl->onStartPlayback();
         }
+    }
+    if (impl->audioStream) {
+        impl->audioStream->onPlayback();
     }
 }
 
@@ -2361,6 +2335,30 @@ std::shared_ptr<DAW::rmsmeter> Host::getMeterInput() {
 
 std::shared_ptr<DAW::rmsmeter> Host::getMeterOutput() {
     return impl->meterOutput;
+}
+
+samplecount_t Host::getLatency() const {
+    if (impl->processingGraph) {
+        return impl->processingGraph->trackGraph->maxLatencySamples;
+    }
+    return 0;
+}
+samplecount_t Host::getOutputQueueSamples() const {
+    if (impl->audioStream) {
+        return impl->audioStream->getOutputQueueSize() * m_sampleFormatExternal.blockSize;
+    }
+    return 0;
+}
+double Host::getOutputTickPos() {
+    if (impl->audioStream) {
+        auto stream = impl->audioStream.get();
+        auto tickPosSync = stream->getPlaybackBeginTickPos();
+        auto secondsSinceBegin = stream->getPlaybackTimeSeconds();
+        auto sampleSinceBegin = secondsToSamplesConvert<double, roundmode::floor>(secondsSinceBegin, m_sampleFormatExternal.sampleRate);
+        auto tickPos = tickPosSync + sampleToTickConvert<double, roundmode::floor>(sampleSinceBegin, prjGlobals.tempo100, m_sampleFormatExternal.sampleRate);
+        return tickPos;
+    }
+    return 0;
 }
 
 }// namespace DAW::Host

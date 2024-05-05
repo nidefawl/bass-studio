@@ -125,7 +125,7 @@ public:
     hires_timer_t timerProfile;  // timer for cpu-time profiling
 
 private:
-    double lastTickEndPos       = 0;
+    bool bResyncOutputTime = false;
     host_stats_t stats{};
     host_processing_stats_t processing{ 0 };
 
@@ -175,6 +175,9 @@ public:
     void onStartPlayback(project_controller_t* ctrl);
     void onStopPlayback(project_controller_t* ctrl);
     void onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
+    double getOutputTickPos();
+    samplecount_t getLatency() const;
+    samplecount_t getOutputQueueSamples() const;
 
     bool writeRecordedData(project_controller_t* ctrl);
     void sendNotesOff(effectbase* plugin);

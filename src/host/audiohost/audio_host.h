@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <array>
+#include "platform.h"
 #include "types.h"
 #include "config.h"
 #include "samplerate.h"
@@ -71,10 +72,17 @@ public:
         std::atomic<bool> streamShouldEnd{ false };
         std::atomic<bool> streamFinished{ false };
 
-        double firstInputTimeSeconds = -1.0;
-        double firstOutputTimeSeconds = -1.0;
+        double streamInputLatency = 0.0;
+        double streamOutputLatency = 0.0;
+
         double inputTimeSeconds = 0.0;
         double outputTimeSeconds = 0.0;
+        double outputTickPos = 0.0;
+
+        double firstInputTimeSeconds = -1.0;
+        double playbackBeginTimeSeconds = 0.0;
+        double playbackBeginTickPos = 0.0;
+    
         samplecount_t inputSamplePos = 0;
         samplecount_t outputSamplePos = 0;
 
@@ -89,6 +97,28 @@ public:
         audiothread_ringbuffer_t& getRingbuffer() {
             return ringbuffer;
         }
+        double getInputTimeSeconds() const override {
+            return inputTimeSeconds;
+        }
+        double getPlaybackTimeSeconds() const override {
+            return getTimeSecondsD() - playbackBeginTimeSeconds;
+        }
+        double getOutputTickPos() const override {
+            return outputTickPos;
+        }
+        double getPlaybackBeginTickPos() const override {
+            return playbackBeginTickPos;
+        }
+        double getStreamInputLatency() const override {
+            return streamInputLatency;
+        }
+        double getStreamOutputLatency() const override {
+            return streamOutputLatency;
+        }
+        void onPlayback() override {
+            playbackBeginTimeSeconds = getTimeSecondsD();
+        }
+
         DAW::rmsmeter& getMeterInput() {
             return metersInput;
         }

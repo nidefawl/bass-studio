@@ -7,7 +7,9 @@
 struct AudioBufferTimeInfo {
     samplecount_t samplePosInput{};
     samplecount_t samplePosOutput{};
+    double outputTickPos{};
     double inputTimeSeconds{};
+    bool bResyncPos = false;
 };
 struct alignas(64) AudioBuffer {
     AudioBlock* output{};

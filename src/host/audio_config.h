@@ -92,6 +92,13 @@ namespace AudioIO {
         virtual uint32_t getBufferUnderuns() const = 0;
         virtual uint32_t getInputBufferUnderuns() const = 0;
         virtual uint32_t getNumCallbacks() const = 0;
+        virtual double getInputTimeSeconds() const = 0;
+        virtual double getPlaybackTimeSeconds() const = 0;
+        virtual double getOutputTickPos() const = 0;
+        virtual double getPlaybackBeginTickPos() const = 0;
+        virtual double getStreamInputLatency() const = 0;
+        virtual double getStreamOutputLatency() const = 0;
+        virtual void onPlayback() = 0;
     };
 } // namespace AudioIO
 

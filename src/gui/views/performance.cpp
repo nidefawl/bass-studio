@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <vector>
 #include "gui/container/container_builder.h"
+#include "math/seq_math.h"
 #include "seq_util.h"
 #include "str_util.h"
 #include "util/profiling.h"
@@ -118,6 +119,8 @@ public:
         }
         y += height / 2;
         
+        String strOutputTickPos = tickAsBeatString(math::rounddS32(host->getOutputTickPos()), false);
+        printL(0, "audioCallback tickPos", StringAsCStr(strOutputTickPos));
         if (stream) {
             auto timings = stream->getStreamTimings();
             printL(0, "audioCallback tDelta", StringFormat("%.1fµs min %.1fµs max %.1fµs avg", timings.tmDeltaCbMin / 1000.0, timings.tmDeltaCbMax / 1000.0, timings.tmDeltaCbAvg / 1000.0));

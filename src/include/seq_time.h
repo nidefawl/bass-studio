@@ -70,6 +70,10 @@ inline double toSeconds(double tick, int32_t bpm100) {
     return toSecondsDD(tick, 1.0 / bpm100);
 }
 
+inline double secondsToTicks(double seconds, int32_t bpm100) {
+    return seconds / TPQ_OVER_MINUTE_100 * bpm100;
+}
+
 namespace roundmode {
     struct none {};
     struct round {};
