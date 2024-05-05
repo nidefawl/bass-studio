@@ -345,13 +345,14 @@ private:
                 }
 
                 if (m_status != playback_state::status_render) {
-                    if (!host->bypassPlaybackProcessing && host->getOutputQueueLen() < 2) {
-                        if (host->getOutputQueueLen() != 0) {
+                    if (host->bypassPlaybackProcessing) {
+                        seqthreads::threadSleep(1);
+                    } else if (host->getOutputQueueLen() > 0) {
+                        if (host->getOutputQueueLen() > 6) {
+                            seqthreads::threadSleep(2);
+                        } else {
                             seqthreads::threadSleepMicros(500);
                         }
-                    } else {
-
-                        seqthreads::threadSleep(1);
                     }
                 } else {
                     if (numBlocksRendered > 100) {
