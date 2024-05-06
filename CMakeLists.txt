@@ -625,9 +625,25 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
         get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
         set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
+        set(DIST_COPY_RUNTIME_DEPENDS dist-strip)
+        
+        # if libunwind exists create a target to copy it
+        if(EXISTS "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}")
+          add_custom_target(dist-copy-libunwind
+            VERBATIM
+            DEPENDS dist-strip
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMAND ${CMAKE_COMMAND} 
+              -E copy
+              "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
+              "${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
+          )
+          set(DIST_COPY_RUNTIME_DEPENDS ${DIST_COPY_RUNTIME_DEPENDS} dist-copy-libunwind)
+        endif()
+        
         add_custom_target(dist-copy-runtimes
           VERBATIM
-          DEPENDS dist-strip
+          DEPENDS ${DIST_COPY_RUNTIME_DEPENDS}
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
           COMMAND ${CMAKE_COMMAND} 
             -E copy
@@ -637,12 +653,8 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
             -E copy
             "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
             "${PATH_DIST}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
-          COMMAND ${CMAKE_COMMAND} 
-            -E copy
-            "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
-            "${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
-          # COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
         )
+        
       else()
       
         add_custom_target(dist-strip-msvc
