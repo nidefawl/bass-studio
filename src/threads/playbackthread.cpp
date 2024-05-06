@@ -250,6 +250,8 @@ private:
                  * is always read from the current editing position on the UI
                  */
 
+
+                int32_t numBlocksProcessed = 0;
                 if (m_status != playback_state::status_no_process) {
                     // aquire lock so data does not get modified during processing
                     std::unique_lock<std::recursive_mutex> lock(m_mutex);
@@ -277,8 +279,6 @@ private:
 
 
                     const auto props = host->updateAudioStreamProperties();
-
-                    int32_t numBlocksProcessed = 0;
 
                     bool inLoop = m_status == status_playback && projGlobals.loopEnabled && (tickPos >= projGlobals.loopStart) && (tickPos < projGlobals.loopStart + projGlobals.loopLen);
 
@@ -342,14 +342,10 @@ private:
                 }
 
                 if (m_status != playback_state::status_render) {
-                    if (host->bypassPlaybackProcessing) {
+                    if (numBlocksProcessed) {
+                        seqthreads::threadSleepMicros(500);
+                    } else {
                         seqthreads::threadSleep(1);
-                    } else if (host->getOutputQueueLen() > 0) {
-                        if (host->getOutputQueueLen() > 6) {
-                            seqthreads::threadSleep(2);
-                        } else {
-                            seqthreads::threadSleepMicros(500);
-                        }
                     }
                 } else {
                     if (numBlocksRendered > 100) {
