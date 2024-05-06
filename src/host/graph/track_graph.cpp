@@ -190,6 +190,21 @@ namespace DAW {
         return true;
     }
 
+    /* Helper function to detect if node is part of a loop */
+    bool hasFeedbackLoop(const track_node_ptr node, std::vector<track_node_ptr>& unresolved) {
+        unresolved.push_back(node);
+        for (auto child : node->children) {
+            if (STL_CONTAINS(unresolved, child)) {
+                return true;
+            }
+            if (hasFeedbackLoop(child, unresolved)) {
+                return true;
+            }
+        }
+        removeEntry(unresolved, node);
+        return false;
+    }
+
     bool buildProcessingGraphFromRoutingGraph(const Host::Host* const host, const std::shared_ptr<track_graph_t>& dependencyGraph, const dependency_trackgraph_flattened_t& graphFlattened, std::shared_ptr<processing_graph_t>& out_procgraph) {
         std::vector<const track_node_t*> tracksVisited;
         std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_shared<processing_graph_t>();
@@ -550,8 +565,12 @@ namespace DAW {
         //  log_lf(Log::L_DEBUG, "free track_graph %08X\n", reinterpret_cast<uint64_t>(gr));
         //});
         trackGraph->nodes.reserve(map.size());
+        std::vector<track_node_ptr> unresolved;
         for (auto mapIt = map.begin(); mapIt != map.end(); ++mapIt) {
             track_node_ptr node = mapIt->second;
+            if (hasFeedbackLoop(node, unresolved)) {
+                return false;
+            }
             if (node->parents.empty()) {
                 trackGraph->roots.push_back(node);
             }
