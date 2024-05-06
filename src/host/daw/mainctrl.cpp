@@ -1335,7 +1335,7 @@ void MainCtrl::onTick() {
     DawCtrl::onTick();
     graphMonitor.onTick(this);
     guiNotify = graphMonitor.getNotifyError();
-    bool bIsInContainers = stl_contains(this->containers, guiNotify);
+    bool bIsInContainers = stl_contains(this->viewRender, guiNotify);
     if (guiNotify && (guiNotify->isVisible() != bIsInContainers)) {
         updateViewGuiContainers();
     }
