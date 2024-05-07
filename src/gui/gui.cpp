@@ -552,7 +552,7 @@ void drawWaveform(NVGcontext* vg, vec2 pos, vec2 size, int32_t shape, NVGcolor c
         case ShapeWaveform::SHAPE_SINE_INV:
             for (int i = 0; i < size.x; ++i) {
                 float x = pos.x + i;
-                float v = size.y * (0.5f + std::sinf(i * M_PI * 2.0f / size.x) * 0.5f);
+                float v = size.y * (0.5f + sinf(float(i * M_PI) * 2.0f / size.x) * 0.5f);
                 float y = pos.y + (shape == ShapeWaveform::SHAPE_SINE ? v : size.y - v);
                 if (i == 0) {
                     nvgMoveTo(vg, x, y);

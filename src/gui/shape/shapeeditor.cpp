@@ -857,7 +857,8 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                 }
                 auto unclamped = snapped;
                 double fModfInput = snapped.x;
-                snapped.x      = math::clamp<float>(modf(fModfInput, &fModfInput), 0.0f, 1.0f);
+                double _unused = 0.0;
+                snapped.x      = math::clamp<float>(std::modf(fModfInput, &_unused), 0.0f, 1.0f);
                 snapped.y      = math::clamp(snapped.y, 0.0f, 1.0f);
                 auto& pt       = curveTmp.pts[dragged.idx];
                 if (unclamped.x > snapped.x + 0.9) {

@@ -191,8 +191,9 @@ namespace PluginLFO {
                     double barPos = dTick / double(TICKS_BAR);
                     fPhaseOffset = double((barPos * ratio.denominator) / ratio.numerator);
                 }
-                auto phase = fPhaseOffset + fPhase;
-                float moduloPhase = modf(phase, &phase);
+                double phase = fPhaseOffset + fPhase;
+                double _unused = 0.0;
+                float moduloPhase = float(std::modf(phase, &_unused));
                 return moduloPhase;
             }
             float sampleCurve(double dTick) const {
@@ -374,7 +375,8 @@ namespace PluginLFO {
                 auto v0 = r.rng_double();
                 r.rng_seed(nextTick);
                 auto v1 = r.rng_double();
-                float v = modf(phase, &phase);
+                float _unused = 0.0f;
+                float v = std::modf(phase, &_unused);
                 v = v * v * (3.0f - 2.0f * v);
                 v = v0 + (v1 - v0) * v;
                 return scaleMinMax(dTick, v);
@@ -392,7 +394,8 @@ namespace PluginLFO {
                 auto v0 = r.rng_double();
                 r.rng_seed(nextTick);
                 auto v1 = r.rng_double();
-                float v = modf(phase, &phase);
+                float _unused = 0.0f;
+                float v = std::modf(phase, &_unused);
                 // v = v * v * (3.0f - 2.0f * v);
                 v = v0 + (v1 - v0) * v;
                 return scaleMinMax(dTick, v);
@@ -411,7 +414,8 @@ namespace PluginLFO {
                 auto shape0 = r.rng_double();
                 r.rng_seed(nextTick);
                 auto v1 = r.rng_double();
-                float v = modf(phase, &phase);
+                float _unused = 0.0f;
+                float v = std::modf(phase, &_unused);
                 float shapeBi  = 1.0f - shape0 * 2.0f;
                 float shapeExp = 0.0f;
                 float scale2   = 0.2f + v * 0.8f;
