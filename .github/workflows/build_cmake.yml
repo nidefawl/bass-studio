@@ -177,7 +177,7 @@ jobs:
           libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
           libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev        \
           libssl-dev curl wget gnupg2 e2fslibs-dev libatomic1         \
-          libattr1-dev chrpath bzip2 libstdc++-12-dev
+          libattr1-dev chrpath bzip2 libstdc++-11-dev
     - uses: actions/setup-python@v5
       with:
         python-version: '3.11'
