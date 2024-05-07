@@ -158,7 +158,7 @@ jobs:
         if-no-files-found: warn
 
   build-windows-and-linux:
-    if: github.ref == 'refs/heads/gh-actions'
+    if: github.ref == 'refs/heads/master'
     name: "Build Windows and Linux"
     runs-on: ubuntu-22.04
     defaults:
