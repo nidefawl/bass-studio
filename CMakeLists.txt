@@ -630,6 +630,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       OUTPUT ${PROJECT_INSTALLER_OUTPUT} CMakeStinks.txt
       VERBATIM
       DEPENDS ${DIST_LINUX_INSTALLER_DEPENDS}
+      WORKING_DIRECTORY ${PATH_DIST}
       COMMAND ${CMAKE_COMMAND} 
         -E copy_directory
         "${PROJECT_SOURCE_DIR}/dist/docs"
@@ -658,22 +659,8 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         if(EXISTS "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}")
           add_custom_target(dist-copy-libunwind
             VERBATIM
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            COMMAND ${CMAKE_COMMAND} 
-              -E copy
-              "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
-              "${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
-          )
-          set(DIST_COPY_RUNTIME_DEPENDS ${DIST_COPY_RUNTIME_DEPENDS} dist-copy-libunwind)
-        endif()
-        
-        add_custom_target(dist-copy-runtimes
-          VERBATIM
-          DEPENDS ${DIST_COPY_RUNTIME_DEPENDS}
-          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-          COMMAND ${CMAKE_COMMAND} 
-            -E copy
-            "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+        DEPENDS dist-strip
+_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
             "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
           COMMAND ${CMAKE_COMMAND} 
             -E copy
