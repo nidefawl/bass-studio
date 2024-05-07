@@ -190,6 +190,12 @@ Section "Install C++ Runtimes"
 SetOutPath $InstDir
 File "${DIST_LOC}\libsoxr-clang-release.dll"
 File "${DIST_LOC}\libc++.dll"
+SectionEnd
+!endif
+
+!if /FileExists "${DIST_LOC}\libunwind.dll"
+Section "Install C++ Runtimes"
+SetOutPath $InstDir
 File "${DIST_LOC}\libunwind.dll"
 SectionEnd
 !endif
