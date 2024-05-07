@@ -55,7 +55,7 @@ jobs:
         echo "cachekey=build-cache-master-macos-native-${{ env.BUILD_TYPE_DEPS }}-${CACHE_DEPS_REVISION}" >> $GITHUB_ENV
     - name: Restore build cache
       id: build-cache-macos-native
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ${{ env.LLVM_MACOS_PATH }}
@@ -148,7 +148,7 @@ jobs:
         echo "ARTIFACT_NAME_MACOS=${ARTIFACT_NAME_MACOS}" >> $GITHUB_ENV
         tar -cvjSf ./installer/macos/symbols.tar.bz2 ./build/macos/dist/*.debug
     - name: Upload macos distributable
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ARTIFACT_NAME_MACOS }}
         path: |
@@ -207,7 +207,7 @@ jobs:
         echo "cachekey=build-cache-master-linux-cross-${{ env.BUILD_TYPE_DEPS }}-${CACHE_DEPS_REVISION}" >> $GITHUB_ENV
     - name: Restore build cache
       id: build-cache-linux-cross
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ${{ env.LLVM_MINGW_PATH }}
@@ -357,7 +357,7 @@ jobs:
         echo "ARTIFACT_NAME_LINUX=${ARTIFACT_NAME_LINUX}" >> $GITHUB_ENV
         tar -cvjSf ./installer/linux/symbols.tar.bz2 ./build/linux/dist/*.debug
     - name: Upload win32 distributable
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ARTIFACT_NAME_WIN32 }}
         path: |
@@ -367,7 +367,7 @@ jobs:
         if-no-files-found: warn
 
     - name: Upload linux distributable
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ARTIFACT_NAME_LINUX }}
         path: |

@@ -25,6 +25,9 @@ option(PROJECT_BUILD_PLUGINS "Build standalone plugins" ON)
 option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 option(PROJECT_FORCE_LIB "Force building a lib" ON)
 option(PROJECT_GENERATE_LINKER_MAP "Generate <build-dir>/<exe>_linker.map" OFF)
+if (LINUX)
+  option(PROJECT_DIST_INCLUDE_RUNTIMES "Include runtime libraries in installer" OFF)
+endif()
 set(PROJECT_VST2_OUTPUT_PATH "${ABS_WORKING_DIR}" CACHE STRING "VST2 output path")
 set(PROJECT_INSTALLER_OUTPUT_PATH "${CMAKE_BINARY_DIR}/installer" CACHE STRING "Installer output path")
 
@@ -578,29 +581,50 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     add_custom_target(dist-installer DEPENDS dist-compress-macos-bundle)
   elseif (LINUX AND CLANG)
     set(PROJECT_INSTALLER_NAME_UNIX "${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-linux-x86_64")
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
-    get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
-    message(STATUS "PATH_RUNTIMES: ${PATH_RUNTIMES}")
     set(LIST_RUNTIMES "")
-    if(EXISTS "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
-      list(APPEND LIST_RUNTIMES "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
+    set(DIST_LINUX_INSTALLER_DEPENDS dist-strip dist-copy-resources dist-create-defaults-zip)
+
+    if (PROJECT_DIST_INCLUDE_RUNTIMES)
+      execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
+      get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
+      if(EXISTS "${PATH_RUNTIMES}/libc++abi.so.1")
+        list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++abi.so.1")
+      endif()
+      if(EXISTS "${PATH_RUNTIMES}/libc++.so.2")
+        list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.2")
+      endif()
+      if(EXISTS "${PATH_RUNTIMES}/libc++.so.1")
+        list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.1")
+      endif()
     endif()
-    if(EXISTS "${PATH_RUNTIMES}/libc++abi.so.1")
-      list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++abi.so.1")
-    endif()
-    if(EXISTS "${PATH_RUNTIMES}/libc++.so.2")
-      list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.2")
-    endif()
-    if(EXISTS "${PATH_RUNTIMES}/libc++.so.1")
-      list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.1")
+
+    if (NOT LIST_RUNTIMES)
+      message(WARNING "No runtimes found")
+    else()
+      add_custom_target(dist-include-c-cxx-runtimes-linux
+        VERBATIM
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
+        COMMAND ${CMAKE_COMMAND} 
+          -E copy
+          ${LIST_RUNTIMES}
+          "${PATH_DIST}/lib/"
+        COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+        COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      )
+      set(DIST_COPY_RUNTIME_DEPENDS ${DIST_COPY_RUNTIME_DEPENDS} dist-include-c-cxx-runtimes-linux)
     endif()
 
     set(PROJECT_INSTALLER_OUTPUT "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz")
+
+    set(PATH_SOXR_SO_LIBRARY "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
+    if(NOT EXISTS "${PATH_SOXR_SO_LIBRARY}")
+      message(FATAL "soxr .so library not found at: ${PATH_SOXR_SO_LIBRARY}")
+    endif()
+  
     add_custom_command(
       OUTPUT ${PROJECT_INSTALLER_OUTPUT} CMakeStinks.txt
       VERBATIM
-      DEPENDS dist-strip dist-copy-resources dist-create-defaults-zip
-      WORKING_DIRECTORY ${PATH_DIST}
+      DEPENDS ${DIST_LINUX_INSTALLER_DEPENDS}
       COMMAND ${CMAKE_COMMAND} 
         -E copy_directory
         "${PROJECT_SOURCE_DIR}/dist/docs"
@@ -608,10 +632,8 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
       COMMAND ${CMAKE_COMMAND} 
         -E copy
-        ${LIST_RUNTIMES}
+        ${PATH_SOXR_SO_LIBRARY}
         "${PATH_DIST}/lib/"
-      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
       COMMAND tar "--exclude=*.debug" "-vczf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
     )
     add_custom_target(dist-installer DEPENDS ${PROJECT_INSTALLER_OUTPUT})
@@ -631,7 +653,6 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         if(EXISTS "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}")
           add_custom_target(dist-copy-libunwind
             VERBATIM
-            DEPENDS dist-strip
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             COMMAND ${CMAKE_COMMAND} 
               -E copy
