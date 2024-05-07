@@ -28,6 +28,9 @@ option(PROJECT_GENERATE_LINKER_MAP "Generate <build-dir>/<exe>_linker.map" OFF)
 if (LINUX)
   option(PROJECT_DIST_INCLUDE_RUNTIMES "Include runtime libraries in installer" OFF)
 endif()
+if (LINUX)
+  option(PROJECT_DIST_INCLUDE_RUNTIMES "Include runtime libraries in installer" OFF)
+endif()
 set(PROJECT_VST2_OUTPUT_PATH "${ABS_WORKING_DIR}" CACHE STRING "VST2 output path")
 set(PROJECT_INSTALLER_OUTPUT_PATH "${CMAKE_BINARY_DIR}/installer" CACHE STRING "Installer output path")
 
@@ -613,13 +616,17 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
           -E copy
           ${LIST_RUNTIMES}
           "${PATH_DIST}/lib/"
-        COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-        COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
       )
       set(DIST_COPY_RUNTIME_DEPENDS ${DIST_COPY_RUNTIME_DEPENDS} dist-include-c-cxx-runtimes-linux)
     endif()
 
     set(PROJECT_INSTALLER_OUTPUT "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz")
+
+    set(PATH_SOXR_SO_LIBRARY "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
+    if(NOT EXISTS "${PATH_SOXR_SO_LIBRARY}")
+      message(FATAL "soxr .so library not found at: ${PATH_SOXR_SO_LIBRARY}")
+    endif()
+  
 
     set(PATH_SOXR_SO_LIBRARY "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
     if(NOT EXISTS "${PATH_SOXR_SO_LIBRARY}")
@@ -640,6 +647,8 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         -E copy
         ${PATH_SOXR_SO_LIBRARY}
         "${PATH_DIST}/lib/"
+      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
       COMMAND tar "--exclude=*.debug" "-vczf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
     )
     add_custom_target(dist-installer DEPENDS ${PROJECT_INSTALLER_OUTPUT})
@@ -659,8 +668,22 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         if(EXISTS "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}")
           add_custom_target(dist-copy-libunwind
             VERBATIM
-        DEPENDS dist-strip
-_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMAND ${CMAKE_COMMAND} 
+              -E copy
+              "${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
+              "${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}"
+          )
+          set(DIST_COPY_RUNTIME_DEPENDS ${DIST_COPY_RUNTIME_DEPENDS} dist-copy-libunwind)
+        endif()
+        
+        add_custom_target(dist-copy-runtimes
+          VERBATIM
+          DEPENDS ${DIST_COPY_RUNTIME_DEPENDS}
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+          COMMAND ${CMAKE_COMMAND} 
+            -E copy
+            "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
             "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
           COMMAND ${CMAKE_COMMAND} 
             -E copy
