@@ -482,33 +482,38 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
   # res/fonts -> dist/res/fonts
   # res/icons -> dist/res/icons
   # res/cursors -> dist/res/cursors
+  # res/shaders -> dist/res/shaders
   # res/*.png -> dist/res/
   add_custom_target(dist-copy-resources
     ALL
     VERBATIM
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_RES}"
-    COMMAND ${CMAKE_COMMAND} 
+    COMMAND ${CMAKE_COMMAND}
       -E copy_directory
       "${PROJECT_SOURCE_DIR}/res/fonts"
       "${PATH_RES}/fonts"
-    COMMAND ${CMAKE_COMMAND} 
+    COMMAND ${CMAKE_COMMAND}
       -E copy_directory
       "${PROJECT_SOURCE_DIR}/res/icons"
       "${PATH_RES}/icons"
-    COMMAND ${CMAKE_COMMAND} 
+    COMMAND ${CMAKE_COMMAND}
       -E copy_directory
       "${PROJECT_SOURCE_DIR}/res/cursors"
       "${PATH_RES}/cursors"
-    COMMAND ${CMAKE_COMMAND} 
+    COMMAND ${CMAKE_COMMAND}
+      -E copy_directory
+      "${PROJECT_SOURCE_DIR}/res/shaders"
+      "${PATH_RES}/shaders"
+    COMMAND ${CMAKE_COMMAND}
       -E copy
       "${PROJECT_SOURCE_DIR}/res/led.png"
       "${PATH_RES}"
-    COMMAND ${CMAKE_COMMAND} 
+    COMMAND ${CMAKE_COMMAND}
       -E copy
       "${PROJECT_SOURCE_DIR}/res/led_off.png"
       "${PATH_RES}"
-    COMMAND ${CMAKE_COMMAND} 
+    COMMAND ${CMAKE_COMMAND}
       -E copy
       "${PROJECT_SOURCE_DIR}/res/led_glow.png"
       "${PATH_RES}"
