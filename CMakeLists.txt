@@ -614,7 +614,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
           ${LIST_RUNTIMES}
           "${PATH_DIST}/lib/"
       )
-      set(DIST_COPY_RUNTIME_DEPENDS ${DIST_COPY_RUNTIME_DEPENDS} dist-include-c-cxx-runtimes-linux)
+      set(DIST_LINUX_INSTALLER_DEPENDS ${DIST_LINUX_INSTALLER_DEPENDS} dist-include-c-cxx-runtimes-linux)
     endif()
 
     set(PROJECT_INSTALLER_OUTPUT "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz")
