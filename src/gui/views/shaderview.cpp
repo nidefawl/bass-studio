@@ -147,7 +147,7 @@ public:
         if (!pipeTestShader) {
             if (currentPreset.path.empty())
                 return;
-            String vsh = App::Platform::toResourcePath("fullscreen_quad.vsh");
+            String vsh = App::Platform::toResourcePath("shaders/fullscreen_quad.vsh");
             pipeTestShader = std::make_shared<testshader>(vsh, currentPreset.path);
             struct shader_src_parser_noise {
                 void preprocessSources(std::vector<glshader_src>& srcList) {
