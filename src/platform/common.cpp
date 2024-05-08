@@ -159,16 +159,20 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
     }
 
 #else
-    String resourcePath = cwdPath + FILE_PATHSEP_STR + "res";
+    const auto SEP = FILE_PATHSEP_STR;
+    String resourcePath = cwdPath + SEP + "res";
     if (!FileExists(resourcePath)) {
-        resourcePath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "res";
+        resourcePath = cwdPath + SEP + ".." + SEP + "res";
     }
-    String defaultsPath = cwdPath + FILE_PATHSEP_STR + "defaults";
+    String defaultsPath = cwdPath + SEP + "defaults";
     if (!FileExists(defaultsPath)) {
-        defaultsPath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "defaults";
+        defaultsPath = cwdPath + SEP + ".." + SEP + "defaults";
     }
     if (!FileExists(defaultsPath)) {
-        defaultsPath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "dist" + FILE_PATHSEP_STR + "defaults";
+        defaultsPath = cwdPath + SEP + ".." + SEP + "dist" + SEP + "defaults";
+    }
+    if (!FileExists(defaultsPath)) {
+        defaultsPath = cwdPath + SEP + "res" + SEP + ".." + SEP + "dist" + SEP + "defaults";
     }
 #endif
     setResourcePath(resourcePath);
