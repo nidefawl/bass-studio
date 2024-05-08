@@ -225,14 +225,16 @@ jobs:
       run: |
         wget --no-check-certificate -nv https://raw.githubusercontent.com/nidefawl/daw-deps/master/python/python311-win32.zip -O python-win32.zip
         unzip python-win32.zip -d ${{ env.BUILD_DIR }} && rm *.zip
-        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v19.0.0-linux/llvm-clang-19.0.0-ubuntu-22.04-python-3.12-x86_64.bz2 -O llvm-clang-19.0.0-ubuntu-22.04-python-3.12-x86_64.bz2
+        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v19.0.0-linux/llvm-clang-19.0.0-ubuntu-22.04-python-3.10-x86_64.bz2 -O llvm-clang-19.0.0-ubuntu-22.04-python-3.10-x86_64.bz2
         tar -xjf llvm-clang-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_LINUX_PATH }}
         sudo mv llvm-clang-* ${{ env.LLVM_LINUX_PATH }}
+        PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH clang --version
         wget --no-check-certificate -nv https://github.com/mstorsjo/llvm-mingw/releases/download/20240502/llvm-mingw-20240502-ucrt-ubuntu-20.04-x86_64.tar.xz -O llvm-mingw-20240502-ucrt-ubuntu-20.04-x86_64.tar.xz
         tar -xf llvm-mingw-*.tar.xz && rm *.tar.xz
         sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
         sudo mv llvm-mingw-* ${{ env.LLVM_MINGW_PATH }}
+        PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH clang --version
         wget --no-check-certificate -nv https://github.com/Kitware/CMake/releases/download/v3.25.0-rc4/cmake-3.25.0-rc4-linux-$(uname -m).tar.gz
         tar -zxf cmake-*.tar.gz && rm *.tar.gz
         sudo rm -Rf ${{ env.BUILD_DIR }}/cmake
