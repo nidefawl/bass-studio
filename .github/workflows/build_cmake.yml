@@ -7,6 +7,7 @@ env:
   BUILD_TYPE: RelWithDebInfo
   BUILD_TYPE_DEPS: release
   LLVM_MACOS_PATH: ${{ github.workspace }}/llvm-macos
+  LLVM_LINUX_PATH: ${{ github.workspace }}/llvm-linux
   LLVM_MINGW_PATH: ${{ github.workspace }}/llvm-mingw
   CC_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-gcc
   CXX_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-g++
@@ -210,6 +211,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
+          ${{ env.LLVM_LINUX_PATH }}
           ${{ env.LLVM_MINGW_PATH }}
           ${{ env.BUILD_DIR }}/Python311
           ${{ env.BUILD_DIR }}/cmake
@@ -223,6 +225,10 @@ jobs:
       run: |
         wget --no-check-certificate -nv https://raw.githubusercontent.com/nidefawl/daw-deps/master/python/python311-win32.zip -O python-win32.zip
         unzip python-win32.zip -d ${{ env.BUILD_DIR }} && rm *.zip
+        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v19.0.0-linux/llvm-clang-19.0.0-ubuntu-22.04-python-3.12-x86_64.bz2 -O llvm-clang-19.0.0-ubuntu-22.04-python-3.12-x86_64.bz2
+        tar -xjf llvm-clang-*.bz2 && rm *.bz2
+        sudo rm -Rf ${{ env.LLVM_LINUX_PATH }}
+        sudo mv llvm-clang-* ${{ env.LLVM_LINUX_PATH }}
         wget --no-check-certificate -nv https://github.com/mstorsjo/llvm-mingw/releases/download/20240502/llvm-mingw-20240502-ucrt-ubuntu-20.04-x86_64.tar.xz -O llvm-mingw-20240502-ucrt-ubuntu-20.04-x86_64.tar.xz
         tar -xf llvm-mingw-*.tar.xz && rm *.tar.xz
         sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
@@ -264,7 +270,7 @@ jobs:
     - name: Build linux dependencies
       if: steps.build-cache-linux-cross.outputs.cache-hit != 'true'
       run: |
-        LD_LIBRARY_PATH=${{ env.LLVM_MINGW_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/linux ./install-deps/linux -${{ env.BUILD_TYPE_DEPS }}
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/linux ./install-deps/linux -${{ env.BUILD_TYPE_DEPS }}
     - name: Configure win32
       run: >
         PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH CC=${{ env.CC_MINGW }} CXX=${{ env.CXX_MINGW }} cmake
@@ -303,7 +309,7 @@ jobs:
 
     - name: Configure linux
       run: >
-        LD_LIBRARY_PATH=${{ env.LLVM_MINGW_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} cmake
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} cmake
         -S"daw"
         -B"build/linux"
         -G"Ninja"
@@ -330,9 +336,10 @@ jobs:
         -DCMAKE_VERBOSE_MAKEFILE=OFF
         -DCMAKE_UNITY_BUILD=ON
         -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+        -DPROJECT_DIST_INCLUDE_RUNTIMES=ON
     - name: Build linux
       run: |
-        LD_LIBRARY_PATH=${{ env.LLVM_MINGW_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target ${{ env.BUILD_TARGET }}
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target ${{ env.BUILD_TARGET }}
     - name: Build win32
       run: |
         PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target ${{ env.BUILD_TARGET }}
