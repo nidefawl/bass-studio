@@ -11,8 +11,8 @@ env:
   LLVM_MINGW_PATH: ${{ github.workspace }}/llvm-mingw
   CC_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-gcc
   CXX_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-g++
-  CC_LINUX: ${{ github.workspace }}/llvm-mingw/bin/clang
-  CXX_LINUX: ${{ github.workspace }}/llvm-mingw/bin/clang++
+  CC_LINUX: ${{ github.workspace }}/llvm-linux/bin/clang
+  CXX_LINUX: ${{ github.workspace }}/llvm-linux/bin/clang++
   CC_MACOS: ${{ github.workspace }}/llvm-macos/bin/clang
   CXX_MACOS: ${{ github.workspace }}/llvm-macos/bin/clang++
   BUILD_DIR: ${{ github.workspace }}
