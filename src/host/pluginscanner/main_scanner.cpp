@@ -1170,7 +1170,7 @@ static int runScannerClient() {
 int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
     App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
-    if (argc < 1) {
+    if (argc < 2 || String(argv[1]) == "-h" || String(argv[1]) == "--help") {
         String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
         log_message("Daw VST scanner version %s\n", BuildInfo::BUILD_BINARY_VERSION);
         log_message("This program can be run in server or client mode.");
