@@ -342,6 +342,10 @@ jobs:
     - name: Build linux
       run: |
         LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target ${{ env.BUILD_TARGET }}
+    - name: Build linux without python
+      run: |
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake ./build/linux -DPROJECT_ENABLE_PYTHON=OFF -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/installer/linux-no-python
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target ${{ env.BUILD_TARGET }}
     - name: Build win32
       run: |
         PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target ${{ env.BUILD_TARGET }}
@@ -361,7 +365,7 @@ jobs:
     - name: Prepare linux artifacts
       run: |
         INSTALLER_FILENAME=$(basename $(ls -AU ./installer/linux/*.tar.gz | head -1))
-        INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
+        INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-7))}
         ARTIFACT_NAME_LINUX="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
         echo "ARTIFACT_NAME_LINUX=${ARTIFACT_NAME_LINUX}" >> $GITHUB_ENV
         tar -cvjSf ./installer/linux/symbols.tar.bz2 ./build/linux/dist/*.debug
@@ -382,5 +386,6 @@ jobs:
         path: |
           ${{ env.BUILD_DIR }}/installer/revision.txt
           ${{ env.BUILD_DIR }}/installer/linux
+          ${{ env.BUILD_DIR }}/installer/linux-no-python
           ${{ env.BUILD_DIR }}/build/linux/compile_commands.json
         if-no-files-found: warn
