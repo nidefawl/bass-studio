@@ -221,8 +221,7 @@ private:
                                     break;
                                 }
                             }
-                            m_status = reqState;
-                            host->getHostCallback()->m_playbackState = playback_state::status_no_process;
+                            host->getHostCallback()->m_playbackState = m_status = reqState;
                         } break;
                         case GUI_CALL:
                             req->fn();
@@ -326,8 +325,7 @@ private:
                         ctrl->getIdleTickPos() = math::rounddS32(tickPos);
                         if (m_status == status_render) {
                             if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
-                                m_status = status_no_process;
-                                host->getHostCallback()->m_playbackState = playback_state::status_no_process;
+                                host->getHostCallback()->m_playbackState = m_status = status_no_process;
                                 ctrl->getGlobals().recordArmed = false;
                                 host->onStopPlayback(this->m_prjCtrl);
                                 host->postExportEnd(ctrl, exportSettingsLocal, false);
