@@ -323,6 +323,7 @@ void DawInstance::onTick() {
                     canOpenAutosave &= !ctrl->hasContextMenu();
                     hasAnyInputFocus |= ctrl->hasInputFocus();
                     /*canOpenAutosave &= last click was n seconds ago*/
+                    canOpenAutosave &= playThread.getState() != playback_state::status_render;
                 }
                 canOpenAutosave &= hasAnyInputFocus;
                 if (canOpenAutosave &&  (tmNow - autosaveState.tmLastTrigger) / ms60k > math::max<int64_t>(settings.autosave.tmReminderDelayMinutes, 1)) {
