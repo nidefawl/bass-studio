@@ -420,7 +420,7 @@ namespace PluginEQ {
     }
 
     samplecount_t module_eq::getPluginLatency() {
-        return getParamValue(PARAMID_OVERSAMPLING) >= 0.5f ? format.blockSize : 0;
+        return getParamValue(PARAMID_OVERSAMPLING) >= 0.5f ? this->impl->oversampler.latency() : 0;
     }
 
     void module_eq::onTick(double since) {
