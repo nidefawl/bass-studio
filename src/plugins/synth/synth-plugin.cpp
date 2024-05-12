@@ -1646,7 +1646,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             setModulationDestination(0, 0, Parameters::FilterCutoff, 0.5);
         }
         samplecount_t getLatency() {
-            return getSetting(Settings::Oversampling) ? oversampler.latency() / 2 : 0;
+            return getSetting(Settings::Oversampling) ? oversampler.latency()/2 : 0;
         }
         void initSampleRate() {
             auto dt = oneOverSR;
@@ -2668,7 +2668,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             };
         }
 
-        void ProcessSynth(float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
+        void ProcessSynth(AudioBlock* in, float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
             // lockProcessing only locks VST2 versions of the plugin
             auto lock = this->lockProcessing();
 
@@ -2699,6 +2699,9 @@ class SynthImpl final : public PluginLockable, public SynthState {
             int nOversample        = 1;
             if (getSetting(Settings::Oversampling)) {
                 nOversample = 2;
+                if (in) {
+                    this->oversampler.up(in->buf, nFrames);
+                }
                 nFrames *= nOversample;
                 synthOutputs[0] = this->oversampler[0];
                 synthOutputs[1] = this->oversampler[1];
@@ -2714,7 +2717,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 if (host && moduleInstance && (s % framesPerAutomationUpdate) == 0) {
                     ReadAutomation(host, tick, state, s, nFrames, nOversample);
                 }
-                FlushMidi(s);
+                FlushMidi(s / nOversample);
                 UpdateParameters(dt);
                 UpdateDrift(dt);
                 if (lfo2.Update(dt, bpmDiv4Hz)) {
@@ -3095,7 +3098,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             //     this->impl->onTransportChanged(timeinfo->flags & kVstTransportPlaying);
             // }
             out->clear();
-            this->impl->ProcessSynth(out->buf, numSamples, host, tick, state);
+            this->impl->ProcessSynth(in, out->buf, numSamples, host, tick, state);
         }
 
         std::shared_ptr<std::vector<std::byte>> storePresetData() override {
@@ -3428,7 +3431,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             if (inputs)
                 dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
             dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
-            this->impl->ProcessSynth(outputs, sampleFrames, nullptr, tickPos, state);
+            this->impl->ProcessSynth(nullptr, outputs, sampleFrames, nullptr, tickPos, state);
         }
     }
 }// namespace PluginSynth
