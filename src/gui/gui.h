@@ -353,8 +353,6 @@ public:
     }
     virtual void prerender(NVGcontext* vg) {
     }
-    virtual void onIdle() {
-    }
     virtual void onTick(AppCtrl* appctrl) {
     }
     virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl);

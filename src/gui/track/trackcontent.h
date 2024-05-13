@@ -193,7 +193,6 @@ public:
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     void renderDebugPass(NVGcontext* vg) override;
-    void onIdle() override;
     void onTick(AppCtrl* appctrl) override;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     void onRemove() override;

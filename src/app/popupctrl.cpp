@@ -161,7 +161,4 @@ void PopupCtrl::onTick() {
     for (guictr_base* ctr : containers) {
         if (ctr->isVisible()) ctr->onTick(this);
     }
-    for (guictr_base* ctr : containers) {
-        if (ctr->isVisible()) ctr->onIdle();
-    }
 }

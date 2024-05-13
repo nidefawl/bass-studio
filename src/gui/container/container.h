@@ -266,12 +266,6 @@ public:
 
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 
-    void onIdle() override {
-        for (guibase* gui : guis) {
-            gui->onIdle();
-        }
-    }
-
     void prerender(NVGcontext* vg) override {
         for (guibase* gui : guis) {
             gui->prerender(vg);

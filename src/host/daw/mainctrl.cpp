@@ -1293,10 +1293,6 @@ void DawCtrl::onTick() {
         if (ctr->isVisible())
             ctr->onTick(this);
     }
-    for (guictr_base* ctr : containers) {
-        if (ctr->isVisible())
-            ctr->onIdle();
-    }
     //if (rand.rng_rand(100000) == 0) {
     //    throw std::bad_alloc();
     //}

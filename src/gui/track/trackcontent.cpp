@@ -678,9 +678,6 @@ guictxtmenu_base* gui_audio_clip::getTooltip(AppCtrl* appctrl) {
     return tooltip;
 }
 
-void gui_audio_clip::onIdle() {
-}
-
 void gui_audio_clip::onTick(AppCtrl* appctrl) {
 }
 
