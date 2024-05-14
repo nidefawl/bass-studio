@@ -27,6 +27,9 @@ namespace {
         sampleToTickConvert<int32_t, roundmode::floorclamp>(0, tempo100, samplerate);
         sampleToTickConvert<int32_t, roundmode::round>(0, tempo100, samplerate);
         sampleToTickConvert<int32_t, roundmode::ceil>(0, tempo100, samplerate);
+        auto ticks = secondsToTicks(1.0, tempo100);
+        auto ticks2 = sampleToTickConvert<double, roundmode::none>(samplerate, tempo100, samplerate);
+        TEST_ASSERT_EQUAL(ticks, ticks2);
         TEST_END();
     }
     void test_tickToBarBeat16thAbsolute() {

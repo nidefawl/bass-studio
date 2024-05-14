@@ -71,7 +71,7 @@ inline double toSeconds(double tick, int32_t bpm100) {
 }
 
 inline double secondsToTicks(double seconds, int32_t bpm100) {
-    return seconds / TPQ_OVER_MINUTE_100 * bpm100;
+    return (TPQ_OVER_MINUTE_100 * bpm100) * seconds;
 }
 
 namespace roundmode {
