@@ -73,7 +73,7 @@ public:
     void assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef);
     int renderUpdates(NVGcontext* ctxt, float pxRatio);
     int queueUpdate(samplesource_t* audio, gui_waveform_texture_ref* waveformRef);
-    void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);
+    void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size, const NVGcolor& rgba);
     void drawPart(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 sizeClipped, vec2 texTl, vec2 texBr);
 
     void release(gui_waveform_texture_ref* waveformRef);

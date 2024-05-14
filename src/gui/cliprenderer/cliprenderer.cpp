@@ -1,4 +1,5 @@
 #include "cliprenderer.h"
+#include "color_util.h"
 #include "host/audiocache/audiocache.h"
 #include "host/clip/clip.h"
 #include "cliprenderer_cache.h"
@@ -114,12 +115,15 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
         return;
     }
     const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-    NVGcolor color = rgbToNvg(cl->rgb);
+    auto col = cl->rgb;
+    if (!cl->enabled) {
+        col = 0x333333;
+    }
     auto textPos = vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0) + vec2(pos);
     auto textBounds = vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0);
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
-    nvgFillColor(vg, color);
+    nvgFillColor(vg, rgbaToNvg(col));
     nvgFill(vg);
     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
     nvgStrokeWidth(vg, 1.f);
@@ -171,7 +175,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
                         cl->name,
                         theme,
                         HEIGHT_CLIP_TITLE,
-                        getContrastFontColor(cl->rgb),
+                        getContrastFontColor(col),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
     ivec2 posContents = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
@@ -180,7 +184,8 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     float barSize  = size.x / (float) numBars;
     if (sizeClipped.x > 0 && sizeClipped.y > 2 && waveformRef->rendered) {
         nvgTranslate(vg, posClipped.x, posContents.y);
-        wfrenderer->draw(vg, waveformRef, sizeClipped);
+        auto colWaveform = theme->getColor(cl->enabled ? GuiColor::COL_WAVEFORM : GuiColor::COL_WAVEFORM_MUTED);
+        wfrenderer->draw(vg, waveformRef, sizeClipped, colWaveform);
         nvgTranslate(vg, -posClipped.x, -posContents.y);
     }
     if (cl->loopEnabled && cl->loopLen > 0) {

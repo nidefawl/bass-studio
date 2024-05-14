@@ -399,9 +399,9 @@ void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVG
     }
 }
 
-void drawImage(NVGcontext* vg, int image, float alpha,
+void drawTintedImage(NVGcontext* vg, int image, float alpha,
                float sx, float sy, float sw, float sh,// sprite location on texture
-               float x, float y, float w, float h)    // position and size of the sprite rectangle on screen
+               float x, float y, float w, float h, const NVGcolor& rgba)    // position and size of the sprite rectangle on screen
 {
     float ax, ay;
     int iw, ih;
@@ -418,6 +418,7 @@ void drawImage(NVGcontext* vg, int image, float alpha,
                           0, image, alpha);
     nvgBeginPath(vg);
     nvgRect(vg, x, y, w, h);
+    img.innerColor = img.outerColor = rgba;
     nvgFillPaint(vg, img);
     nvgFill(vg);
 }

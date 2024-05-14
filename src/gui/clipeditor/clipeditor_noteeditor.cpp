@@ -1011,7 +1011,13 @@ void gui_audiocontent::renderAudioClip(NVGcontext* vg) {
     nvgSave(vg);
     nvgTranslate(vg, pos.x, pos.y);
     if (waveformRef->rendered) {
-        dawCtrl->getWaveformRenderer()->draw(vg, waveformRef, size);
+        auto colWaveform = GuiColor::COL_WAVEFORM;
+        auto clip = view.clip();
+        if (clip && !clip->enabled) {
+            colWaveform = GuiColor::COL_WAVEFORM_MUTED;
+        }
+        auto rgba = theme->getColor(colWaveform);
+        dawCtrl->getWaveformRenderer()->draw(vg, waveformRef, size, rgba);
     }
 
     nvgRestore(vg);

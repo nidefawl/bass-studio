@@ -8,6 +8,7 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <nanovg_min.h>
 #include <utility>
 #include <vector>
 
@@ -598,7 +599,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
     return totalRendered;
 }
 
-void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 sizeClipped) {
+void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 sizeClipped, const NVGcolor& rgba) {
     dbgassert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int) atlases.size());
     auto& atlas = this->atlases[waveformRef->atlasId];
     dbgassert(atlas.fb && atlas.glTexture > -1 && atlas.idx > -1);
@@ -608,7 +609,7 @@ void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* wave
                    });
     dbgassert(it != atlas.entries.cend());
     auto& entry                          = *it;
-    drawImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, 0, 0, sizeClipped.x, sizeClipped.y);
+    drawTintedImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, 0, 0, sizeClipped.x, sizeClipped.y, rgba);
 }
 
 void waveformrender::drawPart(NVGcontext* vg, const gui_waveform_texture_ref* waveformRef, ivec2 size, vec2 texTl, vec2 texBr) {

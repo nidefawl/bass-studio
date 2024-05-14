@@ -119,6 +119,8 @@ namespace GuiColor {
     extern constant_t COL_TEXTBOX_TEXT_MARKED;
     extern constant_t COL_TEXTBOX_TEXT;
     extern constant_t COL_WHITE;
+    extern constant_t COL_WAVEFORM;
+    extern constant_t COL_WAVEFORM_MUTED;
 }// namespace GuiColor
 
 

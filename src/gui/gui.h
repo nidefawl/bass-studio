@@ -72,9 +72,9 @@ void drawCross(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, i
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth);
-void drawImage(NVGcontext* vg, int image, float alpha,
+void drawTintedImage(NVGcontext* vg, int image, float alpha,
                float sx, float sy, float sw, float sh,// sprite location on texture
-               float x, float y, float w, float h);   // position and size of the sprite rectangle on screen
+               float x, float y, float w, float h, const NVGcolor& rgba);
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs);
 void drawSquareInset(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);

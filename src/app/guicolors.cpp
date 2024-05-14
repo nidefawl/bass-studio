@@ -165,6 +165,8 @@ namespace GuiColor {
     constant_t COL_TEXTBOX_TEXT_DISABLED("COL_TEXTBOX_TEXT_DISABLED", 0xff666666);
     constant_t COL_TEXTBOX_TEXT_MARKED("COL_TEXTBOX_TEXT_MARKED", 0xff4d60d7);
     constant_t COL_WHITE("COL_WHITE", 0xffe9eafd);
+    constant_t COL_WAVEFORM("COL_WAVEFORM", 0xffffffff);
+    constant_t COL_WAVEFORM_MUTED("COL_WAVEFORM_MUTED", 0xff7f7f7f);
 
 } // namespace GuiColor
 

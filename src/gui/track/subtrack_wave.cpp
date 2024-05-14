@@ -80,7 +80,8 @@ public:
             if (wv.waveformTex.rendered) {
                 nvgSave(vg);
                 nvgTranslate(vg, wvLC.splitTexPos.x, wvLC.splitTexPos.y);
-                dawCtrl->getWaveformRenderer()->draw(vg, &waveformTex, wvLC.spliTexSize);
+                auto col = NVGcolor{1.0f, 1.0f, 1.0f, 1.0f};
+                dawCtrl->getWaveformRenderer()->draw(vg, &waveformTex, wvLC.spliTexSize, col);
                 nvgRestore(vg);
             }
 
@@ -106,8 +107,8 @@ public:
                 if (waveformTex.waveform.size.x > 4 && waveformTex.waveform.size.y > 4 && wvSize.x > 4 && wvSize.y > 4 && waveformTex.rendered) {
                     nvgSave(vg);
                     nvgTranslate(vg, wv.splitTexPos.x, wv.splitTexPos.y);
-                    dawCtrl->getWaveformRenderer()->draw(vg, &waveformTex, wv.spliTexSize);
-
+                    auto col = NVGcolor{1.0f, 1.0f, 1.0f, 1.0f};
+                    dawCtrl->getWaveformRenderer()->draw(vg, &waveformTex, wv.spliTexSize, col);
                     nvgRestore(vg);
                 }
             }

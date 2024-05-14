@@ -1,6 +1,7 @@
 #include "plugin.h"
 #include <nanovg.h>
 #include <memory>
+#include <nanovg_min.h>
 #include "assert_dbg.h"
 #include "host/automation/automation.h"
 #include "fileio.h"
@@ -595,7 +596,8 @@ public:
             return;
         }
         if (tex > 0) {
-            drawImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, size.x, size.y);
+            auto col = NVGcolor{1.0f, 1.0f, 1.0f, 1.0f};
+            drawTintedImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, size.x, size.y, col);
         }
         for (auto c : guis) {
             nvgSave(vg);
