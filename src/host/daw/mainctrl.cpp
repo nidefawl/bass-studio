@@ -1289,14 +1289,11 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
 }
 
 void DawCtrl::onTick() {
-    for (guictr_base* ctr : containers) {
+    auto& renderContainers = getRenderContainers();
+    for (guictr_base* ctr : renderContainers) {
         if (ctr->isVisible())
             ctr->onTick(this);
     }
-    //if (rand.rng_rand(100000) == 0) {
-    //    throw std::bad_alloc();
-    //}
-    //log_lf(Log::L_DEBUG, "onTick %d\n", std::this_thread::get_id());
 }
 
 void ProjectGraphMonitor::onTick(MainCtrl* ctrl) {
