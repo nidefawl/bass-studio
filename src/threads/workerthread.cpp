@@ -89,19 +89,27 @@ class WorkerThread::Impl {
     std::condition_variable m_cond;
     std::atomic<bool> m_stop{};
     int32_t threadid = 0;
+#if BUILD_DAW_HOST
     daw_tls::tlsinstance threadTLS;
+#endif
     bool isRealtimePriority = false;
 public:
+
+#if BUILD_DAW_HOST
     void setTls(daw_tls::tlsinstance tls) {
         dbgassert(!t.joinable());
         threadTLS = tls;
     }
+#endif
+
     void start(const String& name, seqthreads::ThreadType type) {
         t = std::thread([this, name, type]() {
             seqthreads::registerThread(name, type);
             this->threadid = seqthreads::getCurrentThreadId();
+#if BUILD_DAW_HOST
             dbgassert(threadTLS.tlsInitialized);
             daw_tls::setTls(threadTLS);
+#endif
             if (this->isRealtimePriority) {
 #ifdef _WIN32
                 HANDLE h = reinterpret_cast<HANDLE*>(GetCurrentThread);
@@ -195,9 +203,13 @@ int32_t WorkerThread::getThreadId() {
 bool WorkerThread::pushTask(ThreadTask* task) { //TODO: make this take a shared_ptr
     return this->m_threadImpl->push(task->m_taskImpl);
 }
+
 void WorkerThread::setTls(daw_tls::tlsinstance tls) {
+#if BUILD_DAW_HOST
     m_threadImpl->setTls(tls);
+#endif
 }
+
 void WorkerThread::setRealtimePriority(bool isRealtimePriority) {
     m_threadImpl->setRealtimePriority(isRealtimePriority);
 }

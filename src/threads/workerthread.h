@@ -77,7 +77,9 @@ public:
     void stopThread();
     void joinThread();
     int32_t getThreadId() override;
+#if BUILD_DAW_HOST
     void setTls(daw_tls::tlsinstance tls) override;
+#endif
     bool pushTask(ThreadTask* task);
     [[nodiscard]] std::shared_ptr<WorkerThread::ThreadTask> call(std::function<void()>&& fn);
 
