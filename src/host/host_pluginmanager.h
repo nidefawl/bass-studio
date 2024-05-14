@@ -14,9 +14,11 @@
 #include "types.h"
 #include <map>
 
+// would be nice to not have these includes in the header
 #include <vstsdk-host-2.4/aeffectx.h>
 #include <public.sdk/source/vst/hosting/hostclasses.h>
 #include <public.sdk/source/vst/hosting/module.h>
+
 #include "note.h"
 #include "rand.h"
 #include "hires_timer.h"
