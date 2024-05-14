@@ -477,11 +477,16 @@ namespace DAW {
                     daw->setClipClipboard(clipboard);
                     handledKeyinput = true;
                 } else if (command == CMD_RENDER_TO_AUDIO && dawCtrl->getSelectedTrack()) {
-                    auto pTask = new freeze_track_task_t{};
-                    pTask->daw = daw;
-                    pTask->cursor = cursor.getLeftAligned();
-                    pTask->track = dawCtrl->getSelectedTrack();
-                    daw->setAsyncTask(pTask);
+                    auto tr = dawCtrl->getSelectedTrack();
+                    track_gui_entry_t* entry;
+                    if (iGuiMgr.getPointerEntry(tr, &entry)) {
+                        auto pTask = new freeze_track_task_t{};
+                        pTask->daw = daw;
+                        pTask->cursor = cursor.getLeftAligned();
+                        pTask->track = tr;
+                        pTask->cloneTrack(entry);
+                        daw->setAsyncTask(pTask);
+                    }
                     handledKeyinput = true;
                     desc            = "Freeze track";
                 } else if (command == CMD_CONSOLIDATE && cursor.getRange() && !cursor.isSubtrackSelection()) {

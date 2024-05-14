@@ -1873,19 +1873,6 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
     dragDropTarget.reset();
 }
 
-class gui_track_drop_position_t {
-public:
-    enum drop_type {
-        none,
-        track_on,
-        track_before,
-        track_after
-    };
-    int slot = 0;
-    track_gui_entry_t* droppedTrack;
-    drop_type droptype = none;
-    ivec2 pos{};
-};
 gui_track_drop_position_t slotFromCoord(guictr_tracks* parent, track_gui_entry_t* trackEntryDragged, const ivec2 _pos) {
     const int dropMaxDistance = 32;
 
@@ -2006,70 +1993,70 @@ namespace {
         parent->dawCtrl->getDragDropTarget() = target;
     }
 
-    void moveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot) {
-        int32_t treeIdx = 0;
-        track_gui_entry_t* targetTrack = nullptr;
-        dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
-        switch (slot.droptype) {
-            case drop_type::none:
-                return;
-            case drop_type::track_on:
-                //insert into slot.droppedTrack at end
-                targetTrack = slot.droppedTrack;
-                treeIdx     = !slot.droppedTrack->track->children.empty() ? slot.droppedTrack->track->children.back()->childIdxTree : 0;
-                break;
-            case drop_type::track_before:
-                //insert into slot.droppedTrack->parent before slot.droppedTrack
-                targetTrack = getParentOf(slot.droppedTrack);
-                treeIdx     = slot.droppedTrack->track->childIdxTree;
-                break;
-            case drop_type::track_after:
-                //insert into slot.droppedTrack->parent after slot.droppedTrack
-                targetTrack = getParentOf(slot.droppedTrack);
-                {
-                    int idx = slot.droppedTrack->track->childIdxTree + 1;
-                    // auto* p = getParentOf(slot.droppedTrack);
-                    // while (p && idx == CtrSize(p->track->children)) {
-                    //     idx = p->track->childIdxTree + 1;
-                    //     p   = getParentOf(p);
-                    // }
-                    // targetTrack = p;
-                    treeIdx     = idx;
-                }
-                break;
-            default:
-                dbgassert(0);
-                return;
-        }
-        if (TRACKTYPE_TO_CTR(slot.droppedTrack->track->type) != TRACKTYPE_TO_CTR(track->type)) {
-            log_printf("Cannot move there\n");
-            return;
-        }
-        track_tree_pos_t treePos{};
-        treePos.treeIdx      = treeIdx;
-        treePos.parent       = targetTrack ? targetTrack->track : nullptr;
-        treePos.trackTypeCtr = TRACKTYPE_TO_CTR(track->type);
-        std::vector<track_t*> selectedTracks;
-        selectedTracks.push_back(track);
-        ThreadLock lock  = daw->lockPlayThread();
-        bool failed      = !daw->getTracks().moveTracks(selectedTracks, treePos);
-        String strTarget = "<root>";
-        if (treePos.parent) {
-            strTarget = treePos.parent->name;
-        }
-        log_printf("Moving %zu tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
-
-        daw->onPluginsChanged();
-        daw->updateVisibleTrackContents();
-        //TODO: edithistory entry
-    }
-
     void handleTrackEntryDragRelease(guictr_tracks* parent, track_gui_entry_t* entry, ivec2 mousepos) {
         gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
         track_t* track = entry->track;
         moveTrackToSlot(parent->dawCtrl->getDaw(), track, slot);
     }
 }// namespace
+
+void moveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot) {
+    int32_t treeIdx = 0;
+    track_gui_entry_t* targetTrack = nullptr;
+    dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
+    switch (slot.droptype) {
+        case drop_type::none:
+            return;
+        case drop_type::track_on:
+            //insert into slot.droppedTrack at end
+            targetTrack = slot.droppedTrack;
+            treeIdx     = !slot.droppedTrack->track->children.empty() ? slot.droppedTrack->track->children.back()->childIdxTree : 0;
+            break;
+        case drop_type::track_before:
+            //insert into slot.droppedTrack->parent before slot.droppedTrack
+            targetTrack = getParentOf(slot.droppedTrack);
+            treeIdx     = slot.droppedTrack->track->childIdxTree;
+            break;
+        case drop_type::track_after:
+            //insert into slot.droppedTrack->parent after slot.droppedTrack
+            targetTrack = getParentOf(slot.droppedTrack);
+            {
+                int idx = slot.droppedTrack->track->childIdxTree + 1;
+                // auto* p = getParentOf(slot.droppedTrack);
+                // while (p && idx == CtrSize(p->track->children)) {
+                //     idx = p->track->childIdxTree + 1;
+                //     p   = getParentOf(p);
+                // }
+                // targetTrack = p;
+                treeIdx     = idx;
+            }
+            break;
+        default:
+            dbgassert(0);
+            return;
+    }
+    if (TRACKTYPE_TO_CTR(slot.droppedTrack->track->type) != TRACKTYPE_TO_CTR(track->type)) {
+        log_printf("Cannot move there\n");
+        return;
+    }
+    track_tree_pos_t treePos{};
+    treePos.treeIdx      = treeIdx;
+    treePos.parent       = targetTrack ? targetTrack->track : nullptr;
+    treePos.trackTypeCtr = TRACKTYPE_TO_CTR(track->type);
+    std::vector<track_t*> selectedTracks;
+    selectedTracks.push_back(track);
+    ThreadLock lock  = daw->lockPlayThread();
+    bool failed      = !daw->getTracks().moveTracks(selectedTracks, treePos);
+    String strTarget = "<root>";
+    if (treePos.parent) {
+        strTarget = treePos.parent->name;
+    }
+    log_printf("Moving %zu tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
+
+    daw->onPluginsChanged();
+    daw->updateVisibleTrackContents();
+    //TODO: edithistory entry
+}
 
 void gui_track_content_base::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
     auto trackEntry = g->getTrackEntry();

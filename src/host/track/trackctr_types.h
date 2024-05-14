@@ -48,3 +48,18 @@ void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom);
 track_gui_entry_t* getParentOf(track_gui_entry_t* t);
 using track_gui_vector_td       = std::vector<track_gui_entry_t*>;
 using const_track_gui_vector_td = std::vector<const track_gui_entry_t*>;
+
+class gui_track_drop_position_t {
+public:
+    enum drop_type {
+        none,
+        track_on,
+        track_before,
+        track_after
+    };
+    int slot = 0;
+    track_gui_entry_t* droppedTrack;
+    drop_type droptype = none;
+    ivec2 pos{};
+};
+void moveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot);
