@@ -2717,7 +2717,9 @@ class SynthImpl final : public PluginLockable, public SynthState {
                 if (host && moduleInstance && (s % framesPerAutomationUpdate) == 0) {
                     ReadAutomation(host, tick, state, s, nFrames, nOversample);
                 }
-                FlushMidi(s / nOversample);
+                if (s % nOversample == 0) {
+                    FlushMidi(s / nOversample);
+                }
                 UpdateParameters(dt);
                 UpdateDrift(dt);
                 if (lfo2.Update(dt, bpmDiv4Hz)) {
