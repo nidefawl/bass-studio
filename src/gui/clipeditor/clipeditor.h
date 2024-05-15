@@ -538,7 +538,9 @@ public:
     void updateClipViewReferences();
     bool isVisible() const override;
     void determineSize(ivec2& prefSize) override;
+    bool canMouseHit() const override;
 };
+
 class gui_clipcontent_base : public guictr_base {
 public:
     scaled_grid& grid;

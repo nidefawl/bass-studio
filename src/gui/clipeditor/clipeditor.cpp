@@ -2558,7 +2558,6 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
             } else if (command == CMD_QUANTIZE) {
                 auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
                 if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
-                    bool bUpdateViewSelection = false;
                     view.visitClipView([&](clip_t* cl) {
                         // auto& notes = cl->notes;
                         /* Quantize notes to grid 
@@ -2615,14 +2614,6 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                             log_lf(Log::L_DEBUG, "removed some intersecting notes\n");
                         }
                         mergeDraggedNotes(dragmode::drag_notes_move, cl);
-                        if (view.isAbsoluteTimeMode()) {
-                            auto pair = getMinMaxTime(cl->notes.selection);
-                            if (pair.second)
-                                grid.makeTickVisible(pair.second->end() + getTickOffset());
-                            expandSelectionFrame(pair);
-                        } else {
-                            bUpdateViewSelection = true;
-                        }
                         cl->setDirty();
                         cl->updateNoteViewSelection();
                         edit = true;
@@ -2631,52 +2622,36 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     if (edit) {
                         desc = "Quanitize notes";
                     }
-                    if (bUpdateViewSelection) {
-                        setSelectionFrameFromView();
-                    }
                 }
             } else if (command == CMD_APPLY_PYTHON_SCRIPT) {
-                if (clip) {
-                    auto& notes = clip->notes;
-                    if (notes.selection.empty()) {
-                        DAW::UI::CommandContext ctxtSelectAll = ctxt;
-                        ctxtSelectAll.type = GlobalCommandType::CMD_SELECT_ALL;
-                        handleEditorCommand(ctxtSelectAll);
+                view.visitClipView([&](clip_t* cl) {
+                    if (cl->notes.selection.empty()) {
+                        return true;
                     }
-                    clip_notes_t tmpClipboard;
-                    tmpClipboard.setTo(notes.selection, 0);
-                    notes.deleteSelectedNotes(notes);
-                    notes.clearSelection();
-                    view.copySelectedNoteList();
-                    auto& dragged = view.m_notesDragged[clip];
+
+                    auto& dragged = view.m_notesDragged[cl];
+                    dragged.draggedSelection = dragged.draggedSelectionBegin;
                     try {
                         DAW::PythonNoteProcessor::python_script_ctxt_t pyCtxt;
-                        pyCtxt.notes = tmpClipboard.m_list;
+                        pyCtxt.notes = dragged.draggedSelection;
                         seq_rand rnd;
                         rnd.rng_seed(getTimeMillis());
                         pyCtxt.seed = int32_t(rnd.rng_rand());
                         pyCtxt.params = ctxt.argFloats;
-                        tmpClipboard.m_list = DAW::PythonNoteProcessor::RunPythonNoteProcessor(ctxt.argStr0, pyCtxt);
+                        dragged.draggedSelection = DAW::PythonNoteProcessor::RunPythonNoteProcessor(ctxt.argStr0, pyCtxt);
                     } catch (std::exception& e) {
                         log_lf(Log::L_ERROR, "Python script failed: %s\n", e.what());
                     }
-                    cutSelfIntersecting(tmpClipboard.m_list);
-                    for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
-                        dragged.draggedSelection.push_back(note);
-                    }
-                    mergeDraggedNotes(dragmode::drag_notes_move);
-#ifndef NDEBUG
-                    for (note_t* selPtr: notes.selection) {
-                        dbgassert(notes.has(selPtr));
-                    }
-#endif
-                    auto pair = getMinMaxTime(notes.selection);
-                    if (pair.second)
-                        grid.makeTickVisible(pair.second->end() + getTickOffset());
-                    expandSelectionFrame(pair);
-                    clip->setDirty();
+                    cutSelfIntersecting(dragged.draggedSelection);
+                    mergeDraggedNotes(dragmode::drag_notes_move, cl);
+                    cl->setDirty();
+                    cl->updateNoteViewSelection();
                     edit = true;
+                    return true;
+                });
+                if (edit) {
                     desc = "Apply python note processor";
+                    view.updateNotePitches(false);
                 }
             }
         }
@@ -3477,12 +3452,6 @@ float CCEdit::snapH(float x) {
     return x;
 }
 
-bool gui_clipsettings::isVisible() const {
-    auto clip = view.clip();
-    if (!clip) return false;
-    return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsClip;
-}
-
 void gui_clipsettings::determineSize(ivec2& prefSize) {
     prefSize = ivec2(0, 0);
     guictr_base::determineSize(prefSize);
@@ -4013,4 +3982,15 @@ bool gui_pianoroll::handleMouseScroll(MouseEvent& evt, double xoffset, double yo
         return true;
     }
     return guibase::handleMouseScroll(evt, xoffset, yoffset);
+}
+
+bool gui_clipsettings::isVisible() const {
+    return guictr_base::isVisible();
+}
+
+bool gui_clipsettings::canMouseHit() const {
+    auto clip = view.clip();
+    if (!clip) return false;
+    return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsClip;
+    return true;
 }
