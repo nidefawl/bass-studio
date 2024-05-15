@@ -249,7 +249,7 @@ void guictr_clipeditor::selectEditClip(clip_t* clip) {
 }
 
 void guictr_clipeditor::setSingleClip(clip_t* clip) {
-    bool bChanged = clip != view.clip();
+    bool bChanged = clip != view.clip() || view.isAbsoluteTimeMode();
     storeEditorLayout();
     view.setSingleClip(clip);
     if (parent)
@@ -266,7 +266,8 @@ void guictr_clipeditor::setSingleClip(clip_t* clip) {
 }
 
 void guictr_clipeditor::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
-    bool bChanged = clip != view.clip();
+    bool bWillBeAbsTime = clipboardView.totalClipCount > 1 || clip == nullptr;
+    bool bChanged = clip != view.clip() || (bWillBeAbsTime != view.isAbsoluteTimeMode());
     if (bChanged) {
         storeEditorLayout();
     }
