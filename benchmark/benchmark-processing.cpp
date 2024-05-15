@@ -125,6 +125,26 @@ public:
     uint32_t getNumCallbacks() const override {
         return 0;
     }
+    double getInputTimeSeconds() const override {
+        return 0;
+    }
+    double getPlaybackTimeSeconds() const override {
+        return 0;
+    }
+    double getOutputTickPos() const override {
+        return 0;
+    }
+    double getPlaybackBeginTickPos() const override {
+        return 0;
+    }
+    double getStreamInputLatency() const override {
+        return 0;
+    }
+    double getStreamOutputLatency() const override {
+        return 0;
+    }
+    void onPlayback() override {
+    }
 };
 }
 int main(int argc, char** argv) {
@@ -213,7 +233,7 @@ int main(int argc, char** argv) {
                 // if (nIt == 8)
                     // DebugAlloc::beginTrace();
                 // log_lf(Log::L_DEBUG, "process Block %d Sample %d Tick %f\n", nIt, samplePos, tickPos);
-                int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop, isLoopAround);
+                int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop);
                 // if (nIt == 8)
                     // DebugAlloc::endTrace();
                 // nIt++;
@@ -236,9 +256,8 @@ int main(int argc, char** argv) {
                     stream->enqueueInput(nullptr);
             }
             // log_lf(Log::L_DEBUG, "process Block %d Sample %d Tick %f\n", nIt, samplePos, tickPos);
-            const bool isLoopAround = tickPos + ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
             const bool inLoop = projGlobals.loopEnabled && (tickPos >= projGlobals.loopStart) && (tickPos < projGlobals.loopStart + projGlobals.loopLen);
-            host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_stop, inLoop, isLoopAround);
+            host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_stop, inLoop);
 
             host->onStopPlayback(dawInstance);
         };
@@ -400,7 +419,7 @@ int main(int argc, char** argv) {
                         delete track1->getStage()->arp;
                         track1->getStage()->arp = nullptr;
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_HOSTINFO, -1);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_EQ, -1);
                         dbgassert(pluginInstance);
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
                         pluginInstance->onEnable();
@@ -451,7 +470,7 @@ int main(int argc, char** argv) {
                         track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_HOSTINFO, -1);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_EQ, -1);
                         dbgassert(pluginInstance);
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
                         pluginInstance->onEnable();
@@ -497,7 +516,8 @@ int main(int argc, char** argv) {
                         track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_SYNTH, 0, -1);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH, -1);
+                        dbgassert(pluginInstance);
                         pluginInstance->setParamValue(29, 0.8f, FLG_PAR_UPDATE_INIT);
                         pluginInstance->setParamValue(31, 0.8f, FLG_PAR_UPDATE_INIT);
                         pluginInstance->setParamValue(40, 1.0f, FLG_PAR_UPDATE_INIT);
