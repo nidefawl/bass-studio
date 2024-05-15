@@ -154,8 +154,6 @@ int main(int argc, char** argv) {
         const float fSize = 48.0f;
         ivec2 size(fbwidth, fbheight);
         ivec2 strPos = size/2;
-        static const auto str = "Test String Benchmark";
-
         std::vector<String> strings;
         loadStrings(strings);
         hires_timer_t timer;
