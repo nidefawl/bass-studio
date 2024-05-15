@@ -17,7 +17,6 @@ class guictxtmenu_track_editor : public guictxtmenu {
 protected:
     guitrack_editor* const m_editor;
     track_gui_entry_t* const m_trackentry;
-    gui_clip* const m_gclip;
     ctxtmenu_color_select* sel = nullptr;
     ctxtmenu_time_select* timeSel1 = nullptr;
     ctxtmenu_time_select* timeSel2 = nullptr;
@@ -28,7 +27,7 @@ public:
 };
 class guictxtmenu_clip final : public guictxtmenu_track_editor {
 public:
-    explicit guictxtmenu_clip(guitrack_editor* const _editor, gui_clip* const _gclip);
+    explicit guictxtmenu_clip(guitrack_editor* const _editor, track_gui_entry_t* const _trackentry, gui_clip* const _gclip);
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guictxtmenu_notrack final : public guictxtmenu {

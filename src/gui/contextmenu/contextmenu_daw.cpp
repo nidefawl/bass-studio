@@ -249,7 +249,7 @@ namespace DAW {
 
 
 guictxtmenu_track_editor::guictxtmenu_track_editor(guitrack_editor* const _editor, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip)
-    : guictxtmenu(), m_editor(_editor), m_trackentry(_trackentry), m_gclip(optionalContextClip) {
+    : guictxtmenu(), m_editor(_editor), m_trackentry(_trackentry) {
     this->size.x = 260;
     this->dawCtrl = _editor->dawCtrl;
     this->maxHeight = 0;
@@ -359,8 +359,8 @@ bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
     return true;
 }
 
-guictxtmenu_clip::guictxtmenu_clip(guitrack_editor* const _editor, gui_clip* const _gclip)
-: guictxtmenu_track_editor(_editor, _gclip->m_trackentry, _gclip)
+guictxtmenu_clip::guictxtmenu_clip(guitrack_editor* const _editor, track_gui_entry_t* const _trackentry, gui_clip* const _gclip)
+: guictxtmenu_track_editor(_editor, _trackentry, _gclip)
 {
 }
 
