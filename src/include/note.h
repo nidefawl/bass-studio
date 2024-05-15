@@ -97,12 +97,12 @@ public:
     bool isIntersectVel(int32_t velL, int32_t velH) const {
         return this->velocity >= velL && this->velocity <= velH;
     }
+    bool operator==(const note_t& rhs) const = default;
+    static constexpr bool IsIequalMidi(const note_t& lhs, const note_t& rhs) {
+        return lhs.pitch == rhs.pitch && lhs.time == rhs.time && lhs.channel == rhs.channel;
+    }
 };
 
-inline bool operator==(const note_t& lhs, const note_t& rhs) {
-    return lhs.time == rhs.time && lhs.pitch == rhs.pitch && lhs.channel == rhs.channel;
-}
-inline bool operator!=(const note_t& lhs, const note_t& rhs) { return !operator==(lhs, rhs); }
 inline bool operator<(const note_t& lhs, const note_t& rhs) {
     if (lhs.time == rhs.time) {
         if (lhs.pitch == rhs.pitch) {

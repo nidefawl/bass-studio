@@ -165,7 +165,7 @@ bool clip_notes_t::has(note_t* notePtr) const {
 
 size_t removeDuplicatesImpl(std::vector<note_t>& m_list) {
     std::sort(m_list.begin(), m_list.end());
-    auto itNewEnd  = unique(m_list.begin(), m_list.end());
+    auto itNewEnd  = std::unique(m_list.begin(), m_list.end(), [](const note_t& a, const note_t& b) { return note_t::IsIequalMidi(a, b); });
     size_t removed = m_list.end() - itNewEnd;
     m_list.erase(itNewEnd, m_list.end());
     return removed;
@@ -270,7 +270,7 @@ size_t clip_notes_t::removeDuplicates() {
         std::vector<note_t> selNotes;
         storeSelection(selNotes);
         selection.clear();
-        nRemoved         = removeDuplicatesImpl(m_list);
+        nRemoved = removeDuplicatesImpl(m_list);
 #ifndef NDEBUG
         always_assert(restoreSelection(selNotes));
         for (note_t* n : selection) {
