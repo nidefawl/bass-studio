@@ -1,6 +1,7 @@
 #include <nanovg.h>
 #include <ctime>
 #include <algorithm>
+#include <nanovg_min.h>
 #include <vector>
 #include <memory>
 #include <GLFW/glfw3.h>
@@ -230,7 +231,8 @@ namespace MiniApp {
                         nvgRect(vg, 2, 2, wvSize.x - 4, wvSize.y - 4);
                         nvgFillColor(vg, rgbToNvg(0xFF00FF));
                         nvgFill(vg);
-                        waveformTest.renderers[i]->draw(vg, &ref, ref.waveform.size);
+                        auto col = NVGcolor{ 1.0f, 1.0f, 1.0f, 1.0f };
+                        waveformTest.renderers[i]->draw(vg, &ref, ref.waveform.size, col);
                         ivec2 txt(70, 14);
                         nvgBeginPath(vg);
                         nvgRect(vg, 10, wvSize.y - txt.y, txt.x, txt.y);
