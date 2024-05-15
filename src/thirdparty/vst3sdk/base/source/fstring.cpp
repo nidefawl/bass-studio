@@ -3356,7 +3356,7 @@ String& String::printFloat (double value, uint32 maxPrecision)
 {
 	static constexpr auto kMaxAfterCommaResolution = 16;
 	// escape point for integer values, avoid unnecessary complexity later on
-	const bool withinInt64Boundaries = value <= std::numeric_limits<int64>::max () && value >= std::numeric_limits<int64>::lowest ();
+	const bool withinInt64Boundaries = value <= double(std::numeric_limits<int64>::max()) && value >= std::numeric_limits<int64>::lowest ();
 	if (withinInt64Boundaries && (maxPrecision == 0 || std::round (value) == value))
 		return printInt64 (value);
 

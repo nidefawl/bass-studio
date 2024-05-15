@@ -721,6 +721,7 @@ static int fons__atlasAddRect(FONSatlas* atlas, int rw, int rh, int* rx, int* ry
     return 1;
 }
 
+#if 0
 static void fons__addWhiteRect(FONScontext* stash, int w, int h)
 {
     int x, y, gx, gy;
@@ -741,6 +742,7 @@ static void fons__addWhiteRect(FONScontext* stash, int w, int h)
     stash->dirtyRect[2] = fons__maxi(stash->dirtyRect[2], gx+w);
     stash->dirtyRect[3] = fons__maxi(stash->dirtyRect[3], gy+h);
 }
+#endif
 
 FONScontext* fonsCreateInternal(FONSparams* params)
 {
