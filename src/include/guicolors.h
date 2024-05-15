@@ -61,6 +61,7 @@ namespace GuiColor {
     extern constant_t COL_CLIP_NOTE_OVERLAP;
     extern constant_t COL_CLIP_NOTE;
     extern constant_t COL_CLIP_OUTLINE;
+    extern constant_t COL_CLIP_OUTLINE_HOVER;
     extern constant_t COL_CLIPEDITOR_SHARP;
     extern constant_t COL_CTXTMNU_HILIGHT;
     extern constant_t COL_CTXTMNU_OUTLINE;

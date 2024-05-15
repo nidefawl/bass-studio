@@ -4,6 +4,7 @@
 #include "host/clip/clip.h"
 #include "cliprenderer_cache.h"
 #include "guiglobals.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "host/host_pluginmanager.h"
 #include "renderresources.h"
@@ -104,7 +105,7 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     return w;
 }
 
-void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const audiofile_t* file, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
+void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const audiofile_t* file, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped, GuiColor::constant_t colOutline) {
     if (size.y < 1) {
         return;
     }
@@ -125,7 +126,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
     nvgFillColor(vg, rgbaToNvg(col));
     nvgFill(vg);
-    nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
+    nvgStrokeColor(vg, theme->getColor(colOutline));
     nvgStrokeWidth(vg, 1.f);
     nvgStroke(vg);
     if (file && (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING) && size.x > 0 && size.y - HEIGHT_CLIP_TITLE > 4) {
@@ -451,12 +452,13 @@ void gui_midi_clip::render(NVGcontext* vg) {
         if (!cl->enabled) {
             color = rgbToNvg(0x333333);
         }
+
         const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
         nvgFillColor(vg, color);
         nvgFill(vg);
-        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
+        nvgStrokeColor(vg, theme->getColor(hovered() ? GuiColor::COL_CLIP_OUTLINE_HOVER : GuiColor::COL_CLIP_OUTLINE));
         nvgStrokeWidth(vg, 1.f);
         nvgStroke(vg);
         if (cl->name.length()) {
@@ -501,7 +503,7 @@ void gui_midi_clip::render(NVGcontext* vg) {
         renderStats.clipsRendered++;
     }
 }
-void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_entry_t* const entry, const clip_t* cl, ivec2 pos, ivec2 size) {
+void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_entry_t* const entry, const clip_t* cl, ivec2 pos, ivec2 size, GuiColor::constant_t colOutline) {
     if (cl->getLen() <= 0) {
         return;
     }
@@ -515,7 +517,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
     nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
     nvgFillColor(vg, color);
     nvgFill(vg);
-    nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
+    nvgStrokeColor(vg, theme->getColor(colOutline));
     nvgStrokeWidth(vg, 1.f);
     nvgStroke(vg);
     if (cl->name.length()) {

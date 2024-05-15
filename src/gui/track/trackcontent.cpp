@@ -204,7 +204,8 @@ void gui_audio_clip::render(NVGcontext* vg) {
 
         gui_waveform_texture_ref* ref = getWaveformTextureRef();
         auto file = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(m_clip->audio);
-        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
+        auto colOutline = hovered() ? GuiColor::COL_CLIP_OUTLINE_HOVER : GuiColor::COL_CLIP_OUTLINE;
+        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped, colOutline);
         if (fadeInLayout.size.y < 5 || sizeClipped.x < 1 || sizeClipped.y < 1) {
             return;
         }
