@@ -34,10 +34,17 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //-----------------------------------------------------------------------------
 
+// std::wstring_convert is deprecated in C++17, removed in C++26
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include "stringconvert.h"
 #include <codecvt>
 #include <locale>
 #include <istream>
+
 
 //------------------------------------------------------------------------
 namespace VST3 {
@@ -61,7 +68,6 @@ Converter& converter ()
 	static Converter conv;
 	return conv;
 }
-
 //------------------------------------------------------------------------
 } // anonymous
 
@@ -146,3 +152,8 @@ std::string convert (const char* str, uint32_t max)
 //------------------------------------------------------------------------
 } // String
 } // VST3
+
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
