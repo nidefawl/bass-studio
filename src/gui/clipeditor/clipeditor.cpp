@@ -2125,8 +2125,6 @@ bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 
 bool gui_clipcontent::mergeDraggedNotes(dragmode mergeMode, clip_t* cl) {
     auto& dragged = view.m_notesDragged[cl];
-    if (dragged.draggedSelection.empty())
-        return false;
     auto& notes = cl->notes;
     notes  = dragged.dragStartNotes;
     notes.selection.clear();
@@ -2638,7 +2636,9 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                         rnd.rng_seed(getTimeMillis());
                         pyCtxt.seed = int32_t(rnd.rng_rand());
                         pyCtxt.params = ctxt.argFloats;
-                        dragged.draggedSelection = DAW::PythonNoteProcessor::RunPythonNoteProcessor(ctxt.argStr0, pyCtxt);
+                        auto newList = DAW::PythonNoteProcessor::RunPythonNoteProcessor(ctxt.argStr0, pyCtxt);
+                        // log_lf(Log::L_DEBUG, "Input len %zu, output len %zu\n", dragged.draggedSelection.size(), newList.size());
+                        dragged.draggedSelection = newList;
                     } catch (std::exception& e) {
                         log_lf(Log::L_ERROR, "Python script failed: %s\n", e.what());
                     }
