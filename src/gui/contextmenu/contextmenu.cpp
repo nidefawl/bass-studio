@@ -147,7 +147,7 @@ bool guictxtmenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 popup->size = size;
                 popup->setFontSize(entryHit->fontSize);
                 popup->size.x        = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-                auto popupPosRelCtrl = toScreenSpace(ivec2(right() + 2, top() + entryHit->y));
+                auto popupPosRelCtrl = toScreenSpace(ivec2(right() + 2, top() + entryHit->y) - getLeftTop());
                 auto appCtrlParent   = parentCtrl->getParentCtrl();
                 appCtrlParent->openAppMenu(popup->getLevel(), popup, parentCtrl->toScreenSpace(popupPosRelCtrl), WINDOW_IS_BORDERLESS | WINDOW_POS_ABSOLUTE);
             }

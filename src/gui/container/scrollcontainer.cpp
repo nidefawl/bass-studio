@@ -189,7 +189,6 @@ bool guictr_scrollbar::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
 }
 ivec2 guictr_scrollbar::toScreenSpace(ivec2 in) const {
     in += getPosContent();
-    // in.y -= scrollOffset; // we position the guis with the scrollOffset in layout()
     if (this->parent != NULL) {
         in = this->parent->toScreenSpace(in);
     }
