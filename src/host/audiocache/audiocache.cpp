@@ -85,7 +85,7 @@ void audiocache::setSamplerate(samplerate_t _newSampleRate) {
             }
             sample->downsampled = {};
 
-            auto numSamplesInput = static_cast<samplecount_t>(sample->nSamples);
+            auto numSamplesReadFromFile = static_cast<samplecount_t>(sample->nSamples);
             auto numSamplesResampled = static_cast<samplecount_t>(sample->nSamples * double(_newSampleRate) / static_cast<double>(sample->sampleRate) + .5); /* Assay output len. */
             std::vector<samplechannel_t> resampledChannels(sample->nChannels);
             std::vector<float*> channelPtrsOut(sample->nChannels);
@@ -107,7 +107,7 @@ void audiocache::setSamplerate(samplerate_t _newSampleRate) {
             if (!!error) {
                 log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(error));
             } else {
-                error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
+                error = soxr_process(soxr, channelPtrsIn.data(), numSamplesReadFromFile, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
                 soxr_delete(soxr);
                 if (!!error) {
                     log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(error));
@@ -371,7 +371,7 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
             error = StringFormat("File %s has 0 channels", StringAsCStr(path));
             return false;
         }
-        fileReadSamples = wav.totalPCMFrameCount * wav.channels;
+        numSamplesFileHeader = wav.totalPCMFrameCount * wav.channels;
     } else if (std::holds_alternative<drmp3>(drAudiofile)) {
         auto& mp3 = std::get<drmp3>(drAudiofile);
         sourceSamplerate = mp3.sampleRate;
@@ -381,7 +381,7 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
             drmp3_uninit(&mp3);
             return false;
         }
-        fileReadSamples = samplecount_t(drmp3_get_pcm_frame_count(&mp3) * sourceNumChannels);
+        numSamplesFileHeader = samplecount_t(drmp3_get_pcm_frame_count(&mp3) * sourceNumChannels);
     } else if (std::holds_alternative<drflac_file>(drAudiofile)) {
         auto& flac = *std::get<drflac_file>(drAudiofile).pFlac;
         sourceSamplerate = flac.sampleRate;
@@ -391,12 +391,12 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
             drflac_close(&flac);
             return false;
         }
-        fileReadSamples = flac.totalPCMFrameCount * flac.channels;
+        numSamplesFileHeader = flac.totalPCMFrameCount * flac.channels;
     } else {
         error = "Unknown audio file type";
         return false;
     }
-    pSamples.resize(fileReadSamples + chunkSize);
+    pSamples.resize(numSamplesFileHeader + chunkSize);
     std::memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
     auto* sample = file->sample.get();
     sample->bitsPerSample = 32;
@@ -480,12 +480,12 @@ bool audiocache::fileloader::loadFileIncremental() {
     audiofile_variant& audiofileVariant = this->audiofileVariant.value();
     if (std::holds_alternative<drwav>(audiofileVariant)) {
         auto& wav = std::get<drwav>(audiofileVariant);
-        auto outputBuffer = pSamples.data() + (numSamplesInput * sourceNumChannels);
+        auto outputBuffer = pSamples.data() + (numSamplesReadFromFile * sourceNumChannels);
         auto numRead = drwav_read_pcm_frames_f32(&wav, chunkSize / sourceNumChannels, outputBuffer);
-        numSamplesInput += numRead;
+        numSamplesReadFromFile += numRead;
         if (numRead < chunkSize / sourceNumChannels) {
-            if (size_t(numSamplesInput * sourceNumChannels) < pSamples.size()) {
-                pSamples.resize(size_t(numSamplesInput * sourceNumChannels));
+            if (size_t(numSamplesReadFromFile * sourceNumChannels) < pSamples.size()) {
+                pSamples.resize(size_t(numSamplesReadFromFile * sourceNumChannels));
             }
             drwav_uninit(&wav);
             audiofileVariant = std::monostate{};
@@ -493,31 +493,31 @@ bool audiocache::fileloader::loadFileIncremental() {
         }
     } else if (std::holds_alternative<drmp3>(audiofileVariant)) {
         auto& mp3 = std::get<drmp3>(audiofileVariant);
-        auto outputBuffer = pSamples.data() + (numSamplesInput * sourceNumChannels);
+        auto outputBuffer = pSamples.data() + (numSamplesReadFromFile * sourceNumChannels);
         auto numSamplesDecoded = drmp3_read_pcm_frames_f32(&mp3, chunkSize / sourceNumChannels, outputBuffer);
-        numSamplesInput += numSamplesDecoded;
+        numSamplesReadFromFile += numSamplesDecoded;
         if (numSamplesDecoded < chunkSize / sourceNumChannels) {
-            if (size_t(numSamplesInput * sourceNumChannels) < pSamples.size()) {
-                pSamples.resize(size_t(numSamplesInput * sourceNumChannels));
+            if (size_t(numSamplesReadFromFile * sourceNumChannels) < pSamples.size()) {
+                pSamples.resize(size_t(numSamplesReadFromFile * sourceNumChannels));
             }
             drmp3_uninit(&mp3);
             bReadComplete = true;
         }
     } else if (std::holds_alternative<drflac_file>(audiofileVariant)) {
         auto& flac = *std::get<drflac_file>(audiofileVariant).pFlac;
-        if (numSamplesInput == 0) {
+        if (numSamplesReadFromFile == 0) {
             if (drflac_seek_to_pcm_frame(&flac, 0) != DRFLAC_TRUE) {
                 error = StringFormat("Failed to seek to PCM frame");
                 drflac_close(&flac);
                 return false;
             }
         }
-        auto outputBuffer = pSamples.data() + (numSamplesInput * sourceNumChannels);
+        auto outputBuffer = pSamples.data() + (numSamplesReadFromFile * sourceNumChannels);
         auto numRead = drflac_read_pcm_frames_f32(&flac, chunkSize / sourceNumChannels, outputBuffer);
-        numSamplesInput += numRead;
+        numSamplesReadFromFile += numRead;
         if (numRead < chunkSize / sourceNumChannels) {
-            if (size_t(numSamplesInput * sourceNumChannels) < pSamples.size()) {
-                pSamples.resize(size_t(numSamplesInput * sourceNumChannels));
+            if (size_t(numSamplesReadFromFile * sourceNumChannels) < pSamples.size()) {
+                pSamples.resize(size_t(numSamplesReadFromFile * sourceNumChannels));
             }
             drflac_close(&flac);
             bReadComplete = true;
@@ -528,6 +528,24 @@ bool audiocache::fileloader::loadFileIncremental() {
         return false;
     }
     if (bReadComplete) {
+        auto* sample = file->sample.get();
+        auto numSamplesRead = static_cast<samplecount_t>(numSamplesReadFromFile * targetSamplerate / (double) sourceSamplerate + .5);
+        auto numSamplesHeader = static_cast<samplecount_t>(numSamplesFileHeader * targetSamplerate / (double) sourceSamplerate + .5);
+        if (numSamplesRead < numSamplesHeader) {
+#ifndef NDEBUG
+            log_lf(Log::L_WARN, "File %s: read %lld samples, expected %lld samples\n", StringAsCStr(file->pathLoaded), numSamplesRead, numSamplesHeader);
+#endif
+            // fill with silence
+            for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+                auto& chSamples = sample->samples[ch];
+                auto numSilentSamples = samplecount_t(chSamples.size()) - numSamplesRead;
+                if (numSilentSamples > 0) {
+                    std::memset(chSamples.data() + numSamplesRead, 0, numSilentSamples * sizeof(float));
+                }
+            }
+        } else if (numSamplesRead > numSamplesHeader) {
+            // do nothing for now
+        }
         this->heapBuffer.resize(0);
         audiofileVariant = std::monostate{};
     }
@@ -553,17 +571,12 @@ bool audiocache::fileloader::resample() {
             soxrContext = soxr;
         }
         if (soxrContext) {
-            auto& loadedSampleChannels = sample->samples;
-    #ifndef NDEBUG
-            auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * targetSamplerate / (double) sourceSamplerate + .5);
-            dbgassert(loadedSampleChannels.size() == sample->nChannels);
-            dbgassert(samplecount_t(loadedSampleChannels[0].size()) == numSamplesResampled);
-    #endif
             std::vector<float*> channelPtrsOut(sample->nChannels);
             for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
                 dbgassert(sample->samples[ch].size() >= size_t(this->resampleOutputOffset));
                 channelPtrsOut[ch] = sample->samples[ch].data() + this->resampleOutputOffset;
             }
+            auto& loadedSampleChannels = sample->samples;
             auto outputBufferLength = samplecount_t(loadedSampleChannels[0].size()) - this->resampleOutputOffset;
             dbgassert(outputBufferLength >= 0);
             auto inputAvailable = (samplecount_t(pSamples.size()) - this->resampleInputOffset) / sourceNumChannels;
@@ -596,15 +609,15 @@ bool audiocache::fileloader::resample() {
         dbgassert(loadedSampleChannels.size() == sample->nChannels);
         // deinterleave
         for (channelnum_t i = 0; i < sample->nChannels; i++) {
-            dbgassert(samplecount_t(loadedSampleChannels[i].size()) >= numSamplesInput);
+            dbgassert(samplecount_t(loadedSampleChannels[i].size()) >= numSamplesReadFromFile);
             auto out = loadedSampleChannels[i].begin();
             // interleaved sample is at samples[ chIdx + sampleIdx * chCount ]
-            for (samplecount_t j = i; j < numSamplesInput * sourceNumChannels; j += sourceNumChannels) {
+            for (samplecount_t j = i; j < numSamplesReadFromFile * sourceNumChannels; j += sourceNumChannels) {
                 *out++ = pSamples[j];
             }
         }
-        sample->nSamples = numSamplesInput;
-        this->resampleOutputOffset = numSamplesInput;
+        sample->nSamples = numSamplesReadFromFile;
+        this->resampleOutputOffset = numSamplesReadFromFile;
         bResampleComplete = true;
     }
     return true;
@@ -1125,7 +1138,7 @@ float audiocache::fileloader::getProgress() const {
         progressResample = resampleOutputOffset / float(samplesTotal);
     }
     if (pSamples > 0) {
-        progressSampleRead = (numSamplesInput * sourceNumChannels) / float(pSamples);
+        progressSampleRead = (numSamplesReadFromFile * sourceNumChannels) / float(pSamples);
     }
     float progressDownsample = downsampleStep / float(audiosample_t::MAX_DOWNSAMPLE);
     auto total = progressSampleRead * 0.33f + progressResample * 0.33f + progressDownsample * 0.33f + 0.01f;
@@ -1133,7 +1146,7 @@ float audiocache::fileloader::getProgress() const {
 }
 
 samplecount_t audiocache::fileloader::getExpectedNumSamples() const {
-    auto perChannel = fileReadSamples / sourceNumChannels;
+    auto perChannel = numSamplesFileHeader / sourceNumChannels;
     auto numSamples = targetSamplerate == sourceSamplerate ? perChannel : static_cast<samplecount_t>(perChannel * targetSamplerate / (double) sourceSamplerate + .5);
     return numSamples;
 }

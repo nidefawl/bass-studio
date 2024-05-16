@@ -99,8 +99,8 @@ public:
         samplerate_t targetSamplerate = 0;
         channelnum_t sourceNumChannels = 0;
         std::vector<float> pSamples;
-        samplecount_t fileReadSamples = 0;
-        samplecount_t numSamplesInput = 0;
+        samplecount_t numSamplesFileHeader = 0;
+        samplecount_t numSamplesReadFromFile = 0;
         std::vector<uint8_t> heapBuffer;
         bool bReadComplete = false;
         bool bResampleComplete = false;
