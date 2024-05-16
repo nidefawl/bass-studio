@@ -100,8 +100,9 @@ class guictr_edit_modulation final : public guictxtmenu_base {
 
 class gui_dragged_modulation final : 
         public guitooltip<gui_dragged_modulation>, public IDraggedModulationSource {
-        DAW::modulation_channel_ref ref;
-        automatable_param_ref_t previewParamRef;
+        DAW::modulation_channel_ref ref{};
+        automatable_param_ref_t previewParamRef{};
+        modulation_scaling_t previewScaling{};
     public:
         gui_dragged_modulation() : guitooltip<gui_dragged_modulation>(this) {
             setGuiType(gui_type::CTR_TYPE_MODULATION_DRAGGED);

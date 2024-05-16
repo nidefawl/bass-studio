@@ -177,7 +177,13 @@ class guictxtmenu_modulation final : public guictxtmenu {
                 newRef.paramIdx = paramIdx;
             }
         }
-        if (newRef != previewParamRef) {
+        modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD};
+        if (isShift(dawCtrl->lastMouseEvent.kbmods)) {
+            scale.mode = ModulationMode::MUL;
+            scale.min = 0.0f;
+            scale.max = 1.0f;
+        }
+        if (newRef != previewParamRef || scale != previewScaling) {
             auto daw = dawCtrl->getDaw();
             auto lock = daw->lockPlayThread();
             auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
@@ -187,8 +193,8 @@ class guictxtmenu_modulation final : public guictxtmenu {
                 DAW::DisonnectModulation(prevAt, refCopy);
             }
             previewParamRef = newRef;
+            previewScaling = scale;
             if (newAt) {
-                modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD};
                 DAW::ConnectModulationInputChannel(newAt, newRef.paramIdx, getChannelRef(), scale, true);
             }
         }
@@ -214,6 +220,11 @@ class guictxtmenu_modulation final : public guictxtmenu {
             if (at) {
                 auto lock = dawCtrl->lockPlayThread();
                 modulation_scaling_t scale = {.min = -0.25f, .max = 0.25f, .mode = ModulationMode::ADD};
+                if (isShift(dawCtrl->lastMouseEvent.kbmods)) {
+                    scale.mode = ModulationMode::MUL;
+                    scale.min = 0.0f;
+                    scale.max = 1.0f;
+                }
                 DAW::ConnectModulationInputChannel(at, paramIdx, getChannelRef(), scale, false);
             }
         }

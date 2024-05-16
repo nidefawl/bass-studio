@@ -64,6 +64,7 @@ namespace DAW {
         float max = 1.0f;
         ModulationMode mode = ModulationMode::BYPASS;
         bool bClamp = true;
+        auto operator<=>(const modulation_scaling_t&) const = default;
     };
     struct modulation_channel_ref {
         int32_t paramIdxDst = -1;
