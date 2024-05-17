@@ -323,6 +323,8 @@ RmDir "$INSTDIR\res\icons"
 RmDir "$INSTDIR\res"
 Delete "$INSTDIR\docs\licenses-thirdparty.pdf"
 RmDir "$INSTDIR\docs"
+Delete "$INSTDIR\defaults\data.zip"
+RmDir "$INSTDIR\defaults"
 Delete "$INSTDIR\defaults\view0.layout"
 Delete "$INSTDIR\defaults\view1.layout"
 Delete "$INSTDIR\defaults\view2.layout"
@@ -331,7 +333,7 @@ RmDir "$INSTDIR\defaults"
  
 Delete "$INSTDIR\uninstall.exe"
 !ifdef PRODUCT_URL_VENDOR
-Delete "$INSTDIR\${PRODUCT_NAME_DISPLAY} Website.url"
+Delete "$INSTDIR\${STARTMENU_LINK_NAME} Website.url"
 !endif
 
 RmDir "$INSTDIR"
