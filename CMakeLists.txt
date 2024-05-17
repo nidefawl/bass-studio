@@ -116,7 +116,7 @@ foreach (f ${CPP_ALL_FILES})
     OR f MATCHES ".*.mm"
     OR f MATCHES "/main_.*"
     OR f MATCHES ".*platform/linux/.*"
-    OR f MATCHES ".*/plugins/synth/synth-plugin.cpp"
+    OR f MATCHES ".*/plugins/synth/.*"
     OR f MATCHES ".*/util/fp_math.cpp"
     OR f MATCHES ".*/gui/linetess/linetess.cpp"
     OR f MATCHES ".*/gui/linetess/pymachine.cpp"

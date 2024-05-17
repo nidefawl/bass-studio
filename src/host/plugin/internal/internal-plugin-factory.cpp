@@ -27,9 +27,11 @@ extern template effectbase* makeInstance<PluginLFO::module_lfo>(int32_t _project
 extern template effectbase* makeInstance<PluginEQ::module_eq>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
 namespace PluginSynth {
-    class module_synth;
+    class module_synth_unison;
+    class module_synth_basic;
 }
-extern template effectbase* makeInstance<PluginSynth::module_synth>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginSynth::module_synth_unison>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginSynth::module_synth_basic>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 namespace DAW::Host {
 
 effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
@@ -59,7 +61,7 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
                 effect = makeInstance<PluginStereoWidth::module_stereowidth>(getNextGlobalModuleId(globalid), hostcallback);
                 break;
             case PLUGIN_TYPE_SYNTH:
-                effect = makeInstance<PluginSynth::module_synth>(getNextGlobalModuleId(globalid), hostcallback);
+                effect = makeInstance<PluginSynth::module_synth_unison>(getNextGlobalModuleId(globalid), hostcallback);
                 break;
             case PLUGIN_TYPE_MACROS:
                 effect = makeInstance<PluginMacros::module_macros>(getNextGlobalModuleId(globalid), hostcallback);
@@ -72,6 +74,9 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
                 break;
             case PLUGIN_TYPE_VISUALIZER:
                 effect = makeInstance<PluginVisualizer::module_visualizer>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_SYNTH_BASIC:
+                effect = makeInstance<PluginSynth::module_synth_basic>(getNextGlobalModuleId(globalid), hostcallback);
                 break;
             default:
                 break;

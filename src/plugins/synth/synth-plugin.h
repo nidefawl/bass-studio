@@ -4,8 +4,9 @@
 #include <cmath>
 #include <mutex>
 #include "../plugin-base.h"
-#include "../plugin-base.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
+#include "synth-types.hpp"
+#include "synth-param.hpp"
 
 namespace PluginSynth {
 
@@ -197,12 +198,6 @@ namespace PluginSynth {
 
     class SynthState {
     public:
-        int osc1Wave   = 0;
-        int osc2Wave   = 0;
-        int voiceMode  = 0;
-        int filterMode = 0;
-        int fmMode     = 0;
-
         double lfo2Value     = 0.0;
         double driftVelocity = 0.0;
         double driftPhase    = 0.0;
@@ -354,9 +349,9 @@ namespace PluginSynth {
     };
 
     struct snapshot_t;
-    struct SynthParamBase;
-    class SynthImpl;
-class PluginVST2_Synth final : public BasePluginVST2 {
+    class SynthImplUnison;
+
+    class PluginVST2_Synth final : public BasePluginVST2 {
     public:
         using ThreadLock = std::lock_guard<std::recursive_mutex>;
         explicit PluginVST2_Synth(audioMasterCallback audioMaster);
@@ -373,7 +368,7 @@ class PluginVST2_Synth final : public BasePluginVST2 {
         void settingChanged(Settings setting, float value);
 
         int32_t loadPreset(const String& path);
-        SynthImpl* getSynth();
+        SynthImplUnison* getSynth();
 
 #ifdef DISPATCHER_DEBUG_TRACE
         VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
@@ -423,7 +418,7 @@ class PluginVST2_Synth final : public BasePluginVST2 {
         /* TODO: release lastProgramChunks after several seconds */
         std::vector<std::shared_ptr<std::vector<std::byte>>> lastProgramChunks;
         std::recursive_mutex mutex;
-        SynthImpl* const impl;
+        SynthImplUnison* const impl;
         std::vector<SynthParamBase*>& vecParams;
     };
     AudioEffectX* createPlugin(audioMasterCallback audioMaster);

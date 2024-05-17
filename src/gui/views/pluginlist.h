@@ -227,6 +227,7 @@ public:
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SAMPLE_DELAY, "Sample Delay", false });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_STEREO_WIDTH, "Stereo Width", false });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH, "Synth", true });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_BASIC, "Synth Basic", true });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_VISUALIZER, "Visualizer", false });
         auto daw = dawCtrl->getDaw();
         auto pluginMgr = daw->getPluginManager();
