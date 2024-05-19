@@ -421,13 +421,126 @@ public:
     }
 };
 
+
+struct Voice {
+    std::array<double, 64> modValues{};
+    std::array<float, 8> envelopeValuesCached{};
+
+    Oscillator lfo1;
+    Oscillator lfo2;
+    double lfoValue     = 0.0;
+    double prevLfoValue = 0.0;
+
+    double velocity     = 0.0;
+    int32_t indexUnison = 0;
+    int noteNr        = 0;
+    note_t noteT      = {};
+    Envelope volEnv;
+    Envelope modEnv;
+    Envelope lfoEnv;
+    Oscillator oscFm;
+    Oscillator osc1a;
+    Oscillator osc1b;
+    Oscillator osc2a;
+    Oscillator osc2b;
+    Filter filter;
+    seq_rand rand;
+    double driftVelocity   = 0.0;
+    double driftPhase      = 0.0;
+    double driftValue      = 0.0;
+    double frequency       = 0.0;
+    double targetFrequency = 0.0;
+    double pitchBend       = 1.0;
+    bool bIsActive         = false;
+    bool bTriggerSmoothing = false;
+    double prevVolEnv = 0.0;
+    double prevCutoff = 0.0;
+
+    double getRandom() {
+        return rand.rng_double();
+    }
+
+    double getRandomPhase() {
+        return rand.rng_double() * 0.5;
+    }
+
+    bool isVoiceActive(const FilterModes mode) const {
+        if (hint_likely(!bIsActive)) {
+            return false;
+        }
+        return this->volEnv.stage < EnvelopeStages::Idle || !this->filter.IsSilent(mode);
+        // return true;
+    }
+
+    bool IsReleased() const { return volEnv.IsReleased(); }
+    double GetVolume() const { return volEnv.value; }
+
+    void ResetPhases(bool bRandomPhase) {
+    }
+
+    void ResetEnvelopes() {
+        volEnv.Reset();
+        modEnv.Reset();
+        lfoEnv.Reset();
+        filter.Reset();
+    }
+
+    void Release() {
+        volEnv.Release();
+        modEnv.Release();
+        lfoEnv.Release();
+    }
+
+    void SetNote(const note_t& n) {
+        noteT = n;
+        noteNr = n.pitch;
+        targetFrequency = pitchToFrequency(noteNr);
+    }
+
+    void SetPitchBendFactor(double f) { pitchBend = f; }
+    void ResetPitch() { frequency = targetFrequency; }
+    void SetVelocity(double v) { velocity = v; }
+
+    void Start(bool holdOsc1Phase, bool holdOsc2Phase) {
+        bIsActive = true;
+        // if (bRandomPhase) {
+            if (!holdOsc1Phase) {
+                oscFm.phase = rand.rng_double();
+                osc1a.phase = rand.rng_double();
+                osc1b.phase = rand.rng_double();
+            }
+            if (!holdOsc2Phase) {
+                osc2a.phase = rand.rng_double();
+                osc2b.phase = rand.rng_double();
+            }
+        // } else {
+        //     oscFm.phase = 0.0;
+        //     osc1a.phase = 0.0;
+        //     osc1b.phase = 0.0;
+        //     osc2a.phase = 0.0;
+        //     osc2b.phase = 0.0;
+        // }
+        volEnv.Start();
+        modEnv.Start();
+        lfoEnv.Start();
+    }
+
+    void UpdateVoiceDrift(double dt, const HostTempo& tempo) {
+        driftVelocity += getRandom() * 1.0 * dt;
+        driftVelocity -= driftVelocity * 2.0 * dt;
+        driftPhase += driftVelocity * dt;
+        driftValue = .00001 * sin(driftPhase);
+    }
+};
+
 class VoiceUnison {
 public:
     std::array<Voice, NUM_UNISON_VOICES> voices;
     Voice* const first;
     Voice* last;
     int32_t indexPoly = 0;
-    int note          = 0;
+    int noteNr        = 0;
+    note_t noteT      = {};
     int32_t seqNr     = 0;
     seq_rand rand;
     double lfoValue         = 0.0;
@@ -491,8 +604,9 @@ public:
         });
     }
 
-    void SetNote(int n) {
-        note = n;
+    void SetNote(const note_t& n) {
+        noteT = n;
+        noteNr = n.pitch;
         std::for_each(voices.begin(), voices.end(), [n](Voice& voice) {
             voice.SetNote(n);
         });
@@ -1567,24 +1681,36 @@ private:
             auto voiceMode      = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
             auto status         = message.StatusMsg();
             auto ctrl           = message.ControlChangeIdx();
-            auto note           = message.NoteNumber();
             auto velocity       = pow(message.Velocity() * .0078125, 1.25);
 
             if (status == IMidiMsg::kNoteOn && velocity == 0) status = IMidiMsg::kNoteOff;
+            note_t noteDaw;
+            if (message.note) {
+                noteDaw = message.note.value();
+            } else {
+                noteDaw = note_t{
+                    .pitch = message.NoteNumber(),
+                    .velocity = message.Velocity(),
+                    .time = 0,
+                    .len = TICKS_QUARTER,
+                    .flags = NoteFlags::ENABLED | NoteFlags::IS_HELD | NoteFlags::REALTIME,
+                    .channel = static_cast<int8_t>(message.Channel()),
+                };
+            }
 
             switch (status) {
                 case IMidiMsg::kNoteOff:
                     heldNotes.erase(
-                        std::remove(
+                        std::remove_if(
                                 std::begin(heldNotes),
                                 std::end(heldNotes),
-                                note),
+                                [noteB=noteDaw](const auto& noteA) { return noteA.pitch == noteB.pitch && noteA.channel == noteB.channel; }),
                         std::end(heldNotes));
 
                     switch (voiceMode) {
                         case VoiceModes::Poly:
                             for (auto& voice : voices)
-                                if (voice.note == note) voice.Release();
+                                if (voice.noteNr == noteDaw.pitch) voice.Release();
                             break;
                         case VoiceModes::Mono:
                         case VoiceModes::Legato:
@@ -1618,7 +1744,7 @@ private:
                                         return aReleased;
                                     });
                             dbgassert(voice->getNumUnisonVoices() == unisonVoiceCount);
-                            voice->SetNote(note);
+                            voice->SetNote(noteDaw);
                             voice->SetVelocity(velocity);
                             voice->ResetPitch();
                             StartVoice(*voice, false);
@@ -1627,13 +1753,13 @@ private:
                         }
                         default:
                         case VoiceModes::Mono:
-                            voices[0].SetNote(note);
+                            voices[0].SetNote(noteDaw);
                             voices[0].SetVelocity(velocity);
                             StartVoice(voices[0], true);
                             voices[0].seqNr = 1;
                             break;
                         case VoiceModes::Legato:
-                            voices[0].SetNote(note);
+                            voices[0].SetNote(noteDaw);
                             if (heldNotes.empty()) {
                                 voices[0].SetVelocity(velocity);
                                 voices[0].ResetPitch();
@@ -1643,7 +1769,7 @@ private:
                             break;
                     }
 
-                    heldNotes.push_back(note);
+                    heldNotes.push_back(noteDaw);
                     break;
                 case IMidiMsg::kPitchWheel: {
                     auto pitchBendFactor = pitchFactor(message.PitchWheel() * 2.0);
@@ -1893,8 +2019,8 @@ private:
         modSrcData[1 + ModulationSourceType::Velocity]         = voice.velocity;
         modSrcData[1 + ModulationSourceType::VoiceIndex]       = this->polyVoiceCount < 2 ? 0.5 : vu.indexPoly / static_cast<double>(this->polyVoiceCount - 1);
         modSrcData[1 + ModulationSourceType::UnisonVoiceIndex] = this->unisonVoiceCount < 2 ? 0.5 : voice.indexUnison / static_cast<double>(this->unisonVoiceCount - 1);
-        modSrcData[1 + ModulationSourceType::Pitch]            = noteToLinearScale(voice.note);
-        modSrcData[1 + ModulationSourceType::Note]             = voice.note / 127.0;
+        modSrcData[1 + ModulationSourceType::Pitch]            = noteToLinearScale(voice.noteNr);
+        modSrcData[1 + ModulationSourceType::Note]             = voice.noteNr / 127.0;
         for (auto& modulation : modulations) {
             ModulationSourceData& sources = modSrcData;
             double modVal                 = 0.0;
@@ -4090,8 +4216,8 @@ public:
             bGuiNeedsRefresh = false;
         }
         PluginVST2_Synth* thisImpl = this->vst2Instance;
-        auto synthImpl             = this->synth;
-        std::vector<int> heldNotes = synthImpl->getHeldNotes();//TODO: not threadsafe
+        auto synthImpl = this->synth;
+        auto heldNotes = synthImpl->getHeldNotes();//TODO: not threadsafe
         std::vector<String> strings;
         strings.reserve(8);
         strings.push_back(StringFormat("Drift Val %f", synthImpl->driftValue));
@@ -4103,8 +4229,8 @@ public:
         strings.push_back(StringFormat("unisonVoiceCount %d", synthImpl->unisonVoiceCount));
         strings.push_back(StringFormat("polyVoiceCount %d", synthImpl->polyVoiceCount));
         String s = "Held notes: ";
-        for (int i : heldNotes) {
-            s += String(noteName(i)) + ",";
+        for (auto& note : heldNotes) {
+            s += String(noteName(note.pitch)) + ",";
         }
         if (heldNotes.empty())
             s += "<empty>";

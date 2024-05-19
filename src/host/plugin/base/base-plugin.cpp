@@ -150,6 +150,7 @@ void effectbase::processMidi(midi_data_processing_t& midiEvents) {
         } else {
             msg.MakeNoteOffMsg(evt.pitch, deltaFrames, evt.channel);
         }
+        msg.note = evt.note;
     }
     for (auto& evt : *midiEvents.ctrlEvents) {
         auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);

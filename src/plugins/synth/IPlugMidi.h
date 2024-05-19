@@ -17,6 +17,7 @@
  */
 
 #include "assert_dbg.h"
+#include "note.h"
 #include "str_util.h"
 #include "types.h"
 #include <cstdio>
@@ -28,6 +29,7 @@
 struct IMidiMsg {
     int mOffset;
     uint8_t mStatus, mData1, mData2;
+    std::optional<note_t> note;
 
     /** /todo */
     enum EStatusMsg {

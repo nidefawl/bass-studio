@@ -29,7 +29,7 @@ private:
     module_synth_template<T>* const moduleInstance;
 protected:
     std::vector<SynthParamBase*> vecParams;
-    std::vector<int> heldNotes;
+    std::vector<note_t> heldNotes;
     HostTempo tempo{};
     IMidiQueue midiQueue;
     double oneOverSR = 1.0 / 44100.0;
@@ -93,7 +93,7 @@ public:
         midiQueue.AddAll(midiEvents);
     }
 
-    std::vector<int> getHeldNotes() {
+    std::vector<note_t> getHeldNotes() {
         return heldNotes;
     }
 
@@ -210,113 +210,5 @@ public:
 };
 
 
-struct Voice {
-    std::array<double, 64> modValues{};
-    std::array<float, 8> envelopeValuesCached{};
-
-    Oscillator lfo1;
-    Oscillator lfo2;
-    double lfoValue     = 0.0;
-    double prevLfoValue = 0.0;
-
-    double velocity     = 0.0;
-    int32_t indexUnison = 0;
-    int note            = 0;
-    Envelope volEnv;
-    Envelope modEnv;
-    Envelope lfoEnv;
-    Oscillator oscFm;
-    Oscillator osc1a;
-    Oscillator osc1b;
-    Oscillator osc2a;
-    Oscillator osc2b;
-    Filter filter;
-    seq_rand rand;
-    double driftVelocity   = 0.0;
-    double driftPhase      = 0.0;
-    double driftValue      = 0.0;
-    double frequency       = 0.0;
-    double targetFrequency = 0.0;
-    double pitchBend       = 1.0;
-    bool bIsActive         = false;
-    bool bTriggerSmoothing = false;
-    double prevVolEnv = 0.0;
-    double prevCutoff = 0.0;
-
-    double getRandom() {
-        return rand.rng_double();
-    }
-
-    double getRandomPhase() {
-        return rand.rng_double() * 0.5;
-    }
-
-    bool isVoiceActive(const FilterModes mode) const {
-        if (hint_likely(!bIsActive)) {
-            return false;
-        }
-        return this->volEnv.stage < EnvelopeStages::Idle || !this->filter.IsSilent(mode);
-        // return true;
-    }
-
-    bool IsReleased() const { return volEnv.IsReleased(); }
-    double GetVolume() const { return volEnv.value; }
-
-    void ResetPhases(bool bRandomPhase) {
-    }
-
-    void ResetEnvelopes() {
-        volEnv.Reset();
-        modEnv.Reset();
-        lfoEnv.Reset();
-        filter.Reset();
-    }
-
-    void Release() {
-        volEnv.Release();
-        modEnv.Release();
-        lfoEnv.Release();
-    }
-
-    void SetNote(int n) {
-        note            = n;
-        targetFrequency = pitchToFrequency(note);
-    }
-
-    void SetPitchBendFactor(double f) { pitchBend = f; }
-    void ResetPitch() { frequency = targetFrequency; }
-    void SetVelocity(double v) { velocity = v; }
-
-    void Start(bool holdOsc1Phase, bool holdOsc2Phase) {
-        bIsActive = true;
-        // if (bRandomPhase) {
-            if (!holdOsc1Phase) {
-                oscFm.phase = rand.rng_double();
-                osc1a.phase = rand.rng_double();
-                osc1b.phase = rand.rng_double();
-            }
-            if (!holdOsc2Phase) {
-                osc2a.phase = rand.rng_double();
-                osc2b.phase = rand.rng_double();
-            }
-        // } else {
-        //     oscFm.phase = 0.0;
-        //     osc1a.phase = 0.0;
-        //     osc1b.phase = 0.0;
-        //     osc2a.phase = 0.0;
-        //     osc2b.phase = 0.0;
-        // }
-        volEnv.Start();
-        modEnv.Start();
-        lfoEnv.Start();
-    }
-
-    void UpdateVoiceDrift(double dt, const HostTempo& tempo) {
-        driftVelocity += getRandom() * 1.0 * dt;
-        driftVelocity -= driftVelocity * 2.0 * dt;
-        driftPhase += driftVelocity * dt;
-        driftValue = .00001 * sin(driftPhase);
-    }
-};
 
 } // namespace PluginSynth
