@@ -438,7 +438,7 @@ namespace PluginEQ {
             bandsM.resize(bandsA.size());
             const float f = 1.0f / (lf->numBands - 1);
             for (int j = 0; j < lf->numBands; ++j) {
-                float fInterp = smoothstep(fstep, 1.0f - fstep, f * j);
+                float fInterp = math::smoothstep(fstep, 1.0f - fstep, f * j);
                 float mixedBand = lerpf32(bandsA[j], bandsB[j], fInterp);
                 float dbfs = dsp_util::dBFS(mixedBand);
                 bandsM[j] = (dbfs - PLOT_DB_MIN) / PLOT_DB_RANGE;

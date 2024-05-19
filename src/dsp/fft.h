@@ -120,12 +120,6 @@ public:
         }
     }
 };
-inline float smoothstep(float a, float b, float x) {
-    if (x < a) return 0.0f;
-    if (x > b) return 1.0f;
-    float y = (x - a) / (b - a);
-    return y * y * (3.0f - 2.0f * y);
-}
 inline float lerpf32(float a, float b, float c) {
     return a + (b - a) * c;
 }
@@ -140,7 +134,7 @@ inline void mixSpectrum(const audio_spectrum* lf, const audio_spectrum* hf, audi
         auto& bandsM = out.bands[i];
         float f      = 1.0f / (lf->numBands - 1);
         for (int j = 0; j < lf->numBands; j++) {
-            float fInterp = smoothstep(fstep, 1.0f - fstep, f * j);
+            float fInterp = math::smoothstep(fstep, 1.0f - fstep, f * j);
             bandsM[j]     = lerpf32(bandsA[j], bandsB[j], fInterp);
         }
     }
@@ -156,7 +150,7 @@ inline void mixDbfsScaleBands(const audio_spectrum* lf, const audio_spectrum* hf
         bandsM.resize(bandsA.size());
         const float f = 1.0f / (lf->numBands - 1);
         for (int j = 0; j < lf->numBands; ++j) {
-            float fInterp = smoothstep(fstep, 1.0f - fstep, f * j);
+            float fInterp = math::smoothstep(fstep, 1.0f - fstep, f * j);
             float mixedBand = lerpf32(bandsA[j], bandsB[j], fInterp);
             bandsM[j]   = dsp_util::scaledRange(dsp_util::dBFS(mixedBand), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
         }

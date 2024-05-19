@@ -580,7 +580,7 @@ namespace math {
     inline float calcMappedValueForScale(float inValue, float expo, float scaleMin = 0.0f, float scaleMax = 1.0f) noexcept {
         return std::pow(inValue, expo) * (scaleMax - scaleMin) + scaleMin;
     }
-    
+
     inline float calcTanhLike(float x, float steepness) {
         const float j = 0.39f; // range 0.01 - 4.0
         float h = steepness; // range 1.01 - 3.0
@@ -589,5 +589,17 @@ namespace math {
         float b = 1.0f + (2.0f * h - 3.0f) * (t * t);
         float fSign = (2.0f * x - 1.0f) < 0.0f ? -1.0f : 1.0f;
         return (fSign * math::powf(a / b, 1.0f / j) + 1.0f) * 0.5f;
+    }
+
+    inline float smoothstep(float a, float b, float x) {
+        if (x < a) return 0.0f;
+        if (x > b) return 1.0f;
+        float y = (x - a) / (b - a);
+        return y * y * (3.0f - 2.0f * y);
+    }
+
+
+    inline float smoothstep(float t) {
+        return t * t * (3.0f - 2.0f * t);
     }
 }// namespace math
