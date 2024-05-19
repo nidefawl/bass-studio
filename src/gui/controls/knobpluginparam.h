@@ -82,9 +82,6 @@ public:
         paramAutomatable = _hostSidePlugin;
         if (hostSidePlugin) {
             setKnobInternalHandlers();
-            fnValueEditChanged = [this](float preVal, float val) {
-                setValueInit(val);
-            };
             fnValueEditBegin = [this](float preVal, float val) {
                 hostSidePlugin->getHostCallback()->onParametersChanged(hostSidePlugin, paramIdx, val, 0, 0);
             };

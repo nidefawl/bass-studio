@@ -1,4 +1,10 @@
+#include "assert_dbg.h"
+#include "gui/controls/button.h"
+#include "math/seq_math.h"
+#include "synth-plugin.h"
 #include "synth-template.hpp"
+#include "synth-types.hpp"
+#include <nanovg_min.h>
 
 namespace PluginSynth {
 
@@ -374,7 +380,7 @@ public:
             * 1 is highest precission, automation is updated every sample
             * this can be lowered to lower CPU load
             */
-        int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
+        // int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
         for (int s = 0; s < nFrames; s++) {
             /* if (host && moduleSynthUnisonInstance && (s % framesPerAutomationUpdate) == 0) {
                 ReadAutomation(host, tick, state, s, nFrames, nOversample);
@@ -486,40 +492,205 @@ public:
     }
 };
 
-class guicontainer_plugin_synth_basic final : public guictr_base {
+static constexpr auto N_WAVEFORMS = size_t(Waveforms::NumWaveforms);
+static constexpr auto N_VOICEMODES = size_t(VoiceModes::NumVoiceModes);
+template<int N>
+class guictr_synth_select_enum final : public guictr_base, public DAW::UI::IModulateable {
+    class guibutton_select_enum : public guibutton {
+    public:
+        guibutton_select_enum() = default;
+        void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) override {
+            nvgSave(vg);
+            if (setScissorTransform(vg)) {
+                static_cast<guictr_synth_select_enum<N>*>(parent)->renderButtonLabel(this, vg, stateFlags);
+            }
+            nvgRestore(vg);
+        }
+        bool getState() const override {
+            return static_cast<guictr_synth_select_enum<N>*>(parent)->getButtonStateState(this);
+        }
+    };
+    std::array<guibutton_select_enum, N> buttons;
+    automatable_t* paramAutomatable = nullptr;
+    int32_t paramIdx                = -1;
+public:
+    std::function<void(guibutton*, int32_t, NVGcontext*, int32_t, ivec2)> fnRenderButtonLabel;
+    guictr_synth_select_enum() {
+        padding = 0;
+        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
+        for (size_t i = 0; i < N; ++i) {
+            buttons[i].id = i;
+            add(&buttons[i]);
+        }
+    }
+    ~guictr_synth_select_enum() override {
+        removeGuis();
+    }
+    void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
+        this->paramAutomatable = _paramAutomatable;
+        this->paramIdx         = _paramIdx;
+    }
+    void getAutomationRef(automatable_t*& at, int32_t& paramIdx) const override {
+        paramIdx = this->paramIdx;
+        at       = this->paramAutomatable;
+    }
+    int32_t getParamIdx() const { return paramIdx; }
+    void renderButtonLabel(guibutton_select_enum* button, NVGcontext* vg, int32_t stateFlags) {
+        ivec2 renderFrame = button->size;
+        ivec2 renderPos(0);
+        if (renderFrame.y > 10 && renderFrame.x > 10) {
+            if (fnRenderButtonLabel) {
+                fnRenderButtonLabel(button, button->id, vg, stateFlags, renderFrame);
+            } else if (!button->getText().empty()) {
+                auto fontScale = math::clamp(math::min(renderFrame.y, renderFrame.x), 4, 48) * FONT_AUTOSCALE;
+                renderCenteredMultilineText(vg, theme, button->getText(), fontScale, getLabelColor(), renderPos, renderFrame);
+            }
+        }
+    }
+    bool getButtonStateState(const guibutton_select_enum* button) const {
+        int32_t idx = static_cast<int32_t>(button - &buttons[0]);
+        if (paramAutomatable && paramIdx >= 0) {
+            auto valModulated = paramAutomatable->getParamValue(paramIdx);
+            auto param = paramAutomatable->getParam(paramIdx);
+            dbgassert(param);
+            if (param->quantizationSteps > 0) {
+                return idx == math::floorfS32(valModulated * param->quantizationSteps + 0.5f);
+            }
+            return idx == math::roundfS32(valModulated * (N - 1));
+        }
+        return false;
+    }
+    void buttonClicked(guibase* button) override {
+        if (assert_expr(button >= &buttons[0] && button < &buttons[N])) {
+            auto idx = button->id;
+            if (paramAutomatable && paramIdx >= 0) {
+                float val = static_cast<float>(idx) / (N - 1);
+                paramAutomatable->setParamEdit(paramIdx, val, param_update_flags::FLG_PAR_UPDATE_USER | param_update_flags::FLG_PAR_UPDATE_FINISH);
+            }
+        }
+    }
 
+    float modifyParam(float param, float amt, bool applyUserInputScaling) {
+        if (applyUserInputScaling) {
+            amt *= 0.01f;
+        }
+        return math::clamp(param - amt, 0.0f, 1.0f);
+    }
+
+    void updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal) {
+        float fNew = modifyParam(paramAutomatable->getParam(paramIdx)->getValue(), amt, applyUserInputScaling);
+        int32_t flags = param_update_flags::FLG_PAR_UPDATE_USER;
+        if (isFinal) {
+            flags |= param_update_flags::FLG_PAR_UPDATE_FINISH;
+        }
+        paramAutomatable->setParamEdit(paramIdx, fNew, flags);
+    }
+    int32_t getNumButtons() const {
+        return CtrSize(buttons);
+    }
+    guibutton_select_enum& getButton(int32_t idx) {
+        return buttons.at(idx);
+    }
+};
+class guicontainer_plugin_synth_basic final : public guictr_base {
+    module_synth_basic* const moduleInstance;
+    guictr_synth_select_enum<N_WAVEFORMS> ctr_waveform;
+    guictr_synth_select_enum<N_VOICEMODES> ctr_voicemode;
 public:
 
-    explicit guicontainer_plugin_synth_basic(module_synth_basic* module)
+    explicit guicontainer_plugin_synth_basic(module_synth_basic* module) : moduleInstance(module)
     {
         padding = 0;
         margin  = 0;
         setBackgroundRendered(false);
+        for (size_t i = 0; i < N_WAVEFORMS; ++i) {
+            auto& btn = ctr_waveform.getButton(i);
+            const auto& name = stringsWaveform[i];
+            btn.setTooltipText(String("Select ") + name);
+            btn.setText(name);
+            btn.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
+        }
+        ctr_waveform.fnRenderButtonLabel = [this](guibutton* button, int32_t idx, NVGcontext* vg, int32_t stateFlags, ivec2 size) {
+            auto waveform = static_cast<Waveforms>(idx);
+            ivec2 renderFrame = size;
+            ivec2 renderPos(0);
+            // auto fontScale = math::clamp(math::min(size.y, size.x), 4, 48) * FONT_AUTOSCALE;
+            // renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), renderPos, renderFrame);
+            auto col = theme->getColor(GuiColor::COL_TEXT);
+            int32_t waveformIdx = -1;
+            switch (waveform) {
+                case Waveforms::Sine:
+                    waveformIdx = DAW::Shape::ShapeWaveform::SHAPE_SINE;
+                    break;
+                case Waveforms::Triangle:
+                    waveformIdx = DAW::Shape::ShapeWaveform::SHAPE_TRIANGLE;
+                    break;
+                case Waveforms::Saw:
+                    waveformIdx = DAW::Shape::ShapeWaveform::SHAPE_SAW;
+                    break;
+                case Waveforms::Square:
+                    waveformIdx = DAW::Shape::ShapeWaveform::SHAPE_SQUARE;
+                    break;
+                case Waveforms::Pulse:
+                case Waveforms::Shaper:
+                case Waveforms::Noise:
+                case Waveforms::NumWaveforms:
+                    break;
+            }
+            if (waveformIdx >= 0) {
+                float inset = math::max(4.0f, size.x / 10.0f) * 1.8f;
+                auto renderFrameIcon = renderFrame - ivec2(inset * 2);
+                if (renderFrameIcon.x > 0 && renderFrameIcon.y > 0)
+                    drawWaveform(vg, renderPos + ivec2(inset), renderFrameIcon, waveformIdx, col);
+            }
+            drawSquareInset(vg, renderPos, renderFrame, theme->getColor(getBackgroundColor()), 0, 0);
+        };
+        for (size_t i = 0; i < N_VOICEMODES; ++i) {
+            auto& btn = ctr_voicemode.getButton(i);
+            const auto& name = stringsVoiceMode[i];
+            btn.setTooltipText(String("Select ") + name);
+            btn.setText(name);
+            btn.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
+        }
+        add(&ctr_waveform);
+        add(&ctr_voicemode);
     }
 
     ~guicontainer_plugin_synth_basic() override {
+        removeGuis();
     }
 
-    void layout() override {
-        guictr_base::layout();
-    }
-
-    void onTick(AppCtrl* ctrl) override {
-        guictr_base::onTick(ctrl);
-    }
+    // void onTick(AppCtrl* ctrl) override {
+    //     guictr_base::onTick(ctrl);
+    // }
 
     void onSetParameter(int32_t index, float value) {
     }
 
     void getSizeScale(int& w, int& h) const {
-        w = 1280*1.25;
         h = 720;
+        // w = h / N_WAVEFORMS + h / N_VOICEMODES;
+        w = h / (N_WAVEFORMS + N_VOICEMODES);
+    }
+
+    void layout() override {
+        auto bHeight = size.y / 10;
+
+        ctr_voicemode.pos  = { 0, 0 };
+        ctr_voicemode.size = { bHeight, (bHeight * ctr_voicemode.getNumButtons()) / 2 };
+        ctr_waveform.pos  = ctr_voicemode.getLeftBottom();
+        ctr_waveform.size = { bHeight, bHeight * ctr_waveform.getNumButtons() };
+        guictr_base::layout();
     }
 
     void onGuiOpen() {
+        ctr_waveform.setAutomationRef(moduleInstance, 1 + Parameters::Osc1Wave);
+        ctr_voicemode.setAutomationRef(moduleInstance, 1 + Parameters::VoiceMode);
     }
 
     void onGuiClose() {
+        ctr_waveform.setAutomationRef(nullptr, -1);
+        ctr_voicemode.setAutomationRef(nullptr, -1);
     }
 };
 

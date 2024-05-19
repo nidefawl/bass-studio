@@ -55,7 +55,7 @@ public:
         renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
     }
-    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
+    virtual void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
     virtual bool getState() const {
         return true;
     }
