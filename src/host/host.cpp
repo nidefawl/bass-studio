@@ -621,11 +621,11 @@ void Host::sendNotesOff(effectbase* plugin) {
 
 void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosBlockStart, playback_state state) {
     constexpr bool logProcessedNotes = false;
-    auto realtimeMidiDelay = audioProperties.ticksPerBlock;
-    const auto msToTicks = sampleToTickConvert<double, roundmode::none>(m_sampleFormatInternal.blockSize, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate) / 1000.0;
-    for (auto& device : midiRealtimeDeviceInputs) {
-        device.second.events.m_list.clear();
-    }
+    // incoming events are shifted 3 blocks into the future
+    const auto realtimeMidiDelay = audioProperties.ticksPerBlock * 3;
+    // incoming events are kept in buffer for 9 blocks
+    const auto realtimeMidiTrackingTime = audioProperties.ticksPerBlock * 9;
+    const auto msToTicks = secondsToTicks(1.0 / 1000.0, prjGlobals.tempo100);
     auto& inputDevices = midihost::getInstance()->getDevicesInput();
     const auto midiTimeNow = getMidiTime(nullptr);
     bool notesProcessed = false;
@@ -637,9 +637,6 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
         for (auto& msg : device.midiMsgs) {
             auto timeUntilStart = (msg.timestamp - midiTimeNow);
             auto tickEvtDelay = math::rounddS32(dTickPosBlockStart + (timeUntilStart * msToTicks) + realtimeMidiDelay);
-            if (tickEvtDelay < dTickPosBlockStart) {
-                log_lf(Log::L_WARN, "Midi event too late: %d\n", tickEvtDelay);
-            }
             int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
             if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
                 note_miditime_t note;
@@ -663,21 +660,13 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
                 for (auto& noteHeld : midiData.notes.m_list) {
                     if(noteHeld.pitch == pitch && noteHeld.channel == int8_t(msg.message & 0x0F)) {
                         if (!noteHeld.isHeld()) {
-                            //log_printf("%s note was released before, looking for next one\n", noteName(noteHeld.pitch));
                             continue;
                         }
-                        // if (noteHeld.start() > tickEvtDelay) {
-                        //     //log_printf("%s note starts after this release (tickEvtDelay %d, noteHeld.start() %d)\n",
-                        //     //        noteName(noteHeld.pitch), tickEvtDelay, noteHeld.start());
-                        //     continue;
-                        // }
                         if (noteHeld.start() == tickEvtDelay) {
-                        //     //log_printf("%s noteHeld.start() == tickEvtDelay %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEvtDelay);
                             tickEvtDelay += TICKS_16TH/4;
                         }
                         noteHeld.len = math::max<tick_t>((TICKS_16TH >> 4), tickEvtDelay - noteHeld.start());
                         noteHeld.setIsHeld(false);
-                        // dbgassert(noteHeld.len >= 0);
                         fnd = true;
                         notesProcessed = true;
                         if (logProcessedNotes) {
@@ -699,8 +688,11 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
             auto it = midiData.notes.m_list.begin();
             while (it != midiData.notes.m_list.end()) {
                 auto& note = *it;
-                if (!note.isHeld() && midiTimeNow - note.midiTime*msToTicks > realtimeMidiDelay * 4.0) {
+                if (!note.isHeld() && (midiTimeNow - note.midiTime)*msToTicks > realtimeMidiTrackingTime) {
                     notesProcessed = true;
+                    if (logProcessedNotes) {
+                        log_lf(Log::L_DEBUG, "%f unheld note remove %s %d\n", dTickPosBlockStart, noteName(note.pitch), note.end());
+                    }
                     it = midiData.notes.m_list.erase(it);
                 } else {
                     it++;
@@ -711,7 +703,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
             auto it = midiData.events.m_list.begin();
             while (it != midiData.events.m_list.end()) {
                 auto& evt = *it;
-                if (midiTimeNow - evt.midiTime*msToTicks > realtimeMidiDelay * 4.0) {
+                if ((midiTimeNow - evt.midiTime)*msToTicks > realtimeMidiTrackingTime) {
                     it = midiData.events.m_list.erase(it);
                 } else {
                     it++;
@@ -722,13 +714,13 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
             std::sort(midiData.notes.m_list.begin(), midiData.notes.m_list.end());
             // midiData.notes.updateBounds();
         }
+        /* if (!midiData.events.m_list.empty()) {
+            for (auto& evt : midiData.events.m_list) {
+                auto msg = IMidiMsg::FromU32AndTick(evt.message, evt.tick);
+                log_lf(Log::L_DEBUG, "Block %f: ctrlEvtsOut %s\n", dTickPosBlockStart, msg.ToString().c_str());
+            }
+        } */
     }
-    /* if (!midiData.events.m_list.empty()) {
-        for (auto& evt : midiData.events.m_list) {
-            auto msg = IMidiMsg::FromU32AndTick(evt.message, evt.tick);
-            log_lf(Log::L_DEBUG, "Block %f: ctrlEvtsOut %s\n", dTickPosBlockStart, msg.ToString().c_str());
-        }
-    } */
 }
 
 void Host::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {

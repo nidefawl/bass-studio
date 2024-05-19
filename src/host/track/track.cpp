@@ -1295,7 +1295,16 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             }
             // Find ending notes
             if (note.end() >= blockLoopStart && note.end() < blockLoopEnd) {
-                if (removeEntry(m_heldNotes, note)) {
+                bool bFound = false;
+                for (auto it = m_heldNotes.begin(); it != m_heldNotes.end();) {
+                    if (it->pitch == note.pitch && it->channel == note.channel) {
+                        bFound = true;
+                        it = m_heldNotes.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+                if (bFound) {
                     if (logProcessedNotes)
                         log_lf(Log::L_DEBUG, "Block %d-%d: %s OFF at %d/%f (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart, ticksPerBlock, note.time, note.len);
                     auto tickOffsetInBlock = note.end() - blockStart;
@@ -1338,7 +1347,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             }
             if (!found) {
                 if (logProcessedNotes)
-                    log_lf(Log::L_INFO, "Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), blockEnd - 1);
+                    log_lf(Log::L_INFO, "Block %d-%d: %s (end at %d) Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), noteHeld.end(), blockEnd - 1);
                 InsertMidiEventSorted(noteEvents, {noteHeld, math::floordS32(ticksPerBlock) - 1, blockEnd - 1, false, false});
                 it = m_heldNotes.erase(it);
                 continue;
