@@ -936,7 +936,6 @@ namespace PluginLFO {
             ctxtmenu_lfo_sync(module_lfo* _module, int32_t _channel, String _title, int _id)
                 : ctxtmenu_lfo_base(_module, _channel, _title, _id)
             {
-                this->id = 100;
                 entries.push_back({ NoteRatio::STRAIGHT, 0, 0, 0, "Straight" });
                 entries.push_back({ NoteRatio::TRIPLET, 0, 0, 0, "Triplet" });
                 entries.push_back({ NoteRatio::DOTTED, 0, 0, 0, "Dotted" });
@@ -991,7 +990,6 @@ namespace PluginLFO {
             ctxtmenu_lfo_mode(module_lfo* _module, int32_t _channel, String _title, int _id)
                 : ctxtmenu_lfo_base(_module, _channel, _title, _id)
             {
-                this->id = 200;
                 entries.push_back({ 0, 0, 0, 0, "Shape" });
                 entries.push_back({ 1, 0, 0, 0, "Random" });
                 perRowEntries = 2;
@@ -1043,7 +1041,6 @@ namespace PluginLFO {
             ctxtmenu_lfo_random_mode(module_lfo* _module, int32_t _channel, String _title, int _id)
                 : ctxtmenu_lfo_base(_module, _channel, _title, _id)
             {
-                this->id = 300;
                 entries.push_back({ 0, 0, 0, 0, "Smooth" });
                 entries.push_back({ 1, 0, 0, 0, "Linear" });
                 entries.push_back({ 2, 0, 0, 0, "Exponential" });
@@ -1092,100 +1089,6 @@ namespace PluginLFO {
             }
         };
 
-        class ctxtmenu_lfo_shape_select final : public ctxtmenu_entry {
-            struct _shape_sel_entry {
-                DAW::Shape::ShapeWaveform shape;
-                int x;
-                int y;
-                int w;
-                String name;
-            };
-            std::vector<_shape_sel_entry> entries;
-
-        public:
-            const int pad   = 10;
-            const int inset = 5;
-        public:
-            ctxtmenu_lfo_shape_select(String _title, int _id)
-                : ctxtmenu_entry(std::move(_title), _id)
-            {
-                this->id = 400;
-                using DAW::Shape::ShapeWaveform;
-                entries.push_back({ ShapeWaveform::SHAPE_SINE, 0, 0, 0, "Sine" });
-                entries.push_back({ ShapeWaveform::SHAPE_TRIANGLE, 0, 0, 0, "Triangle" });
-                entries.push_back({ ShapeWaveform::SHAPE_SAW, 0, 0, 0, "Saw" });
-                entries.push_back({ ShapeWaveform::SHAPE_SQUARE, 0, 0, 0, "Square" });
-                entries.push_back({ ShapeWaveform::SHAPE_SINE_INV, 0, 0, 0, "Sine Inv" });
-                entries.push_back({ ShapeWaveform::SHAPE_TRIANGLE_INV, 0, 0, 0, "Triangle Inv" });
-                entries.push_back({ ShapeWaveform::SHAPE_SAW_INV, 0, 0, 0, "Saw Inv" });
-                entries.push_back({ ShapeWaveform::SHAPE_SQUARE_INV, 0, 0, 0, "Square Inv" });
-            }
-
-            void layout(ivec2 size, float _fontSize, determine_string_width& strw) override {
-                width = size.x;
-                this->fontSize = _fontSize;
-                const int h    = math::roundfS32(_fontSize);
-                layoutE(width, h, 4);
-            }
-
-            void layoutE(int tw, int h, int perRow) {
-                int iX      = inset;
-                int iY      = h + 2;
-                int elW     = (tw - inset * 2) / perRow;
-                for (_shape_sel_entry& e : entries) {
-                    this->height = iY + h;
-                    e.x = iX;
-                    e.y = iY;
-                    e.w = elW;
-                    iX += e.w;
-                    if (iX >= tw - inset * 2) {
-                        iX = inset;
-                        iY += h;
-                    }
-                }
-            }
-
-            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-                auto h = fontSize * 1.1f;
-
-                renderTextLabel(vg,
-                                vec2(leftOffset(), y + h * 0.5f),
-                                vec2(width, h),
-                                title,
-                                theme,
-                                fontSize,
-                                theme->getColor(GuiColor::COL_TEXT),
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                for (_shape_sel_entry& e : entries) {
-                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
-                        nvgBeginPath(vg);
-                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-                        nvgFill(vg);
-                    }
-                    int inset = 4;
-                    vec2 waveformPos = vec2(e.x, y + e.y) + vec2(inset, inset);
-                    vec2 waveformSize = vec2(e.w, h) - vec2(inset * 2, inset * 2);
-                    drawWaveform(vg, waveformPos, waveformSize, e.shape, theme->getColor(GuiColor::COL_TEXT));
-                }
-            }
-
-            bool contains(ivec2& ctxtSize, ivec2& mouse) const override {
-                return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
-            }
-
-            int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
-                if (contains(ctxtSize, mouse)) {
-                    const auto h = this->fontSize;
-                    for (_shape_sel_entry& e : entries) {
-                        if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
-                            return this->id + e.shape;
-                        }
-                    }
-                }
-                return -1;
-            }
-        };
         class guictr_module_lfo_context_menu final : public guictxtmenu {
             module_lfo* const module;
             int32_t channel;
@@ -1197,16 +1100,16 @@ namespace PluginLFO {
                 maxHeight = 0;
                 this->fontSize = FONT_SIZE_CTXT_SMALL;
                 this->paddingV = 0;
-                addEntry(new ctxtmenu_lfo_sync(module, channel, "Sync", 0));
-                addEntry(new ctxtmenu_lfo_mode(module, channel, "Mode", 1));
-                addEntry(new ctxtmenu_lfo_shape_select("Shape", 2));
-                addEntry(new ctxtmenu_lfo_random_mode(module, channel, "Random", 3));
+                addEntry(new ctxtmenu_lfo_sync(module, channel, "Sync", 100));
+                addEntry(new ctxtmenu_lfo_mode(module, channel, "Mode", 200));
+                addEntry(new DAW::Shape::ctxtmenu_lfo_shape_select("Shape", 400));
+                addEntry(new ctxtmenu_lfo_random_mode(module, channel, "Random", 300));
             }
             bool clickedElement(ctxtmenu_entry* e, int _id) override {
                 if (_id >= 400) {
                     using DAW::Shape::ShapeWaveform;
                     auto shapeIdx = _id - 400;
-                    if (shapeIdx < 0 || shapeIdx > ShapeWaveform::SHAPE_SQUARE_INV) {
+                    if (shapeIdx < 0 || shapeIdx > ShapeWaveform::SHAPE_PULSE_INV) {
                         return false;
                     }
                     auto waveform = static_cast<ShapeWaveform>(shapeIdx);

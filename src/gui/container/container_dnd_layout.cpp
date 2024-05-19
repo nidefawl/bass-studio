@@ -38,7 +38,7 @@ public:
         //renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
     }
-    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
+    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) override {
         if (drawFn || str.length()) {
             nvgSave(vg);
             setScissorTransform(vg);

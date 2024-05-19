@@ -176,14 +176,7 @@ public:
     int32_t getIndex() const {
         return btnIndex;
     }
-    void render(NVGcontext* vg) override {
-        if (!isRenderableSizeAndContext(vg))
-            return;
-        int32_t fl = getStateFlags();
-        renderWidgetBorder(vg, fl);
-        renderButtonLabel(vg, fl);
-    }
-    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
+    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) override;
 };
 class guictr_daw_layout_select final : public guictr_base {
     class guibutton_layout_select : public guibutton_select {

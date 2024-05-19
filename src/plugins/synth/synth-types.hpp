@@ -11,7 +11,6 @@ enum class Waveforms : int32_t {
     Saw,
     Square,
     Pulse,
-    Shaper,
     Noise,
     NumWaveforms
 };
@@ -28,6 +27,11 @@ enum class VoiceModes : int32_t {
     Legato,
     NumVoiceModes
 };
+enum class VoiceModesMono : int32_t {
+    Mono = 0,
+    Legato,
+    NumVoiceModesMono
+};
 enum class FmModes : int32_t {
     Off = 0,
     Osc1,
@@ -35,8 +39,8 @@ enum class FmModes : int32_t {
     NumFmModes
 };
 
-const std::array<const char*, 7> stringsWaveform = {
-    "Sine", "Triangle", "Saw", "Square", "Pulse", "Shaper", "Noise"
+const std::array<const char*, 6> stringsWaveform = {
+    "Sine", "Triangle", "Saw", "Square", "Pulse", "Noise"
 };
 const std::array<const char*, 2> stringsReset = {
     "Always", "Hold"
@@ -264,9 +268,9 @@ public:
                 noiseValue *= noiseValue;
                 noiseValue -= (int) noiseValue;
                 return noiseValue - .5;
-            case Waveforms::Shaper:
-                dbgassert(shape);
-                return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
+            // case Waveforms::Shaper:
+            //     dbgassert(shape);
+            //     return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
             default:
                 dbgassert(0);
                 break;
@@ -312,9 +316,9 @@ public:
                 noiseValue *= noiseValue;
                 noiseValue -= (int) noiseValue;
                 return noiseValue - .5;
-            case Waveforms::Shaper:
-                dbgassert(shape);
-                return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
+            // case Waveforms::Shaper:
+            //     dbgassert(shape);
+            //     return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
             default:
                 dbgassert(0);
                 break;
@@ -326,6 +330,12 @@ public:
         phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
         while (phase > 1.0) phase -= 1.0;
         return GetWaveform(waveform, bleb);
+    }
+    double GetWaveformShaper(double dt, double frequency, bool bleb) {
+        phaseIncrement = frequency * dt;
+        phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
+        while (phase > 1.0) phase -= 1.0;
+        return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
     }
 
     double Get(double dt, SmoothSwitch& waveform, double frequency, bool bleb) {
@@ -339,7 +349,7 @@ public:
         return GetWaveform(static_cast<Waveforms>(roundedVal), bleb);
     }
 
-    double GetLfo(double dt, SmoothSwitch& waveform, double frequency, bool oneShot) {
+    double GetLfo(double dt, double frequency, bool oneShot) {
         phaseIncrement = frequency * dt;
         phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
         dbgassert(phase >= -1.0);
@@ -352,13 +362,14 @@ public:
         double p = phase;
         while (p < 0.0) p += 1.0;
         dbgassert(p >= 0.0 && p <= 1.0);
-        double dSwitchVal = waveform.getSwitchValue();
-        dbgassert(!fp_math::isNanOrInfd(dSwitchVal));
-        auto roundedVal = math::rounddU32(dSwitchVal);
-        dbgassert(roundedVal < static_cast<uint32_t>(Waveforms::NumWaveforms));
-        double v = GetLfoWaveform(static_cast<Waveforms>(roundedVal), phase > 0.5 && oneShot, p);
-        dbgassert(v >= -1.0 && v <= 1.0);
-        return v;
+        // double dSwitchVal = waveform.getSwitchValue();
+        // dbgassert(!fp_math::isNanOrInfd(dSwitchVal));
+        // auto roundedVal = math::rounddU32(dSwitchVal);
+        // dbgassert(roundedVal < static_cast<uint32_t>(Waveforms::NumWaveforms));
+        // double v = GetLfoWaveform(static_cast<Waveforms>(roundedVal), phase > 0.5 && oneShot, p);
+        // dbgassert(v >= -1.0 && v <= 1.0);
+        // return v;
+        return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
     }
 };
 

@@ -4,14 +4,13 @@
 #include "synth-types.hpp"
 #include "synth-param.hpp"
 #include "host/plugin/plugin-lockable.h"
-#include "synth-plugin.h"
 
 namespace PluginSynth {
 
 template<typename T>
 class module_synth_template;
 class module_synth_unison;
-class module_synth_basic;
+class module_synth_mono;
 
 struct HostTempo {
     double barPos;
@@ -19,11 +18,13 @@ struct HostTempo {
     double ppqPos;
 };
 
-template <typename T>
+template <typename T, class P>
 class SynthImpl : public PluginLockable {
+public:
+    using Parameters = P;
     friend class PluginVST2_Synth;
     friend class module_synth_unison;
-    friend class module_synth_basic;
+    friend class module_synth_mono;
 private:
     module_synth_template<T>* const moduleInstance;
 protected:
@@ -48,8 +49,8 @@ public:
     virtual std::shared_ptr<PluginViewContainer> createViewCtrImpl() { return nullptr; };
     virtual void OnParamChange(Parameters parameter) {};
     virtual void onTransportChanged(bool bIsPlaying) {}
-    virtual bool getSnapshot(snapshot_t& snapshot) const { return false; }
-    virtual bool setSnapshot(const snapshot_t& snapshot) { return false; }
+    // virtual bool getSnapshot(snapshot_t& snapshot) const { return false; }
+    // virtual bool setSnapshot(const snapshot_t& snapshot) { return false; }
     virtual samplecount_t getLatency() { return 0; }
     SynthParamBase* getParam(Parameters enumParam) {
         if (enumParam >= 0 && enumParam < vecParams.size()) {
@@ -175,7 +176,7 @@ public:
             } else {
                 param->setAll(val);
             }
-            this->impl->OnParamChange(static_cast<Parameters>(param->enumParam));
+            this->impl->OnParamChange(static_cast<T::Parameters>(param->enumParam));
         }
         internalplugin::postSetParameter(idx, preVal, val, flags);
     }
@@ -210,7 +211,7 @@ public:
 
 
 struct Voice {
-    std::array<double, Parameters::kNumParams> modValues{};
+    std::array<double, 64> modValues{};
     std::array<float, 8> envelopeValuesCached{};
 
     Oscillator lfo1;

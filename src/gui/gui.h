@@ -78,7 +78,7 @@ void drawTintedImage(NVGcontext* vg, int image, float alpha,
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs);
 void drawSquareInset(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
-void drawWaveform(NVGcontext* vg, vec2 pos, vec2 size, int32_t shape, NVGcolor color);
+void drawWaveform(NVGcontext* vg, vec2 pos, vec2 size, int32_t shape, NVGcolor color, float strokeWidth = 2.0f);
 ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {

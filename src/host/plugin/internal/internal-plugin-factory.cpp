@@ -27,11 +27,17 @@ extern template effectbase* makeInstance<PluginLFO::module_lfo>(int32_t _project
 extern template effectbase* makeInstance<PluginEQ::module_eq>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
 namespace PluginSynth {
-    class module_synth_unison;
-    class module_synth_basic;
+class module_synth_unison;
+namespace Mono {
+class module_synth_mono;
+}
+namespace Shaper {
+class module_synth_shaper;
+}
 }
 extern template effectbase* makeInstance<PluginSynth::module_synth_unison>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
-extern template effectbase* makeInstance<PluginSynth::module_synth_basic>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginSynth::Shaper::module_synth_shaper>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginSynth::Mono::module_synth_mono>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 namespace DAW::Host {
 
 effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
@@ -75,8 +81,11 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
             case PLUGIN_TYPE_VISUALIZER:
                 effect = makeInstance<PluginVisualizer::module_visualizer>(getNextGlobalModuleId(globalid), hostcallback);
                 break;
-            case PLUGIN_TYPE_SYNTH_BASIC:
-                effect = makeInstance<PluginSynth::module_synth_basic>(getNextGlobalModuleId(globalid), hostcallback);
+            case PLUGIN_TYPE_SYNTH_MONO:
+                effect = makeInstance<PluginSynth::Mono::module_synth_mono>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_SYNTH_SHAPER:
+                effect = makeInstance<PluginSynth::Shaper::module_synth_shaper>(getNextGlobalModuleId(globalid), hostcallback);
                 break;
             default:
                 break;

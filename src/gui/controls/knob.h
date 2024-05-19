@@ -216,3 +216,102 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override;
     void updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal);
 };
+
+template<int N>
+class guictr_select_enum final : public guictr_base, public DAW::UI::IModulateable {
+    class guibutton_select_enum : public guibutton {
+    public:
+        guibutton_select_enum() = default;
+        void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) override {
+            nvgSave(vg);
+            if (setScissorTransform(vg)) {
+                static_cast<guictr_select_enum<N>*>(parent)->renderButtonLabel(this, vg, stateFlags);
+            }
+            nvgRestore(vg);
+        }
+        bool getState() const override {
+            return static_cast<guictr_select_enum<N>*>(parent)->getButtonStateState(this);
+        }
+    };
+    std::array<guibutton_select_enum, N> buttons;
+    automatable_t* paramAutomatable = nullptr;
+    int32_t paramIdx                = -1;
+public:
+    std::function<void(guibutton*, int32_t, NVGcontext*, int32_t, ivec2)> fnRenderButtonLabel;
+    guictr_select_enum() {
+        padding = 0;
+        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
+        for (size_t i = 0; i < N; ++i) {
+            buttons[i].id = i;
+            add(&buttons[i]);
+        }
+    }
+    ~guictr_select_enum() override {
+        removeGuis();
+    }
+    void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
+        this->paramAutomatable = _paramAutomatable;
+        this->paramIdx         = _paramIdx;
+    }
+    void getAutomationRef(automatable_t*& at, int32_t& paramIdx) const override {
+        paramIdx = this->paramIdx;
+        at       = this->paramAutomatable;
+    }
+    int32_t getParamIdx() const { return paramIdx; }
+    void renderButtonLabel(guibutton_select_enum* button, NVGcontext* vg, int32_t stateFlags) {
+        ivec2 renderFrame = button->size;
+        ivec2 renderPos(0);
+        if (renderFrame.y > 10 && renderFrame.x > 10) {
+            if (fnRenderButtonLabel) {
+                fnRenderButtonLabel(button, button->id, vg, stateFlags, renderFrame);
+            } else if (!button->getText().empty()) {
+                auto fontScale = math::clamp(math::min(renderFrame.y, renderFrame.x), 4, 48) * FONT_AUTOSCALE;
+                renderCenteredMultilineText(vg, theme, button->getText(), fontScale, getLabelColor(), renderPos, renderFrame);
+            }
+        }
+    }
+    bool getButtonStateState(const guibutton_select_enum* button) const {
+        int32_t idx = static_cast<int32_t>(button - &buttons[0]);
+        if (paramAutomatable && paramIdx >= 0) {
+            auto valModulated = paramAutomatable->getParamValue(paramIdx);
+            auto param = paramAutomatable->getParam(paramIdx);
+            dbgassert(param);
+            if (param->quantizationSteps > 0) {
+                return idx == math::floorfS32(valModulated * param->quantizationSteps + 0.5f);
+            }
+            return idx == math::roundfS32(valModulated * (N - 1));
+        }
+        return false;
+    }
+    void buttonClicked(guibase* button) override {
+        if (assert_expr(button >= &buttons[0] && button < &buttons[N])) {
+            auto idx = button->id;
+            if (paramAutomatable && paramIdx >= 0) {
+                float val = static_cast<float>(idx) / (N - 1);
+                paramAutomatable->setParamEdit(paramIdx, val, param_update_flags::FLG_PAR_UPDATE_USER | param_update_flags::FLG_PAR_UPDATE_FINISH);
+            }
+        }
+    }
+
+    float modifyParam(float param, float amt, bool applyUserInputScaling) {
+        if (applyUserInputScaling) {
+            amt *= 0.01f;
+        }
+        return math::clamp(param - amt, 0.0f, 1.0f);
+    }
+
+    void updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal) {
+        float fNew = modifyParam(paramAutomatable->getParam(paramIdx)->getValue(), amt, applyUserInputScaling);
+        int32_t flags = param_update_flags::FLG_PAR_UPDATE_USER;
+        if (isFinal) {
+            flags |= param_update_flags::FLG_PAR_UPDATE_FINISH;
+        }
+        paramAutomatable->setParamEdit(paramIdx, fNew, flags);
+    }
+    int32_t getNumButtons() const {
+        return CtrSize(buttons);
+    }
+    guibutton_select_enum& getButton(int32_t idx) {
+        return buttons.at(idx);
+    }
+};

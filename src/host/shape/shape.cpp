@@ -358,6 +358,16 @@ namespace DAW::Shape {
                 pts.push_back({ { 0.5f, bInv ? 1.0f : 0.0f }, 0.5f });
                 break;
             }
+            case ShapeWaveform::SHAPE_PULSE:
+            case ShapeWaveform::SHAPE_PULSE_INV: {
+                float f = 1.0f/6.0f;
+                bool bInv = waveform == ShapeWaveform::SHAPE_PULSE_INV;
+                pts.push_back({ { 0.0f, bInv ? 1.0f : 0.0f }, 0.5f });
+                pts.push_back({ { 0.0f, bInv ? 0.0f : 1.0f }, 0.5f });
+                pts.push_back({ { f, bInv ? 0.0f : 1.0f }, 0.5f });
+                pts.push_back({ { f, bInv ? 1.0f : 0.0f }, 0.5f });
+                break;
+            }
             case ShapeWaveform::SHAPE_SINE:
             case ShapeWaveform::SHAPE_SINE_INV: {
                 bool bInv = waveform == ShapeWaveform::SHAPE_SINE_INV;

@@ -545,65 +545,97 @@ void drawLoadingIcon(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& co
     nvgRestore(vg);
 }
 
-void drawWaveform(NVGcontext* vg, vec2 pos, vec2 size, int32_t shape, NVGcolor color) {
+void drawWaveform(NVGcontext* vg, vec2 pos, vec2 size, int32_t shape, NVGcolor color, float strokeWidth) {
     using DAW::Shape::ShapeWaveform;
-    nvgBeginPath(vg);
-    switch (shape) {
-        case ShapeWaveform::SHAPE_SINE:
-        case ShapeWaveform::SHAPE_SINE_INV:
-            for (int i = 0; i < size.x; ++i) {
-                float x = pos.x + i;
-                float v = size.y * (0.5f + sinf(float(i * M_PI) * 2.0f / size.x) * 0.5f);
-                float y = pos.y + (shape == ShapeWaveform::SHAPE_SINE ? v : size.y - v);
-                if (i == 0) {
-                    nvgMoveTo(vg, x, y);
-                } else {
-                    nvgLineTo(vg, x, y);
+    /* pass 0 is fill, pass 1 is stroke */
+    for (int pass = 0; pass < 2; ++pass) {
+        nvgBeginPath(vg);
+        switch (shape) {
+            case ShapeWaveform::SHAPE_SINE:
+            case ShapeWaveform::SHAPE_SINE_INV:
+                for (int i = 0; i < size.x; ++i) {
+                    float x = pos.x + i;
+                    float v = size.y * (0.5f + sinf(float(i * M_PI) * 2.0f / size.x) * 0.5f);
+                    float y = pos.y + (shape == ShapeWaveform::SHAPE_SINE ? v : size.y - v);
+                    if (i == 0) {
+                        nvgMoveTo(vg, x, y);
+                    } else {
+                        nvgLineTo(vg, x, y);
+                    }
                 }
+                break;
+            case ShapeWaveform::SHAPE_SQUARE: {
+                nvgMoveTo(vg, pos.x, pos.y + size.y);
+                nvgLineTo(vg, pos.x, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + size.y);
+                nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+                break;
             }
-            break;
-        case ShapeWaveform::SHAPE_SQUARE: {
-            nvgMoveTo(vg, pos.x, pos.y + size.y);
-            nvgLineTo(vg, pos.x, pos.y + 0);
-            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + 0);
-            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + size.y);
-            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
-            break;
+            case ShapeWaveform::SHAPE_SQUARE_INV: {
+                nvgMoveTo(vg, pos.x, pos.y + size.y);
+                nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + size.y);
+                nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+                break;
+            }
+            case ShapeWaveform::SHAPE_PULSE: {
+                float f = 1.0f / 6.0f;
+                nvgMoveTo(vg, pos.x, pos.y + size.y);
+                nvgLineTo(vg, pos.x, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x * f, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x * f, pos.y + size.y);
+                nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+                break;
+            }
+            case ShapeWaveform::SHAPE_PULSE_INV: {
+                /* 66% PWM */
+                float f = 1.0f / 6.0f;
+                nvgMoveTo(vg, pos.x, pos.y + size.y);
+                nvgLineTo(vg, pos.x + size.x * f, pos.y + size.y);
+                nvgLineTo(vg, pos.x + size.x * f, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x, pos.y + 0);
+                nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+                break;
+            }
+            case ShapeWaveform::SHAPE_SAW: {
+                nvgMoveTo(vg, pos.x, pos.y + size.y);
+                nvgLineTo(vg, pos.x, pos.y);
+                nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+                break;
+            }
+            case ShapeWaveform::SHAPE_SAW_INV: {
+                nvgMoveTo(vg, pos.x, pos.y + size.y);
+                nvgLineTo(vg, pos.x + size.x, pos.y);   
+                nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
+                break;
+            }
+            case ShapeWaveform::SHAPE_TRIANGLE:
+            case ShapeWaveform::SHAPE_TRIANGLE_INV: {
+                bool bInv = shape == ShapeWaveform::SHAPE_TRIANGLE_INV;
+                nvgMoveTo(vg, pos.x, pos.y + (bInv ? 0 : size.y));
+                nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + (bInv ? size.y : 0));
+                nvgLineTo(vg, pos.x + size.x, pos.y + (bInv ? 0 : size.y));
+                break;
+            }
+            default:
+                break;
         }
-        case ShapeWaveform::SHAPE_SQUARE_INV: {
-            nvgMoveTo(vg, pos.x, pos.y + size.y);
-            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + size.y);
-            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + 0);
-            nvgLineTo(vg, pos.x + size.x, pos.y + 0);
-            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
-            break;
+        if (pass == 0) {
+            auto fillColor = color;
+            fillColor.a = 0.3;
+            nvgClosePath(vg);
+            nvgFillColor(vg, fillColor);
+            nvgFillCustomPar(vg, -2);
+            nvgFill(vg);
+        } else {
+            nvgStrokeWidth(vg, strokeWidth);
+            nvgStrokeColor(vg, color);
+            nvgSetShapeExtents(vg, pos.x, pos.y, size.x, size.y);
+            nvgStroke(vg);
         }
-        case ShapeWaveform::SHAPE_SAW: {
-            nvgMoveTo(vg, pos.x, pos.y + size.y);
-            nvgLineTo(vg, pos.x, pos.y);
-            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
-            break;
-        }
-        case ShapeWaveform::SHAPE_SAW_INV: {
-            nvgMoveTo(vg, pos.x, pos.y + size.y);
-            nvgLineTo(vg, pos.x + size.x, pos.y);   
-            nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
-            break;
-        }
-        case ShapeWaveform::SHAPE_TRIANGLE:
-        case ShapeWaveform::SHAPE_TRIANGLE_INV: {
-            bool bInv = shape == ShapeWaveform::SHAPE_TRIANGLE_INV;
-            nvgMoveTo(vg, pos.x, pos.y + (bInv ? 0 : size.y));
-            nvgLineTo(vg, pos.x + size.x * 0.5f, pos.y + (bInv ? size.y : 0));
-            nvgLineTo(vg, pos.x + size.x, pos.y + (bInv ? 0 : size.y));
-            break;
-        }
-        default:
-            break;
     }
-    nvgStrokeWidth(vg, 2.0f);
-    nvgStrokeColor(vg, color);
-    nvgStroke(vg);
 }
 
 GuiColor::constant_t guibase::getLabelColor() const {

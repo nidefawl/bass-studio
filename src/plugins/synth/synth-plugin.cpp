@@ -83,6 +83,344 @@ constexpr uint16_t AUDIOPROCESSING_THREADS = USE_THREADING ? 32 : 0;
 constexpr uint16_t AUDIOPROCESSING_TASKS = (USE_THREADING) ? NUM_POLY_VOICES * NUM_UNISON_VOICES : 0;
 
 
+enum {
+    // Global
+    kNumOutputs  = 2,
+    kNumInputs   = 2,
+};
+
+enum ParametersSynthUnison {
+    MasterVolume = 0,
+    VoiceMode,
+    GlideLength,
+    FilterMode,
+    FilterCutoff,
+    FilterResonance,
+    FilterKeyTracking,
+    VolEnvCutoff,
+    ModEnvCutoff,
+    OscMix,
+    Osc1Wave,
+    Osc1Coarse,
+    Osc1Fine,
+    Osc1Split,
+    Osc2Wave,
+    Osc2Coarse,
+    Osc2Fine,
+    Osc2Split,
+    LfoShape,
+    LfoFrequency,
+    LfoDelay,
+    LfoCutoff,
+    FmMode,
+    FmCoarse,
+    FmFine,
+    VolEnvFm,
+    ModEnvFm,
+    LfoFm,
+    VolEnvA,
+    VolEnvD,
+    VolEnvS,
+    VolEnvR,
+    VolEnvV,
+    ModEnvA,
+    ModEnvD,
+    ModEnvS,
+    ModEnvR,
+    ModEnvV,
+    LfoWave,
+    Panning,
+    Voices,
+    UnisonVoices,
+    FilterDrive,
+    Macro01,
+    Macro02,
+    Macro03,
+    Macro04,
+    Macro05,
+    Macro06,
+    Macro07,
+    Macro08,
+    LfoPhase,
+    VolEnvTriggerMode,
+    ModEnvTriggerMode,
+    Lfo1RampTriggerMode,
+    Lfo1TriggerMode,
+    Osc1PhaseResetMode,
+    Osc2PhaseResetMode,
+    kNumParams
+};
+const ParametersSynthUnison parametersOrdered[] = {
+    MasterVolume,
+    Voices,
+    UnisonVoices,
+    Panning,
+    VoiceMode,
+    GlideLength,
+    FilterMode,
+    FilterCutoff,
+    FilterResonance,
+    FilterDrive,
+    FilterKeyTracking,
+    VolEnvCutoff,
+    ModEnvCutoff,
+    OscMix,
+    Osc1PhaseResetMode,
+    Osc1Wave,
+    Osc1Coarse,
+    Osc1Fine,
+    Osc1Split,
+    Osc2PhaseResetMode,
+    Osc2Wave,
+    Osc2Coarse,
+    Osc2Fine,
+    Osc2Split,
+    Lfo1RampTriggerMode,
+    Lfo1TriggerMode,
+    // LfoWave,
+    LfoShape,
+    LfoPhase,
+    LfoFrequency,
+    LfoDelay,
+    LfoCutoff,
+    FmMode,
+    FmCoarse,
+    FmFine,
+    VolEnvFm,
+    ModEnvFm,
+    LfoFm,
+    VolEnvTriggerMode,
+    VolEnvA,
+    VolEnvD,
+    VolEnvS,
+    VolEnvR,
+    VolEnvV,
+    ModEnvTriggerMode,
+    ModEnvA,
+    ModEnvD,
+    ModEnvS,
+    ModEnvR,
+    ModEnvV,
+    Macro01,
+    Macro02,
+    Macro03,
+    Macro04,
+    Macro05,
+    Macro06,
+    Macro07,
+    Macro08,
+};
+const ParametersSynthUnison parametersModulate[] = {
+    MasterVolume,
+    Panning,
+    FilterCutoff,
+    FilterResonance,
+    FilterDrive,
+    FilterKeyTracking,
+    VolEnvCutoff,
+    ModEnvCutoff,
+    OscMix,
+    Osc1Coarse,
+    Osc1Fine,
+    Osc1Split,
+    Osc2Coarse,
+    Osc2Fine,
+    Osc2Split,
+    LfoShape,
+    LfoPhase,
+    LfoFrequency,
+    LfoDelay,
+    LfoCutoff,
+    FmCoarse,
+    FmFine,
+    VolEnvFm,
+    ModEnvFm,
+    LfoFm,
+    VolEnvA,
+    VolEnvD,
+    VolEnvS,
+    VolEnvR,
+    VolEnvV,
+    ModEnvA,
+    ModEnvD,
+    ModEnvS,
+    ModEnvR,
+    ModEnvV
+};
+static_assert(kNumParams - 1 == sizeof(parametersOrdered) / sizeof(ParametersSynthUnison), "parametersOrdered is not the correct size");
+
+enum Settings {
+    FilterEnabled,
+    ModulationEnabled,
+    LfoEnabled,
+    ClearModulationEnabled,
+    ExprEvaluationEnabled,
+    Lfo1OneShotEnabled,
+    DiagnosticOutputEnabled,
+    LfoShapeType,
+    TuningDriftEnabled,
+    FilterDriftEnabled,
+    LfoPhaseDriftEnabled,
+    Lfo1ResetByLfo2Enabled,
+    ShowModulationRanges,
+    Oversampling,
+    NumSettings,
+};
+extern const std::array<const char*, 14> stringsSettings;
+
+class SynthState {
+public:
+    double lfo2Value     = 0.0;
+    double driftVelocity = 0.0;
+    double driftPhase    = 0.0;
+    double driftValue    = 0.0;
+    double tuningDrift   = 0.5;
+    double filterDrift   = 0.7;
+    double lfoPhaseDrift = 0.8;
+
+    double osc1Tune                = 1.0;
+    double targetOsc1SplitMix      = 0.0;
+    double osc1SplitMix            = 0.0;
+    double osc1SplitFactorA        = 1.0;
+    double osc1SplitFactorB        = 1.0;
+    double osc2Tune                = 1.0;
+    double targetOsc2SplitMix      = 0.0;
+    double osc2SplitMix            = 0.0;
+    double osc2SplitFactorA        = 1.0;
+    double osc2SplitFactorB        = 1.0;
+    double targetOscMix            = 0.0;
+    double oscMix                  = 0.0;
+    double baseFmAmount            = 0.0;
+    double glideLength             = 0.0;
+    double targetMasterVolume      = 0.0;
+    double masterVolume            = 0.0;
+};
+class SynthProgramParameters {
+public:
+    ~SynthProgramParameters() = default;
+
+protected:
+    double Osc1Wave          = 0.0;
+    double Osc1Coarse        = 0.0;
+    double Osc1Fine          = 0.0;
+    double Osc1Split         = 0.0;
+    double Osc2Wave          = 0.0;
+    double Osc2Coarse        = 0.0;
+    double Osc2Fine          = 0.0;
+    double Osc2Split         = 0.0;
+    double OscMix            = 0.0;
+    double FmMode            = 0.0;
+    double FmCoarse          = 0.0;
+    double FmFine            = 0.0;
+    double FilterMode        = 0.0;
+    double FilterCutoff      = 0.0;
+    double FilterResonance   = 0.0;
+    double FilterKeyTracking = 0.0;
+    double VolEnvA           = 0.0;
+    double VolEnvD           = 0.0;
+    double VolEnvS           = 0.0;
+    double VolEnvR           = 0.0;
+    double VolEnvV           = 0.0;
+    double ModEnvA           = 0.0;
+    double ModEnvD           = 0.0;
+    double ModEnvS           = 0.0;
+    double ModEnvR           = 0.0;
+    double ModEnvV           = 0.0;
+    double LfoAmount         = 0.0;
+    double LfoFrequency      = 0.0;
+    double LfoDelay          = 0.0;
+    double LfoWave           = 0.0;
+    double VolEnvFm          = 0.0;
+    double VolEnvCutoff      = 0.0;
+    double ModEnvFm          = 0.0;
+    double ModEnvCutoff      = 0.0;
+    double LfoFm             = 0.0;
+    double LfoCutoff         = 0.0;
+    double VoiceMode         = 0.0;
+    double GlideLength       = 0.0;
+    double MasterVolume      = 0.0;
+    double Pan               = 0.5;
+    double UnisonVoices      = 0.0;
+    double PolyVoicesMax     = 0.0;
+    double FilterDrive       = 0.5;
+    double LfoPhase          = 0.0;
+    double VolEnvTriggerMode   = 0.0;
+    double ModEnvTriggerMode   = 0.0;
+    double Lfo1RampTriggerMode = 0.0;
+    double Lfo1TriggerMode     = 0.0;
+    double Osc1PhaseResetMode  = 0.0;
+    double Osc2PhaseResetMode  = 0.0;
+    double MacroValues[8] = {};
+public:
+    double* getProgramParameter(ParametersSynthUnison parameter) {
+        using Parameters = ParametersSynthUnison;
+        switch (parameter) {
+            case Parameters::VoiceMode: return &VoiceMode;
+            case Parameters::GlideLength: return &GlideLength;
+            case Parameters::FilterMode: return &FilterMode;
+            case Parameters::FilterCutoff: return &FilterCutoff;
+            case Parameters::FilterResonance: return &FilterResonance;
+            case Parameters::FilterKeyTracking: return &FilterKeyTracking;
+            case Parameters::VolEnvCutoff: return &VolEnvCutoff;
+            case Parameters::ModEnvCutoff: return &ModEnvCutoff;
+            case Parameters::OscMix: return &OscMix;
+            case Parameters::Osc1Wave: return &Osc1Wave;
+            case Parameters::Osc1Coarse: return &Osc1Coarse;
+            case Parameters::Osc1Fine: return &Osc1Fine;
+            case Parameters::Osc1Split: return &Osc1Split;
+            case Parameters::Osc2Wave: return &Osc2Wave;
+            case Parameters::Osc2Coarse: return &Osc2Coarse;
+            case Parameters::Osc2Fine: return &Osc2Fine;
+            case Parameters::Osc2Split: return &Osc2Split;
+            case Parameters::LfoShape: return &LfoAmount;
+            case Parameters::LfoFrequency: return &LfoFrequency;
+            case Parameters::LfoDelay: return &LfoDelay;
+            case Parameters::LfoCutoff: return &LfoCutoff;
+            case Parameters::LfoWave: return &LfoWave;
+            case Parameters::FmMode: return &FmMode;
+            case Parameters::FmCoarse: return &FmCoarse;
+            case Parameters::FmFine: return &FmFine;
+            case Parameters::VolEnvFm: return &VolEnvFm;
+            case Parameters::ModEnvFm: return &ModEnvFm;
+            case Parameters::LfoFm: return &LfoFm;
+            case Parameters::VolEnvA: return &VolEnvA;
+            case Parameters::VolEnvD: return &VolEnvD;
+            case Parameters::VolEnvS: return &VolEnvS;
+            case Parameters::VolEnvR: return &VolEnvR;
+            case Parameters::VolEnvV: return &VolEnvV;
+            case Parameters::ModEnvA: return &ModEnvA;
+            case Parameters::ModEnvD: return &ModEnvD;
+            case Parameters::ModEnvS: return &ModEnvS;
+            case Parameters::ModEnvR: return &ModEnvR;
+            case Parameters::ModEnvV: return &ModEnvV;
+            case Parameters::Panning: return &Pan;
+            case Parameters::Voices: return &PolyVoicesMax;
+            case Parameters::UnisonVoices: return &UnisonVoices;
+            case Parameters::FilterDrive: return &FilterDrive;
+            case Parameters::Macro01: return &MacroValues[0];
+            case Parameters::Macro02: return &MacroValues[1];
+            case Parameters::Macro03: return &MacroValues[2];
+            case Parameters::Macro04: return &MacroValues[3];
+            case Parameters::Macro05: return &MacroValues[4];
+            case Parameters::Macro06: return &MacroValues[5];
+            case Parameters::Macro07: return &MacroValues[6];
+            case Parameters::Macro08: return &MacroValues[7];
+            case Parameters::LfoPhase: return &LfoPhase;
+            case Parameters::VolEnvTriggerMode: return &VolEnvTriggerMode;
+            case Parameters::ModEnvTriggerMode: return &ModEnvTriggerMode;
+            case Parameters::Lfo1RampTriggerMode: return &Lfo1RampTriggerMode;
+            case Parameters::Lfo1TriggerMode: return &Lfo1TriggerMode;
+            case Parameters::Osc1PhaseResetMode: return &Osc1PhaseResetMode;
+            case Parameters::Osc2PhaseResetMode: return &Osc2PhaseResetMode;
+            case Parameters::MasterVolume:
+            case Parameters::kNumParams:
+                return nullptr;
+        }
+        dbgassert(0);
+        return nullptr;
+    }
+};
+
 class VoiceUnison {
 public:
     std::array<Voice, NUM_UNISON_VOICES> voices;
@@ -401,8 +739,8 @@ struct ModulationInput {
 };
 
 struct ModulationDestination {
-    Parameters parameter = Parameters::FilterCutoff;
-    double range         = 1.0;
+    ParametersSynthUnison parameter = ParametersSynthUnison::FilterCutoff;
+    double range = 1.0;
 };
 
 struct Modulation {
@@ -425,7 +763,7 @@ struct MidiMessage {
 
 using ModulationSourceData = std::array<double, MathExprInputLen>;
 
-class SynthImplUnison final : public SynthImpl<SynthImplUnison>, public SynthState {
+class SynthImplUnison final : public SynthImpl<SynthImplUnison, ParametersSynthUnison>, public SynthState {
 public:
     using UnisonVoiceList = std::array<int32_t, NUM_POLY_VOICES * NUM_UNISON_VOICES>;
     using PolyVoiceList   = std::array<int32_t, NUM_POLY_VOICES>;
@@ -452,7 +790,7 @@ private:
     Oscillator lfo2;
     SmoothSwitch osc1Wave;
     SmoothSwitch osc2Wave;
-    SmoothSwitch lfoWave;
+    // SmoothSwitch lfoWave;
     // SmoothSwitch filterMode;
     seq_rand synthRand;
     int32_t seq = 0;
@@ -773,8 +1111,8 @@ private:
         setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "Waveform");
         addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setInitialValue(static_cast<int32_t>(Waveforms::Saw));
         setParamName(getParam(Parameters::Osc2Wave), "Osc2 Waveform", "Osc2 Waveform", "Waveform");
-        addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setInitialValue(static_cast<int32_t>(Waveforms::Shaper));
-        setParamName(getParam(Parameters::LfoWave), "LFO1 Waveform", "LFO1 Waveform", "Waveform");
+        // addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setInitialValue(static_cast<int32_t>(Waveforms::));
+        // setParamName(getParam(Parameters::LfoWave), "LFO1 Waveform", "LFO1 Waveform", "Waveform");
         addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode.begin(), stringsVoiceMode.end())->setInitialValue(0);
         setParamName(getParam(Parameters::VoiceMode), "Voice Mode");
         addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode.begin(), stringsFilterMode.end())->setInitialValue(0);
@@ -811,7 +1149,7 @@ private:
     }
 
 public:
-    explicit SynthImplUnison(PluginVST2_Synth* vst2Plugin) : SynthImpl<SynthImplUnison>(nullptr), moduleSynthUnisonInstance(nullptr), instanceVST2Plugin(vst2Plugin) {
+    explicit SynthImplUnison(PluginVST2_Synth* vst2Plugin) : SynthImpl<SynthImplUnison, ParametersSynthUnison>(nullptr), moduleSynthUnisonInstance(nullptr), instanceVST2Plugin(vst2Plugin) {
         initImpl();
     }
     explicit SynthImplUnison(module_synth_unison* module);
@@ -1041,7 +1379,7 @@ public:
         return statsMaxVoiceCount;
     }
 
-    bool getSnapshot(snapshot_t& snapshot) const override {
+    bool getSnapshot(snapshot_t& snapshot) const {
         snapshot.version     = SYNTH_SNAPSHOT_VERSION;
         const auto numParams = CtrSize(vecParams);
         snapshot.params.reserve(numParams);
@@ -1091,7 +1429,7 @@ public:
         return true;
     }
 
-    bool setSnapshot(const snapshot_t& snapshot) override {
+    bool setSnapshot(const snapshot_t& snapshot) {
         if (snapshot.version < 2) {
             dbgassert(0);
             return false;
@@ -1337,7 +1675,7 @@ private:
         osc1SplitMix += (targetOsc1SplitMix - osc1SplitMix) * 100.0 * dt;
         osc2Wave.Update(dt);
         osc2SplitMix += (targetOsc2SplitMix - osc2SplitMix) * 100.0 * dt;
-        lfoWave.Update(dt);
+        // lfoWave.Update(dt);
         oscMix += (targetOscMix - oscMix) * 100.0 * dt;
         masterVolume += (targetMasterVolume - masterVolume) * 100.0 * dt;
     }
@@ -1510,7 +1848,7 @@ private:
                     }
                     // dbgassert(v.lfo1.phase >= -1.0 && v.lfo1.phase <= 1.0);
                     double lfoFreqHz    = floatParamFreq->ValueModulated(v.modValues[Parameters::LfoFrequency]) * bpmHz;
-                    double dVoiceLfoBi  = v.lfo1.GetLfo(dt, lfoWave, lfoFreqHz, lfo1OneShot);
+                    double dVoiceLfoBi  = v.lfo1.GetLfo(dt, lfoFreqHz, lfo1OneShot);
                     v.lfo1.phaseFade -= (v.lfo1.phaseFade) * 1000 * dt;
                     double dVoiceLfoUni = 0.5 + 0.5 * dVoiceLfoBi;
                     dbgassert(dVoiceLfoUni >= 0.0 && dVoiceLfoUni <= 1.0);
@@ -2087,9 +2425,9 @@ public:
             case Parameters::MasterVolume:
                 targetMasterVolume = value;
                 break;
-            case Parameters::LfoWave:
-                lfoWave.Switch(value);
-                break;
+            // case Parameters::LfoWave:
+            //     lfoWave.Switch(value);
+                // break;
             default:
                 break;
         }
@@ -2126,6 +2464,9 @@ public:
         bCanReceiveMidi = true;
         isSynth = true;
         for (const auto& paramEntry : vecParams) {
+            if (!paramEntry) {
+                continue;
+            }
             int idx = PARAM_ENABLE + 1 + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
@@ -2143,6 +2484,7 @@ public:
                     regparam->quantizationSteps = params;
                     break;
             }
+            using Parameters = ParametersSynthUnison;
             switch (paramEntry->enumParam) {
                 case Parameters::Osc1Fine:
                 case Parameters::Osc2Fine:
@@ -2211,13 +2553,16 @@ public:
 
     void onPresetLoaded() {
         for (int32_t idx = 0; idx < CtrSize(vecParams); idx++) {
+            if (!vecParams[idx]) {
+                continue;
+            }
             auto param = getParam(idx + 1);
             param->setAll(vecParams[idx]->getAsDouble());
         }
     }
 
     void addPropertiesParameterTooltip(Table::tbl& table, int idx) override {
-        if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
+        if (idx > 0 && idx - 1 < CtrSize(vecParams) && vecParams[idx-1]) {
             SynthParamBase* param = vecParams[idx-1];
             const auto strName    = param->name;
             const auto strDisplay = param->getValueDisplay(param->getAsDouble());
@@ -2252,7 +2597,7 @@ public:
         }
     }
 
-    SynthParamBase* getSynthParam(Parameters enumParam) {
+    SynthParamBase* getSynthParam(ParametersSynthUnison enumParam) {
         return impl->getParam(enumParam);
     }
     void onPreUnload() override {
@@ -2262,7 +2607,7 @@ public:
 };
 
 PluginVST2_Synth::PluginVST2_Synth(audioMasterCallback audioMaster)
-    : BasePluginVST2(audioMaster, PLUGIN_UID, 0, Parameters::kNumParams, kNumInputs, kNumOutputs),
+    : BasePluginVST2(audioMaster, PLUGIN_UID, 0, ParametersSynthUnison::kNumParams, kNumInputs, kNumOutputs),
         impl(new SynthImplUnison(this)),
         vecParams(impl->vecParams) {
     isSynth(true);
@@ -2286,6 +2631,8 @@ SynthImplUnison* PluginVST2_Synth::getSynth() {
 void PluginVST2_Synth::getParameterLabel(VstInt32 index, char* label) {
     if (label && index >= 0 && index < CtrSize(vecParams)) {
         SynthParamBase* param = vecParams[index];
+        if (!param)
+            return;
         vst_strncpy(label, StringAsCStr(param->unit), PLUGIN_PARAM_STR_MAX_LEN);
     }
 }
@@ -2293,6 +2640,8 @@ void PluginVST2_Synth::getParameterLabel(VstInt32 index, char* label) {
 void PluginVST2_Synth::getParameterDisplay(VstInt32 index, char* text) {
     if (text && index >= 0 && index < CtrSize(vecParams)) {
         SynthParamBase* param = vecParams[index];
+        if (!param)
+            return;
         String valDisplay     = param->getValueDisplay(param->getAsDouble());
         vst_strncpy(text, StringAsCStr(valDisplay), PLUGIN_PARAM_STR_MAX_LEN);
     }
@@ -2301,6 +2650,8 @@ void PluginVST2_Synth::getParameterDisplay(VstInt32 index, char* text) {
 void PluginVST2_Synth::getParameterName(VstInt32 index, char* label) {
     if (index >= 0 && index < CtrSize(vecParams)) {
         SynthParamBase* param = vecParams[index];
+        if (!param)
+            return;
         vst_strncpy(label, StringAsCStr(param->shortName), PLUGIN_PARAM_STR_MAX_LEN);
     }
 }
@@ -2308,8 +2659,10 @@ void PluginVST2_Synth::getParameterName(VstInt32 index, char* label) {
 void PluginVST2_Synth::setParameter(VstInt32 index, float value) {
     if (index >= 0 && index < CtrSize(vecParams)) {
         SynthParamBase* param = vecParams[index];
+        if (!param)
+            return;
         param->set(value, value);
-        this->impl->OnParamChange(static_cast<Parameters>(param->enumParam));
+        this->impl->OnParamChange(static_cast<ParametersSynthUnison>(param->enumParam));
     }
     for (auto& pviewctr : this->views) {
         if (pviewctr->isInUse()) {
@@ -2321,13 +2674,14 @@ void PluginVST2_Synth::setParameter(VstInt32 index, float value) {
 param_converted_t PluginVST2_Synth::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
     if (idx >= 0 && idx < CtrSize(vecParams)) {
         SynthParamBase* param = vecParams[idx];
-        return param->convertValueDisplay(displayValue);
+        if (param)
+            return param->convertValueDisplay(displayValue);
     }
     return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
 }
 
 void PluginVST2_Synth::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
-    if (idx >= 0 && idx < CtrSize(vecParams)) {
+    if (idx >= 0 && idx < CtrSize(vecParams) && vecParams[idx]) {
         SynthParamBase* param = vecParams[idx];
         const auto strName    = param->name;
         const auto strDisplay = param->getValueDisplay(param->getAsDouble());
@@ -2364,7 +2718,8 @@ void PluginVST2_Synth::addPropertiesParameterTooltip(Table::tbl& table, int idx)
 float PluginVST2_Synth::getParameter(VstInt32 index) {
     if (index >= 0 && index < CtrSize(vecParams)) {
         SynthParamBase* param = vecParams[index];
-        return static_cast<double>(param->getAsDouble());
+        if (param)
+            return static_cast<double>(param->getAsDouble());
     }
     return 0.0f;
 }
@@ -3147,10 +3502,10 @@ public:
 
 class guiknob_synthparam final : public guiknob_pluginparam {
     SynthImplUnison* const synth;
-    const Parameters param;
+    const ParametersSynthUnison param;
 
 public:
-    explicit guiknob_synthparam(int32_t idx, int32_t idxExternal, SynthImplUnison* _impl, Parameters _param, guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
+    explicit guiknob_synthparam(int32_t idx, int32_t idxExternal, SynthImplUnison* _impl, ParametersSynthUnison _param, guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
         : guiknob_pluginparam(idxExternal, idx, _knobtype),
             synth(dynamic_cast<SynthImplUnison*>(_impl)),
             param(_param) {
@@ -3168,7 +3523,7 @@ public:
         }
         return std::nullopt;
     }
-    Parameters getParam() const {
+    ParametersSynthUnison getParam() const {
         return param;
     }
 };
@@ -3387,7 +3742,7 @@ public:
 
 class guicontainer_plugin_synth_editor final : public guictr_base, public splitter_cb {
     struct _synth_gui_param_knob {
-        Parameters param;
+        ParametersSynthUnison param;
         guiknob_pluginparam* knob;
         guiknob::knobtype type;
         guictr_base* parentContainer;
@@ -3490,14 +3845,16 @@ public:
         ctrEnvM.setLabel("Envelope Modulation");
         ctrMacro.setLabel("Macros");
         ctrShapeLfo.setLabel("Shape");
-
+        using Parameters = ParametersSynthUnison;
         vecParamUI.resize(Parameters::kNumParams);
         for (auto param : parametersOrdered) {
             auto type = guiknob::knobtype::SLIDER_LABELED;
             if (!stl_contains(parametersModulate, param)) {
                 type = guiknob::knobtype::KNOB_LABELED;
             }
-            switch (synth->getParam(param)->getType()) {
+            auto synthParam = synth->getParam(param);
+            dbgassert(synthParam);
+            switch (synthParam->getType()) {
                 case SynthParam::ParamType::ENUM:
                 case SynthParam::ParamType::INT:
                     type = guiknob::knobtype::KNOB_LABELED;
@@ -3526,7 +3883,7 @@ public:
                 case Parameters::LfoFrequency:
                 case Parameters::LfoPhase:
                 case Parameters::LfoShape:
-                case Parameters::LfoWave:
+                // case Parameters::LfoWave:
                 case Parameters::Lfo1TriggerMode:
                 case Parameters::Lfo1RampTriggerMode:
                     ctr = &ctrLfo;
@@ -3672,7 +4029,7 @@ public:
     }
 
     guiknob_pluginparam* getKnobFromParameter(int32_t index) {
-        if (index >= 0 && index < (int32_t) vecParamUI.size()) {
+        if (index >= 0 && index < (int32_t) vecParamUI.size() && vecParamUI[index].knob != nullptr) {
             return vecParamUI[index].knob;
         }
         return nullptr;
@@ -3682,7 +4039,8 @@ public:
         if (index == -1) {
             bGuiNeedsRefresh = true;
             for (auto& synthKnob : vecParamUI) {
-                synthKnob.knob->setValueInit(synth->getParam(synthKnob.param)->getAsDouble());
+                if (synthKnob.knob)
+                    synthKnob.knob->setValueInit(synth->getParam(synthKnob.param)->getAsDouble());
             }
             return;
         }
@@ -3697,6 +4055,8 @@ public:
 
     void onGuiOpen() {
         for (auto& synthKnob : vecParamUI) {
+            if (!synthKnob.knob)
+                continue;
             if (!moduleInstance) {
                 synthKnob.knob->setAudioEffect(vst2Instance);
             } else {
@@ -3712,6 +4072,8 @@ public:
 
     void onGuiClose() {
         for (auto& synthKnob : vecParamUI) {
+            if (!synthKnob.knob)
+                continue;
             if (!moduleInstance) {
                 synthKnob.knob->setAudioEffect(nullptr);
             } else {
@@ -3814,6 +4176,8 @@ public:
 
     void layout() override {
         for (auto& knob : vecParamUI) {
+            if (!knob.knob)
+                continue;
             if (knob.type == guiknob::knobtype::KNOB_LABELED) {
                 knob.knob->setLabelsFontScale(0.9f, 0.9f);
                 knob.knob->setLabelsScale(0.2f, 0.2f);
@@ -4345,7 +4709,7 @@ void module_synth_unison::settingChanged(Settings setting, float value) {
     log_lf(Log::L_DEBUG, "Setting changed: %s %f\n", stringsSettings[setting], value);
 }
 
-void PluginVST2_Synth::settingChanged(Settings setting, float value) {
+void PluginVST2_Synth::settingChanged(int32_t setting, float value) {
     log_lf(Log::L_DEBUG, "Setting changed: %s %f\n", stringsSettings[setting], value);
     if (setting == Settings::Oversampling) {
         setInitialDelay(getSynth()->getLatency());
@@ -4353,7 +4717,7 @@ void PluginVST2_Synth::settingChanged(Settings setting, float value) {
 }
 
 SynthImplUnison::SynthImplUnison(module_synth_unison* module)
-    : SynthImpl<SynthImplUnison>(module),
+    : SynthImpl<SynthImplUnison, ParametersSynthUnison>(module),
     moduleSynthUnisonInstance(module),
     instanceVST2Plugin(nullptr)
 {

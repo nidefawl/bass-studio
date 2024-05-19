@@ -26,6 +26,8 @@ enum ShapeWaveform : int32_t {
     SHAPE_SAW_INV,
     SHAPE_SQUARE,
     SHAPE_SQUARE_INV,
+    SHAPE_PULSE,
+    SHAPE_PULSE_INV,
 };
 
 enum ShapeFlags {
