@@ -46,6 +46,27 @@ namespace PluginLFO {
     constexpr int32_t PARAM_LFO_PHASE = 17;
     constexpr int32_t PARAM_LFO_MINIMUM = 18;
     constexpr int32_t PARAM_LFO_MAXIMUM = 19;
+    constexpr int32_t PARAM_LFO_PHASE_RESET_TICKS = 20;
+
+    constexpr std::array LFO_PHASE_RESET_STEPS = {
+        tick_t(0), tick_t(512), 1024, 1536, 2048, 2560, 3072, 3584, 4096, 6144, 8192, 12288, 16384, 20480, 24576, 28672, 32768, 40960, 49152, 57344, 65536, 81920, 98304, 114688, 131072, 163840, 196608, 229376, 262144, 327680, 393216, 458752, 524288
+    };
+
+    tick_t GetScaledResetTicks(float paramValue) {
+        int32_t idx = math::clamp<int32_t>(math::floorfS32(paramValue * (LFO_PHASE_RESET_STEPS.size()-1)), 0, LFO_PHASE_RESET_STEPS.size() - 1);
+        return LFO_PHASE_RESET_STEPS[idx];
+    }
+
+    float ResetTicksToParam(float resetTicks) {
+        size_t idx = 0;
+        for (size_t i = 0; i < LFO_PHASE_RESET_STEPS.size(); ++i) {
+            if (resetTicks >= LFO_PHASE_RESET_STEPS[i]) {
+                break;
+            }
+            idx = i;
+        }
+        return float(idx) / float(LFO_PHASE_RESET_STEPS.size() - 1);
+    }
 
     const double RATE_MIN = 1;
     const double RATE_MAX = TICKS_BAR*4;
@@ -122,7 +143,7 @@ namespace PluginLFO {
 
         int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, CtrSize(syncRatios) - 1);
         const SyncRatio& syncRatio = syncRatios[index];
-        return (TICKS_BAR * syncRatio.numerator) / syncRatio.denominator;
+        return float(TICKS_BAR * syncRatio.numerator) / syncRatio.denominator;
     }
 
     String FormatSyncRate(const std::vector<SyncRatio>& syncRatios, int32_t syncFlags, float paramValue) {
@@ -131,6 +152,10 @@ namespace PluginLFO {
         }
         int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, CtrSize(syncRatios) - 1);
         return syncRatios[index].text;
+    }
+
+    String FormatResetTicks(float paramValue) {
+        return StringFormat("%d", GetScaledResetTicks(paramValue));
     }
 
     struct impl_channel_snapshot_t {
@@ -164,25 +189,30 @@ namespace PluginLFO {
                 stack.pop_back();
                 return { valMin, valMax };
             }
-            std::pair<float, float> getRatePhase(double dTick) const {
+            std::tuple<float, float, float> getRatePhase(double dTick) const {
                 auto host = module->getPluginManager();
                 if (!host || stl_contains(stack, this)) {
-                    return { module->getParamValue(PARAM_LFO_RATE), module->getParamValue(PARAM_LFO_PHASE) };
+                    return { module->getParamValue(PARAM_LFO_RATE), module->getParamValue(PARAM_LFO_PHASE), module->getParamValue(PARAM_LFO_PHASE_RESET_TICKS) };
                 }
                 stack.push_back(this);
                 auto state = module->hostCallback->m_playbackState;
                 auto valRate = module->getModulatedParameterAt(host, PARAM_LFO_RATE, dTick, state);
                 auto valPhase = module->getModulatedParameterAt(host, PARAM_LFO_PHASE, dTick, state);
+                auto valResetTicks = module->getModulatedParameterAt(host, PARAM_LFO_PHASE_RESET_TICKS, dTick, state);
                 stack.pop_back();
-                return { valRate, valPhase };
+                return { valRate, valPhase, valResetTicks };
             }
         };
         struct lfo_automation_src_synced_t final : public lfo_automation_src {
             DAW::Shape::shape_t shape;
             float getPhase(double dTick) const {
-                const auto [fRate, fPhase] = getRatePhase(dTick);
+                const auto [fRate, fPhase, fPhaseDuration] = getRatePhase(dTick);
 
                 double fPhaseOffset = 0.0f;
+                if (fPhaseDuration > 0) {
+                    double phaseDuration = GetScaledResetTicks(fPhaseDuration);
+                    dTick = fmod(dTick, phaseDuration);
+                }
                 if (sync->syncRatios.empty()) {
                     fPhaseOffset = dTick / GetScaledRate(fRate);
                 } else {
@@ -337,7 +367,7 @@ namespace PluginLFO {
             void insertTickRange(tick_t tickBegin, tick_t tickEnd, const std::vector<automation_point_t>& data) override {
             }
             virtual float getPhase(double dTick) const {
-                const auto [fRate, fPhase] = getRatePhase(dTick);
+                const auto [fRate, fPhase, fPhaseDuration] = getRatePhase(dTick);
                 double fPhaseOffset = 0.0f;
                 if (sync->syncRatios.empty()) {
                     fPhaseOffset = dTick / GetScaledRate(fRate);
@@ -589,6 +619,13 @@ namespace PluginLFO {
         reg->shortLabel  = "Max";
         reg->unit  = "";
         reg->isBiPolar = true;
+        reg = registerParam(PARAM_LFO_PHASE_RESET_TICKS);
+        reg->setInitial(0.0f);
+        reg->name  = "Phase Reset";
+        reg->shortLabel  = "Reset";
+        reg->unit  = "Ticks";
+        reg->isAutomatable = false;
+        reg->quantizationSteps = LFO_PHASE_RESET_STEPS.size();
         impl->setSyncFlags(0, TRIPLET|DOTTED|STRAIGHT);
         outputModChannelsDesc.push_back({0, "LFO 0"});
     }
@@ -1312,6 +1349,10 @@ namespace PluginLFO {
             case PARAM_LFO_PHASE: {
                 return {math::clamp(fTextFieldVal / 360.0f, 0.0f, 1.0f), true};
             }
+            case PARAM_LFO_PHASE_RESET_TICKS: {
+                float phaseTicks = ResetTicksToParam(fTextFieldVal);
+                return {phaseTicks, true};
+            }
             default:
                 break;
         }
@@ -1331,6 +1372,10 @@ namespace PluginLFO {
         }
         if (param->idx == PARAM_LFO_MINIMUM || param->idx == PARAM_LFO_MAXIMUM) {
             return {StringFormat("%.2f", value*2.0f-1.0f), param->unit};
+        }
+        if (param->idx == PARAM_LFO_PHASE_RESET_TICKS) {
+            auto resetTicksStr = FormatResetTicks(value);
+            return {resetTicksStr, param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
