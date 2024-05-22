@@ -61,6 +61,13 @@ PluginManager::~PluginManager() {
     delete moduleMgr;
 }
 
+
+void PluginManager::setProcessingQuality(ProcessingQuality quality) {
+    for (auto plugin : this->pluginInstancesVST3) {
+        plugin->setProcessingMode(static_cast<Steinberg::Vst::ProcessModes>(quality));
+    }
+}
+
 void PluginManager::updateSampleFormat(const sampleformat_t& _sampleFormat) {
     for (auto stage : this->allAudioStages) {
         stage->sampleFormat = _sampleFormat;
@@ -72,6 +79,9 @@ void PluginManager::updateSampleFormat(const sampleformat_t& _sampleFormat) {
         plugin->onDisable();
     }
     for (auto plugin : this->pluginInstancesClap) {
+        plugin->onDisable();
+    }
+    for (auto plugin : this->pluginInstancesVST3) {
         plugin->onDisable();
     }
     for (auto plugin : this->pluginInstances) {
@@ -90,6 +100,9 @@ void PluginManager::updateSampleFormat(const sampleformat_t& _sampleFormat) {
         plugin->onEnable();
     }
     for (auto plugin : this->pluginInstancesClap) {
+        plugin->onEnable();
+    }
+    for (auto plugin : this->pluginInstancesVST3) {
         plugin->onEnable();
     }
     for (auto stage : this->allAudioStages) {

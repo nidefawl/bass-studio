@@ -64,10 +64,13 @@ class vst3plugin final : public effectbase {
     Steinberg::Vst::IEditControllerHostEditing* editControllerHostEditing = nullptr;
     Steinberg::Vst::HostProcessData processData = {};
 	Steinberg::Vst::ProcessContext processContext = {};
+    int32_t numInputEventBuses = 0;
+    int32_t numOutputEventBuses = 0;
 	Steinberg::IPtr<Steinberg::IPlugView> view = nullptr;
     Steinberg::Vst::ParameterInfo programChangeParameter{};
     bool bIsPostInit       = false;
     bool bIsLoadingProgram = false;
+    bool bIsInSuspend      = true;
     class ComponentHandler : public Steinberg::Vst::IComponentHandler
     {
         vst3plugin* plugin;
@@ -241,6 +244,7 @@ public:
     {
         processData.inputParameterChanges = &inputParameterChanges;
         processData.outputParameterChanges = &outputParameterChanges;
+        processData.processContext = &processContext;
     }
     ~vst3plugin() override {
         if (processData.inputEvents) delete[] dynamic_cast<Steinberg::Vst::EventList*>(processData.inputEvents);
@@ -255,65 +259,12 @@ public:
         processData.outputs = nullptr;
         processData.processContext = nullptr;
     }
-
-    String getUID() const { return uid.toString(true); }
-    VST3::Hosting::ClassInfo getClassInfo() const { return pluginProvider->getClassInfo(); }
-    ModuleType getModuleType() override { return MODULE_TYPE_VST3; };
-    String getAutomatableName() override { return this->sName; }
-    Steinberg::Vst::ProcessContext& getVst3ProcessContext() { return processContext; }
-    void checkForMainThread() {
-        if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
-            dbgassert(0);
-            throw std::logic_error("Requires Main Thread!");
-        }
-    }
-
-    void deactivate() {
-        checkForMainThread();
-        vst3AudioProcessor->setProcessing(false);
-        if (Steinberg::kResultOk != vst3Component->setActive(false)) {
-            log_lf(Log::L_ERROR, "%s: Failed to deactivate VST3 plugin\n", StringAsCStr(sName));
-            bIsEnabled = false;
-        }
-    }
-
-    void activate() {
-        checkForMainThread();
-        if (Steinberg::kResultOk != vst3Component->setActive(true)) {
-            log_lf(Log::L_ERROR, "%s: Failed to activate VST3 plugin\n", StringAsCStr(sName));
-            bIsEnabled = false;
-        }
-        vst3AudioProcessor->setProcessing(bIsEnabled);
-    }
-
-    void unloadVst3Plugin() {
-        checkForMainThread();
-        using namespace Steinberg;
-        using namespace Steinberg::Vst;
-        if (vst3Component) {
-            auto numInAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kInput);
-            auto numOutAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kOutput);
-            auto numInEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kInput);
-            auto numOutEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kOutput);
-            for (int i = 0; i < numInEventBuses; ++i) {
-                vst3Component->activateBus(kEvent, kInput, i, false);
-            }
-            for (int i = 0; i < numOutEventBuses; ++i) {
-                vst3Component->activateBus(kEvent, kOutput, i, false);
-            }
-            for (int i = 0; i < numInAudioBuses; ++i) {
-                vst3Component->activateBus(kAudio, kInput, i, false);
-            }
-            for (int i = 0; i < numOutAudioBuses; ++i) {
-                vst3Component->activateBus(kAudio, kOutput, i, false);
-            }
-        }
-		pluginProvider->releasePlugIn (vst3Component, editController);
-        editController = nullptr;
-        vst3AudioProcessor = nullptr;
-        vst3Component = nullptr;
-    }
-
+    /**
+     * loadVST3Plugin
+     * @brief Load the VST3 plugin. This method is called right after construction.
+     *        It will load the plugin and set up the necessary data structures.
+     * @return true if the plugin was loaded successfully
+     */
     bool loadVST3Plugin() {
         using namespace Steinberg;
         using namespace Steinberg::Vst;
@@ -380,6 +331,101 @@ public:
         return true;
     }
 
+    String getUID() const { return uid.toString(true); }
+    // VST3::Hosting::ClassInfo getClassInfo() const { return pluginProvider->getClassInfo(); }
+    ModuleType getModuleType() override { return MODULE_TYPE_VST3; };
+    String getAutomatableName() override { return this->sName; }
+    Steinberg::Vst::ProcessContext& getVst3ProcessContext() { return processContext; }
+    void setProcessingMode(Steinberg::Vst::ProcessModes pm) {
+        if (processData.processMode != pm) {
+            // checkForMainThread();
+            bool bReactivate = !bIsInSuspend;
+            if (bReactivate) {
+                vst3AudioProcessor->setProcessing(false);
+            }
+            processData.processMode = pm;
+            setupProcessingImpl();
+            if (bReactivate) {
+                vst3AudioProcessor->setProcessing(true);
+            }
+        }
+    }
+private:
+    void setupProcessingImpl() {
+        checkForMainThread();
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        ProcessSetup processSetup = {};
+        processSetup.symbolicSampleSize = processData.symbolicSampleSize;
+        processSetup.processMode = processData.processMode;
+        processSetup.maxSamplesPerBlock = format.blockSize;
+        processSetup.sampleRate = format.sampleRate;
+
+        if (kResultOk != vst3AudioProcessor->setupProcessing(processSetup)) {
+            log_lf(Log::L_ERROR, "%s: Failed to setup VST3 plugin processing\n", StringAsCStr(sName));
+            bIsEnabled = false;
+        }
+    }
+
+    void checkForMainThread() {
+        if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
+            dbgassert(0);
+            throw std::logic_error("Requires Main Thread!");
+        }
+    }
+
+    void deactivate() {
+        if (bIsInSuspend)
+            return;
+        checkForMainThread();
+        vst3AudioProcessor->setProcessing(false);
+        if (Steinberg::kResultOk != vst3Component->setActive(false)) {
+            log_lf(Log::L_ERROR, "%s: Failed to deactivate VST3 plugin\n", StringAsCStr(sName));
+            bIsEnabled = false;
+        }
+        bIsInSuspend = true;
+    }
+
+    void activate() {
+        if (!bIsInSuspend)
+            return;
+        checkForMainThread();
+        if (Steinberg::kResultOk != vst3Component->setActive(true)) {
+            log_lf(Log::L_ERROR, "%s: Failed to activate VST3 plugin\n", StringAsCStr(sName));
+            bIsEnabled = false;
+        }
+        vst3AudioProcessor->setProcessing(bIsEnabled);
+        bIsInSuspend = false;
+    }
+
+    void unloadVst3Plugin() {
+        checkForMainThread();
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        if (vst3Component) {
+            auto numInAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kInput);
+            auto numOutAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kOutput);
+            auto numInEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kInput);
+            auto numOutEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kOutput);
+            for (int i = 0; i < numInEventBuses; ++i) {
+                vst3Component->activateBus(kEvent, kInput, i, false);
+            }
+            for (int i = 0; i < numOutEventBuses; ++i) {
+                vst3Component->activateBus(kEvent, kOutput, i, false);
+            }
+            for (int i = 0; i < numInAudioBuses; ++i) {
+                vst3Component->activateBus(kAudio, kInput, i, false);
+            }
+            for (int i = 0; i < numOutAudioBuses; ++i) {
+                vst3Component->activateBus(kAudio, kOutput, i, false);
+            }
+        }
+		pluginProvider->releasePlugIn (vst3Component, editController);
+        editController = nullptr;
+        vst3AudioProcessor = nullptr;
+        vst3Component = nullptr;
+    }
+
     void scanParams() {
         using namespace Steinberg;
         using namespace Steinberg::Vst;
@@ -427,6 +473,97 @@ public:
         }
     }
 
+    void configureIOPorts() {
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        inputChannelsDesc.clear();
+        outputChannelsDesc.clear();
+        uint32_t numInAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kInput);
+        uint32_t numOutAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kOutput);
+        channelnum_t inputCount  = static_cast<channelnum_t>(math::clamp(numInAudioBuses, 0U, 255U));
+        channelnum_t outputCount = static_cast<channelnum_t>(math::clamp(numOutAudioBuses, 0U, 255U));
+        channelnum_t portOffsetInput = 0;
+        for (channelnum_t i = 0; i < inputCount; ++i) {
+            BusInfo info{};
+            if (kResultOk != vst3Component->getBusInfo(kAudio, kInput, i, info)) {
+                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin input bus info\n", StringAsCStr(sName));
+                bIsEnabled = false;
+                return;
+            }
+            DAW::channel_desc desc;
+            desc.offset = portOffsetInput;
+            desc.count = info.channelCount;
+            desc.name = VST3::StringConvert::convert(info.name);
+            inputChannelsDesc.push_back(desc);
+            portOffsetInput += desc.count;
+        }
+        channelnum_t portOffsetOutput = 0;
+        for (channelnum_t i = 0; i < outputCount; ++i) {
+            BusInfo info{};
+            if (kResultOk != vst3Component->getBusInfo(kAudio, kOutput, i, info)) {
+                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin output bus info\n", StringAsCStr(sName));
+                bIsEnabled = false;
+                return;
+            }
+            DAW::channel_desc desc;
+            desc.offset = portOffsetOutput;
+            desc.count = info.channelCount;
+            desc.name = VST3::StringConvert::convert(info.name);
+            outputChannelsDesc.push_back(desc);
+            portOffsetOutput += desc.count;
+        }
+
+        processData.numInputs = inputChannelsDesc.size();
+        processData.numOutputs = outputChannelsDesc.size();
+        if (processData.inputs) delete[] dynamic_cast<AudioBusBuffers*>(processData.inputs);
+        if (processData.outputs) delete[] dynamic_cast<AudioBusBuffers*>(processData.outputs);
+        if (processData.numInputs > 0) {
+            processData.inputs = new AudioBusBuffers[processData.numInputs];
+            for (channelnum_t ch = 0; ch < processData.numInputs; ++ch) {
+                auto& desc = inputChannelsDesc[ch];
+                AudioBusBuffers& busBuffers = processData.inputs[ch];
+                busBuffers.numChannels = desc.count;
+                busBuffers.silenceFlags = 0;
+                busBuffers.channelBuffers32 = new Sample32*[desc.count];
+                for (channelnum_t i = 0; i < desc.count; ++i) {
+                    busBuffers.channelBuffers32[i] = nullptr;
+                }
+            }
+        } else {
+            processData.inputs = nullptr;
+        }
+        if (processData.numOutputs > 0) {
+            processData.outputs = new AudioBusBuffers[processData.numOutputs];
+            for (channelnum_t ch = 0; ch < processData.numOutputs; ++ch) {
+                auto& desc = outputChannelsDesc[ch];
+                AudioBusBuffers& busBuffers = processData.outputs[ch];
+                busBuffers.numChannels = desc.count;
+                busBuffers.silenceFlags = 0;
+                busBuffers.channelBuffers32 = new Sample32*[desc.count];
+                for (channelnum_t i = 0; i < desc.count; ++i) {
+                    busBuffers.channelBuffers32[i] = nullptr;
+                }
+            }
+        } else {
+            processData.outputs = nullptr;
+        }
+        
+        numInputEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kInput);
+        numOutputEventBuses = 0; //vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kOutput); // INACTIVE
+        if (processData.inputEvents) delete[] dynamic_cast<EventList*>(processData.inputEvents);
+        if (processData.outputEvents) delete[] dynamic_cast<EventList*>(processData.outputEvents);
+        if (numInputEventBuses > 0) {
+            processData.inputEvents = new EventList[numInputEventBuses];
+        } else {
+            processData.inputEvents = nullptr;
+        }
+        if (numOutputEventBuses > 0) {
+            processData.outputEvents = new EventList[numOutputEventBuses];
+        } else {
+            processData.outputEvents = nullptr;
+        }
+    }
+public:
     void load(DAW::Host::PluginManager* host) override {
         effectbase::load(host);
         activate();
@@ -450,6 +587,41 @@ public:
                 }
             });
         }
+    }
+
+    void unload(DAW::Host::PluginManager* host) override {
+        effectbase::unload(host);
+        deactivate();
+        unloadVst3Plugin();
+    }
+    
+    void setSampleFormat(sampleformat_t sampleFormat) override {
+        effectbase::setSampleFormat(sampleFormat);
+    }
+
+    void initBuffers() override {
+        configureIOPorts();
+        effectbase::initBuffers();
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        processData.symbolicSampleSize = format.sampleformat == sampleformat_bits_t::FLOAT_32 ? SymbolicSampleSizes::kSample32 : SymbolicSampleSizes::kSample64;
+
+        /* Only assingn pointers here once. This is ok for now */
+        channelnum_t busIdx = 0;
+        for (channelnum_t ch = 0; ch < blockInputs->channels && busIdx < processData.numInputs; ++busIdx) {
+            auto& bus = processData.inputs[busIdx];
+            for (channelnum_t busCh = 0; busCh < bus.numChannels; ++busCh) {
+                bus.channelBuffers32[busCh] = blockInputs->buf[ch++];
+            }
+        }
+        busIdx = 0;
+        for (channelnum_t ch = 0; ch < blockOutputs->channels && busIdx < processData.numOutputs; ++busIdx) {
+            auto& bus = processData.outputs[busIdx];
+            for (channelnum_t busCh = 0; busCh < bus.numChannels; ++busCh) {
+                bus.channelBuffers32[busCh] = blockOutputs->buf[ch++];
+            }
+        }
+        setupProcessingImpl();
     }
 
     automatable_param_t* getParam(int32_t idx) override {
@@ -532,143 +704,6 @@ public:
         return effectbase::getParamValueDisplay(param->idx);
     }
 
-    void unload(DAW::Host::PluginManager* host) override {
-        effectbase::unload(host);
-        deactivate();
-        unloadVst3Plugin();
-    }
-
-    void initBuffers() override {
-        configureIOPorts();
-        effectbase::initBuffers();
-        using namespace Steinberg;
-        using namespace Steinberg::Vst;
-	    Steinberg::Vst::ProcessSetup processSetup = {};
-        processSetup.processMode = ProcessModes::kRealtime;
-        processSetup.symbolicSampleSize = format.sampleformat == sampleformat_bits_t::FLOAT_32 ? SymbolicSampleSizes::kSample32 : SymbolicSampleSizes::kSample64;
-        processSetup.maxSamplesPerBlock = format.blockSize;
-        processSetup.sampleRate = format.sampleRate;
-        processData.symbolicSampleSize = processSetup.symbolicSampleSize;
-        processData.processMode = processSetup.processMode;
-        processData.processContext = &processContext;
-
-        /* Only assingn pointers here once. This is ok for now */
-        channelnum_t busIdx = 0;
-        for (channelnum_t ch = 0; ch < blockInputs->channels && busIdx < processData.numInputs; ++busIdx) {
-            auto& bus = processData.inputs[busIdx];
-            for (channelnum_t busCh = 0; busCh < bus.numChannels; ++busCh) {
-                bus.channelBuffers32[busCh] = blockInputs->buf[ch++];
-            }
-        }
-        busIdx = 0;
-        for (channelnum_t ch = 0; ch < blockOutputs->channels && busIdx < processData.numOutputs; ++busIdx) {
-            auto& bus = processData.outputs[busIdx];
-            for (channelnum_t busCh = 0; busCh < bus.numChannels; ++busCh) {
-                bus.channelBuffers32[busCh] = blockOutputs->buf[ch++];
-            }
-        }
-
-        if (kResultOk != vst3AudioProcessor->setupProcessing(processSetup)) {
-            log_lf(Log::L_ERROR, "%s: Failed to setup VST3 plugin processing\n", StringAsCStr(sName));
-            bIsEnabled = false;
-        }
-    }
-
-    void configureIOPorts() {
-        using namespace Steinberg;
-        using namespace Steinberg::Vst;
-        inputChannelsDesc.clear();
-        outputChannelsDesc.clear();
-        uint32_t numInAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kInput);
-        uint32_t numOutAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kOutput);
-        channelnum_t inputCount  = static_cast<channelnum_t>(math::clamp(numInAudioBuses, 0U, 255U));
-        channelnum_t outputCount = static_cast<channelnum_t>(math::clamp(numOutAudioBuses, 0U, 255U));
-        channelnum_t portOffsetInput = 0;
-        for (channelnum_t i = 0; i < inputCount; ++i) {
-            BusInfo info{};
-            if (kResultOk != vst3Component->getBusInfo(kAudio, kInput, i, info)) {
-                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin input bus info\n", StringAsCStr(sName));
-                bIsEnabled = false;
-                return;
-            }
-            DAW::channel_desc desc;
-            desc.offset = portOffsetInput;
-            desc.count = info.channelCount;
-            desc.name = VST3::StringConvert::convert(info.name);
-            inputChannelsDesc.push_back(desc);
-            portOffsetInput += desc.count;
-        }
-        channelnum_t portOffsetOutput = 0;
-        for (channelnum_t i = 0; i < outputCount; ++i) {
-            BusInfo info{};
-            if (kResultOk != vst3Component->getBusInfo(kAudio, kOutput, i, info)) {
-                log_lf(Log::L_ERROR, "%s: Failed to get VST3 plugin output bus info\n", StringAsCStr(sName));
-                bIsEnabled = false;
-                return;
-            }
-            DAW::channel_desc desc;
-            desc.offset = portOffsetOutput;
-            desc.count = info.channelCount;
-            desc.name = VST3::StringConvert::convert(info.name);
-            outputChannelsDesc.push_back(desc);
-            portOffsetOutput += desc.count;
-        }
-
-        processData.numInputs = inputChannelsDesc.size();
-        processData.numOutputs = outputChannelsDesc.size();
-        if (processData.inputs) delete[] dynamic_cast<AudioBusBuffers*>(processData.inputs);
-        if (processData.outputs) delete[] dynamic_cast<AudioBusBuffers*>(processData.outputs);
-        if (processData.numInputs > 0) {
-            processData.inputs = new AudioBusBuffers[processData.numInputs];
-            for (channelnum_t ch = 0; ch < processData.numInputs; ++ch) {
-                auto& desc = inputChannelsDesc[ch];
-                AudioBusBuffers& busBuffers = processData.inputs[ch];
-                busBuffers.numChannels = desc.count;
-                busBuffers.silenceFlags = 0;
-                busBuffers.channelBuffers32 = new Sample32*[desc.count];
-                for (channelnum_t i = 0; i < desc.count; ++i) {
-                    busBuffers.channelBuffers32[i] = nullptr;
-                }
-            }
-        } else {
-            processData.inputs = nullptr;
-        }
-        if (processData.numOutputs > 0) {
-            processData.outputs = new AudioBusBuffers[processData.numOutputs];
-            for (channelnum_t ch = 0; ch < processData.numOutputs; ++ch) {
-                auto& desc = outputChannelsDesc[ch];
-                AudioBusBuffers& busBuffers = processData.outputs[ch];
-                busBuffers.numChannels = desc.count;
-                busBuffers.silenceFlags = 0;
-                busBuffers.channelBuffers32 = new Sample32*[desc.count];
-                for (channelnum_t i = 0; i < desc.count; ++i) {
-                    busBuffers.channelBuffers32[i] = nullptr;
-                }
-            }
-        } else {
-            processData.outputs = nullptr;
-        }
-        
-        auto numInEventBuses = vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kInput);
-        auto numOutEventBuses = 0; //vst3Component->getBusCount(MediaTypes::kEvent, BusDirections::kOutput); // INACTIVE
-        if (processData.inputEvents) delete[] dynamic_cast<EventList*>(processData.inputEvents);
-        if (processData.outputEvents) delete[] dynamic_cast<EventList*>(processData.outputEvents);
-        if (numInEventBuses > 0) {
-            processData.inputEvents = new EventList[numInEventBuses];
-        } else {
-            processData.inputEvents = nullptr;
-        }
-        if (numOutEventBuses > 0) {
-            processData.outputEvents = new EventList[numOutEventBuses];
-        } else {
-            processData.outputEvents = nullptr;
-        }
-    }
-    
-    void setSampleFormat(sampleformat_t sampleFormat) override {
-        effectbase::setSampleFormat(sampleFormat);
-    }
-
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double dTick, double samplePos, int32_t numSamples, playback_state state) override {
         using namespace Steinberg;
         using namespace Steinberg::Vst;
@@ -680,7 +715,6 @@ public:
          */
         dbgassert(in == blockInputs);
         dbgassert(out == blockOutputs);
-
         processData.numSamples = numSamples;
 
         auto& automationLanes = getAutomationLanes();
@@ -1033,6 +1067,14 @@ public:
         }
 
         const int32_t midiBusIndex = 0;
+        if (!processData.inputEvents) {
+            return;
+        }
+
+        if (numInputEventBuses <= midiBusIndex) {
+            return;
+        }
+
         Steinberg::Vst::EventList& eventList = dynamic_cast<Steinberg::Vst::EventList*>(processData.inputEvents)[midiBusIndex];
         eventList.clear();
         auto numEvents = int32_t(midiEvents.noteEvents->size() + midiEvents.ctrlEvents->size());

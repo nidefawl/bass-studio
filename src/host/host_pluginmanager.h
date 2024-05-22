@@ -71,6 +71,12 @@ typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 
 namespace DAW::Host {
 
+enum ProcessingQuality {
+    Q_REALTIME,
+    Q_PLAYBACK,
+    Q_RENDER,
+};
+
 struct builtin_module_reg_t {
     int id = -1;
     bool isSynth;
@@ -234,6 +240,7 @@ public:
     effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
     void updateSampleFormat(const sampleformat_t& _sampleFormat);
+    void setProcessingQuality(ProcessingQuality quality);
     void UpdateVstTime(VstTimeInfo& timeInfo, const sampleformat_t& sampleFormat, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) const;
 
     void onBeforeBlock(const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state);

@@ -150,6 +150,7 @@ void DawInstance::startExport() {
         tls.midiHost->stopMidi();
     }
     tls.host->setOutput(nullptr);
+    tls.host->setProcessingQuality(DAW::Host::ProcessingQuality::Q_RENDER);
     playThread.addRequestWithCallback(REQ_STATE, (int) playback_state::status_render, []() {
         auto& tls = daw_tls::getTls();
         tls.dawInstance->bExportFinished = true;
@@ -264,6 +265,7 @@ void DawInstance::onTick() {
         bExportFinished = false;
         {
             auto lock = getPlayThread()->lockThread();
+            tls.host->setProcessingQuality(DAW::Host::ProcessingQuality::Q_PLAYBACK);
             if (settings->dawsettings.audioEnabled) {
                 if (audioHost->startAudio(settings->iosettings)) {
                     auto stream = audioHost->getStreamSharedPtr(0);
