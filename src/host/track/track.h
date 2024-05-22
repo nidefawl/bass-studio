@@ -123,7 +123,7 @@ public:
 
     std::pair<clip_t*, clip_t*> getMinMax();
 
-    bool hasClip(const clip_t* c) {
+    bool hasClip(const clip_t* c) const {
         return std::find(clips.cbegin(), clips.cend(), c) != clips.cend();
     }
 

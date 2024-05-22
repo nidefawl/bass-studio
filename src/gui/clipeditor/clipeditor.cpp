@@ -1773,6 +1773,9 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                         return true;
                     }
                     for (auto cl : clips) {
+                        if (!tr->getClips().hasClip(cl)) {
+                            continue;
+                        }
                         std::set<note_t*>& selection = cl->notes.selection;
                         if (bIsShift) {
                             cl->notes.selection = selectionsStart[cl];
@@ -1859,6 +1862,9 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                         return true;
                     }
                     for (auto cl : clips) {
+                        if (!tr->getClips().hasClip(cl)) {
+                            continue;
+                        }
                         std::set<note_t*>& selection = cl->notes.selection;
                         if (bIsShift) {
                             cl->notes.selection = selectionsStart[cl];
