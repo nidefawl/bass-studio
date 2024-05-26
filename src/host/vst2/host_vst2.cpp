@@ -2,6 +2,7 @@
 #include "assert_dbg.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
+#include "logging.h"
 #include "thread.h"
 #include "host/daw/history.h"
 #include "host/track/track_impl.h"
@@ -517,7 +518,7 @@ namespace DAW::Host {
 
 void PluginManager::onBeforeBlock(const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) {
     auto loopEnabed = state != playback_state::status_render && prjGlobals.loopEnabled;
-    auto& vst2TransportState = mgrImpl->vst2TransportStateFlags;
+    auto& vst2TransportState = getTransportStateFlagsVst2();
     bool changed = DAW::VST2::SetFlag(vst2TransportState, kVstTransportPlaying, DAW::isPlaybackState(state));
     changed |= DAW::VST2::SetFlag(vst2TransportState, kVstTransportCycleActive, loopEnabed);
     changed |= DAW::VST2::SetFlag(vst2TransportState, kVstTransportRecording, false);
@@ -525,7 +526,7 @@ void PluginManager::onBeforeBlock(const project_globals_t& prjGlobals, double sa
 }
 void PluginManager::UpdateVstTime(VstTimeInfo& timeInfo, const sampleformat_t& sampleFormat, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) const {
     DAW::VST2::UpdateTime(timeInfo,
-                            mgrImpl->vst2TransportStateFlags,
+                            getTransportStateFlagsVst2(),
                             sampleFormat,
                             prjGlobals,
                             samplePos,
@@ -533,26 +534,17 @@ void PluginManager::UpdateVstTime(VstTimeInfo& timeInfo, const sampleformat_t& s
                             state);
 }
 
-void PluginManager::destroy() {
-    stopScanner();
+void PluginManager::destroyVST2() {
     dbgassert(hostSlot > -1);
     dbgassert(DAW::VST2::g_hostslots[hostSlot].g_instance);
     DAW::VST2::g_hostslots[hostSlot].g_instance = nullptr;
-    if (Steinberg::Vst::PluginContextFactory::instance().getPluginContext() == pluginHostVST3Context.get()) {
-        Steinberg::Vst::PluginContextFactory::instance().setPluginContext(nullptr);
-    }
-    pluginHostVST3Context.reset();
 }
 
-bool PluginManager::assignMasterCallback(PluginManager* host)
-{
-    host->pluginHostCallback = std::make_shared<::DAW::Host::PluginHostCallback>(host);
-    host->pluginHostVST3Context = std::make_shared<Steinberg::Vst::HostApplication>();
-    Steinberg::Vst::PluginContextFactory::instance().setPluginContext(host->pluginHostVST3Context.get());
+bool PluginManager::assignVST2MasterCallback(PluginManager* host, ::DAW::Host::PluginHostCallback* cb) {
     for (int i = 0; i < NUM_HOST_CB_SLOTS; i++) {
         if (DAW::VST2::g_hostslots[i].g_instance == nullptr) {
             DAW::VST2::g_hostslots[i].g_instance = host;
-            DAW::VST2::g_hostslots[i].g_hostCallback = host->pluginHostCallback.get();
+            DAW::VST2::g_hostslots[i].g_hostCallback = cb;
             host->hostSlot = i;
             if (i == 0) {
                 host->masterCallBackSlot = DAW::VST2::audioMaster1;
@@ -569,7 +561,9 @@ bool PluginManager::assignMasterCallback(PluginManager* host)
             return true;
         }
     }
-    dbgassert(0&&"Out of host slots");
+    log_lf(Log::L_ERROR, "No free VST2 host slots\n");
+    dbgassert(0);
     return false;
 }
+
 } // namespace DAW::Host

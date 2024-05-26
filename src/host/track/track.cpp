@@ -8,6 +8,7 @@
 #include "host/daw_channel.h"
 #include "host/graph/effect_graph.h"
 #include "host/host.h"
+#include "host/host_plugin_loadresult.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
@@ -518,7 +519,8 @@ namespace DAW {
             plugindatabase_t* db = plugindatabase_t::getInstance();
             pluginentry_t resolvedPlugin;
             if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-                auto res = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat, pluginSnapshot.clapId});
+                auto loadResult = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat, pluginSnapshot.clapId});
+                Host::LoadResultPluginImpl& res = *loadResult;
                 if (res.library.isSuccess()) {
                     res.plugin->localDbId = resolvedPlugin.localDbId;
                     effect = res.plugin;

@@ -24,6 +24,7 @@
 
 namespace DAW::Host {
     class PluginManager;
+    struct LoadResultSharedLibrary;
 }
 class PluginHostSettings;
 using WId = WINDOW_HANDLE;
@@ -60,7 +61,7 @@ private:
         std::vector<AudioBlock> dawInputBuffers;
         std::vector<AudioBlock> dawOutputBuffers;
         clap_event_transport_t transport{};
-        DAW::Host::LoadResultSharedLibrary library;
+        // DAW::Host::LoadResultSharedLibrary library;
         bool bIsStopProcessing = false;
         std::vector<IMidiMsg> midiEvents;
         std::vector<ParamModulation> paramModulations;
@@ -77,7 +78,7 @@ public:
     // effectbase
     ModuleType getModuleType() override { return MODULE_TYPE_CLAP; };
     int getModuleCategory() const { return pluginCategory; };
-    void* getModuleHandle() { return dawHandles->library.module; }
+    void* getModuleHandle() { return nullptr; }
     String getAutomatableName() override {
         return this->sName;
     }

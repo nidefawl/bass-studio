@@ -21,6 +21,7 @@
 #include "host/daw/history.h"
 #include "host/host_plugin_window.h"
 #include "host/plugin/clap/clap-plugin-param.h"
+#include "host/host_plugin_loadresult.h"
 #include "logging.h"
 #include "host/plugin/modules.h"
 #include "plugins/synth/IPlugMidi.h"
@@ -297,7 +298,7 @@ bool clapplugin::loadClapPlugin(DAW::Host::LoadResultSharedLibrary& _library) {
     _process.in_events  = _eventListInput.clapInputEvents();
     _process.out_events = _evOut.clapOutputEvents();
 
-    this->dawHandles->library = _library;
+    // this->dawHandles->library = _library;
 
     initPluginExtensions();
     scanParams();

@@ -1,25 +1,27 @@
 #include "host/host_pluginmanager.h"
 #include "assert_dbg.h"
+#include "str_util.h"
 #include "fileio.h"
-#include "host/daw_channel.h"
 #include "logging.h"
+#include "platform.h"
+#include "host/daw_channel.h"
 #include "host/plugin/modules.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/clap/clap-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
 #include "host/plugin/vst3/vst3plugin.h"
-#include "platform.h"
-#include "plugin/vst3/vst3plugin.h"
-#include "pluginterfaces/vst/ivstaudioprocessor.h"
-#include "public.sdk/source/vst/hosting/plugprovider.h"
-#include "public.sdk/source/vst/utility/uid.h"
-#include "str_util.h"
+#include "host/host_plugin_loadresult.h"
 #include "host/track/track_impl.h"
+#include "plugin/vst3/vst3plugin.h"
+#include <pluginterfaces/vst/ivstaudioprocessor.h>
+#include <public.sdk/source/vst/hosting/plugprovider.h>
+#include <public.sdk/source/vst/utility/uid.h>
+#include <vstsdk-host-2.4/aeffectx.h>
+#include <public.sdk/source/vst/hosting/hostclasses.h>
+#include <public.sdk/source/vst/hosting/module.h>
 #include <clap/clap.h>
 #include <memory>
-
-#include <public.sdk/source/vst/hosting/module.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -49,6 +51,19 @@ public:
     }
 };
 
+/**
+* pluginmanager internals
+*/
+class PluginManager::pluginmanager_impl {
+public:
+    daw_tls::tlsinstance tls;
+    std::unique_ptr<ProcessThread> threadPluginScannerProcess;
+    int scanningState = 0;
+    int32_t vst2TransportStateFlags = 0;
+    SafeRefStorage<effectbase> safeRefs;
+    std::shared_ptr<PluginHostCallback> pluginHostCallback;
+    std::shared_ptr<Steinberg::Vst::HostApplication> pluginHostVST3Context;
+};
 
 PluginManager::PluginManager() noexcept
     : mgrImpl(new PluginManager::pluginmanager_impl()), moduleMgr{new PluginManager::ModuleManager{}} 
@@ -187,7 +202,7 @@ void PluginManager::updatePluginWindows() {
 }
 
 IHostCallback* PluginManager::getHostCallback() {
-    return pluginHostCallback.get();
+    return mgrImpl->pluginHostCallback.get();
 }
 
 void PluginManager::unload() {
@@ -274,7 +289,7 @@ void PluginManager::createAudio(track_t* track, std::optional<audio_stage_id_t> 
     auto audio = new track_impl_t(this,
                                   getNextGlobalAudioStageId(stageIdFirst),
                                   track,
-                                  pluginHostCallback->m_sampleFormatInternal,
+                                  mgrImpl->pluginHostCallback->m_sampleFormatInternal,
                                   DAW::Host::DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
     trackAudioStages.push_back(audio);
@@ -300,7 +315,7 @@ void PluginManager::releaseAudio(track_t* track) {
 audio_stage_t* PluginManager::createAudioStage() {
     auto audio = new audio_stage_t(this,
                                    getNextGlobalAudioStageId(),
-                                   pluginHostCallback->m_sampleFormatInternal,
+                                   mgrImpl->pluginHostCallback->m_sampleFormatInternal,
                                    DAW::Host::DEFAULT_CHANNEL_COUNT,
                                    DAW::Host::DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
@@ -746,10 +761,10 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
             }
             if (classCount >= 1 && req.uIdVst3.empty()) {
                 libResult.type = classCount > 1 ? SharedLibPluginType::VST3_SHELL : SharedLibPluginType::VST3;
-                return {libResult, static_cast<vst3plugin*>(nullptr), filepath, nameWithoutExt};
+                return LoadResultPluginImpl{libResult, static_cast<vst3plugin*>(nullptr), filepath, nameWithoutExt};
             } else {
                 libResult.state = SharedLibState::FAILED;
-                return LoadResultPlugin{libResult};
+                return LoadResultPluginImpl{libResult};
             }
         }
         for (auto &classInfo : factory.classInfos()) {
@@ -769,16 +784,16 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
                 {
                     delete plugin;
                     libResult.state = SharedLibState::FAILED;
-                    return LoadResultPlugin{libResult};
+                    return LoadResultPluginImpl{libResult};
                 }
                 pluginInstancesVST3.push_back(plugin);
                 pluginInstances.push_back(plugin);
                 plugin->load(this);
-                return {libResult, plugin, filepath, nameWithoutExt};
+                return LoadResultPluginImpl{libResult, plugin, filepath, nameWithoutExt};
             }
         }
         libResult.state = SharedLibState::FAILED;
-        return LoadResultPlugin{libResult};
+        return LoadResultPluginImpl{libResult};
     }
 
     if (libResult.state == SharedLibState::SUCCESS && libResult.type == SharedLibPluginType::CLAP) {
@@ -787,20 +802,20 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         if (!plugin->loadClapPlugin(libResult)) {
             delete plugin;
             libResult.state = SharedLibState::FAILED;
-            return LoadResultPlugin{libResult};
+            return LoadResultPluginImpl{libResult};
         }
         pluginInstancesClap.push_back(plugin);
         pluginInstances.push_back(plugin);
 
         plugin->load(this);
         moduleCloser.moduleToClose = nullptr;
-        return {libResult, plugin, filepath, nameWithoutExt};
+        return LoadResultPluginImpl{libResult, plugin, filepath, nameWithoutExt};
     }
 
     if (uId != 0) {
-        pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
+        mgrImpl->pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
     } else {
-        pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+        mgrImpl->pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     }
 
     AEffect* aeffect = nullptr;
@@ -810,7 +825,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         aeffect = fn(masterCallBackSlot);
         if (!aeffect) {
             libResult.state = SharedLibState::FAILED;
-            return LoadResultPlugin{libResult};
+            return LoadResultPluginImpl{libResult};
         }
 #ifdef _WIN32
     } else if (libResult.state == SharedLibState::DL_OPEN_FAILED && moduleFormat <= 0) {
@@ -821,20 +836,20 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 #endif //_WIN32
     }
 
-    pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+    mgrImpl->pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     
     if (libResult.state != SharedLibState::SUCCESS) {
         moduleCloser.moduleToClose = nullptr;
-        return LoadResultPlugin{libResult};
+        return LoadResultPluginImpl{libResult};
     }
     if (!aeffect || libResult.type != SharedLibPluginType::VST2) {
         libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
-        return LoadResultPlugin{libResult};
+        return LoadResultPluginImpl{libResult};
     }
 
     if (aeffect->magic != kEffectMagic) {
         libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
-        return LoadResultPlugin{libResult};
+        return LoadResultPluginImpl{libResult};
     }
 
     if (uId == 0) {
@@ -844,19 +859,19 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         if (pluginCategory == VstPlugCategory::kPlugCategShell) {
             libResult.type = SharedLibPluginType::VST2_SHELL;
             moduleCloser.moduleToClose = nullptr;
-            return {libResult, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt};
+            return LoadResultPluginImpl{libResult, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt};
         }
     }
 
     if (aeffect->user) {
         libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
-        return LoadResultPlugin{libResult};
+        return LoadResultPluginImpl{libResult};
     }
 
     //NOTE: Plugins with no inputs and outputs might exists
     if (aeffect->numOutputs <= 0 && aeffect->numInputs <= 0) {
         libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
-        return LoadResultPlugin{libResult};
+        return LoadResultPluginImpl{libResult};
     }
 
     globalId = getNextGlobalModuleId(globalId);
@@ -873,7 +888,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 
     dbgassert(plugin->handle && plugin->handle->aeffect);
     moduleCloser.moduleToClose = nullptr;
-    return {libResult, plugin, plugin->handle, filepath, nameWithoutExt};
+    return LoadResultPluginImpl{libResult, plugin, plugin->handle, filepath, nameWithoutExt};
 }
 
 void PluginManager::scanPlugins() {
@@ -965,11 +980,74 @@ bool PluginManager::isScanning() {
     return mgrImpl->scanningState > 0;
 }
 
-LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
+LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
     : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin), shellPluginHandle(_shellHandle), path(std::move(_path)), name(std::move(_name)){};
-LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name)
+LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name)
     : library(std::move(_lib)), plugin(_plugin), clapPlugin(_plugin), path(std::move(_path)), name(std::move(_name)){};
-LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vst3plugin* _plugin, String _path, String _name)
+LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, vst3plugin* _plugin, String _path, String _name)
     : library(std::move(_lib)), plugin(_plugin), vst3Plugin(_plugin), path(std::move(_path)), name(std::move(_name)){};
-LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin) : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin){};
+LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, vstplugin* _plugin) : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin){};
+
+LoadResultPlugin::LoadResultPlugin(LoadResultPluginImpl _impl) : impl(new LoadResultPluginImpl{}) {
+    *impl = std::move(_impl);
+}
+LoadResultPlugin::~LoadResultPlugin() {
+    delete impl;
+}
+LoadResultPluginImpl& LoadResultPlugin::operator*() const {
+    return *impl;
+}
+
+daw_tls::tlsinstance& PluginManager::getTls() const {
+    return mgrImpl->tls;
+}
+
+SafeRefStorage<effectbase>* PluginManager::getSafeRefStore() {
+    return &mgrImpl->safeRefs;
+}
+
+LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
+    return loadPlugin({ filepath, uId, globalId, bugfixFlags });
+}
+
+int32_t& PluginManager::getTransportStateFlagsVst2() {
+    return mgrImpl->vst2TransportStateFlags;
+}
+const int32_t& PluginManager::getTransportStateFlagsVst2() const {
+    return mgrImpl->vst2TransportStateFlags;
+}
+
+
+void PluginManager::destroyVST3() {
+    if (Steinberg::Vst::PluginContextFactory::instance().getPluginContext() == mgrImpl->pluginHostVST3Context.get()) {
+        Steinberg::Vst::PluginContextFactory::instance().setPluginContext(nullptr);
+    }
+    mgrImpl->pluginHostVST3Context.reset();
+}
+
+void PluginManager::assignVST3MasterCallback(PluginManager* host)
+{
+    host->mgrImpl->pluginHostVST3Context = std::make_shared<Steinberg::Vst::HostApplication>();
+    Steinberg::Vst::PluginContextFactory::instance().setPluginContext(host->mgrImpl->pluginHostVST3Context.get());
+}
+
+
+
+void PluginManager::destroy() {
+    stopScanner();
+    destroyVST2();
+    destroyVST3();
+}
+
+bool PluginManager::assignMasterCallback(PluginManager* host)
+{
+    auto cb = std::make_shared<::DAW::Host::PluginHostCallback>(host);
+    host->mgrImpl->pluginHostCallback = cb;
+    if (!assignVST2MasterCallback(host, cb.get())) {
+        return false;
+    }
+    assignVST3MasterCallback(host);
+    return true;
+}
+
 }// namespace DAW::Host

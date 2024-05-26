@@ -1,42 +1,35 @@
 #pragma once
 #include "config.h"
-#include "host/plugin/modules.h"
+#include "types.h"
 #include "str_util.h"
-#include "seq_time.h"
+#include "audio_config.h"
+#include "daw_channel.h"
 #include "dsp_util.h"
+#include "hires_timer.h"
+#include "note.h"
+#include "rand.h"
+#include "saferef.h"
+#include "seq_time.h"
+#include "threads/childprocessthread.h"
+#include "tls.h"
+#include "util/profiling.h"
+#include "host/audiobuffer/audioblock.h"
+#include "host/audiobuffer/audiobuffer.h"
+#include "host/graph/effect_graph.h"
+#include "host/graph/track_graph.h"
+#include "host/host_pluginmanager.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/modules.h"
+#include "host/project/project.h"
+#include "host/track/track.h"
+#include <atomic>
 #include <functional>
+#include <map>
 #include <optional>
 #include <utility>
 #include <vector>
-#include <atomic>
-#include "threads/childprocessthread.h"
-#include "tls.h"
-#include "types.h"
-#include <map>
-
-// would be nice to not have these includes in the header
-#include <vstsdk-host-2.4/aeffectx.h>
-#include <public.sdk/source/vst/hosting/hostclasses.h>
-#include <public.sdk/source/vst/hosting/module.h>
-
-#include "note.h"
-#include "rand.h"
-#include "hires_timer.h"
-#include "host/project/project.h"
-#include "audio_config.h"
-#include "host/audiobuffer/audiobuffer.h"
-#include "host/audiobuffer/audioblock.h"
-#include "saferef.h"
-#include "host/track/track.h"
-#include "host/graph/track_graph.h"
-#include "host/graph/effect_graph.h"
-#include "daw_channel.h"
-#include "util/profiling.h"
-#include "host/host_pluginmanager.h"
-#include "host/plugin/base/base-plugin.h"
-
-
 #include <memory>
+
 #ifdef __linux__
 #define PLATFORM_PLUGIN_EXT "so"
 #endif
@@ -71,6 +64,14 @@ typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 
 namespace DAW::Host {
 
+struct LoadResultPluginImpl;
+struct LoadResultPlugin {
+    LoadResultPluginImpl* const impl;
+    ~LoadResultPlugin();
+    LoadResultPlugin(LoadResultPluginImpl _impl);
+    LoadResultPluginImpl& operator*() const;
+};
+
 enum ProcessingQuality {
     Q_REALTIME,
     Q_PLAYBACK,
@@ -83,61 +84,6 @@ struct builtin_module_reg_t {
     String name;
     FnCreateModule fnNewInstance;
 };
-
-enum class SharedLibPluginType : int32_t {
-    UNKNOWN = -1,
-    VST2 = 0,
-    VST2_SHELL = 1,
-    CLAP = 2,
-    VST3 = 3,
-    VST3_SHELL = 4,
-};
-
-enum class SharedLibState : int32_t {
-    FILE_NOT_FOUND = -3,
-    DL_OPEN_FAILED = -2,
-    DL_UNKNOWN_FORMAT = -1,
-    FAILED = 0,
-    SUCCESS = 1,
-};
-
-struct LoadResultSharedLibrary {
-    SharedLibPluginType type = SharedLibPluginType::UNKNOWN;
-    SharedLibState state = SharedLibState::FILE_NOT_FOUND;
-    String error = "";
-    void* module = nullptr;
-    void* entryPoint = nullptr;
-    VST3::Hosting::Module::Ptr vst3Module{};
-    static inline LoadResultSharedLibrary FromError(SharedLibState _state, const String& _error, SharedLibPluginType _type = SharedLibPluginType::UNKNOWN) {
-        return {_type, _state, _error, nullptr, nullptr};
-    }
-    static inline LoadResultSharedLibrary FromSuccess(SharedLibPluginType _type, void* module, void* entryPoint) {
-        return {_type, SharedLibState::SUCCESS, "", module, entryPoint};
-    }
-    static inline LoadResultSharedLibrary FromSuccessVST3(VST3::Hosting::Module::Ptr&& module) {
-        return {SharedLibPluginType::VST3, SharedLibState::SUCCESS, "", nullptr, nullptr, module};
-    }
-    bool isSuccess() const {
-        return state >= SharedLibState::SUCCESS && type != SharedLibPluginType::UNKNOWN;
-    }
-};
-
-struct LoadResultPlugin {
-    LoadResultSharedLibrary library;
-    effectbase* plugin = nullptr;
-    vstplugin* vstPlugin = nullptr;
-    clapplugin* clapPlugin = nullptr;
-    vst3plugin* vst3Plugin = nullptr;
-    handles_t* shellPluginHandle = nullptr;
-    String path;
-    String name;
-    explicit LoadResultPlugin(LoadResultSharedLibrary _lib) : library(std::move(_lib)){};
-    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin);
-    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name);
-    LoadResultPlugin(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name);
-    LoadResultPlugin(LoadResultSharedLibrary _lib, vst3plugin* _plugin, String _path, String _name);
-};
-
 
 class PluginHostCallback final : public IHostCallback {
     PluginManager* const host;
@@ -175,16 +121,7 @@ struct PluginLoadParameters {
 };
 class PluginManager {
 private:
-    /**
-    * pluginmanager internals
-    */
-    class pluginmanager_impl {
-    public:
-        daw_tls::tlsinstance tls;
-        std::unique_ptr<ProcessThread> threadPluginScannerProcess;
-        int scanningState = 0;
-        int32_t vst2TransportStateFlags = 0;
-    };
+    class pluginmanager_impl;
     pluginmanager_impl* const mgrImpl;
     void registerModules();
     std::vector<audio_stage_t*> allAudioStages;
@@ -203,25 +140,28 @@ private:
     std::vector<effectbase*> pluginInstances;
     std::vector<effectbase*> pluginsDeferred;
     std::vector<builtin_module_reg_t> builtinModules;
-    SafeRefStorage<effectbase> safeRefs;
-    std::shared_ptr<PluginHostCallback> pluginHostCallback;
-    std::shared_ptr<Steinberg::Vst::HostApplication> pluginHostVST3Context;
     LoadResultPlugin loadInternalPlugin(int32_t type, int32_t globalId = 0);
     /* These are currently not called */
     void updatePluginWindows();
+    int32_t& getTransportStateFlagsVst2();
+    const int32_t& getTransportStateFlagsVst2() const;
+
 public:
     virtual void onTrackLayoutChange() {
     }
     static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY    = 1;
     static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
     static bool assignMasterCallback(PluginManager* host);
+    static bool assignVST2MasterCallback(PluginManager* host, ::DAW::Host::PluginHostCallback* cb);
+    static void assignVST3MasterCallback(PluginManager* host);
+
     PluginManager() noexcept;
     virtual ~PluginManager();
     void setTls(daw_tls::tlsinstance& tls);
-    daw_tls::tlsinstance& getTls() const {
-        return mgrImpl->tls;
-    }
+    daw_tls::tlsinstance& getTls() const;
     void destroy();
+    void destroyVST2();
+    void destroyVST3();
     std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
         return builtinModules;
     }
@@ -234,9 +174,7 @@ public:
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
     LoadResultPlugin loadPlugin(const PluginLoadParameters& req);
-    LoadResultPlugin loadPlugin(const String& filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0) {
-        return loadPlugin({filepath, uId, globalId, bugfixFlags});
-    }
+    LoadResultPlugin loadPlugin(const String& filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
     effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
     void updateSampleFormat(const sampleformat_t& _sampleFormat);
@@ -260,9 +198,7 @@ public:
     void getDeferredEffects(std::vector<effectbase*>& effects) {
         effects = pluginsDeferred;
     }
-    SafeRefStorage<effectbase>* getSafeRefStore() {
-        return &safeRefs;
-    }
+    SafeRefStorage<effectbase>* getSafeRefStore();
     int32_t validateIds();
 
     bool movePluginsToStage(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);

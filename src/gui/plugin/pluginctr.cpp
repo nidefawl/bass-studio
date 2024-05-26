@@ -33,6 +33,7 @@
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
 #include "host/plugindatabase/plugindatabase.h"
+#include "host/host_plugin_loadresult.h"
 #include "threads/playbackthread.h"
 
 #include "host/track/track.h"
@@ -584,7 +585,8 @@ int guictr_plugins::slotFromCoord(ivec2 _pos) {
     return slot;
 }
 effectbase* gui_pluginlibrary_entry::makeInstance() {
-    auto res = dawCtrl->getDaw()->getPluginManager()->loadPlugin({entry.path, entry.uid, 0, entry.bugfixFlags, entry.moduleFormat, entry.clapId});
+    auto loadResult = dawCtrl->getDaw()->getPluginManager()->loadPlugin({entry.path, entry.uid, 0, entry.bugfixFlags, entry.moduleFormat, entry.clapId});
+    DAW::Host::LoadResultPluginImpl& res = *loadResult;
     if (res.library.isSuccess()) {
         res.plugin->setName(entry.name);
         res.plugin->localDbId = entry.localDbId;
