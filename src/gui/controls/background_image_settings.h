@@ -1,3 +1,4 @@
+#pragma once
 #include "gui/container/container.h"
 #include "gui/controls/button.h"
 #include "gui/controls/colorpick.h"
