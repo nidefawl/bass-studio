@@ -478,7 +478,7 @@ long PaAsioMessageCallback( long messageType, long value, void *message, double 
             return 1;
         default:
             log_lf(Log::L_DEBUG, "PaAsioMessageCallback: unknown message type %ld\n", messageType);
-            return 0;
+            break;
     }
     return 0;
 }

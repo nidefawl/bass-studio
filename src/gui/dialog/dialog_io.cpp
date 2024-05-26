@@ -801,7 +801,7 @@ public:
             auto daw = dawCtrl->getDaw();
             auto audiohost = daw->getAudioHost();
             auto err = audiohost->getLastErrorMessage();
-            if (err.length() != bHadError) {
+            if (!err.empty() != bHadError) {
                 bHadError = !err.empty();
                 strLastError = err;
                 layout();

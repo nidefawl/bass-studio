@@ -3998,5 +3998,4 @@ bool gui_clipsettings::canMouseHit() const {
     auto clip = view.clip();
     if (!clip) return false;
     return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsClip;
-    return true;
 }
