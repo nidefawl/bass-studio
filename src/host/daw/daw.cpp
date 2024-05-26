@@ -138,7 +138,7 @@ void DawInstance::startPlaying(tick_t pos) {
         projectGlobals.cursor.setEmptySelection();
         projectGlobals.cursor.cursorPos = pos;
     }
-    playThread.addRequest(REQ_STATE, (int) playback_state::status_playback, true);
+    playThread.addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int) playback_state::status_playback, true);
 }
 
 void DawInstance::startExport() {
@@ -151,7 +151,7 @@ void DawInstance::startExport() {
     }
     tls.host->setOutput(nullptr);
     tls.host->setProcessingQuality(DAW::Host::ProcessingQuality::Q_RENDER);
-    playThread.addRequestWithCallback(REQ_STATE, (int) playback_state::status_render, []() {
+    playThread.addRequestWithCallback(PlaybackThread::REQ_PLAYBACK_STATE, (int) playback_state::status_render, []() {
         auto& tls = daw_tls::getTls();
         tls.dawInstance->bExportFinished = true;
     }, true);
@@ -162,7 +162,7 @@ void DawInstance::stopPlaying() {
 }
 
 void DawInstance::setAudioThreadState(playback_state state) {
-    playThread.addRequest(REQ_STATE, (int) state, true);
+    playThread.addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int) state, true);
 }
 
 bool DawInstance::toggleLoop() {

@@ -6,14 +6,15 @@
 #include <stdexcept>
 #include <functional>
 
-#define REQ_STATE 1
-#define GUI_CALL 2
 class project_controller_t;
 class PlaybackThread final : public seqthreads::thread_base {
-
+public:
+    enum RequestType {
+        REQ_PLAYBACK_STATE = 1,
+        REQ_INVOKE_FN = 2
+    };
 private:
     class Impl;
-
 public:
     PlaybackThread();
     ~PlaybackThread() override;
@@ -22,8 +23,8 @@ public:
     void joinThread();
     ThreadLock lockThread();
     ThreadLock tryLockThread();
-    void addRequest(int32_t msgId, int32_t param, bool wait);
-    void addRequestWithCallback(int32_t _msgId, int32_t _param, std::function<void()> fn, bool wait);
+    void addRequest(RequestType req, int32_t param, bool wait);
+    void addRequestWithCallback(RequestType req, int32_t param, std::function<void()> fn, bool wait);
     void call(std::function<void()> fn, bool wait);
     playback_state getState();
     int32_t getThreadId() override;

@@ -163,7 +163,7 @@ private:
             while (true) {
                 if (m_q.try_dequeue(req)) {
                     switch (req->msgId) {
-                        case REQ_STATE: {
+                        case PlaybackThread::REQ_PLAYBACK_STATE: {
                             auto reqState = static_cast<playback_state>(req->param);
                             if (m_status == playback_state::status_render && reqState != playback_state::status_render) {
                                 m_status = status_no_process;
@@ -223,7 +223,7 @@ private:
                             }
                             host->getHostCallback()->m_playbackState = m_status = reqState;
                         } break;
-                        case GUI_CALL:
+                        case PlaybackThread::REQ_INVOKE_FN:
                             req->fn();
                             break;
                         case PLAYBACK_THREAD_EXIT:
@@ -369,21 +369,21 @@ PlaybackThread::PlaybackThread() : _M_impl{ new PlaybackThread::Impl{} } {
 }
 
 void PlaybackThread::call(std::function<void()> fn, bool wait) {
-    auto r = std::make_shared<PlaybackThreadReq>(GUI_CALL, 0, std::move(fn));
+    auto r = std::make_shared<PlaybackThreadReq>(PlaybackThread::REQ_INVOKE_FN, 0, std::move(fn));
     bool s = _M_impl->addRequest(r);
     if (s && wait) {
         r->wait();
     }
 }
-void PlaybackThread::addRequest(int32_t _msgId, int32_t _param, bool wait) {
-    auto r = std::make_shared<PlaybackThreadReq>(_msgId, _param);
+void PlaybackThread::addRequest(RequestType req, int32_t param, bool wait) {
+    auto r = std::make_shared<PlaybackThreadReq>(req, param);
     bool s = _M_impl->addRequest(r);
     if (s && wait) {
         r->wait();
     }
 }
-void PlaybackThread::addRequestWithCallback(int32_t _msgId, int32_t _param, std::function<void()> fn, bool wait) {
-    auto r = std::make_shared<PlaybackThreadReq>(_msgId, _param, std::move(fn));
+void PlaybackThread::addRequestWithCallback(RequestType req, int32_t param, std::function<void()> fn, bool wait) {
+    auto r = std::make_shared<PlaybackThreadReq>(req, param, std::move(fn));
     bool s = _M_impl->addRequest(r);
     if (s && wait) {
         r->wait();
