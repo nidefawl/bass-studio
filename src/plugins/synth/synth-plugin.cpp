@@ -1,4 +1,5 @@
 #include "synth-template.hpp"
+#include "synth-types.hpp"
 #include "synth-plugin.h"
 #include "assert_dbg.h"
 #include "host/audiobuffer/audioblock.h"
@@ -2378,7 +2379,7 @@ public:
                 resetBlock();
             }
             int taskIndex = 0;
-            for (int32_t polyIndex = list.polyVoiceIndexFirst; polyIndex < list.polyVoiceIndexLast; ++polyIndex) {
+            for (int32_t polyIndex = list.polyVoiceIndexFirst; polyIndex >= 0 && polyIndex < list.polyVoiceIndexLast; ++polyIndex) {
                 auto& uv = voices[polyIndex];
                 for (int32_t unisonIndex = 0; unisonIndex < maxUnisonVoice; ++unisonIndex) {
                     auto& v = uv.getVoice(unisonIndex);
