@@ -11,6 +11,7 @@
  */
 
 #include "assert_dbg.h"
+#include "host/host_plugin_loadresult.h"
 #include "host/plugin/clap/clap-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
@@ -257,7 +258,7 @@ struct pluginscanner_server_options {
     int32_t unresponsiveTimeoutSeconds = timeoutdefault;
 };
 
-static void getVSTPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst24_t* _out) {
+static void getVSTPluginData(DAW::Host::LoadResultPluginImpl& res, response_type_vst24_t* _out) {
     auto plugin = res.vstPlugin;
     AEffect* aeffect     = plugin->handle->aeffect;
     _out->uniqueID       = aeffect->uniqueID;
@@ -278,7 +279,7 @@ static void getVSTPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst
     _out->isSynth = plugin->isSynth;
 }
 
-static void getClapPluginData(DAW::Host::LoadResultPlugin& res, response_type_clapplugin_t* _out) {
+static void getClapPluginData(DAW::Host::LoadResultPluginImpl& res, response_type_clapplugin_t* _out) {
     auto plugin = res.clapPlugin;
     _out->pluginIndex = 0;
     _out->pluginCategory = plugin->getModuleCategory();
@@ -916,7 +917,8 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
     int response = 0;
     log_message("Load plugin %s", req.szPath);
     try {
-        auto res = pluginMgr->loadPlugin(req.szPath, 0);
+        auto loadresult = pluginMgr->loadPlugin(req.szPath, 0);
+        auto res = *loadresult;
         if (res.library.state != DAW::Host::SharedLibState::SUCCESS) {
             log_message("Failed loading %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
             response = CMD_PLUGIN_LOAD_ERROR;
@@ -985,7 +987,8 @@ static int runScannerClient() {
             }
 
             log_message("Load plugin %s", req.szPath);
-            auto res = pluginMgr->loadPlugin(req.szPath, 0);
+            auto loadresult = pluginMgr->loadPlugin(req.szPath, 0);
+            auto res = *loadresult;
             if (res.library.state != DAW::Host::SharedLibState::SUCCESS) {
                 log_message("Failed loading %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
                 int response = CMD_PLUGIN_LOAD_ERROR;
@@ -1078,7 +1081,8 @@ static int runScannerClient() {
                     for (auto& entry : entries) {
                         if (userSentQuitRequest) break;
                         log_message("load shell entry: %08X", entry.pluginUID);
-                        auto resShellPluginEntry = pluginMgr->loadPlugin(req.szPath, entry.pluginUID);
+                        auto loadresult = pluginMgr->loadPlugin(req.szPath, entry.pluginUID);
+                        auto resShellPluginEntry = *loadresult;
                         if (resShellPluginEntry.library.state != DAW::Host::SharedLibState::SUCCESS) {
                             log_message("Failed loading shell plugin %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
                         } else {

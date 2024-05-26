@@ -2,6 +2,7 @@
 #include "appsettings.h"
 #include "fileio.h"
 #include "host/daw/mainctrl.h"
+#include "host/host_plugin_loadresult.h"
 #include "host/plugin/clap/clap-plugin.h"
 #include "host/graph/effect_graph.h"
 #include "str_util.h"
@@ -48,7 +49,8 @@ namespace test_clap_plugin_host {
         std::vector<FileFound> files;
         findFilesWithExt(TEST_PATH("plugins/clap"), PLATFORM_TEST_CLAP_EXT, true, files);
         for (const auto& file : files) {
-            auto res = host->loadPlugin({file.path, 0, 0, 0, 1});
+            auto loadresult = host->loadPlugin({file.path, 0, 0, 0, 1});
+            auto res = *loadresult;
             TEST_ASSERT_THROW(res.library.isSuccess());
             TEST_ASSERT_THROW(res.clapPlugin != nullptr);
             host->onTick();

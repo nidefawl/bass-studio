@@ -1,4 +1,5 @@
 #include "TestBase.hpp"
+#include "host/host_plugin_loadresult.h"
 #include "str_util.h"
 #include "common/test_common.h"
 #include "host/host_pluginmanager.h"
@@ -24,7 +25,7 @@ namespace {
     using DAW::Host::SharedLibState;
     using DAW::Host::SharedLibPluginType;
     using DAW::Host::LoadResultSharedLibrary;
-    using DAW::Host::LoadResultPlugin;
+    using DAW::Host::LoadResultPluginImpl;
 
     int32_t exitStatusCode = 0;
 
@@ -38,7 +39,7 @@ namespace {
 
     size_t currentFileIdx = 0;
     void TickTest() {
-        static LoadResultPlugin res{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
+        static LoadResultPluginImpl res{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
         static int currentTimerTick = 0;
         static int numPluginsTested = 0;
         auto* host = daw_tls::getTls().host;
@@ -48,7 +49,8 @@ namespace {
                 return;
             }
             TestCaseEntry testCase = dllFilesToTest[currentFileIdx++];
-            res = host->loadPlugin(testCase.pathToDll, 0);
+            auto loadresult = host->loadPlugin(testCase.pathToDll, 0);
+            res = *loadresult;
             if (res.library.state != testCase.expectedState || res.library.type != testCase.expectedType) {
                 printf("loadPlugin: %s %d => ERROR\n", StringAsCStr(testCase.pathToDll), static_cast<int32_t>(res.library.state));
                 exitStatusCode = 1;
@@ -58,7 +60,7 @@ namespace {
                 printf("loadPlugin: %s %d => GOOD\n", StringAsCStr(testCase.pathToDll), static_cast<int32_t>(res.library.state));
             }
             if (res.library.state != SharedLibState::SUCCESS) {
-                res = LoadResultPlugin{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
+                res = LoadResultPluginImpl{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
             }
         } else {
             bool hasUI = res.vstPlugin->getFlagsVST() & effFlagsHasEditor;
@@ -68,7 +70,7 @@ namespace {
                 res.plugin->closeWindow();
             } else if ((hasUI && currentTimerTick == 40) || (!hasUI && currentTimerTick == 10)) {
                 host->unloadPlugin(res.plugin);
-                res = LoadResultPlugin{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
+                res = LoadResultPluginImpl{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
                 currentTimerTick = -1;
                 numPluginsTested++;
             } else {
