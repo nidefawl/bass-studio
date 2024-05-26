@@ -530,7 +530,8 @@ bool audiocache::fileloader::loadFileIncremental() {
     if (bReadComplete) {
         auto* sample = file->sample.get();
         auto numSamplesRead = static_cast<samplecount_t>(numSamplesReadFromFile * targetSamplerate / (double) sourceSamplerate + .5);
-        auto numSamplesHeader = static_cast<samplecount_t>(numSamplesFileHeader * targetSamplerate / (double) sourceSamplerate + .5);
+        auto perChannel = numSamplesFileHeader / sourceNumChannels;
+        auto numSamplesHeader = static_cast<samplecount_t>(perChannel * targetSamplerate / (double) sourceSamplerate + .5);
         if (numSamplesRead < numSamplesHeader) {
 #ifndef NDEBUG
             log_lf(Log::L_WARN, "File %s: read %lld samples, expected %lld samples\n", StringAsCStr(file->pathLoaded), numSamplesRead, numSamplesHeader);
