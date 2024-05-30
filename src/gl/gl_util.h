@@ -9,6 +9,7 @@ int getStatus(unsigned int obj, unsigned int type);
 String getLog(int logtype, unsigned int obj);
 int compileShader(int type, const String& src);
 bool isGLContextPresent();
+const char* getGlErrorString(int error_code);
 
 class OpenGLResource {
 protected:

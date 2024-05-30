@@ -158,14 +158,14 @@ set(PROJECT_DEP_MUPARSERS_SRC_FILES
   muparser/src/muParserTokenReader.cpp
 )
 set(PROJECT_DEPS_SRC_FILES
-  glad/gl-3.2-core/src/glad.c
+  glad/gl-4.6-compat/src/glad.c
   ${PROJECT_DEP_MUPARSERS_SRC_FILES}
   ${PROJECT_DEP_TINYSPLINE_SRC_FILES}
 )
 
 list(TRANSFORM PROJECT_DEPS_SRC_FILES PREPEND "${PROJECT_DEPS_PATH}/")
 if (CMAKE_COMPILER_IS_GNUCC)
-  set_source_files_properties("${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c" PROPERTIES COMPILE_OPTIONS "-Wno-pedantic")
+  set_source_files_properties("${PROJECT_DEPS_PATH}/glad/gl-4.6-compat/src/glad.c" PROPERTIES COMPILE_OPTIONS "-Wno-pedantic")
 endif()
 
 list(APPEND RESOURCE_FILES "")

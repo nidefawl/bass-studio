@@ -184,3 +184,5 @@ if (WIN32 OR LINUX)
       ${TEST_VST3_HOSTING_PLATFORM_FILES}
   )
 endif()
+DEFINE_TEST(test_gpu_compute TRUE test_gpu_compute.cpp common/test_common.cpp)
+DEFINE_TEST(test_gpu_sound TRUE test_gpu_sound.cpp common/test_common.cpp)

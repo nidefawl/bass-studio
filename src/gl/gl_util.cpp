@@ -41,7 +41,7 @@ void enableGlDebugCallback() {
                               true);
 }
 #ifndef NDEBUG
-static const char* getGlErrorString(int error_code) {
+const char* getGlErrorString(int error_code) {
     switch (error_code) {
         case GL_NO_ERROR:
             return "No error";
@@ -237,6 +237,7 @@ void DrawVBO::destroy() {
             glDeleteBuffers(1, &vboIdxId);
         }
     }
+    glfwWindowHandle = nullptr;
     if (vboIdxId || vboVertId) {
         --instanceCount;
     }

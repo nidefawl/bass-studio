@@ -132,6 +132,10 @@ struct Envelope {
     void Update(double dt) {
         switch (stage) {
             case EnvelopeStages::Attack:
+                if (a == 0.0 && value == 0.0) {
+                    stage = EnvelopeStages::Decay;
+                    break;
+                }
                 value += (1.1 - value) * a * dt;
                 if (value >= 1.0) {
                     value = 1.0;

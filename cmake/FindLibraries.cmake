@@ -151,9 +151,9 @@ FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
 
   if (PROJECT_CFG_USE_OPENGL3)
     # use OpenGL 3.2 core profile headers to avoid accidental use of legacy or forward
-    target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/glad/gl-3.2-core/include)
+    target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/glad/gl-4.6-compat/include)
   else()
     # use OpenGL 3.2 compatibility profile headers
-    target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/glad/gl-3.2-compat/include)
+    target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/glad/gl-4.6-compat/include)
   endif()
 ENDFUNCTION()
