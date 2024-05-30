@@ -791,8 +791,8 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
     if (evt.guiDragged == this) {// cursor move / range select
         cursor.selRange = tick - cursor.cursorPos;
         if (cursor.isSubtrackSelection()) {
-            dbgassert(subTrSelected);
-            if (subTr) {
+            if (subTr && subTrSelected) {
+                dbgassert(subTrSelected);
                 cursor.selSubTrackRange = (subTr->idx - subTrSelected->idx);
                 dbgassert(cursor.getSubTrackEnd() > -1);
                 dbgassert(cursor.getSubTrackBegin() <= cursor.getSubTrackEnd());
