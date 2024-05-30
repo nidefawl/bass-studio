@@ -1,4 +1,5 @@
 #include "audio_host.h"
+#include "assert_dbg.h"
 #include "config.h"
 #include "host/audio_config.h"
 #include "math/seq_math.h"
@@ -413,7 +414,7 @@ void audiohost::HostIOStream::enqueue(AudioBuffer* buf) {
             return offset + dstIdx;
         });
     }
-    this->audioQueue.enqueue(buf);
+    always_assert(this->audioQueue.enqueue(buf));
 }
 
 bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {
