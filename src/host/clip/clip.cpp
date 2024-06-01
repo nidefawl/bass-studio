@@ -1308,7 +1308,7 @@ void cutClipLeft(clip_t* c, tick_t len) {
     c->time += len;
     c->setLen(c->getLen() - len);
     c->audio.setEmptyFade(true);
-    dbgassert(c->time > 0);
+    dbgassert(c->time >= 0);
     dbgassert(c->getLenRef() > 0);
 }
 
