@@ -1,4 +1,5 @@
 #pragma once
+#include "host/project/project.h"
 #include "samplerate.h"
 #include "seq_time.h"
 #include "types.h"
@@ -41,6 +42,8 @@ class IHostCallback {
     VstTimeInfo m_vstTimeInfo{};
     bool isOfflineRendering = false;
     playback_state m_playbackState = playback_state::status_no_process;
+    export_settings_t m_exportSettings{};
+
     virtual ~IHostCallback() = default;
     virtual void onLatencyChanged(effectbase* effect) = 0;
     virtual void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) = 0;

@@ -15,6 +15,7 @@
 #include "host/daw/history.h"
 #include "host/host_pluginmanager.h"
 #include "host/meter/meter.h"
+#include "host/track/track_types.h"
 #include "math/seq_math.h"
 #include "host/plugin/modules.h"
 #include "note.h"
@@ -725,6 +726,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
 
 void Host::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
     getHostCallback()->isOfflineRendering = true;
+    getHostCallback()->m_exportSettings = exportSettings;
 }
 
 void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings, bool bCancelled) {
@@ -1486,6 +1488,14 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         loopCutEnd = prjGlobals.loopStart+prjGlobals.loopLen;
     }
 
+    bool bIsRecording = prjGlobals.recordArmed && isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED);
+    if (!bIsRecording && isSet(trackImpl->flags, audiostageflags_t::RECORD_FORCE)) {
+        auto renderRange = getHostCallback()->m_exportSettings;
+        auto begin = tickLatencyCompensated;
+        auto end = tickLatencyCompensated + ticksPerBlock;
+        bIsRecording = end > renderRange.exportPos && begin <= renderRange.exportPos + renderRange.exportLen;
+    }
+
 
     tmp.timer.reset();
 
@@ -1522,14 +1532,14 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     int32_t midiProcessFlags = 0;
     switch (playbackState) {
         case playback_state::status_playback:
-            if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
+            if (bIsRecording) {
                 midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
             } else {
                 midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
             }
             break;
         case playback_state::status_render:
-            if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && prjGlobals.recordArmed) {
+            if (bIsRecording) {
                 midiProcessFlags = MidiFlags::PROCESS_ARP;
             } else {
                 midiProcessFlags = MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
@@ -1564,7 +1574,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
 
     /* Store block in audioInput memory */
     if (DAW::isPlaybackState(playbackState)) {
-        if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && track->type == TRACK_TYPE_AUDIO) {
+        if (track->type == TRACK_TYPE_AUDIO && bIsRecording) {
             if (sampleLatencyCompensated >= 0) {
                 auto firstPair = trackImpl->input.SubChannelsBlock(0, 2);
                 trackImpl->audioInput.store(&firstPair, sampleLatencyCompensated);
@@ -1576,8 +1586,9 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         }
     }
 
+
     /* Update currently recording clip */
-    trackImpl->recorder.update(playbackState, sampleLatencyCompensated, sampleLatencyCompensated + sampleFormat.blockSize, processingPos, tickBlockEnd, track->type, prjGlobals.recordArmed && isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED));
+    trackImpl->recorder.update(playbackState, sampleLatencyCompensated, sampleLatencyCompensated + sampleFormat.blockSize, processingPos, tickBlockEnd, track->type, bIsRecording);
 
     trackImpl->procStats.timeTrackRecordPre = tmp.timer.getTime();
 

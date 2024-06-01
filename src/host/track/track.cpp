@@ -33,6 +33,7 @@
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
+#include "str_util.h"
 #include "types.h"
 #include "host/host_pluginmanager.h"
 #include "track_impl.h"
@@ -1962,9 +1963,9 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                         auto file = cache->createSample(ssr);
                         audioSampleId = file->id;
                         pClip->name = fName;
-                        pClip->audio.id = audioSampleId;
-                        pClip->rgb = tr->rgb;
                     }
+                    pClip->audio.id = audioSampleId;
+                    pClip->rgb = tr->rgb;
                     auto numSamplesRecord = samplesRecorded;
                     if ( ( (isRecording && numSamplesRecord >= trImpl->sampleFormat.sampleRate>>2)
                             || (!isRecording && numSamplesRecord > 0) )
@@ -1976,6 +1977,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                             ssr.id = audioSampleId;
                             ssr.length = numSamplesRecord;
                             ssr.offset = samplesWritten;
+                            /* log_lf(Log::L_DEBUG, "Writing %zd to %zd samples to %s\n", firstRecordedSample+ssr.offset, firstRecordedSample+ssr.offset+ssr.length, StringAsCStr(file->name)); */
                             auto nSamplesRead = trImpl->audioInput.readSamples(firstRecordedSample+ssr.offset,
                                                             ssr.length,
                                                             channelCount,
@@ -1987,10 +1989,8 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                                 cache->updateSample(ssr);
                                 samplesWritten += samplesRecorded;
                                 samplesRecorded -= nSamplesRead;
-                                pClip->name = file->name;
-                                pClip->audio.id = audioSampleId;
-                                pClip->rgb = tr->rgb;
                             }
+                            pClip->name = file->name;
                         } else {
                             // sample wen't offline
                             audioSampleId = -1;

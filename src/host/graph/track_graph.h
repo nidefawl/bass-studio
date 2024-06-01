@@ -68,7 +68,7 @@ namespace DAW {
         std::vector<track_node_t*> roots;// output nodes (Master, )
         std::vector<track_node_ptr> nodes;
         std::vector<track_source_t> externalOutputRouting;
-        samplecount_t maxLatencySamples = 0U;
+        samplecount_t maxLatencySamples = 0;
 
         track_graph_t() = default;
         track_graph_t(const track_graph_t& graph) = delete;

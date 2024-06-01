@@ -42,12 +42,11 @@ struct freeze_track_task_t final : public async_task_t {
             auto trackStage = trackTo->getStage();
             trackStage->inputChannel = DAW::ChannelStage(track->getStage(), stage_bufferpoint::OUTPUT_POST, 0, 0);
             trackStage->outputChannel = DAW::ChannelNone();
-            trackStage->flags |= audiostageflags_t::RECORD_ARMED;
+            trackStage->flags |= audiostageflags_t::RECORD_FORCE;
             exportSettingsRestore = daw->getExportSettings();
             exportSettings.exportLen = cursor.getRange();
             exportSettings.exportPos = cursor.getTickBegin();
             exportSettings.exportPath = trackTo->name + "-frozen.wav";
-            daw->getGlobals().recordArmed = true;
             daw->getExportSettings() = exportSettings;
             bCacheAudioGraphRestore = daw->getHost()->cacheAudioGraph;
             std::shared_ptr<DAW::processing_graph_t> processingGraph;
@@ -101,14 +100,13 @@ struct freeze_track_task_t final : public async_task_t {
     }
     void finish() {
         auto lock = daw->lockPlayThread();
-        daw->getGlobals().recordArmed = false;
         daw->getHost()->cacheAudioGraph = bCacheAudioGraphRestore;
         auto trackStage = trackTo->getStage();
         trackStage->inputChannel = DAW::ChannelDefaultNone();
         trackStage->outputChannel = DAW::ChannelDefaultNone();
         trackStage->recorder.finishRecordingClip();
         trackStage->recorder.writeRecordedData(daw, trackStage, daw->getAudioCache(), daw);
-        trackStage->flags &= ~audiostageflags_t::RECORD_ARMED;
+        trackStage->flags &= ~audiostageflags_t::RECORD_FORCE;
         m_state = canceled ? state::cancelled : state::finished;
         if (m_state == state::finished) {
             for (auto clip : trackTo->getClips().getClips()) {

@@ -149,16 +149,20 @@ public:
 private:
     void run() {
         project_controller_t* const ctrl = this->m_prjCtrl;
-        auto* host = m_threadTls.host;
-        midihost* midiHost = m_threadTls.midiHost;
-        std::function<void()> renderCompleteFn = nullptr;
-        export_settings_t exportSettingsLocal{};
-        hires_timer_t timer2;
+        auto* const host = m_threadTls.host;
+        midihost* const midiHost = m_threadTls.midiHost;
+        const project_globals_t& projGlobals = host->prjGlobals;
 
+        std::function<void()> renderCompleteFn = nullptr;
         std::shared_ptr<PlaybackThreadReq> req;
-        int32_t samplePos = 0;
+
+        export_settings_t exportSettingsLocal{};
+
+        samplecount_t samplePos = 0;
         double tickPos    = 0;
         int32_t numBlocksRendered = 0;
+
+        hires_timer_t timer2;
         try {
             while (true) {
                 if (m_q.try_dequeue(req)) {
@@ -187,9 +191,10 @@ private:
                                     int32_t bpm100         = ctrl->getCurrentTempo();
                                     tickPos                = startPos;
                                     ctrl->getPlaybackPos() = startPos;
-                                    samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
-                                    log_printf("START EXPORT ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+                                    samplePos              = tickToSampleConvert<samplecount_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
+                                    log_printf("START EXPORT ON seconds: %.2f - sample %zd\n", toSeconds(startPos, bpm100), samplePos);
 
+                                    ctrl->getGlobals().recordArmed = false;
                                     host->preExportBegin(ctrl, exportSettingsLocal);
                                     host->onStartPlayback(this->m_prjCtrl);
                                     timer2.reset();
@@ -206,8 +211,8 @@ private:
                                     int32_t bpm100         = ctrl->getCurrentTempo();
                                     tickPos                = startPos;
                                     ctrl->getPlaybackPos() = startPos;
-                                    samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
-                                    log_printf("START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(startPos, false)), toSeconds(startPos, bpm100), samplePos);
+                                    samplePos              = tickToSampleConvert<samplecount_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
+                                    log_printf("START ON %s seconds: %.2f - sample %zd\n", StringAsCStr(tickAsBeatString(startPos, false)), toSeconds(startPos, bpm100), samplePos);
                                     host->onStartPlayback(this->m_prjCtrl);
                                     timer2.reset();
                                     break;
@@ -269,7 +274,6 @@ private:
                      */
                     host->prjGlobals = ctrl->getGlobals();
 
-                    const project_globals_t& projGlobals = host->prjGlobals;
 
                     const samplerate_t sampleRate = host->m_sampleFormatInternal.sampleRate;
                     const int32_t blockSize       = host->m_sampleFormatInternal.blockSize;
@@ -324,7 +328,12 @@ private:
                         }
                         ctrl->getIdleTickPos() = math::rounddS32(tickPos);
                         if (m_status == status_render) {
-                            if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
+                            auto outputLatency = host->getLatency();
+                            auto ticksLatency = tick_t(0);
+                            if (outputLatency > 0) {
+                                ticksLatency = sampleToTickConvert<tick_t, roundmode::floor>(outputLatency, bpm100, sampleRate);
+                            }
+                            if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen + ticksLatency) {
                                 host->getHostCallback()->m_playbackState = m_status = status_no_process;
                                 ctrl->getGlobals().recordArmed = false;
                                 host->onStopPlayback(this->m_prjCtrl);
