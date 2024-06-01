@@ -224,6 +224,8 @@ namespace PluginLFO {
                 double phase = fPhaseOffset + fPhase;
                 double _unused = 0.0;
                 float moduloPhase = float(std::modf(phase, &_unused));
+                // ensure phase is positive
+                moduloPhase = moduloPhase < 0.0f ? 1.0f + moduloPhase : moduloPhase;
                 return moduloPhase;
             }
             float sampleCurve(double dTick) const {
@@ -233,7 +235,9 @@ namespace PluginLFO {
                 return value * (valMax - valMin) + valMin;
             }
             float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
-                const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
+                const auto s = sampleCurve(tick);
+                dbgassert(!fp_math::isNanOrInfd(s));
+                const auto valScaled = scale.min + s * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
                         fIn += valScaled;
@@ -250,6 +254,7 @@ namespace PluginLFO {
                 if (scale.bClamp) {
                     fIn = math::clamp(fIn, 0.0f, 1.0f);
                 }
+                dbgassert(!fp_math::isNanOrInfd(fIn));
                 return fIn;
             }
             void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const override {
@@ -301,7 +306,12 @@ namespace PluginLFO {
         };
         struct lfo_automation_src_random_t : public lfo_automation_src {
             float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
-                const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
+                if (tick < 0) {
+                    fIn*=1.001f;
+                }
+                const auto s = sampleCurve(tick);
+                dbgassert(!fp_math::isNanOrInfd(s));
+                const auto valScaled = scale.min + s * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
                         fIn += valScaled;
@@ -318,6 +328,7 @@ namespace PluginLFO {
                 if (scale.bClamp) {
                     fIn = math::clamp(fIn, 0.0f, 1.0f);
                 }
+                dbgassert(!fp_math::isNanOrInfd(fIn));
                 return fIn;
             }
             void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const override {
@@ -407,6 +418,8 @@ namespace PluginLFO {
                 auto v1 = r.rng_double();
                 float _unused = 0.0f;
                 float v = std::modf(phase, &_unused);
+                // ensure phase is positive
+                v = v < 0.0f ? 1.0f + v : v;
                 v = v * v * (3.0f - 2.0f * v);
                 v = v0 + (v1 - v0) * v;
                 return scaleMinMax(dTick, v);
@@ -426,6 +439,8 @@ namespace PluginLFO {
                 auto v1 = r.rng_double();
                 float _unused = 0.0f;
                 float v = std::modf(phase, &_unused);
+                // ensure phase is positive
+                v = v < 0.0f ? 1.0f + v : v;
                 // v = v * v * (3.0f - 2.0f * v);
                 v = v0 + (v1 - v0) * v;
                 return scaleMinMax(dTick, v);
@@ -446,6 +461,8 @@ namespace PluginLFO {
                 auto v1 = r.rng_double();
                 float _unused = 0.0f;
                 float v = std::modf(phase, &_unused);
+                // ensure phase is positive
+                v = v < 0.0f ? 1.0f + v : v;
                 float shapeBi  = 1.0f - shape0 * 2.0f;
                 float shapeExp = 0.0f;
                 float scale2   = 0.2f + v * 0.8f;
