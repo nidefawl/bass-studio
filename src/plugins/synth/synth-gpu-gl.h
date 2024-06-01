@@ -7,9 +7,9 @@
 #include "platform.h"
 #include "str_util.h"
 #include "types.h"
+#include <cstdint>
 
 namespace PluginSynth::GPU {
-
 
 struct shader_gpu_compute_defs_t {
     samplecount_t blocksize = 512;
@@ -18,29 +18,39 @@ struct shader_gpu_compute_defs_t {
     samplecount_t unisonVoices = 4;
 };
 
+struct shader_gpu_program_desc_t {
+    int32_t programNr;
+    String name;
+    String def;
+};
+#define MAX_PROGRAMS 1024
 struct shader_gpu_compute : public shader_gpu_compute_defs_t {
-    GLuint programSynth = 0;
-    GLuint programSampleWaveform = 0;
+    std::array<shader_gpu_program_desc_t, MAX_PROGRAMS> programDescs{};
+    std::array<GLuint, MAX_PROGRAMS> programs{};
+    std::array<GLuint, MAX_PROGRAMS> programsWaveform{};
+    int32_t numPrograms = 0;
     bool is_valid() const {
-        return programSynth != 0;
+        return numPrograms > 0 && !!programs[0];
     }
     void destroy() {
-        if (programSampleWaveform) {
-            glDeleteProgram(programSampleWaveform);
-            programSampleWaveform = 0;
+        for (auto& program : programs) {
+            if (program) {
+                glDeleteProgram(program);
+                program = 0;
+            }
         }
-        if (programSynth) {
-            glDeleteProgram(programSynth);
-            programSynth = 0;
-        }
+        programDescs = {};
     }
 };
 
 inline std::variant<shader_gpu_compute, String> compile_shader(const glshader_src& src, const shader_gpu_compute_defs_t& defs) {
-    auto compileProgram = [&src](int n) ->  std::variant<GLuint, String> {
-        String sourceCopy = src.source;
+    auto compileProgram = [](const auto& src, int32_t programNr, bool isWaveformSampler) ->  std::variant<GLuint, String> {
+        String sourceCopy = src;
         GLuint shader1 = glCreateShader(GL_COMPUTE_SHADER);
-        StrUtil::StringReplace(sourceCopy, "#define N_PROGRAM 0", "#define N_PROGRAM " + std::to_string(n));
+        StrUtil::StringReplace(sourceCopy, "#define N_PROGRAM 0", "#define N_PROGRAM " + std::to_string(programNr));
+        if (isWaveformSampler) {
+            StrUtil::StringReplace(sourceCopy, "#define IS_WAVEFORM_SAMPLER 0", "#define IS_WAVEFORM_SAMPLER 1");
+        }
         std::array<GLchar*, 1> sources = {(GLchar*)sourceCopy.c_str()};
         glShaderSource(shader1, 1, sources.data(), NULL);
         glCompileShader(shader1);
@@ -62,18 +72,68 @@ inline std::variant<shader_gpu_compute, String> compile_shader(const glshader_sr
         }
         return program;
     };
-    auto programSynth = compileProgram(1);
-    if (std::holds_alternative<String>(programSynth)) {
-        return std::get<String>(programSynth);
-    }
-    auto programWaveform = compileProgram(0);
-    if (std::holds_alternative<String>(programWaveform)) {
-        return std::get<String>(programWaveform);
-    }
-    
     shader_gpu_compute result;
-    result.programSynth = std::get<GLuint>(programSynth);
-    result.programSampleWaveform = std::get<GLuint>(programWaveform);
+    auto& glslSourceCode = src.source;
+    // find #define PROGRAM_NAME_.* ".*"\n using string find, not regex
+    size_t pos = 0;
+    int32_t programNr = 0;
+    size_t posLastProcessedDefine = 0;
+    while ((pos = glslSourceCode.find("#define PROGRAM_NAME_", pos)) != String::npos) {
+        size_t start = pos + 21;
+        size_t lineEnd = glslSourceCode.find("\n", start);
+        size_t beginName = glslSourceCode.find("\"", start);
+        if (beginName+1 > lineEnd || beginName == String::npos) {
+            break;
+        }
+        beginName++;
+        size_t endName = glslSourceCode.find("\"", beginName);
+        if (endName > lineEnd || endName == String::npos) {
+            break;
+        }
+        pos = endName + 1;
+        posLastProcessedDefine = pos;
+        String defName = glslSourceCode.substr(start, beginName - start - 1);
+        String name = glslSourceCode.substr(beginName, endName - beginName);
+        shader_gpu_program_desc_t desc;
+        desc.programNr = programNr;
+        desc.name = name;
+        desc.def = defName;
+        log_lf(Log::L_DEBUG, "Found program %d %s %s\n", programNr, StringAsCStr(name), StringAsCStr(defName));
+        result.programDescs[programNr] = desc;
+        programNr++;
+        if (programNr >= MAX_PROGRAMS) {
+            break;
+        }
+    }
+    if (posLastProcessedDefine == 0 || programNr == 0) {
+        return String("No program names found in shader source");
+    }
+    /* place a #define PROGRAM_<NAME> <NR> in the source code */
+    String defBlock = "";
+    for (int32_t i = 0; i < programNr; i++) {
+        defBlock += "#define PROGRAM_" + result.programDescs[i].def + " " + std::to_string(i) + "\n";
+    }
+    defBlock += "#define N_PROGRAMS " + std::to_string(programNr) + "\n";
+    /* insert after posLastProcessedDefine */
+    posLastProcessedDefine++;
+    if (posLastProcessedDefine >= glslSourceCode.size()) {
+        return String("Failed to insert program defines");
+    }
+    auto processedSrc = glslSourceCode.substr(0, posLastProcessedDefine) + defBlock + glslSourceCode.substr(posLastProcessedDefine);
+    // log_lf(Log::L_DEBUG, "Processed source code:\n%s\n", StringAsCStr(processedSrc));
+    for (int32_t i = 0; i < programNr; i++) {
+        auto programSynth = compileProgram(processedSrc, i, false);
+        if (std::holds_alternative<String>(programSynth)) {
+            return std::get<String>(programSynth);
+        }
+        auto programWaveform = compileProgram(processedSrc, i, true);
+        if (std::holds_alternative<String>(programWaveform)) {
+            return std::get<String>(programWaveform);
+        }
+        result.programs[i] = std::get<GLuint>(programSynth);
+        result.programsWaveform[i] = std::get<GLuint>(programWaveform);
+    }
+    result.numPrograms = programNr;
     result.blocksize = defs.blocksize;
     result.channels = defs.channels;
     result.polyVoices = defs.polyVoices;
@@ -97,7 +157,7 @@ inline std::variant<shader_gpu_compute, String> loadshader(const shader_gpu_comp
     using App::Platform::toResourcePath;
     int64_t timeDiskGpuSoundShader = FileTimeGetter(toResourcePath(filenameGpuSoundShader)).getWriteTimeI64();
     int64_t timeDiskShaderToyShader = FileTimeGetter(toResourcePath(filenameShaderToyShader)).getWriteTimeI64();
-    if (previous.programSynth != 0) {
+    if (previous.programs[0] != 0) {
         // if the file has not been modified, return the previous shader
         if (timeDiskGpuSoundShader == lastModTimeGpuSoundShader && timeDiskShaderToyShader == lastModTimeShaderToyShader) {
             return previous;
@@ -132,31 +192,12 @@ inline std::variant<shader_gpu_compute, String> loadshader_synth(shader_gpu_comp
     // check time of last modification
     using App::Platform::toResourcePath;
     int64_t timeDiskGpuSoundShader = FileTimeGetter(toResourcePath(filenameGpuSoundShader)).getWriteTimeI64();
-    if (previous.programSynth != 0) {
+    if (previous.programs[0]) {
         // if the file has not been modified, return the previous shader
         if (timeDiskGpuSoundShader == lastModTimeGpuSoundShader) {
             return previous;
         }
     }
-    int work_grp_cnt[3];
-
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0]);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1]);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2]);
-
-    log_lf(Log::L_INFO, "max global (total) work group counts x:%i y:%i z:%i\n",
-    work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2]);
-    int work_grp_size[3];
-
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0]);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1]);
-    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2]);
-
-    log_lf(Log::L_INFO, "max local (in one shader) work group sizes x:%i y:%i z:%i\n",
-    work_grp_size[0], work_grp_size[1], work_grp_size[2]);
-    int work_grp_inv;
-    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
-    log_lf(Log::L_INFO, "max local work group invocations %i\n", work_grp_inv);
     lastModTimeGpuSoundShader = timeDiskGpuSoundShader;
     if (!glSourceLoader->addStageSrc(GL_COMPUTE_SHADER, filenameGpuSoundShader.c_str(), 0) || glSourceLoader->sources.empty()) {
         log_lf(Log::L_ERROR, "Failed to load compute shader source file %s", StringAsCStr(filenameGpuSoundShader));
@@ -166,8 +207,8 @@ inline std::variant<shader_gpu_compute, String> loadshader_synth(shader_gpu_comp
     auto& file0Source = sourcefiles[0].source;
     StrUtil::StringReplace(file0Source, "#define N_CHANNELS 0", "#define N_CHANNELS " + std::to_string(defs.channels));
     StrUtil::StringReplace(file0Source, "#define N_SAMPLES 0", "#define N_SAMPLES " + std::to_string(defs.blocksize));
-    StrUtil::StringReplace(file0Source, "#define NUM_POLY_VOICES 0", "#define NUM_POLY_VOICES " + std::to_string(defs.polyVoices));
-    StrUtil::StringReplace(file0Source, "#define NUM_UNISON_VOICES 0", "#define NUM_UNISON_VOICES " + std::to_string(defs.unisonVoices));
+    StrUtil::StringReplace(file0Source, "#define N_POLY_VOICES 0", "#define N_POLY_VOICES " + std::to_string(defs.polyVoices));
+    StrUtil::StringReplace(file0Source, "#define N_UNISON_VOICES 0", "#define N_UNISON_VOICES " + std::to_string(defs.unisonVoices));
     auto res = compile_shader(sourcefiles[0], defs);
     if (std::holds_alternative<shader_gpu_compute>(res)) {
         previous.destroy();
@@ -208,6 +249,7 @@ struct ssbo_ringbuffer_t : public OpenGLResource {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, current());
         checkGLError("glBindBuffer");
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, len, buffer);
+        checkGLError("glBufferSubData");
     }
     GLuint current() const {
         return ssbo[frameIndex % N];
@@ -249,9 +291,28 @@ struct gpu_compute_context_t {
     double time_seconds;
     double time_samples;
     double time_beats;
-    double unison_voice_count;
-    double unison_detune;
-    double bleb_duration;
+    double osc1_unison_voice_count;
+    double osc1_unison_detune;
+    double osc1_bleb_duration;
+    double osc1_stereo;
+    double osc1_pw;
+    double osc1_pw_mod_rate;
+    double osc1_pw_mod_depth;
 };
+
+/* keep in sync with shader defines */
+static constexpr size_t NUM_VOICE_INPUT_PARAMETERS = 2;
+static constexpr size_t NUM_SYNTH_INPUT_PARAMETERS = 4;
+/*
+struct voice_state_input_t {
+    float is_active[N_SAMPLES];
+    float velocity[N_SAMPLES];
+    float pitch[N_SAMPLES];
+};
+
+struct synth_state_input_t {
+    float param_bleb[N_SAMPLES];
+};
+*/
 
 } // namespace PluginSynth::GPU

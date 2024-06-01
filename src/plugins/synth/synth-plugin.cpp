@@ -2455,8 +2455,6 @@ public:
         }
     }
 
-    void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample);
-
     void OnParamChange(Parameters parameter) override {
         double value                         = 0.0;
         auto paramInstance                   = getParam(parameter);
@@ -4810,12 +4808,6 @@ std::shared_ptr<PluginViewContainer> SynthImplUnison::createViewCtrImpl() {
         return this->views.back();
     }
     return nullptr;
-}
-
-void SynthImplUnison::ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {
-    auto bpm100 = host->prjGlobals.tempo100;
-    auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
-    moduleSynthUnisonInstance->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
 }
 
 void SynthImplUnison::setSetting(Settings setting, bool value) {

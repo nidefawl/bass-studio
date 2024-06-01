@@ -125,6 +125,12 @@ public:
     }
     virtual void setBlocksize(blocksize_t bs) {
     }
+
+    void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {
+        auto bpm100 = host->prjGlobals.tempo100;
+        auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
+        this->moduleInstance->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
+    }
 };
 
 template<typename T>
@@ -154,7 +160,9 @@ public:
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
         if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[idx-1];
-            return param->convertValueDisplay(displayValue);
+            if (param->unit != "dB") {
+                return param->convertValueDisplay(displayValue);
+            }
         }
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
@@ -162,8 +170,10 @@ public:
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override {
         if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[idx-1];
-            String valDisplay     = param->getValueDisplay(value);
-            return {valDisplay, param->unit};
+            if (param->unit != "dB") {
+                String valDisplay     = param->getValueDisplay(value);
+                return {valDisplay, param->unit};
+            }
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
