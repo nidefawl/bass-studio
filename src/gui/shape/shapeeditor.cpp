@@ -366,6 +366,9 @@ void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* them
             nvgFill(vg);
         }
     }
+    if (curve.flags & SHAPE_LOCK_POINTS) {
+        return;
+    }
     if (hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts) {
         for (int32_t pass = 0; pass < 2; ++pass) {
             int32_t idx = hit.idx;
