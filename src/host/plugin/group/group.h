@@ -18,7 +18,6 @@ class module_group final : public internalplugin {
     struct internal_handles_t;
     internal_handles_t* handle;
     audio_stage_t* audio;
-    std::shared_ptr<DAW::effect_processing_graph_t> lastEffProcessingGraph;
     DAW::Host::note_event_validator_t noteEventValidator;
 public:
     explicit module_group(int32_t _projectGlobalId, IHostCallback* _hostCallback);

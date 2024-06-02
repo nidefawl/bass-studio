@@ -1,5 +1,6 @@
 #include "config.h"
 #include "host/audio_config.h"
+#include "host/graph/effect_graph.h"
 #include "host/midihost/midi_host.h"
 #include "logging.h"
 #include "math/seq_math.h"
@@ -205,7 +206,7 @@ namespace DAW {
         return false;
     }
 
-    bool buildProcessingGraphFromRoutingGraph(const Host::Host* const host, const std::shared_ptr<track_graph_t>& dependencyGraph, const dependency_trackgraph_flattened_t& graphFlattened, std::shared_ptr<processing_graph_t>& out_procgraph) {
+    bool buildProcessingGraphFromRoutingGraph(const Host::Host* const host, const project_t* const project, const std::shared_ptr<track_graph_t>& dependencyGraph, const dependency_trackgraph_flattened_t& graphFlattened, std::shared_ptr<processing_graph_t>& out_procgraph) {
         std::vector<const track_node_t*> tracksVisited;
         std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_shared<processing_graph_t>();
 
@@ -287,9 +288,27 @@ namespace DAW {
          * Where child_output_latency = pChild->inputLatency + pChild->internalLatency
          * This has to be done in bottom up/child first order
          */
-        samplerate_t maxLatency = 0;
+        samplecount_t maxLatency = 0;
         for (auto const ptrNode : graph.nodesFlatOrdered) {
             ptrNode->inputLatency = 0;
+            dbgassert(ptrNode->internalLatency == -1);
+            const auto track = ptrNode->trackOptional;
+            dbgassert(track);
+            const auto stage = track->getStage();
+            dbgassert(stage);
+            if (stage->routingState == audiostagerouting_state_t::CUSTOM) {
+                std::shared_ptr<effect_processing_graph_t> stageGraph;
+                if (!DAW::buildEffectProcessingGraph(host, project, stage, stageGraph)) {
+                    log_lf(Log::L_ERROR, "Failed building stage graph for track %s\n", StringAsCStr(track->name));
+                    ptrNode->internalLatency = 0;
+                } else {
+                    ptrNode->internalLatency = stageGraph->trackGraph->maxLatencySamples;
+                }
+            } else {
+                ptrNode->internalLatency = stage->getInternalLatencyDefaultRouting();
+            }
+            dbgassert(ptrNode->internalLatency >= 0);
+
 #ifndef NDEBUG
             dbgassert(ptrNode->children.size() == ptrNode->dependencies.size());
             for (const auto trNodeChild : ptrNode->children) {
@@ -304,10 +323,9 @@ namespace DAW {
 #endif
                 ptrNode->inputLatency = std::max(ptrNode->inputLatency, ptrChNode->inputLatency + ptrChNode->internalLatency);
             }
-            auto stage = host->getAudioStage(audio_stage_ref_t{ ptrNode->stageId });
-            dbgassert(stage);
             stage->latencyInput = ptrNode->inputLatency;
-            stage->latencyOuput = stage->latencyInput + stage->getInternalLatency();
+            stage->latencyInternal = ptrNode->internalLatency;
+            stage->latencyOuput = stage->latencyInput + ptrNode->internalLatency;
             maxLatency = std::max(maxLatency, stage->latencyOuput);
 #ifndef NDEBUG
             for (auto const trNodeChild : ptrNode->children) {
@@ -367,7 +385,7 @@ namespace DAW {
         if (!dep_resolve(graphFlattened, &roots)) {
             return false;
         }
-        return buildProcessingGraphFromRoutingGraph(host, dependencyGraph, graphFlattened, out_procgraph);
+        return buildProcessingGraphFromRoutingGraph(host, project, dependencyGraph, graphFlattened, out_procgraph);
     }
 
     bool buildProcessingGraph(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
@@ -381,11 +399,11 @@ namespace DAW {
         if (!dep_resolve(graphFlattened, &root)) {
             return false;
         }
-        return buildProcessingGraphFromRoutingGraph(host, dependencyGraph, graphFlattened, out_procgraph);
+        return buildProcessingGraphFromRoutingGraph(host, project, dependencyGraph, graphFlattened, out_procgraph);
     }
 
-    track_node_ptr makeTrackNode(audiostageid_i32 a, samplecount_t latency) {
-        return new track_node_t(track_node_type_t::TRACK, a, latency);
+    track_node_ptr makeTrackNode(audiostageid_i32 stageId) {
+        return new track_node_t(track_node_type_t::TRACK, stageId, -1);
     }
 
     processing_track_node_ptr makeProcTrackNode() {
@@ -441,7 +459,7 @@ namespace DAW {
             track_impl_t* trackImpl = track->getStage();
             auto stageId            = trackImpl->stageId.stageId;
             if (!map.count(stageId)) {
-                map[stageId] = makeTrackNode(stageId, trackImpl->getInternalLatency());
+                map[stageId] = makeTrackNode(stageId);
             }
             track_node_t& trackCfg = getNode(map, stageId);
 
@@ -475,7 +493,7 @@ namespace DAW {
                         dbgassert(src);
                         auto srcStageId = src->stageId.stageId;
                         if (!map.count(srcStageId)) {
-                            map[srcStageId] = makeTrackNode(srcStageId, src->getInternalLatency());
+                            map[srcStageId] = makeTrackNode(srcStageId);
                         }
                         track_node_t& trackSrcCfg = getNode(map, srcStageId);
                         trackCfg.dependencies.push_back(srcStageId);
@@ -494,7 +512,7 @@ namespace DAW {
                     dbgassert(src);
                     auto srcStageId = src->stageId.stageId;
                     if (!map.count(srcStageId)) {
-                        map[srcStageId] = makeTrackNode(srcStageId, src->getInternalLatency());
+                        map[srcStageId] = makeTrackNode(srcStageId);
                     }
                     track_node_t& trackSrcCfg = getNode(map, srcStageId);
                     trackCfg.dependencies.push_back(srcStageId);
@@ -516,7 +534,7 @@ namespace DAW {
                     }
                     auto dstStageId = dst->stageId.stageId;
                     if (!map.count(dstStageId)) {
-                        map[dstStageId] = makeTrackNode(dstStageId, dst->getInternalLatency());
+                        map[dstStageId] = makeTrackNode(dstStageId);
                     }
                     track_node_t& trackDstCfg = getNode(map, dstStageId);
                     trackDstCfg.dependencies.push_back(stageId);
@@ -551,7 +569,7 @@ namespace DAW {
                     auto srcStageId = audioReturn->stageId.stageId;
 
                     if (!map.count(srcStageId)) {
-                        map[srcStageId] = makeTrackNode(srcStageId, audioReturn->getInternalLatency());
+                        map[srcStageId] = makeTrackNode(srcStageId);
                     }
                     track_node_t& trackReturnCfg = getNode(map, srcStageId);
                     trackReturnCfg.dependencies.push_back(trackImpl->stageId.stageId);

@@ -130,8 +130,9 @@ struct audio_stage_t : public IDelayLineStorage {
     audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
     sampleformat_t sampleFormat;
 
-    samplerate_t latencyInput = 0;
-    samplerate_t latencyOuput = 0;
+    samplecount_t latencyInput = 0;
+    samplecount_t latencyInternal = 0;
+    samplecount_t latencyOuput = 0;
 
 
     audiotrack_t audioInput;
@@ -213,7 +214,8 @@ struct audio_stage_t : public IDelayLineStorage {
     }
     void removePlugin(effectbase* _effect);
     void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
-    samplecount_t getInternalLatency() const;
+    samplecount_t getInternalLatencyCustom() const;
+    samplecount_t getInternalLatencyDefaultRouting() const;
     samplecount_t getOutputLatency() const;
     samplecount_t getInputLatency() const;
     void insertEffect(int32_t idx, effectbase* _instrument);

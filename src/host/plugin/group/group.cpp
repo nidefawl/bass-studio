@@ -172,6 +172,7 @@ void guimodule_group::buttonClicked(guibase* _button) {
 
 struct module_group::internal_handles_t {
     DAW::Host::process_scratch_buf_t scratch{};
+    std::shared_ptr<DAW::effect_processing_graph_t> lastEffProcessingGraph;
 };
 
 module_group::module_group(int32_t _projectGlobalId, IHostCallback* _hostCallback)
@@ -209,7 +210,10 @@ std::shared_ptr<guiplugin> module_group::createGuiPlugin(int32_t uuid) {
 }
 
 samplecount_t module_group::getPluginLatency() {
-    return audio->getInternalLatency();
+    if (handle->lastEffProcessingGraph) {
+        return handle->lastEffProcessingGraph->trackGraph->maxLatencySamples;
+    }
+    return audio->getInternalLatencyDefaultRouting();
 }
 
 void module_group::onEnable() {
@@ -271,7 +275,7 @@ void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 }
 
 std::shared_ptr<DAW::effect_processing_graph_t> module_group::getLastProcessingGraph() {
-    return lastEffProcessingGraph;
+    return handle->lastEffProcessingGraph;
 }
 
 void module_group::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
@@ -279,12 +283,11 @@ void module_group::process(const DAW::Host::Host* const host, AudioBlock* in, Au
     dbgassert(in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     audio->input.copyFrom(in);
 
-    std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
-    if (!DAW::buildEffectProcessingGraph(pluginMgr, nullptr, audio, effProcessingGraph)) {
+    if (!DAW::buildEffectProcessingGraph(pluginMgr, nullptr, audio, handle->lastEffProcessingGraph)) {
         log_lf(Log::L_ERROR, "Failed building effect graph\n");
+        handle->lastEffProcessingGraph = nullptr;
     }
-    host->processAudio(handle->scratch, audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, effProcessingGraph.get(), audio);
-    lastEffProcessingGraph = effProcessingGraph;
+    host->processAudio(handle->scratch, audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, handle->lastEffProcessingGraph.get(), audio);
 #ifdef DAW_DEBUG_TRACK_GRAPHS
     //TODO: this code path runs on a workerthread. Store processing-graph add to pluginhost::lastProcessingGraphs from playback-thread
 #endif

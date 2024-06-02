@@ -242,6 +242,7 @@ namespace DAW {
 
         /* Determine nodes accumulated inputLatency (own internalLatency + max_latency(all_children)) */
         /* This has to be done in bottom up/child first */
+        samplecount_t maxLatency = 0;
         for (auto const ptrNode : graph.nodesFlatOrdered) {
             ptrNode->inputLatency = 0;
 #ifndef NDEBUG
@@ -258,6 +259,7 @@ namespace DAW {
 #endif
                 ptrNode->inputLatency = std::max(ptrNode->inputLatency, ptrChNode->inputLatency + ptrChNode->internalLatency);
             }
+            maxLatency = std::max(maxLatency, ptrNode->inputLatency + ptrNode->internalLatency);
 #ifndef NDEBUG
             for (auto const trNodeChild : ptrNode->children) {
                 dbgassert(STL_CONTAINS(ptrNode->dependencies, trNodeChild->stageId));
@@ -265,6 +267,7 @@ namespace DAW {
             }
 #endif
         }
+        graph.trackGraph->maxLatencySamples = maxLatency;
         /* Assign the resolved latencies to the previously populated push/pull inputs of each node */
         for (auto const ptrNode : graph.nodesFlatOrdered) {
             for (auto& pulls : ptrNode->pulls) {

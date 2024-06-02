@@ -429,7 +429,11 @@ track_impl_t::~track_impl_t() {
     delete midiValidation;
 }
 
-samplecount_t audio_stage_t::getInternalLatency() const {
+samplecount_t audio_stage_t::getInternalLatencyCustom() const {
+    return latencyInternal;
+}
+
+samplecount_t audio_stage_t::getInternalLatencyDefaultRouting() const {
     samplecount_t latency = 0;
     for (effectbase* effect : effects) {
         latency += effect->getPluginLatency();
