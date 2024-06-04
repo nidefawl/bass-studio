@@ -507,8 +507,14 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
             itNoteEnd   = listLoop.cend();
             const tick_t posCurLoopStart = preLoopLen + (i * loopLenProcessing);
             const tick_t posCurLoopEnd   = posCurLoopStart + loopLenProcessing;
-            const tick_t clipStart       = math::max(posCurLoopStart, localStart);
-            const tick_t clipEnd         = math::min(posCurLoopEnd, localEnd);
+
+            /* Notes are always cut at loop and clip boundaries.
+             * if bCutNotes is true then notes are also minimized to [localStart, localEnd) boundaries.
+             * i.e. bCuteNotes is true if the clip is being rendered */
+            const tick_t clipStart = options.bCutNotes ? math::max(0, localStart) : 0;
+            const tick_t clipEnd   = options.bCutNotes ? math::min(len, localEnd) : len;
+            const tick_t cutStart  = math::max(posCurLoopStart, clipStart);
+            const tick_t cutEnd    = math::min(posCurLoopEnd, clipEnd);
             for (; itNote != itNoteEnd; itNote++) {
                 note_t note = *itNote;// copy
                 if (options.bApplyGroove && grooveIdx >= 0) {
@@ -522,27 +528,24 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                         tmp.time += posCurLoopStart;
                         nextNote = &tmp;
                     }
-                    // don't add note if its past the clip end
-                    if (note.start() >= len) // use len instead?
+                    /* don't add note to loop if its past the clip end */
+                    if (note.start() >= len)
                         continue;
                     applyNoteQuantizationGroove(groove, note, nextNote);
                 } else {
                     note.time -= loopStart;
                     note.time += posCurLoopStart;
                 }
+                if (note.start() >= len)
+                    continue;
                 if (note.len <= 0)
                     continue;
                 if (note.end() > localStart && note.start() < localEnd) {
-                    if (note.start() < clipStart) {
-                        //if (!options.bCutNotes) {
-                        //    continue;
-                        //}
-                        if (options.bCutNotes) {
-                            note.cutLeft(clipStart);
-                        }
+                    if (note.start() < cutStart) {
+                        note.cutLeft(cutStart);
                     }
-                    if (note.end() > clipEnd) {
-                        note.cutRight(clipEnd);
+                    if (note.end() > cutEnd) {
+                        note.cutRight(cutEnd);
                     }
                     if (note.len > 0)
                         notesView.m_list.push_back(note);
@@ -1156,6 +1159,8 @@ void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, c
         }
         t += loopLen;
     }
+    dst.shape.sort();
+    dst.updateBounds();
 }
 
 void CopyControlData(const clip_control_data_t& src, clip_control_data_t& dst, tick_t readPos, tick_t writePos, tick_t readLen) {
@@ -1164,6 +1169,7 @@ void CopyControlData(const clip_control_data_t& src, clip_control_data_t& dst, t
         if (pt.pos.x >= readPos && pt.pos.x <= readPos + readLen) {
             pitchBend.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
         }
+        pitchBend.shape.sort();
     }
     for (auto& it : src.ccChannels) {
         auto& cc = dst.getOrCreateChannel(it.first);
@@ -1172,6 +1178,7 @@ void CopyControlData(const clip_control_data_t& src, clip_control_data_t& dst, t
                 cc.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
             }
         }
+        cc.shape.sort();
     }
     dst.eraseDuplicates();
     dst.updateBounds();
@@ -1212,12 +1219,16 @@ void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t writePos, tick_t re
     auto& dataIn = clip->controlData;
     if (clip->isLoopEnabled()) {
         DAW::CopyControlDataChannel(pitchBend, writePos, dataIn.pitchBend, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
+        pitchBend.shape.assertSorted();
         for (auto& it : dataIn.ccChannels) {
             if (!ccChannels.count(it.first)) {
                 createCCChannel(it.first);
             }
             auto& cc = ccChannels[it.first];
+            it.second.shape.assertSorted();
+            cc.shape.assertSorted();
             DAW::CopyControlDataChannel(cc, writePos, it.second, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
+            cc.shape.assertSorted();
         }
     } else {
         readPos += clip->offsetStart;
@@ -1225,6 +1236,7 @@ void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t writePos, tick_t re
             if (pt.pos.x >= readPos && pt.pos.x <= readPos + readLen) {
                 pitchBend.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
             }
+            pitchBend.shape.assertSorted();
         }
         for (auto& it : dataIn.ccChannels) {
             if (!ccChannels.count(it.first)) {
@@ -1236,6 +1248,7 @@ void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t writePos, tick_t re
                     cc.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
                 }
             }
+            cc.shape.assertSorted();
         }
     }
 }
