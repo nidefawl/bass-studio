@@ -167,20 +167,52 @@ guictr_stacked::~guictr_stacked() {
     for (stacked_entry* entry : entries) {
         remove(entry->tabCtr);
         remove(&entry->splitter);
-        entry->tabCtr->remove(&entry->btnHideEntry);
+        // entry->tabCtr->remove(&entry->btnHideEntry);
         delete entry;
     }
+    entries.clear();
     dbgassert(guis.size() <= 1);
     removeGuis();
 }
 void guictr_stacked::addEntry(guictr_base* ctr, String title) {
     auto const entry = new guictr_stacked::stacked_entry{ ctr, std::move(title) };
-    ctr->add(&entry->btnHideEntry);
+    // ctr->add(&entry->btnHideEntry);
+    entry->splitter.setSplitterType(bVerticalLayout ? 0 : 1);
     guictr_base::add(ctr);
     entry->splitter.setCallback(this);
     guictr_base::add(&entry->splitter);
     this->entries.push_back(entry);
+    updateSplitterPositions();
 }
+void guictr_stacked::setSplitters(std::initializer_list<float>&& splitterPos) {
+    dbgassert(splitterPos.size() <= entries.size());
+    for (size_t i = 0; i < splitterPos.size(); ++i) {
+        entries[i]->splitter.setScale(splitterPos.begin()[i]);
+    }
+    updateSplitterPositions();
+}
+void guictr_stacked::updateSplitterPositions() {
+    for (size_t i = 0; i < entries.size(); ++i) {
+        auto min = i == 0 ? 0 : entries[i - 1]->splitter.getScale();
+        auto max = i == entries.size() - 1 ? 1 : entries[i + 1]->splitter.getScale();
+        entries[i]->splitter.setMinMax(min, max);
+        entries[i]->splitter.setScale(entries[i]->splitter.getScaleClamped());
+    }
+    if (!entries.empty()) {
+        entries.back()->splitter.setMinMax(1, 1);
+        entries.back()->splitter.setScale(1.0f);
+    }
+}
+void guictr_stacked::removeEntries() {
+    for (auto* entry : entries) {
+        remove(entry->tabCtr);
+        remove(&entry->splitter);
+        // entry->tabCtr->remove(&entry->btnHideEntry);
+        delete entry;
+    }
+    entries.clear();
+}
+
 void guictr_stacked::render(NVGcontext* vg) {
     if (isBackgroundRendered()) {
         renderBackground(vg);
@@ -195,54 +227,8 @@ void guictr_stacked::render(NVGcontext* vg) {
     }
 }
 void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
-    auto it = std::find_if(entries.begin(), entries.end(), [addrOfSplitter = &splitter](const auto* entry) {
-        return &entry->splitter == addrOfSplitter;
-    });
-    if (it != entries.end()) {
-        auto pos            = it - entries.begin();
-        auto entry          = *it;
-        auto getEntryHeight = [this](int32_t idx, auto& entries, ivec2 csize) -> int32_t {
-            int32_t totalH = csize.y;
-            int len        = entries.size();
-            for (int i = 0; i < len; i++) {
-                auto* entry = entries[i];
-                int32_t verticalHeight = 0;
-                if (entry->active || i == idx) {
-                    verticalHeight = entry->splitter.leftOrTop(totalH);
-                    if (i == len - 1) {
-                        verticalHeight = totalH;
-                    }
-                } else {
-                    verticalHeight = getCollapsedCtrHeight(entry->tabCtr);
-                    if (i == len - 1) {
-                        verticalHeight = math::min(verticalHeight, totalH);
-                    }
-                }
-                if (idx == i) {
-                    return verticalHeight;
-                }
-                totalH -= verticalHeight;
-            }
-            return 0;
-        };
-        int32_t newHeight = getEntryHeight(pos, entries, getSizeContent());
-        int32_t minSize   = getCollapsedCtrHeight(entry->tabCtr);
-        bool oldState     = entry->active;
-        bool newState     = oldState;
-        if (entry->active && newHeight < minSize + 5) {
-            newState = false;
-        } else if (!entry->active && newHeight > minSize + 10) {
-            newState = true;
-        }
-        if (newState != oldState) {
-            toggleEntry(pos, 0);
-        } else {
-
-            this->layout();
-        }
-        return;
-    }
-    dbgassert(0 && "entry not found");
+    updateSplitterPositions();
+    this->layout();
 }
 ivec2 guictr_stacked::getContainerPos() {
     return toScreenSpace({0, 0});
@@ -257,28 +243,36 @@ int32_t guictr_stacked::getCollapsedCtrHeight(guictr_base* ctr) {
 void guictr_stacked::layout() {
     ivec2 csize = getSizeContent();
     ivec2 posOffset(0);
-    int32_t totalH = csize.y;
-    int len        = entries.size();
+    auto totalS = csize;
+    int len     = entries.size();
+    int32_t prevS = 0;
     for (int i = 0; i < len; i++) {
         auto* entry = entries[i];
-        int32_t verticalHeight;
+        int32_t s;
         if (entry->active) {
-            verticalHeight = entry->splitter.leftOrTop(totalH);
+            s = entry->splitter.leftOrTop(totalS[bVerticalLayout]);
             if (i == len - 1) {
-                verticalHeight = totalH;
+                s = totalS[bVerticalLayout];
             }
         } else {
-            verticalHeight = getCollapsedCtrHeight(entry->tabCtr);
+            s = getCollapsedCtrHeight(entry->tabCtr);
             if (i == len - 1) {
-                verticalHeight = math::min(verticalHeight, totalH);
+                s = math::min(s, totalS[bVerticalLayout]);
             }
         }
         entry->tabCtr->pos   = posOffset;
-        entry->tabCtr->size  = { csize.x, verticalHeight };
-        entry->splitter.pos  = { 0, entry->tabCtr->bottom() - Splitter::SPLITTER_LAYOUT_THICKNESS / 2 };
-        entry->splitter.size = { csize.x, Splitter::SPLITTER_LAYOUT_THICKNESS };
-        posOffset.y += verticalHeight;
-        totalH -= verticalHeight;
+        if (bVerticalLayout) {
+            entry->tabCtr->size  = { csize.x, s - prevS };
+            entry->splitter.pos  = { 0, entry->tabCtr->bottom() - Splitter::SPLITTER_LAYOUT_THICKNESS / 2 };
+            entry->splitter.size = { csize.x, Splitter::SPLITTER_LAYOUT_THICKNESS };
+            posOffset.y = entry->tabCtr->bottom();
+        } else {
+            entry->tabCtr->size  = { s - prevS, csize.y };
+            entry->splitter.pos  = { entry->tabCtr->right() - Splitter::SPLITTER_LAYOUT_THICKNESS / 2, 0 };
+            entry->splitter.size = { Splitter::SPLITTER_LAYOUT_THICKNESS, csize.y };
+            posOffset.x = entry->tabCtr->right();
+        }
+        prevS = s;
         entry->splitter.layout();
         entry->tabCtr->layout();
     }

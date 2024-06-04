@@ -1,5 +1,7 @@
 #pragma once
+#include <initializer_list>
 #include <nanovg_min.h>
+#include <vector>
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -17,16 +19,19 @@ struct guitheme_t;
 class guictr_stacked final : public guictr_base, public splitter_cb {
     struct stacked_entry;
     std::vector<stacked_entry*> entries;
-
+    bool bVerticalLayout = true;
 public:
     static constexpr int32_t STACK_ENTRY_BTN_SIZE = 24;
     guictr_stacked() : guictr_base() {
     }
     ~guictr_stacked();
-
+    void setVerticalLayout(bool bVertical) {
+        this->bVerticalLayout = bVertical;
+    }
     int32_t getNumEntries();
     void toggleEntry(int32_t idx, int flags);
     void addEntry(guictr_base* ctr, String title);
+    void removeEntries();
     void buttonClicked(guibase* button) override;
     void layout() override;
     void render(NVGcontext* vg) override;
@@ -34,6 +39,8 @@ public:
     ivec2 getContainerPos() override;
     ivec2 getContainerSize() override;
     int32_t getCollapsedCtrHeight(guictr_base* ctr);
+    void updateSplitterPositions();
+    void setSplitters(std::initializer_list<float>&& splitterPos);
 };
 class guictr_tabbed : public guictr_base {
 
