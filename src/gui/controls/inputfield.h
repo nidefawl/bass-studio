@@ -51,13 +51,14 @@ public:
 template<typename T>
 class gui_numberinput_field_generic : public gui_numberinput_field_base {
 protected:
-    T* number;
+    T* number = nullptr;
     const char* strFormat = nullptr;
     T stepSize{};
 public:
     std::function<void(gui_numberinput_field_base*, T)> fnValueEditChanged;
     std::function<T(T)> fnClamp;
 
+    gui_numberinput_field_generic() = default;
     explicit gui_numberinput_field_generic(T* _number) : gui_numberinput_field_base(), number(_number) {
     }
     void setRef(T* number) {
