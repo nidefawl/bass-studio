@@ -651,10 +651,12 @@ public:
     }
     virtual void restoreModulatedParameter(int32_t paramIdx) {
         auto param = getParam(paramIdx);
-        auto valMod = param->getValueModulated();
-        auto val = param->getValue();
-        param->setModulated(val);
-        postSetParameter(paramIdx, valMod, val, FLG_PAR_UPDATE_USER);
+        if (param) {
+            auto valMod = param->getValueModulated();
+            auto val = param->getValue();
+            param->setModulated(val);
+            postSetParameter(paramIdx, valMod, val, FLG_PAR_UPDATE_USER);
+        }
     }
     std::pair<float, float> getParamMinMaxAutomated(int32_t paramIdx) {
         auto it = std::find_if(automationLanes.begin(), automationLanes.end(), [paramIdx](automation_lane_t& ap) {
