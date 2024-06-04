@@ -522,6 +522,9 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                         tmp.time += posCurLoopStart;
                         nextNote = &tmp;
                     }
+                    // don't add note if its past the clip end
+                    if (note.start() >= len) // use len instead?
+                        continue;
                     applyNoteQuantizationGroove(groove, note, nextNote);
                 } else {
                     note.time -= loopStart;
@@ -539,9 +542,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                         }
                     }
                     if (note.end() > clipEnd) {
-                        if (options.bCutNotes) {
-                            note.cutRight(clipEnd);
-                        }
+                        note.cutRight(clipEnd);
                     }
                     if (note.len > 0)
                         notesView.m_list.push_back(note);

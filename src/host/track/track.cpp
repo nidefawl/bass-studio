@@ -1389,7 +1389,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 }
                 auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
                 if (stageMidiInput) {
-                    stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT, midiChannel.srcChannel, midiChannel.dstChannel);
+                    stageMidiInput->getNotesDelayed(blockStart, blockEnd, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != stage_bufferpoint::INPUT, midiChannel.srcChannel, midiChannel.dstChannel);
                 }
             }
         }
@@ -1434,12 +1434,12 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 
 }
 
-void audio_stage_t::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost, int32_t midiChannelMatch, int32_t midiChannelRewrite) {
+void audio_stage_t::getNotesDelayed(tick_t blockStart, tick_t blockEnd, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost, int32_t midiChannelMatch, int32_t midiChannelRewrite) {
     auto& notesStage = isPost ? notesPost : notesPre;
-    notesStage.getNotesDelayed(tickLatencyCompensated, ticksPerBlock, evtsOut, ctrlEvts, midiChannelMatch, midiChannelRewrite);
+    notesStage.getNotesDelayed(blockStart, blockEnd, ticksPerBlock, evtsOut, ctrlEvts, midiChannelMatch, midiChannelRewrite);
 }
-void audio_stage_t::sendMidiToEffect(const std::vector<midievent_note_t>& evtsOut, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect) {
-    midi_data_processing_t events{ &evtsOut, &ctrlEvts, tickLatencyCompensated, bpm100 };
+void audio_stage_t::sendMidiToEffect(const std::vector<midievent_note_t>& evtsOut, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, tick_t blockStart, int32_t bpm100, effectbase* effect) {
+    midi_data_processing_t events{ &evtsOut, &ctrlEvts, blockStart, bpm100 };
     effect->processMidi(events);
 }
 
@@ -2365,9 +2365,9 @@ void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_not
     }
 }
 
-void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut, int32_t midiChannelMatch, int32_t midiChannelRewrite) {
-    if (tickLatencyCompensated > currentTick) {
-        log_lf(Log::L_WARN, "tickLatencyCompensated=%d, ticksPerBlock=%f, currentTick=%d\n", tickLatencyCompensated, ticksPerBlock, currentTick);
+void noteevent_buffer::getNotesDelayed(tick_t blockStart, tick_t blockEnd, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut, int32_t midiChannelMatch, int32_t midiChannelRewrite) {
+    if (blockStart > currentTick) {
+        log_lf(Log::L_WARN, "blockStart=%d, ticksPerBlock=%f, currentTick=%d\n", blockStart, ticksPerBlock, currentTick);
         return;
     }
     if (!noteEvts.empty()) {
@@ -2375,11 +2375,11 @@ void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const doub
             if (midiChannelMatch != -1 && midiChannelMatch != evt.channel) {
                 continue;
             }
-            if (evt.globalTick >= tickLatencyCompensated && evt.globalTick < tickLatencyCompensated + ticksPerBlock) {
+            if (evt.globalTick >= blockStart && evt.globalTick < blockEnd) {
                 noteEvtsOuts.emplace_back(evt);
                 auto& evtCompensated = noteEvtsOuts.back();
-                evtCompensated.tickOffsetInBlock = (evtCompensated.globalTick - tickLatencyCompensated);
-                dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
+                evtCompensated.tickOffsetInBlock = (evtCompensated.globalTick - blockStart);
+                dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock <= ticksPerBlock);
                 if (midiChannelRewrite > -1) {
                     evtCompensated.channel = midiChannelRewrite;
                 }
@@ -2391,7 +2391,7 @@ void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const doub
             if (midiChannelMatch != -1 && midiChannelMatch != int32_t(evt.message & 0x0F)) {
                 continue;
             }
-            if (evt.tick >= tickLatencyCompensated && evt.tick < tickLatencyCompensated + ticksPerBlock) {
+            if (evt.tick >= blockStart && evt.tick < blockEnd) {
                 ctrlEvtsOut.emplace_back(evt);
                 if (midiChannelRewrite > -1) {
                     auto& evt = ctrlEvtsOut.back();
@@ -2400,7 +2400,7 @@ void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const doub
             }
         }
         /* if (!ctrlEvtsOut.empty()) {
-            log_lf(Log::L_DEBUG, "%zd events in range %d %f. %zd events total\n", ctrlEvtsOut.size(), tickLatencyCompensated, tickLatencyCompensated+ticksPerBlock, ctrlEvts.size());
+            log_lf(Log::L_DEBUG, "%zd events in range %d %f. %zd events total\n", ctrlEvtsOut.size(), blockStart, blockStart+ticksPerBlock, ctrlEvts.size());
             for (auto& evt : ctrlEvtsOut) {
                 auto msg = IMidiMsg::FromU32AndTick(evt.message, evt.tick);
                 log_lf(Log::L_DEBUG, "in range: %s\n", msg.ToString().c_str());

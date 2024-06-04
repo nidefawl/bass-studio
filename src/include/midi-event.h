@@ -91,6 +91,6 @@ namespace DAW::Host {
             noteEvts.clear();
             ctrlEvts.clear();
         }
-        void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut, int32_t midiChannelMatch, int32_t midiChannelRewrite);
+        void getNotesDelayed(tick_t blockStart, tick_t blockEnd, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut, int32_t midiChannelMatch, int32_t midiChannelRewrite);
     };
 }
