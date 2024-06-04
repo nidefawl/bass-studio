@@ -924,3 +924,20 @@ bool gui_slider_textfield::renderAsBipolar() {
 std::optional<std::vector<param_modulation_range_t>> guiknob::getKnobModulationRanges() {
     return std::nullopt;
 }
+
+void gui_slider_textfield::setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
+    this->paramAutomatable = _paramAutomatable;
+    this->paramIdx         = _paramIdx;
+    if (paramAutomatable && this->tooltipText.empty()) {
+        auto param = paramAutomatable->getParam(paramIdx);
+        if (param) {
+            setTooltipText(param->extensiveName.empty() ? param->name : param->extensiveName);
+            setFlag(FLG_RENDER_LABEL, true);
+            label = param->name;
+        }
+    } else {
+        label = "";
+        setTooltipText("");
+        setFlag(FLG_RENDER_LABEL, false);
+    }
+}

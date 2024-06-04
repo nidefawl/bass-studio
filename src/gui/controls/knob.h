@@ -185,10 +185,7 @@ public:
     int32_t getParamIdx() const {
         return paramIdx;
     }
-    void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
-        this->paramAutomatable = _paramAutomatable;
-        this->paramIdx         = _paramIdx;
-    }
+    void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx);
     void getAutomationRef(automatable_t*& at, int32_t& paramIdx) const override {
         paramIdx = this->paramIdx;
         at       = this->paramAutomatable;

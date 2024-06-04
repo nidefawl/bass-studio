@@ -250,6 +250,7 @@ struct automatable_param_properties_t {
     int32_t quantizationSteps = 0;
     int32_t displayIndex = 0;
     int32_t flags      = 0;
+    String extensiveName = ""; // optional
     String name;
     String unit;
     String shortLabel;
@@ -541,7 +542,8 @@ public:
     virtual String getParamName(int32_t paramIdx) {
         auto it = mapParams.find(paramIdx);
         dbgassert(it != mapParams.end());
-        return it->second.name;
+        auto& param = it->second;
+        return param.extensiveName.empty() ? param.name : param.extensiveName;
     }
     void getAutomated(std::vector<int32_t>& targets) {
         for (const auto& t : automationLanes) {
