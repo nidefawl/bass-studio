@@ -1415,7 +1415,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 #ifdef DAW_DEBUG_MIDI_PROCESSING
         std::vector<midievent_note_t> noteEventsPostValidate;
         std::vector<midievent_ctrl_t> ctrlEventsPostValidate;
-        notesPost.getNotesDelayed(blockStart, ticksPerBlock, noteEventsPostValidate, ctrlEventsPostValidate);
+        notesPost.getNotesDelayed(blockStart, blockEnd, ticksPerBlock, noteEventsPostValidate, ctrlEventsPostValidate);
         noteEventValidatorPost.validate(noteEventsPostValidate);
         if (logProcessedNotes && !midiRealtimeInput.notes.isEmpty()) {
             log_lf(Log::L_DEBUG, "Realtime i: %zd. Notes: %zd. Events Processed: %zd. Post Event Buffered: %zd\n",

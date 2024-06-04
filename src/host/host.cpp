@@ -2161,7 +2161,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                 } else {
                     tmp.ctrlEventsTemp.clear();
                     tmp.noteEventsTemp.clear();
-                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, math::floordS32(processingPosLatencyCompensate + audioProperties.ticksPerBlock), audioProperties.ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true, -1, -1);
+                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, math::floordS32(tickLatencyCompensated + audioProperties.ticksPerBlock), audioProperties.ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true, -1, -1);
                     effect->getTrackLink()->sendMidiToEffect(tmp.noteEventsTemp, tmp.ctrlEventsTemp, processingPosLatencyCompensate, prjGlobals.tempo100, effect);
                     effect->process(this, effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, sampleLatencyCompensated, numSamples, playbackState);
                     blockPostProcess = effect->blockOutputs;
