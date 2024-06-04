@@ -19,10 +19,11 @@ public:
 };
 
 class Splitter final : public guictr_base {
-    int type;
-    float scaleDefault;
-    float scale;
-    float scaleMin{}, scaleMax{};
+    int type = 0;
+    float scaleDefault = 0.5;
+    float scale    = 0.5;
+    float scaleMin = 0.0;
+    float scaleMax = 1.0;
     splitter_cb* notifyCtrl = nullptr;
     ivec2 windowBegin{};
     ivec2 windowSize{};
