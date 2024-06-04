@@ -568,6 +568,7 @@ void duplicateClipLoop(DawInstance* daw, clip_view_t& view) {
             }
             {
                 clip_control_data_t dataCopy = data;// copy
+                dataCopy.eraseDuplicates();
                 dataCopy.copyRangeFrom(clip, loopEnd, loopStart, clip->loopLen);
                 dataCopy.eraseDuplicates();
                 dataCopy.updateBounds();
