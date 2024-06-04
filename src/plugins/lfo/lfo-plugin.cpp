@@ -236,7 +236,9 @@ namespace PluginLFO {
             }
             float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
                 const auto s = sampleCurve(tick);
-                dbgassert(!fp_math::isNanOrInfd(s));
+                if(fp_math::isNanOrInfd(s)) {
+                    return fIn;
+                }
                 const auto valScaled = scale.min + s * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
