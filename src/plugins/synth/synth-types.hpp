@@ -1,5 +1,7 @@
 #pragma once
 #include "host/shape/shape.h"
+#include "math/seq_math.h"
+#include "math/simd_math.h"
 #include "types.h"
 #include <array>
 
@@ -107,18 +109,144 @@ public:
 };
 
 enum class EnvelopeStages : int32_t {
-    Attack = 0,
+    Triggered = 0,
+    Attack,
+    Hold,
     Decay,
+    Sustain,
     Release,
     Idle,
 };
 
 struct Envelope {
-    // these defaults are used for the lfo delay envelope
+    static constexpr double MIN_SECONDS = 0.0001;
+    static constexpr double MAX_SECONDS = 1.0;
+    static constexpr double GetTimeBaseFromParam(double p) {
+        return 1.0 / (p * (Envelope::MAX_SECONDS - Envelope::MIN_SECONDS) + Envelope::MIN_SECONDS);
+    }
+
     double a = 0.0;
+    double h = 0.0;
     double d = 0.5;
     double s = 1.0;
     double r = 0.5;
+
+    EnvelopeStages stage = EnvelopeStages::Idle;
+    double value    = 0.0;
+    double relValue = 0.0;
+    double phase    = 0.0;
+    std::array<double, 3> shapes = {0.75, 0.35, 0.25};
+
+    bool IsReleased() const { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
+
+    void Reset() { value = 0.0; }
+    void Start() { stage = EnvelopeStages::Triggered; }
+    void Release() { 
+        if (stage >= EnvelopeStages::Release) return;
+        stage = EnvelopeStages::Release;
+        relValue = value;
+        phase = 0.0; 
+    }
+
+    bool IsSustain() const {
+        return stage == EnvelopeStages::Sustain;
+    }
+    bool IsIdle() const { return stage == EnvelopeStages::Idle; }
+
+    float shapeSegment(float t, float shape) {
+        float shapeBi  = 1.0 - shape * 2.0;
+        float shapeExp = 0.0;
+        float scale2   = 0.2 + t * 0.8;
+        if (shapeBi < 0.0) {
+            shapeExp = 1.0 + scale2 * abs(shapeBi) * 16.0;
+        } else {
+            shapeExp = 1.0 / (1.0 + scale2 * abs(shapeBi) * 16.0);
+        }
+        return pow(t, shapeExp);
+    }
+    double clampDuration(double f) {
+        return math::clamp(f, 1.0 / MAX_SECONDS, 1.0 / MIN_SECONDS);
+    }
+    float getEnvDurationSeconds(EnvelopeStages stage) {
+        switch (stage) {
+            case EnvelopeStages::Attack:
+            case EnvelopeStages::Triggered:
+                return 1.0 / clampDuration(a);
+            case EnvelopeStages::Hold:
+                return 1.0 / clampDuration(h);
+            case EnvelopeStages::Decay:
+                return 1.0 / clampDuration(d);
+            case EnvelopeStages::Sustain:
+                return 0.0;
+            case EnvelopeStages::Release:
+                return 1.0 / clampDuration(r);
+            default:
+                break;
+        }
+        return 0.0;
+    }
+    void Update(double dt) {
+        switch (stage) {
+            case EnvelopeStages::Triggered:
+                stage = EnvelopeStages::Attack;
+                phase = 0.0;
+                /* fallthrough */
+            case EnvelopeStages::Attack:
+                // minimum att time: 1 sample
+                if (a == 0.0 || phase >= 1.0) {
+                    value = 1.0;
+                    phase = 0.0;
+                    stage = EnvelopeStages::Hold;
+                } else {
+                    value = shapeSegment(phase, shapes[0]);
+                    phase += clampDuration(a) * dt;
+                }
+                break;
+            case EnvelopeStages::Hold:
+                // minimum hold time: 1 sample
+                if (h == 0.0 || phase >= 1.0) {
+                    // value = s;
+                    phase = 0.0;
+                    stage = EnvelopeStages::Decay;
+                } else {
+                    // value = 1.0;
+                    phase += clampDuration(h) * dt;
+                }
+                break;
+            case EnvelopeStages::Decay:
+                // minimum dec time: 1 sample
+                if (d == 0.0 || phase >= 1.0) {
+                    value = s;
+                    phase = 0.0;
+                    stage = EnvelopeStages::Sustain;
+                } else {
+                    value = 1.0 - shapeSegment(phase, shapes[1]) * (1.0 - s);
+                    phase += clampDuration(d) * dt;
+                }
+                break;
+            case EnvelopeStages::Sustain:
+                value = value + (s - value) * dt * (1.0 / 0.01);
+                break;
+            case EnvelopeStages::Release:
+                // minimum rel time: 1 sample
+                if (r == 0.0 || phase >= 1.0) {
+                    value = 0.0;
+                    phase = 0.0;
+                    stage = EnvelopeStages::Idle;
+                } else {
+                    value = shapeSegment(1.0 - phase, shapes[2]) * relValue;
+                    phase += clampDuration(r) * dt;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+};
+
+struct EnvelopeAD {
+    double attack = 0.0;
+    double decay = 0.5;
 
     EnvelopeStages stage = EnvelopeStages::Idle;
     double value         = 0.0;
@@ -126,27 +254,38 @@ struct Envelope {
     bool IsReleased() const { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
 
     void Reset() { value = 0.0; }
-    void Start() { stage = EnvelopeStages::Attack; }
+    void Start() { stage = EnvelopeStages::Triggered; }
     void Release() { stage = EnvelopeStages::Release; }
+
+    bool IsSustain() const {
+        return stage == EnvelopeStages::Decay;
+    }
+    bool IsIdle() const { return stage == EnvelopeStages::Idle; }
 
     void Update(double dt) {
         switch (stage) {
+            case EnvelopeStages::Triggered:
+                stage = EnvelopeStages::Attack;
+                break;
             case EnvelopeStages::Attack:
-                if (a == 0.0 && value == 0.0) {
-                    stage = EnvelopeStages::Decay;
-                    break;
-                }
-                value += (1.1 - value) * a * dt;
+                // if (a == 0.0 && value == 0.0) {
+                //     stage = EnvelopeStages::Decay;
+                //     break;
+                // }
+                value += (1.1 - value) * math::max(attack, 0.01/1000.0) * dt;
                 if (value >= 1.0) {
                     value = 1.0;
-                    stage = EnvelopeStages::Decay;
+                    stage = EnvelopeStages::Hold;
                 }
                 break;
+            case EnvelopeStages::Hold:
+                // TODO: implement hold
+                stage = EnvelopeStages::Decay;
+                break;
             case EnvelopeStages::Decay:
-                value += (s - value) * d * dt;
                 break;
             case EnvelopeStages::Release:
-                value += (-.1 - value) * r * dt;
+                value += (-.1 - value) * math::max(decay, 0.01/1000.0) * dt;
                 if (value <= 0.0) {
                     value = 0.0;
                     stage = EnvelopeStages::Idle;
@@ -539,5 +678,32 @@ inline double pitchFactor(double p) {
 }
 
 inline double pitchToFrequency(double p) { return 440.0 * pitchFactor(p - 69); }
+
+inline double noteToLinearScale(double note, double minNote = 69.0) {
+    return exp(0.69314718055994530942 * ((note - minNote) / 12.0));
+    // return pow(2.0, (note - minNote) / 12.0);
+}
+
+template<typename FPType, size_t LEN_SIMD = 8>
+inline void ShapeLogLikeSIMD(FPType valsIn[LEN_SIMD], FPType valsOut[LEN_SIMD], FPType exponent = 0.75f) {
+    using Vec4D      = glm::vec<4, FPType, glm::aligned_highp>;
+    auto sse8Float   = reinterpret_cast<__m256*>(&valsIn[0]);
+    *sse8Float       = math::simd::log_v8f(*sse8Float);
+    auto pIn         = &valsIn[0];
+    FPType* pDataOut = &valsOut[0];
+    for (size_t j = 0; j < LEN_SIMD; j += 4) {
+        Vec4D& valsRef = *reinterpret_cast<Vec4D*>(&pIn[0]);
+        auto vals      = valsRef * exponent;
+        auto sse4Float = reinterpret_cast<__m128*>(&vals);
+        *sse4Float     = math::simd::exp_v4f(*sse4Float);
+        auto floatPtr  = reinterpret_cast<FPType*>(&vals[0]);
+        math::simd::cos_test<FPType, 4>(floatPtr, pDataOut);
+        for (size_t k = 0; k < 4; k++) {
+            pDataOut[k] = (.5f - .5f * pDataOut[k]);
+        }
+        pIn += 4;
+        pDataOut += 4;
+    }
+}
 
 } // namespace PluginSynth

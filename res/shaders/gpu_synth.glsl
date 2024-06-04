@@ -8,8 +8,8 @@
 #define IS_WAVEFORM_SAMPLER 0
 
 /* These macros are to be kept in sync with c++ */
-#define NUM_VOICE_INPUT_PARAMETERS 2
-#define NUM_SYNTH_INPUT_PARAMETERS 1
+#define NUM_VOICE_INPUT_PARAMETERS 3
+#define NUM_SYNTH_INPUT_PARAMETERS 2
 
 /* define any number of programs */
 #define PROGRAM_NAME_ANALOG_SAW "Analog-Saw"
@@ -33,13 +33,12 @@
 struct voice_state_input_t {
     float velocity[N_SAMPLES];
     float pitch[N_SAMPLES];
+    float param_filter[N_SAMPLES];
 };
 
 struct synth_state_input_t {
-    float param_bleb[N_SAMPLES];
+    float param_filter_keytrack[N_SAMPLES];
     float param_stereo[N_SAMPLES];
-    float param_pw[N_SAMPLES];
-    float param_keytrack[N_SAMPLES];
 };
 
 layout(std430, binding = 0) buffer block_in_synth_state
@@ -69,11 +68,14 @@ layout(binding = 0) uniform context {
     double time_beats;
     double osc1_unison_voice_count;
     double osc1_unison_detune;
-    double osc1_bleb_duration;
+    double osc1_filter;
     double osc1_stereo;
     double osc1_pw;
     double osc1_pw_mod_rate;
     double osc1_pw_mod_depth;
+    double osc1_filter_keytrack;
+    double osc1_detune_keytrack;
+    double osc1_width_keytrack;
 } ctx; 
 
 layout(local_size_x = N_SAMPLES, local_size_y = 1, local_size_z = 1) in;
@@ -148,9 +150,9 @@ double square(double phase, double phase_inc, double bleb, double pw) {
     return square;
 }
 
-double osc_pulsewidth(double t, double phase_offset) {
-    double f = pow(2.0, float(ctx.osc1_pw_mod_rate)*12.0);
-    double pw_mod = ctx.osc1_pw + 0.5 * ctx.osc1_pw_mod_depth * sin(float(2*M_PI*(t*f+phase_offset)));
+double osc_pulsewidth(double pw, double t, double phase_offset) {
+    double f = pow(2.0, float(ctx.osc1_pw_mod_rate) * 21.0) * 0.01;
+    double pw_mod = pw + 0.5 * ctx.osc1_pw_mod_depth * sin(float(2*M_PI*(t*f+phase_offset)));
     return clamp(pw_mod, 0.15, 0.85);
 }
 
@@ -224,7 +226,7 @@ double sine(double phase, double phase_inc, double bleb) {
     b = 1.0 - b;
     b = b * b;
     b = 1.0 - b;
-    return double(shapeSegment(abs(fsin), b) * sign(fsin) * (1.0 - b*0.03));
+    return double(shapeSegment(abs(fsin), b) * sign(fsin) * (1.0 - 0.01));
 }
 
 double saw_analog(double phase, double phase_inc, double bleb) {
@@ -257,8 +259,6 @@ double waveform_mix(double phase, double phase_inc, double bleb) {
 }
 
 
-const double pitch_to_unison_detune_intens = 0.1;
-const double pitch_to_unison_stereo_width = 0.4;
 
 void processSynthUnison()
 {
@@ -269,14 +269,8 @@ void processSynthUnison()
     vec2 s_lr = vec2(0.0);
     float vs = VC / 256.0;
     float uv_gain_range = 0.4;
-    // float uv_gain_adj = VC < 2 ? 3.0 : pow(1.0-vs, 3.0) * (1.0 - uv_gain_range) + uv_gain_range;
-    // the above gain adjust is not correct, assume every signal is white noise, how would you scale it?
-    float uv_gain_adj = VC < 2 ? 3.0 : 1.0 / sqrt(float(VC));
+    float uv_gain_adj = VC < 2 ? 1.5 : 1.0 / sqrt(float(VC));
     float seed = 2;
-    const float b = state_in_synth.synth.param_bleb[i];
-    const double stereo_width = state_in_synth.synth.param_stereo[i];
-    const double filter_keytrack = state_in_synth.synth.param_keytrack[i];
-
     for (int j = 0; j < N_POLY_VOICES; j++)
     {
         if (state_in.voices[j].velocity[i] >= 0.0)
@@ -284,38 +278,37 @@ void processSynthUnison()
             const float a = state_in.voices[j].velocity[i];
             const float f = state_in.voices[j].pitch[i]; // hz
             const double pitchLogScale = double(floor(log2(f / 440.0))) + 5.0;
-            double unison_det_scale_note = 1.0;
-            double unison_bleb_scale_note = 1.0;
-            double unison_stereo_width = stereo_width;
-            if (VC > 1) {
-                unison_det_scale_note = 1.0 + clamp(pitchLogScale * 32.0, -1.0, 1.0) * pitch_to_unison_detune_intens;
-                unison_bleb_scale_note = 1.0 + clamp(pitchLogScale * -1.0, -1.0, 1.0) * filter_keytrack;
-                unison_stereo_width = stereo_width + (0.0+clamp(pitchLogScale * 0.7, -1.0, 1.0) * pitch_to_unison_stereo_width);
-            }
-            for (int u = 0; u < VC; ++u)
+            double detune_keytrack = 1.0 + clamp(pitchLogScale * 32.0, -1.0, 1.0) * ctx.osc1_detune_keytrack;
+            double filter_keytrack = 1.0 + clamp((pitchLogScale-4.0) * -0.8, -1.0, 1.0) * state_in_synth.synth.param_filter_keytrack[i];
+            double stereo_width = state_in_synth.synth.param_stereo[i];
+            stereo_width += (0.0+clamp((pitchLogScale-2.0)*0.25, -1.0, 1.0) * ctx.osc1_width_keytrack);
+            stereo_width = clamp(stereo_width, 0.0, 1.0);
+            for (int u = 0; u < N_UNISON_VOICES && u < VC; ++u)
             {
                 float uv_index = VC <= 1 ? 0.5 : float(u) / float(VC-1);
                 float uv_index_centered = uv_index * 2.0 - 1.0;
-                double uv_f = double(f) - double(abs(uv_index_centered+0.04)) * ctx.osc1_unison_detune * unison_det_scale_note;
+                double uv_f = double(f) - double(abs(uv_index_centered+0.04)) * ctx.osc1_unison_detune * detune_keytrack;
                 float uv_p = noise2(j + seed, u*N_POLY_VOICES+j);
                 double phase_inc = uv_f * ctx.one_over_samplerate;
                 double p = phase_inc * sample_offset + double(uv_p);
-                float panLR = (pow(abs(uv_index_centered), 2.0) * sign(uv_index_centered) * float(unison_stereo_width) + 1.0) * 0.5;
+                float panLR = (pow(abs(uv_index_centered), 2.0) * sign(uv_index_centered) * float(stereo_width) + 1.0) * 0.5;
                 vec2 pan_lr = normalize(mix(vec2(1.0, 0.0), vec2(0.0, 1.0), panLR));
-                double bleb_duration = b * max(unison_bleb_scale_note, 0.02);
+                double param_filter = state_in.voices[j].param_filter[i] * max(filter_keytrack, 0.02);
+                param_filter = max(0.0, param_filter * 128.0);
+                // param_filter = max(0.0, (pow(float(param_filter), 1.5)) * 128.0);
 #if N_PROGRAM == PROGRAM_SAW
-                s_lr += float(saw(p, phase_inc, bleb_duration)) * a * pan_lr;
+                s_lr += float(saw(p, phase_inc, param_filter)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_SINE
-                s_lr += float(sine(p, phase_inc, 0.5*bleb_duration)) * a * pan_lr;
+                s_lr += float(sine(p, phase_inc, 0.25*param_filter)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_SQUARE
-                double uv_square_pw = osc_pulsewidth(t, uv_p*222.34567);
-                s_lr += float(square(p, phase_inc, bleb_duration, uv_square_pw)) * a * pan_lr;
+                double uv_square_pw = osc_pulsewidth(ctx.osc1_pw, t, uv_p*222.34567);
+                s_lr += float(square(p, phase_inc, param_filter, uv_square_pw)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_TRIANGLE
-                s_lr += float(triangle(p, phase_inc, bleb_duration)) * a * pan_lr;
+                s_lr += float(triangle(p, phase_inc, param_filter)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_WEIRD_TRI
-                s_lr += float(weird_tri(p, phase_inc, bleb_duration)) * a * pan_lr;
+                s_lr += float(weird_tri(p, phase_inc, param_filter)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_ANALOG_SAW
-                s_lr += float(saw_analog(p, phase_inc, bleb_duration)) * a * pan_lr;
+                s_lr += float(saw_analog(p, phase_inc, param_filter)) * a * pan_lr;
 #endif
             }
         }
@@ -333,21 +326,21 @@ void sampleWaveform()
     float cycles = 6.0;
     float phase = i*cycles / float(N_SAMPLES) + 0.5;
     float phase_inc = cycles / float(N_SAMPLES);
-    // double s = saw(phase, phase_inc, ctx.osc1_bleb_duration);
+    double param_filter = (1.0 - ctx.osc1_filter) * 128.0;
 #if N_PROGRAM == PROGRAM_SAW
-    double s = saw(phase, phase_inc, ctx.osc1_bleb_duration);
+    double s = saw(phase, phase_inc, param_filter);
 #elif N_PROGRAM == PROGRAM_SINE
-    double s = sine(phase, phase_inc, 0.5*ctx.osc1_bleb_duration);
+    double s = sine(phase, phase_inc, 0.25*param_filter);
 #elif N_PROGRAM == PROGRAM_SQUARE
     float t = float(ctx.time_samples * ctx.one_over_samplerate);
-    double uv_square_pw = osc_pulsewidth(t, 0);
-    double s = square(phase, phase_inc, ctx.osc1_bleb_duration, uv_square_pw);
+    double uv_square_pw = osc_pulsewidth(ctx.osc1_pw, t, 0);
+    double s = square(phase, phase_inc, param_filter, uv_square_pw);
 #elif N_PROGRAM == PROGRAM_TRIANGLE
-    double s = triangle(phase, phase_inc, ctx.osc1_bleb_duration);
+    double s = triangle(phase, phase_inc, param_filter);
 #elif N_PROGRAM == PROGRAM_WEIRD_TRI
-    double s = weird_tri(phase, phase_inc, ctx.osc1_bleb_duration);
+    double s = weird_tri(phase, phase_inc, param_filter);
 #elif N_PROGRAM == PROGRAM_ANALOG_SAW
-    double s = saw_analog(phase, phase_inc, ctx.osc1_bleb_duration);
+    double s = saw_analog(phase, phase_inc, param_filter);
 #endif
     waveform_out.samples[i] = float(s);
 }

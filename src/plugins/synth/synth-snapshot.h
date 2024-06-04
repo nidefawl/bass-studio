@@ -38,7 +38,7 @@ struct modulation_snapshot_t {
 };
 struct ui_layout_t {
     int32_t uiId = 0;
-    float splitPos = 0.8;
+    float splitPos = 0.8f;
 };
 struct snapshot_t {
     int32_t version = 0;

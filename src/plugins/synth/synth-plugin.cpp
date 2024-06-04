@@ -1,6 +1,9 @@
+#include "host/plugin/plugin-lockable.h"
 #include "synth-template.hpp"
 #include "synth-types.hpp"
 #include "synth-plugin.h"
+#include "synth-modulations.hpp"
+#include "synth-modulations-ui.hpp"
 #include "assert_dbg.h"
 #include "host/audiobuffer/audioblock.h"
 #include "host/automation/automation.h"
@@ -61,6 +64,7 @@
 #include <muParser.h>
 #include <nanovg.h>
 #include <optional>
+#include <array>
 #include <vector>
 #include <map>
 #include <memory>
@@ -82,6 +86,102 @@ static constexpr uint16_t NUM_UNISON_VOICES = 16;
 constexpr bool USE_THREADING = false;
 constexpr uint16_t AUDIOPROCESSING_THREADS = USE_THREADING ? 32 : 0;
 constexpr uint16_t AUDIOPROCESSING_TASKS = (USE_THREADING) ? NUM_POLY_VOICES * NUM_UNISON_VOICES : 0;
+
+
+enum ModulationSourceType {
+    VolEnv,
+    ModEnv,
+    Lfo1,
+    Velocity,
+    VoiceIndex,
+    UnisonVoiceIndex,
+    Pitch,
+    Note,
+    Lfo2,
+    SrcMacro01,
+    SrcMacro02,
+    SrcMacro03,
+    SrcMacro04,
+    SrcMacro05,
+    SrcMacro06,
+    SrcMacro07,
+    SrcMacro08,
+    Lfo1Ramp,
+    NumModulationSources,
+};
+
+const std::array<int32_t, 1 + ModulationSourceType::NumModulationSources + (ModulationType::NumModulationTypes-1)> modSrcTypesOrdered = {
+    -1, // None
+    Function,
+    Constant,
+    2 + VolEnv,
+    2 + ModEnv,
+    2 + Lfo1,
+    2 + Lfo1Ramp,
+    2 + Lfo2,
+    2 + Velocity,
+    2 + VoiceIndex,
+    2 + UnisonVoiceIndex,
+    2 + Pitch,
+    2 + Note,
+    2 + SrcMacro01,
+    2 + SrcMacro02,
+    2 + SrcMacro02,
+    2 + SrcMacro04,
+    2 + SrcMacro05,
+    2 + SrcMacro06,
+    2 + SrcMacro07,
+    2 + SrcMacro08,
+};
+
+const std::array<const char*, 1 + ModulationSourceType::NumModulationSources + (ModulationType::NumModulationTypes-1)> stringsModSource = {
+    "None",
+    "Function",
+    "Constant",
+    "VolEnv",
+    "ModEnv",
+    "Lfo1",
+    "Lfo1Ramp",
+    "Lfo2",
+    "Velocity",
+    "VoiceIndex",
+    "UnisonVoiceIndex",
+    "Pitch",
+    "Note",
+    "SrcMacro01",
+    "SrcMacro02",
+    "SrcMacro03",
+    "SrcMacro04",
+    "SrcMacro05",
+    "SrcMacro06",
+    "SrcMacro07",
+    "SrcMacro08",
+};
+static_assert(stringsModSource.size() == modSrcTypesOrdered.size(), "stringsModSource.size() does not match modSrcTypesOrdered.size()");
+
+// static constexpr auto MathExprInputLen  = 1 + ModulationSourceType::NumModulationSources;
+const std::array<const char*, MATH_INPUT_LEN> stringsShortSrcNames = {
+    "x",
+    "a",
+    "m",
+    "l",
+    "v",
+    "i",
+    "u",
+    "p",
+    "n",
+    "lfo2",
+    "m1",
+    "m2",
+    "m3",
+    "m4",
+    "m5",
+    "m6",
+    "m7",
+    "m8",
+    "r1",
+    ""
+};
 
 
 enum {
@@ -268,6 +368,7 @@ enum Settings {
     NumSettings,
 };
 extern const std::array<const char*, 14> stringsSettings;
+
 
 class SynthState {
 public:
@@ -469,8 +570,7 @@ struct Voice {
         if (hint_likely(!bIsActive)) {
             return false;
         }
-        return this->volEnv.stage < EnvelopeStages::Idle || !this->filter.IsSilent(mode);
-        // return true;
+        return !this->volEnv.IsIdle();
     }
 
     bool IsReleased() const { return volEnv.IsReleased(); }
@@ -680,189 +780,6 @@ const std::array<const char*, 14> stringsSettings = {
     "Oversampling",
 };
 
-enum ModulationType {
-    Function,
-    Constant,
-    ModulationSource,
-    NumModulationTypes,
-};
-
-enum ModulationSourceType {
-    VolEnv,
-    ModEnv,
-    Lfo1,
-    Velocity,
-    VoiceIndex,
-    UnisonVoiceIndex,
-    Pitch,
-    Note,
-    Lfo2,
-    SrcMacro01,
-    SrcMacro02,
-    SrcMacro03,
-    SrcMacro04,
-    SrcMacro05,
-    SrcMacro06,
-    SrcMacro07,
-    SrcMacro08,
-    Lfo1Ramp,
-    NumModulationSources,
-};
-
-const std::array<int32_t, 1 + ModulationSourceType::NumModulationSources + (ModulationType::NumModulationTypes-1)> modSrcTypesOrdered = {
-    -1, // None
-    Function,
-    Constant,
-    2 + VolEnv,
-    2 + ModEnv,
-    2 + Lfo1,
-    2 + Lfo1Ramp,
-    2 + Lfo2,
-    2 + Velocity,
-    2 + VoiceIndex,
-    2 + UnisonVoiceIndex,
-    2 + Pitch,
-    2 + Note,
-    2 + SrcMacro01,
-    2 + SrcMacro02,
-    2 + SrcMacro02,
-    2 + SrcMacro04,
-    2 + SrcMacro05,
-    2 + SrcMacro06,
-    2 + SrcMacro07,
-    2 + SrcMacro08,
-};
-
-const std::array<const char*, 1 + ModulationSourceType::NumModulationSources + (ModulationType::NumModulationTypes-1)> stringsModSource = {
-    "None",
-    "Function",
-    "Constant",
-    "VolEnv",
-    "ModEnv",
-    "Lfo1",
-    "Lfo1Ramp",
-    "Lfo2",
-    "Velocity",
-    "VoiceIndex",
-    "UnisonVoiceIndex",
-    "Pitch",
-    "Note",
-    "SrcMacro01",
-    "SrcMacro02",
-    "SrcMacro03",
-    "SrcMacro04",
-    "SrcMacro05",
-    "SrcMacro06",
-    "SrcMacro07",
-    "SrcMacro08",
-};
-static_assert(stringsModSource.size() == modSrcTypesOrdered.size(), "stringsModSource.size() does not match modSrcTypesOrdered.size()");
-
-static constexpr auto MathExprInputLen  = 1 + ModulationSourceType::NumModulationSources;
-const std::array<const char*, MathExprInputLen> stringsShortSrcNames = {
-    "x",
-    "a",
-    "m",
-    "l",
-    "v",
-    "i",
-    "u",
-    "p",
-    "n",
-    "lfo2",
-    "m1",
-    "m2",
-    "m3",
-    "m4",
-    "m5",
-    "m6",
-    "m7",
-    "m8",
-    "r1"
-};
-
-enum ModulationOperator {
-    Multiply,
-    Add,
-    Subtract,
-    Divide,
-    MultiplyNegative,
-    Absolute,
-    Clamp,
-    Power,
-    NumModulationOperators
-};
-
-enum ModulationRange {
-    Unipolar,
-    Bipolar,
-    Triangle,
-    NumModulationRanges
-};
-
-const std::array<const char*, 8> stringsModOp = {
-    "*",
-    "+",
-    "-",
-    "/",
-    "*(1-x)",
-    "Abs",
-    "Clamp",
-    "Power"
-};
-
-struct MathExprParsed {
-    std::array<double, MathExprInputLen> inputs{};
-    mu::Parser parser;
-    int32_t nanInfCounter = 0;
-};
-
-struct MathExpr {
-    String str;
-    std::shared_ptr<MathExprParsed> parsedExpr;
-    /**
-        * @brief parse the expression and store the parsed expression. 
-        *        Throws an exception if the expression is invalid.
-        * @param String strExpression the expression to parse
-        * @return MathExpr parsed expression
-        */
-    static MathExpr parse(const String& strExpression) {
-        MathExpr expr;
-        if (strExpression.length()) {
-            auto shrdP    = std::make_shared<MathExprParsed>();
-            auto& p       = shrdP->parser;
-            auto itInputs = shrdP->inputs.data();
-            for (auto& name : stringsShortSrcNames) {
-                p.DefineVar(name, itInputs++);
-            }
-            p.SetExpr(strExpression);
-            p.Eval();
-            expr.str        = strExpression;
-            expr.parsedExpr = std::move(shrdP);
-        }
-        return expr;
-    }
-};
-
-struct ModulationInput {
-    ModulationType type      = ModulationType::ModulationSource;
-    ModulationSourceType src = ModulationSourceType::Lfo1;
-    ModulationOperator op    = ModulationOperator::Multiply;
-    double value             = 1.0;
-    MathExpr function;
-    ModulationRange range = ModulationRange::Unipolar;
-};
-
-struct ModulationDestination {
-    ParametersSynthUnison parameter = ParametersSynthUnison::FilterCutoff;
-    double range = 1.0;
-};
-
-struct Modulation {
-    std::vector<ModulationInput> inputs;
-    std::vector<ModulationDestination> destinations;
-};
-
 struct MidiMessage {
     int32_t mOffset;
     int32_t StatusMsg() {
@@ -876,9 +793,11 @@ struct MidiMessage {
     }
 };
 
-using ModulationSourceData = std::array<double, MathExprInputLen>;
-
-class SynthImplUnison final : public SynthImpl<SynthImplUnison, ParametersSynthUnison>, public SynthState {
+class SynthImplUnison final : public SynthImpl<SynthImplUnison, ParametersSynthUnison>, public SynthState, public ModulationController {
+public:
+    bool isMathEvalEnabled() const override {
+        return getSettingBool(Settings::ExprEvaluationEnabled);
+    }
 public:
     using UnisonVoiceList = std::array<int32_t, NUM_POLY_VOICES * NUM_UNISON_VOICES>;
     using PolyVoiceList   = std::array<int32_t, NUM_POLY_VOICES>;
@@ -896,9 +815,6 @@ private:
     friend class module_synth_unison;
     module_synth_unison* const moduleSynthUnisonInstance;
     PluginVST2_Synth* const instanceVST2Plugin;
-    std::vector<Modulation> modulations;
-    std::array<double, Parameters::kNumParams> modulationValuesMin{};
-    std::array<double, Parameters::kNumParams> modulationValuesMax{};
     std::array<VoiceUnison, NUM_POLY_VOICES> voices;
     std::array<float, Settings::NumSettings> settings{};
     std::vector<std::shared_ptr<PluginViewContainer>> views;
@@ -909,7 +825,6 @@ private:
     // SmoothSwitch filterMode;
     seq_rand synthRand;
     int32_t seq = 0;
-    ModulationSourceData modSrcData{};
     VoiceList prevVoiceList{};
     DAW::Shape::shape_t lfoShape;
     signalsmith::rates::Oversampler2xFIR<float> oversampler;
@@ -1255,7 +1170,15 @@ private:
 
         addFloatParam(Parameters::Panning)->setRange(-1.0, 1.0)->setInitialValue(0.0);
         setParamName(getParam(Parameters::Panning), "Stereo Panning", "Pan");
-        modulations.emplace_back();
+        for (size_t i = 0; i < stringsModSource.size(); ++i) {
+            auto idx = -1 + i;
+            modSourceDescs.emplace_back(idx, stringsModSource[i]);
+        }
+        for (auto param : parametersModulate) {
+            dbgassert(getParam(static_cast<Parameters>(param)));
+            modDestDescs.emplace_back(static_cast<int32_t>(param), getParam(static_cast<Parameters>(param))->name);
+        }
+        varNames = stringsShortSrcNames;
         String defaultPresetPath = App::Platform::toUserdataPath(String("presets/") + PLUGIN_EFFECT_NAME);
         CreateDirectoryIfNotExists(defaultPresetPath);
         presetManager.load(defaultPresetPath);
@@ -1303,183 +1226,11 @@ public:
     }
 
     void initSampleRate() override {
-        auto dt = oneOverSR;
-        if (getSetting(Settings::Oversampling)) {
-            dt *= 0.5;
-        }
-        for (auto& uv : voices) {
-            uv.visitVoices([this, dt, &uv](auto& v) {
-                UpdateVoiceModulations(uv, v, modSrcData);
-                UpdateVoiceEnvelopeModulations(uv, v);
-                UpdateVoiceEnvelopes(dt, uv, v);
-            });
-        }
     }
 
     void setLfoShape(const DAW::Shape::shape_t& shape) {
         lfoShape.pts = shape.pts;
         notifyUiChanges();
-    }
-
-    bool IsBipolarModulation(const Modulation& modulation) const {
-        for (auto& source : modulation.inputs) {
-            if (source.range == ModulationRange::Bipolar) return true;
-        }
-        return false;
-    }
-
-    double getModulationAmountMin(Parameters param) const {
-        return modulationValuesMin[param];
-    }
-
-    double getModulationAmountMax(Parameters param) const {
-        return modulationValuesMax[param];
-    }
-
-    std::optional<std::vector<param_modulation_range_t>> getParamModulationRanges(Parameters _param) {
-        //TODO: result can be cached
-        std::optional<std::vector<param_modulation_range_t>> result;
-        for (auto& mod : modulations) {
-            bool bIsBipolar = IsBipolarModulation(mod);
-            for (auto& modDest : mod.destinations) {
-                if (modDest.parameter == _param) {
-                    if (!result) {
-                        result = std::vector<param_modulation_range_t>();
-                    }
-                    auto modIdx = &mod - &modulations.front();
-                    result->push_back(
-                            param_modulation_range_t{
-                                    static_cast<int32_t>(modIdx),
-                                    static_cast<int32_t>(modDest.parameter),
-                                    static_cast<float>(modDest.range),
-                                    bIsBipolar });
-                }
-            }
-        }
-        return result;
-    }
-    Modulation* getModulationIfExists(int32_t index) {
-        if (index < 0 || index >= CtrSize(modulations)) {
-            return nullptr;
-        }
-        return &modulations[index];
-    }
-    Modulation& getOrCreateModulation(int32_t index) {
-        while (CtrSize(modulations) <= index) {
-            modulations.emplace_back();
-        }
-        return modulations[index];
-    }
-    int32_t getModulationCount() const {
-        return CtrSize(modulations);
-    }
-    bool setModulationType(int32_t slotIndex, int32_t srcSlotIndex, int32_t typeIdx) {
-        auto& modulation = getOrCreateModulation(slotIndex);
-        auto numInputs   = CtrSize(modulation.inputs);
-        if (typeIdx < 0) {
-            if (srcSlotIndex >= 0 && srcSlotIndex < numInputs) {
-                // erase entry
-                modulation.inputs.erase(modulation.inputs.begin() + srcSlotIndex);
-                return true;
-            }
-            return false;
-        }
-        const auto modType    = typeIdx >= ModulationType::ModulationSource ? ModulationType::ModulationSource : static_cast<ModulationType>(typeIdx);
-        const auto modSrcType = modType == ModulationType::ModulationSource ? static_cast<ModulationSourceType>(typeIdx - ModulationType::ModulationSource) : ModulationSourceType::Lfo1;
-        if (srcSlotIndex == numInputs) {
-            ModulationInput input = {
-                modType,
-                modSrcType,
-                ModulationOperator::Multiply,
-                0.0,
-                MathExpr{},
-                ModulationRange::Unipolar,
-            };
-            modulation.inputs.emplace_back(std::move(input));
-            return true;
-        } else if (srcSlotIndex < numInputs) {
-            auto& mod = modulation.inputs[srcSlotIndex];
-            mod.type  = modType;
-            mod.src   = modSrcType;
-            return true;
-        }
-        return false;
-    }
-    bool setModulationOperator(int32_t index, int32_t idx, int32_t modOperatorIndex) {
-        auto& modulation = getOrCreateModulation(index);
-        auto numInputs   = CtrSize(modulation.inputs);
-        if (modOperatorIndex >= 0 && modOperatorIndex < ModulationOperator::NumModulationOperators && idx < numInputs) {
-            auto& mod = modulation.inputs[idx];
-            mod.op    = static_cast<ModulationOperator>(modOperatorIndex);
-            return true;
-        }
-        return false;
-    }
-    bool setModulationConstant(int32_t index, int32_t idx, double constant) {
-        auto& modulation = getOrCreateModulation(index);
-        auto numInputs   = CtrSize(modulation.inputs);
-        if (idx < numInputs) {
-            auto& mod = modulation.inputs[idx];
-            mod.value = constant;
-            return true;
-        }
-        return false;
-    }
-    bool setModulationFunction(int32_t index, int32_t idx, MathExpr&& function) {
-        auto& modulation = getOrCreateModulation(index);
-        auto numInputs   = CtrSize(modulation.inputs);
-        if (idx < numInputs) {
-            auto& mod    = modulation.inputs[idx];
-            mod.function = std::move(function);
-            return true;
-        }
-        return false;
-    }
-    bool resetModulationFunction(int32_t index, int32_t idx) {
-        auto& modulation = getOrCreateModulation(index);
-        auto numInputs   = CtrSize(modulation.inputs);
-        if (idx < numInputs) {
-            auto& mod = modulation.inputs[idx];
-            mod.function.parsedExpr.reset();
-            return true;
-        }
-        return false;
-    }
-    bool setModulationInputRange(int32_t index, int32_t idx, ModulationRange range) {
-        auto& modulation = getOrCreateModulation(index);
-        auto numInputs   = CtrSize(modulation.inputs);
-        if (idx < numInputs) {
-            auto& mod = modulation.inputs[idx];
-            mod.range = range;
-            return true;
-        }
-        return false;
-    }
-
-    bool setModulationDestination(int32_t index, int32_t destIdx, int32_t paramIdx, double range) {
-        auto& modulation     = getOrCreateModulation(index);
-        auto numDestinations = CtrSize(modulation.destinations);
-        if (paramIdx < 0 && destIdx < numDestinations) {
-            // erase entry
-            modulation.destinations.erase(modulation.destinations.begin() + destIdx);
-            return true;
-        } else if (paramIdx >= 0 && paramIdx < Parameters::kNumParams && destIdx == numDestinations) {
-            modulation.destinations.push_back({ static_cast<Parameters>(paramIdx), range });
-            return true;
-        } else if (paramIdx >= 0 && paramIdx < Parameters::kNumParams && destIdx < numDestinations) {
-            modulation.destinations[destIdx] = { static_cast<Parameters>(paramIdx), range };
-            return true;
-        }
-        return false;
-    }
-    bool setModulationDestRange(int32_t index, int32_t destIdx, double range) {
-        auto& modulation     = getOrCreateModulation(index);
-        auto numDestinations = CtrSize(modulation.destinations);
-        if (destIdx < numDestinations) {
-            modulation.destinations[destIdx].range = range;
-            return true;
-        }
-        return false;
     }
 
     void setBlocksize(blocksize_t bs) override {
@@ -1582,7 +1333,7 @@ public:
             const auto numDestinations = CtrSize(ms.destinations);
             for (int32_t j = 0; j < numDestinations; ++j) {
                 const auto& dest = ms.destinations[j];
-                newModulation.destinations.push_back({ static_cast<Parameters>(dest.paramIdx), dest.range });
+                newModulation.destinations.push_back({ dest.paramIdx, dest.range });
             }
             while (CtrSize(modulations) <= msSlotIndex) {
                 modulations.push_back({});
@@ -1612,7 +1363,7 @@ public:
         for (auto& mod : modulations) {
             for (auto& input : mod.inputs) {
                 try {
-                    input.function = MathExpr::parse(input.function.str);
+                    input.function = MathExpr::parse(input.function.str, getVarNames());
                 } catch (mu::Parser::exception_type& e) {
                     input.function = MathExpr{};
                     log_lf(Log::L_ERROR, "Error in expression: %s\n", e.GetMsg().c_str());
@@ -1648,7 +1399,7 @@ private:
         voice.visitVoices([&](Voice& v) {
             bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
             UpdateVoiceEnvelopeModulations(voice, v);
-            UpdateVoiceModulations(voice, v, modSrcData);
+            UpdateVoiceModulations(voice, v);
             v.bTriggerSmoothing = !isSilent;
             v.Start(holdOsc1Phase, holdOsc2Phase);
             if (!holdVolEnv || isSilent) {
@@ -1839,26 +1590,9 @@ private:
         bool bAllEqual = std::memcmp(voice.envelopeValuesCached.data(), envParamVals, sizeofarr) == 0;
         if (!bAllEqual) {
             std::memcpy(voice.envelopeValuesCached.data(), envParamVals, sizeof(envParamVals));
-            using Vec4D      = glm::vec<4, FPType, glm::aligned_highp>;
-            auto sse8Float   = reinterpret_cast<__m256*>(&envParamVals[0]);
-            *sse8Float       = math::simd::log_v8f(*sse8Float);
-            auto pIn         = &envParamVals[0];
-            FPType* pDataOut = &envParamValsScaled[0];
-            for (size_t j = 0; j < LEN_SIMD; j += 4) {
-                Vec4D& valsRef = *reinterpret_cast<Vec4D*>(&pIn[0]);
-                auto vals      = valsRef * 0.1f;
-                auto sse4Float = reinterpret_cast<__m128*>(&vals);
-                *sse4Float     = math::simd::exp_v4f(*sse4Float);
-                auto floatPtr  = reinterpret_cast<float*>(&vals[0]);
-                math::simd::cos_test<float, 4>(floatPtr, pDataOut);
-                for (size_t k = 0; k < 4; k++) {
-                    pDataOut[k] = 1000.0f - 999.9f * (.5f - .5f * pDataOut[k]);
-                }
-                pIn += 4;
-                pDataOut += 4;
-            }
+            ShapeLogLikeSIMD<FPType, 8>(envParamVals, envParamValsScaled);
             for (int i = 0; i < LEN_USED; i++) {
-                *envParamValsPtr[i] = double(envParamValsScaled[i]);
+                *envParamValsPtr[i] = Envelope::GetTimeBaseFromParam(envParamValsScaled[i]);
             }
         }
         voice.volEnv.s = GetModulatedParamVoice(voice, Parameters::VolEnvS);
@@ -1899,27 +1633,6 @@ private:
         voice.volEnv.Update(dt);
         voice.modEnv.Update(dt);
         voice.lfoEnv.Update(dt);
-    }
-
-    static inline double noteToLinearScale(double note, double minNote = 69.0) {
-        return exp(0.69314718055994530942 * ((note - minNote) / 12.0));
-        // return pow(2.0, (note - minNote) / 12.0);
-    }
-
-    double EvaluateVoiceModulationMathExpr(VoiceUnison& vu, Voice& voice, const MathExpr& expr, std::array<double, MathExprInputLen>& inputModSources) {
-        if (expr.parsedExpr) {
-            auto& parsedExpr = *expr.parsedExpr;
-            auto& inputs     = parsedExpr.inputs;
-            dbgassert(inputs.size() == inputModSources.size());
-            memcpy(inputs.data(), inputModSources.data(), sizeof(double) * math::min(inputs.size(), inputModSources.size()));
-            double dResult = parsedExpr.parser.Eval();
-            if (fp_math::isNanOrInfd(dResult)) {
-                dResult = 0.0;
-                parsedExpr.nanInfCounter++;
-            }
-            return dResult;
-        }
-        return 0.0;
     }
 
     void UpdateAllVoiceStates(double dt, FilterModes filterMode, VoiceList& list) {
@@ -2002,8 +1715,7 @@ private:
         }
     }
 
-    void UpdateVoiceModulations(VoiceUnison& vu, Voice& voice, ModulationSourceData& modSrcData) {
-
+    void UpdateVoiceModulations(VoiceUnison& vu, Voice& voice) {
         if (!getSetting(Settings::ModulationEnabled)) {
             return;
         }
@@ -2012,7 +1724,9 @@ private:
         if (getSetting(Settings::ClearModulationEnabled)) {
             std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
         }
-        // std::array<double, MathExprInputLen> sourcesV{};
+
+        ModulationSourceData modSrcData{};
+        modSrcData[1 + ModulationSourceType::Lfo2] = lfo2Value;
         modSrcData[1 + ModulationSourceType::VolEnv]           = voice.volEnv.value;
         modSrcData[1 + ModulationSourceType::ModEnv]           = voice.modEnv.value;
         modSrcData[1 + ModulationSourceType::Lfo1]             = voice.lfoValue;
@@ -2022,78 +1736,15 @@ private:
         modSrcData[1 + ModulationSourceType::UnisonVoiceIndex] = this->unisonVoiceCount < 2 ? 0.5 : voice.indexUnison / static_cast<double>(this->unisonVoiceCount - 1);
         modSrcData[1 + ModulationSourceType::Pitch]            = noteToLinearScale(voice.noteNr);
         modSrcData[1 + ModulationSourceType::Note]             = voice.noteNr / 127.0;
-        for (auto& modulation : modulations) {
-            ModulationSourceData& sources = modSrcData;
-            double modVal                 = 0.0;
-            for (size_t j = 0; j < modulation.inputs.size(); j++) {
-                sources.front() = modVal;
-                // if (modulation.destinations.empty())
-                //     continue;
-                auto& input   = modulation.inputs[j];
-                double srcVal = 0.0;
-                switch (input.type) {
-                    case ModulationType::ModulationSource:
-                        srcVal = sources[input.src + 1];
-                        break;
-                    case ModulationType::Constant:
-                        srcVal = input.value;
-                        break;
-                    case ModulationType::Function:
-                        if (getSetting(Settings::ExprEvaluationEnabled)) {
-                            srcVal = EvaluateVoiceModulationMathExpr(vu, voice, input.function, sources);
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                if (input.range == ModulationRange::Bipolar && input.type != ModulationType::Function) {
-                    srcVal = (srcVal * 2.0) - 1.0;
-                }
-                if (input.range == ModulationRange::Triangle && input.type != ModulationType::Function) {
-                    srcVal = std::fabs((srcVal * 2.0) - 1.0);
-                }
-                if (j > 0 && input.type != ModulationType::Function) {
-                    switch (input.op) {
-                        case ModulationOperator::Multiply:
-                            srcVal = modVal * srcVal;
-                            break;
-                        case ModulationOperator::Add:
-                            srcVal = modVal + srcVal;
-                            break;
-                        case ModulationOperator::Divide:
-                            if (math::abs(srcVal) < 1e-6) {
-                                srcVal = 1e-6;
-                            } else {
-                                srcVal = modVal / srcVal;
-                            }
-                            break;
-                        case ModulationOperator::Subtract:
-                            srcVal = modVal - srcVal;
-                            break;
-                        case ModulationOperator::MultiplyNegative:
-                            srcVal = modVal * (1 - srcVal);
-                            break;
-                        case ModulationOperator::Absolute:
-                            srcVal = abs(modVal * srcVal);
-                            break;
-                        case ModulationOperator::Power:
-                            srcVal = exp(log(srcVal) * modVal);
-                            break;
-                        case ModulationOperator::Clamp:
-                            srcVal = math::clamp(modVal, double(input.range == ModulationRange::Bipolar) * -1.0 * srcVal, srcVal);
-                            break;
-                        default:
-                            srcVal = modVal;
-                            break;
-                    }
-                }
-                modVal = srcVal;
-            }
-            for (auto& dest : modulation.destinations) {
-                size_t destIdx = dest.parameter;
-                voiceModulations[destIdx] += modVal * dest.range;
-            }
-        }
+        modSrcData[1 + ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
+        modSrcData[1 + ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
+        modSrcData[1 + ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
+        modSrcData[1 + ModulationSourceType::SrcMacro04] = GetParamFloat(Parameters::Macro04)->Value();
+        modSrcData[1 + ModulationSourceType::SrcMacro05] = GetParamFloat(Parameters::Macro05)->Value();
+        modSrcData[1 + ModulationSourceType::SrcMacro06] = GetParamFloat(Parameters::Macro06)->Value();
+        modSrcData[1 + ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
+        modSrcData[1 + ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
+        ProcessModulations(modSrcData, voiceModulations);
     }
 
     void UpdateDrift(double dt) {
@@ -2290,14 +1941,6 @@ public:
         const bool bIsGlideEnabled                       = voiceMode != VoiceModes::Poly;
         int32_t numActiveVoices                          = 0;
         const auto dt                                    = getSetting(Settings::Oversampling) ? (oneOverSR * 0.5) : oneOverSR;
-        modSrcData[1 + ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
-        modSrcData[1 + ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
-        modSrcData[1 + ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
-        modSrcData[1 + ModulationSourceType::SrcMacro04] = GetParamFloat(Parameters::Macro04)->Value();
-        modSrcData[1 + ModulationSourceType::SrcMacro05] = GetParamFloat(Parameters::Macro05)->Value();
-        modSrcData[1 + ModulationSourceType::SrcMacro06] = GetParamFloat(Parameters::Macro06)->Value();
-        modSrcData[1 + ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
-        modSrcData[1 + ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
         const bool bDiagnostic                           = getSetting(Settings::DiagnosticOutputEnabled);
         if (getSetting(Settings::ShowModulationRanges)) {
             std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size()*sizeof(double));
@@ -2342,7 +1985,6 @@ public:
             if (getSetting(Settings::LfoEnabled)) {
                 UpdateAllVoiceLfos(dt, list);
             }
-            modSrcData[1 + ModulationSourceType::Lfo2] = lfo2Value;
             int32_t numUnisonVoices = list.numUnisonVoices;
             for (int32_t i = 0; i < numUnisonVoices; ++i) {
                 auto& uv = voices[list.unisonVoices[i] / NUM_UNISON_VOICES];
@@ -2353,7 +1995,7 @@ public:
                         
                 // TODO: executing a full modulation update each sample is really expensive
                 // Make this adjustable
-                UpdateVoiceModulations(uv, v, modSrcData);
+                UpdateVoiceModulations(uv, v);
                 UpdateVoiceEnvelopeModulations(uv, v);
                 UpdateVoiceEnvelopes(dt, uv, v);
                 if (getSetting(Settings::ShowModulationRanges)) {
@@ -2596,7 +2238,9 @@ public:
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
             regparam->setInitial(paramEntry->getAsDouble());
+            regparam->extensiveName  = paramEntry->name;
             regparam->name  = paramEntry->shortName;
+            regparam->shortLabel  = paramEntry->hierarchicalName;
             regparam->unit  = paramEntry->unit;
             switch (paramEntry->type) {
                 case SynthParam::ParamType::FLOAT:
@@ -3004,626 +2648,6 @@ float getLayoutHeight(guibase* gui) {
     return gui->theme->get(GuiConstant::CONST_ROW_HEIGHT) * 1.33f;
 }
 
-class guicontainer_modulation_slot_destination final : public guictr_base {
-    SynthImplUnison* const synth;
-    const int32_t slotIndex;
-    const int32_t destSlotIndex;
-    guidropdown_generic<String> dropdown;
-    guiknob knob;
-    float rowHeight = HEIGHT_DEFAULT_INPUT;
-
-public:
-    guicontainer_modulation_slot_destination(SynthImplUnison* _synth, int32_t _slotIndex, int32_t _destSlotIndex)
-        : guictr_base(),
-            synth(_synth),
-            slotIndex(_slotIndex),
-            destSlotIndex(_destSlotIndex),
-            knob(guiknob::knobtype::KNOB_UNLABELED) {
-        padding      = 1;
-        sortChildren = true;
-        setCanMouseHit(true);
-        setLabel(StringFormat("Mod %d Dst %d", _slotIndex, _destSlotIndex));
-        knob.setIsBipolar(true);
-        auto vecOpts = std::vector<String>();
-        vecOpts.emplace_back("None");
-        for (auto param : parametersModulate) {
-            auto synthParam = synth->getParam(param);
-            if (synthParam && !synthParam->name.empty()) {
-                vecOpts.push_back(synthParam->name);
-            } else {
-                vecOpts.push_back(StringFormat("Param %u", param));
-            }
-        }
-        dropdown.setZOrder(-1);
-        dropdown.setOptions(vecOpts);
-        dropdown.setLabel(StringFormat("Mod %d Dst %d", _slotIndex, _destSlotIndex));
-        dropdown.setCallback([this](int idx, String& value) -> String {
-            if (idx >= 0) {
-                {
-                    ThreadLock lock = synth->lock();
-                    if (idx > 0 && idx-1 < static_cast<int32_t>(sizeof(parametersModulate) / sizeof(parametersModulate[0]))) {
-                        synth->setModulationDestination(slotIndex, destSlotIndex, parametersModulate[idx-1], knob.getValue());
-                    } else {
-                        synth->setModulationDestination(slotIndex, destSlotIndex, -1, knob.getValue());
-                    }
-                }
-                if (parent) {
-                    parent->buttonClicked(this);
-                }
-                return value;
-            }
-            return StringFormat("%d", idx);
-        });
-        dropdown.setCurrentString("<unused>");
-        knob.fnValueEditChanged = [this](float prev, float value) {
-            {
-                ThreadLock lock = synth->lock();
-                synth->setModulationDestRange(slotIndex, destSlotIndex, knob.getValue());
-            }
-            if (parent) {
-                parent->buttonClicked(this);
-            }
-        };
-        knob.setClampToZero(false);
-        add(&dropdown);
-        add(&knob);
-    }
-    void setFromSynth() {
-        auto modulation = synth->getModulationIfExists(slotIndex);
-        if (modulation && CtrSize(modulation->destinations) > destSlotIndex) {
-            auto& dest = modulation->destinations[destSlotIndex];
-            if (dest.parameter < 0) {
-                dropdown.setSelectedIndex(0);
-            } else {
-                auto idx = std::find(std::begin(parametersModulate), std::end(parametersModulate), dest.parameter);
-                if (std::end(parametersModulate) != idx) {
-                    dropdown.setSelectedIndex(1 + static_cast<int32_t>(idx - std::begin(parametersModulate)));
-                    auto* param = synth->getParam(dest.parameter);
-                    if (param) {
-                        dropdown.setCurrentString(param->getShortName());
-                    }
-                } else {
-                    dropdown.setSelectedIndex(-1);
-                }
-            }
-            knob.setValueInit(static_cast<float>(dest.range));
-        } else {
-            dropdown.setSelectedIndex(0);
-        }
-    }
-    ~guicontainer_modulation_slot_destination() override {
-        removeGuis();
-    }
-    void layout() override {
-        auto cs       = getSizeContent();
-        knob.size     = { cs.y, cs.y };
-        knob.pos      = cs - knob.size;
-        dropdown.pos  = { 0, 0 };
-        dropdown.size = { knob.pos.x - padding, cs.y };
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
-    }
-    void determineSize(ivec2& prefSize) override {
-        prefSize.y = math::roundfS32(rowHeight);
-    }
-    void setRowHeight(float rowHeight) {
-        this->rowHeight = rowHeight;
-    }
-};
-
-class guicontainer_modulation_slot_source final : public guictr_base {
-    SynthImplUnison* const synth;
-    const int32_t slotIndex;
-    const int32_t srcSlotIndex;
-    double constant = 0.0;
-    guidropdown_generic<String> dropdownOperator;
-    guidropdown_generic<String> dropdownSource;
-    gui_numberinput_double inputConstant;
-    gui_textfield textfieldFunction;
-    guibutton buttonInputRange;
-    std::function<bool(String)> fnValidateFunction;
-    float rowHeight = HEIGHT_DEFAULT_INPUT;
-
-public:
-    guicontainer_modulation_slot_source(SynthImplUnison* _synth, int32_t _slotIndex, int32_t _srcSlotIndex)
-        : guictr_base(),
-            synth(_synth),
-            slotIndex(_slotIndex),
-            srcSlotIndex(_srcSlotIndex),
-            inputConstant(&constant) {
-        padding      = 1;
-        sortChildren = true;
-        setCanMouseHit(true);
-        setLabel(StringFormat("Mod %d Input %d", _slotIndex, _srcSlotIndex));
-        {
-            auto vecOpts = std::vector<String>();
-            for (size_t i = 0; i < ModulationOperator::NumModulationOperators; ++i) {
-                vecOpts.emplace_back(stringsModOp[i]);
-            }
-            // place it right after the source dropdown
-            dropdownOperator.setOptions(vecOpts);
-            // dropdownOperator.setLabel(StringFormat("Mod %d Op %d", slotIndex, srcSlotIndex));
-            dropdownOperator.setCallback([this](int idx, String& value) -> String {
-                {
-                    ThreadLock lock = synth->lock();
-                    synth->setModulationOperator(slotIndex, srcSlotIndex, idx);
-                }
-                if (parent) {
-                    parent->buttonClicked(this);
-                }
-                return dropdownOperator.optionToString(value);
-            });
-        }
-        {
-            auto vecOpts = std::vector<String>();
-            for (auto& str : stringsModSource) {
-                vecOpts.emplace_back(str);
-            }
-            dropdownSource.setZOrder(1);
-            dropdownSource.setOptions(vecOpts);
-            dropdownSource.setLabel(StringFormat("Mod %d Src %d", slotIndex, srcSlotIndex));
-            dropdownSource.setCallback([this](int idx, String& value) -> String {
-                if (idx >= 0) {
-                    {
-                        ThreadLock lock = synth->lock();
-                        if (idx < CtrSize(modSrcTypesOrdered)) {
-                            synth->setModulationType(slotIndex, srcSlotIndex, modSrcTypesOrdered[idx]);
-                        } else {
-                            synth->setModulationType(slotIndex, srcSlotIndex, -1);
-                        }
-                    }
-                    if (parent) {
-                        parent->buttonClicked(this);
-                    }
-                    return dropdownSource.optionToString(value);
-                }
-                return "";
-            });
-        }
-        {
-            inputConstant.setLabel(StringFormat("Mod %d Constant %d", slotIndex, srcSlotIndex));
-            inputConstant.fnValueEditChanged = [this](gui_numberinput_field_base*, double value) {
-                {
-                    ThreadLock lock = synth->lock();
-                    synth->setModulationConstant(slotIndex, srcSlotIndex, value);
-                }
-                if (parent) {
-                    parent->buttonClicked(this);
-                }
-            };
-            inputConstant.fnClamp = [](double value) -> double {
-                return value;
-            };
-        }
-        {
-            buttonInputRange.setLabel("Bipolar");
-        }
-        {
-            textfieldFunction.setLabel(StringFormat("Mod %d Function %d", slotIndex, srcSlotIndex));
-            // textfieldFunction.setTextfieldColor(GuiColor::COL_TEXTBOX_TEXT);
-            textfieldFunction.setInputActivates(true);
-            textfieldFunction.setReturnCommits(true);
-            fnValidateFunction = ([this](const String& value) {
-                {
-                    try {
-                        MathExpr expr = MathExpr::parse(value);
-                        {
-                            ThreadLock lock = synth->lock();
-                            synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
-                        }
-                        textfieldFunction.setLabel(StringFormat("Mod %d Function %d", slotIndex, srcSlotIndex));
-                        textfieldFunction.setTextfieldColor(GuiColor::COL_TEXTBOX_TEXT);
-                    } catch (mu::Parser::exception_type& e) {
-                        log_lf(Log::L_ERROR, "Error in expression: %s\n", e.GetMsg().c_str());
-                        textfieldFunction.setLabel(StringFormat("Error in expression: %s", e.GetMsg().c_str()));
-                        textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
-                        {
-                            ThreadLock lock = synth->lock();
-                            MathExpr expr;
-                            expr.str        = value;
-                            expr.parsedExpr = nullptr;
-                            synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
-                        }
-                    }
-                }
-                if (parent) {
-                    parent->buttonClicked(this);
-                }
-                return true;
-            });
-            textfieldFunction.setChangeCallback(fnValidateFunction);
-            textfieldFunction.setEndEditCallback(fnValidateFunction);
-        }
-        add(&dropdownOperator);
-        add(&dropdownSource);
-        add(&inputConstant);
-        add(&textfieldFunction);
-        add(&buttonInputRange);
-    }
-
-    ~guicontainer_modulation_slot_source() override {
-        removeGuis();
-    }
-
-    void setFromSynth() {
-        auto modulation = synth->getModulationIfExists(slotIndex);
-        dropdownOperator.setVisible(srcSlotIndex > 0 && (modulation && CtrSize(modulation->inputs) > srcSlotIndex));
-        if (modulation && CtrSize(modulation->inputs) > srcSlotIndex) {
-            auto& src = modulation->inputs[srcSlotIndex];
-            switch (src.type) {
-                case ModulationType::Function:
-                case ModulationType::Constant:
-                    dropdownSource.setSelectedIndex(static_cast<int32_t>(src.type) + 1);
-                    break;
-                case ModulationType::ModulationSource: {
-                    auto idx = std::find(std::begin(modSrcTypesOrdered), std::end(modSrcTypesOrdered), 2+static_cast<int32_t>(src.src));
-                    if (std::end(modSrcTypesOrdered) != idx) {
-                        dropdownSource.setSelectedIndex(static_cast<int32_t>(idx - std::begin(modSrcTypesOrdered)));
-                    } else {
-                        dropdownSource.setSelectedIndex(0);
-                    }
-                    break;
-                }
-                default:
-                    dropdownSource.setSelectedIndex(0);
-                    break;
-            }
-            dropdownOperator.setSelectedIndex(static_cast<int32_t>(src.op));
-            textfieldFunction.setVisible(textfieldFunction.isEditing() || src.type == ModulationType::Function);
-            if (!textfieldFunction.isEditing()) {
-                textfieldFunction.setValue(src.function.str);
-            }
-            if (!src.function.str.empty() && !src.function.parsedExpr) {
-                textfieldFunction.setLabel("Error in expression");
-                textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
-            } else if (src.function.parsedExpr && src.function.parsedExpr->nanInfCounter) {
-                textfieldFunction.setLabel(StringFormat("%d NaN/Inf detected", src.function.parsedExpr->nanInfCounter));
-                textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
-            }
-            dropdownOperator.setVisible(dropdownOperator.isVisible() && (src.type != ModulationType::Function));
-            inputConstant.setVisible(src.type == ModulationType::Constant);
-            buttonInputRange.setVisible(src.type != ModulationType::Constant && src.type != ModulationType::Function);
-            switch (src.range) {
-                case ModulationRange::Bipolar:
-                    buttonInputRange.setText("+/-");
-                    buttonInputRange.setLabel("Bipolar [-1.0 - 1.0]");
-                    break;
-                case ModulationRange::Unipolar:
-                    buttonInputRange.setText("+");
-                    buttonInputRange.setLabel("Unipolar [0.0 - 1.0]");
-                    break;
-                case ModulationRange::Triangle:
-                    buttonInputRange.setText("\\/");
-                    buttonInputRange.setLabel("Triangle [0.0 - 1.0]");
-                    break;
-                default:
-                    break;
-            }
-            constant = src.value;
-        } else {
-            dropdownSource.setSelectedIndex(0);
-            dropdownOperator.setSelectedIndex(0);
-            textfieldFunction.setVisible(false);
-            inputConstant.setVisible(false);
-            buttonInputRange.setVisible(false);
-            buttonInputRange.setText("+");
-            buttonInputRange.setLabel("Unipolar");
-            constant = 1.0;
-        }
-    }
-
-    void layout() override {
-        auto cs = getSizeContent();
-        // dbgassert(cs.x > 0);
-        auto sizeRightOperator = cs.x;
-        dropdownSource.pos     = { 0, 0 };
-        if (dropdownOperator.isVisible()) {
-            auto partialSize      = cs.x * 1 / 4;
-            dropdownOperator.pos  = {};
-            dropdownOperator.size = { partialSize - padding, cs.y };
-            sizeRightOperator     = cs.x - partialSize;
-            dropdownSource.pos.x  = dropdownOperator.right() + padding;
-        }
-        auto widthButtonBipolar = math::roundfS32(size.y);
-        if (buttonInputRange.isVisible()) {
-            sizeRightOperator -= widthButtonBipolar;
-            buttonInputRange.size = { widthButtonBipolar, cs.y };
-            buttonInputRange.pos  = { cs.x - widthButtonBipolar, 0 };
-        }
-        dropdownSource.size = { sizeRightOperator - padding, cs.y };
-        if (inputConstant.isVisible()) {
-            auto partialSize2     = (sizeRightOperator) *3 / 10;
-            dropdownSource.size.x = dropdownSource.size.x - partialSize2 - padding;
-            inputConstant.size    = { partialSize2, cs.y };
-            inputConstant.pos     = { dropdownSource.right() + padding, 0 };
-        }
-        if (textfieldFunction.isVisible()) {
-            auto partialSize2      = (sizeRightOperator) *7 / 10;
-            dropdownSource.size.x  = dropdownSource.size.x - partialSize2 - padding;
-            textfieldFunction.size = { partialSize2, cs.y };
-            textfieldFunction.pos  = { dropdownSource.right() + padding, 0 };
-            // textfieldFunction.setFontSize(textfieldFunction.getSize.y);
-        }
-        for (guibase* gui : guis) {
-            gui->layout();
-            // dbgassert(!gui->isVisible() || (gui->size.x > 0 && gui->size.y > 0));
-        }
-    }
-
-    void buttonClicked(guibase* button) override {
-        if (button == &buttonInputRange) {
-            {
-
-                ThreadLock lock = synth->lock();
-                auto modulation = synth->getModulationIfExists(slotIndex);
-                if (modulation && CtrSize(modulation->inputs) > srcSlotIndex) {
-                    auto& input = modulation->inputs[srcSlotIndex];
-                    synth->setModulationInputRange(slotIndex, srcSlotIndex, static_cast<ModulationRange>((static_cast<int32_t>(input.range) + 1) % ModulationRange::NumModulationRanges));
-                }
-            }
-            if (parent) {
-                parent->buttonClicked(this);
-            }
-        }
-        guictr_base::buttonClicked(button);
-    }
-
-    void determineSize(ivec2& prefSize) override {
-        prefSize.y = math::roundfS32(rowHeight);
-    }
-
-    void setRowHeight(float rowHeight) {
-        this->rowHeight = rowHeight;
-    }
-};
-
-class guictr_synth_title : public guictr_base {
-    float titleHeight = 10.0f;
-public:
-    guictr_synth_title() = default;
-
-    void renderContainerLabel(NVGcontext* vg) override {
-        if (isFlag(FLG_RENDER_LABEL) && label.length()) {
-            const auto bgColor = getInnerBackgroundColorFromState(getStateFlags());
-            renderTextLabel(vg,
-                            vec2(getPosContent()) + vec2(padding, titleHeight / 2.0),
-                            vec2(getSizeContent()) - vec2(INSET_TITLE + 2, 0),
-                            label,
-                            theme,
-                            titleHeight,
-                            theme->getContrastColor(bgColor),
-                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        }
-    }
-
-    void setTitleHeight(float height) {
-        titleHeight = height;
-    }
-
-    float getTitleHeight() const {
-        return titleHeight;
-    }
-
-    virtual void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) {
-    }
-};
-
-class guicontainer_modulation_slot final : public guictr_synth_title {
-    SynthImplUnison* const synth;
-    const int32_t slotIndex;
-    std::vector<guicontainer_modulation_slot_source*> sources;
-    std::vector<guicontainer_modulation_slot_destination*> destinations;
-
-public:
-    explicit guicontainer_modulation_slot(SynthImplUnison* synth, int32_t slotIndex)
-        : synth(synth),
-            slotIndex(slotIndex) {
-        padding      = 1;
-        margin       = 0;
-        sortChildren = true;
-        setLabel(StringFormat("Modulation %d", slotIndex + 1));
-        setBackgroundRendered(true);
-        setBackgroundRenderedInset(true);
-        setFlag(FLG_RENDER_LABEL, true);
-        setCanMouseHit(true);
-    }
-
-    ~guicontainer_modulation_slot() override {
-        removeGuis();
-        for (auto& d : sources) {
-            delete d;
-        }
-        for (auto& d : destinations) {
-            delete d;
-        }
-    }
-
-    void setFromSynth() {
-        auto modulation     = synth->getModulationIfExists(slotIndex);
-        auto modSourceCount = modulation ? modulation->inputs.size() : 0;
-        auto modDestCount   = modulation ? modulation->destinations.size() : 0;
-        while (sources.size() > modSourceCount + 1) {
-            remove(sources.back());
-            delete sources.back();
-            sources.pop_back();
-        }
-        while (sources.size() < modSourceCount + 1) {
-            const auto srcIdx = CtrSize(sources);
-            auto dropdown     = new guicontainer_modulation_slot_source(synth, slotIndex, srcIdx);
-            dropdown->setZOrder(-srcIdx * 10);
-            sources.push_back(dropdown);
-            add(sources.back());
-        }
-        while (destinations.size() > 1 && destinations.size() > modDestCount + 1) {
-            remove(destinations.back());
-            delete destinations.back();
-            destinations.pop_back();
-        }
-        while (destinations.size() < modDestCount + 1) {
-            const auto dstIdx = CtrSize(destinations);
-            auto dstSlot      = new guicontainer_modulation_slot_destination(synth, slotIndex, dstIdx);
-            // place it after source and operator dropdowns
-            dstSlot->setZOrder(-(1000 + dstIdx * 10 + 2));
-            destinations.push_back(dstSlot);
-            add(destinations.back());
-        }
-        for (auto& src : sources) {
-            src->setFromSynth();
-        }
-        for (auto& dst : destinations) {
-            dst->setFromSynth();
-        }
-    }
-
-    void render(NVGcontext* vg) override {
-        // auto halfSize = vec2(size) * 0.5f;
-        // vec2 posScrolled = vec2(pos) + halfSize;
-        // nvgTransformByState(vg, 2, &posScrolled.x, &posScrolled.y);
-        // if (posScrolled.y < -halfSize.y) {
-        //     log_printf("Skip: right, bottom %d %d, in parent space: %f %f\n", right(), bottom(), posScrolled.x, posScrolled.y);
-        //     return;
-        // }
-        guictr_base::render(vg);
-    }
-
-    void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) override {
-        if (sizeInset.y > 0 && sizeInset.x > 0) {
-            nvgTranslateZ(vg, -2.0f);
-            // nvgShapeAntiAlias(vg, 0);
-            nvgBeginPath(vg);
-            nvgRect(vg, pos.x, posInset.y, size.x, getTitleHeight());
-            auto color = dbgcolorsArray[1 + (slotIndex % (dbgcolorsArraySize - 1))];
-            color.a = 0.5f;
-            nvgFillColor(vg, color);
-            nvgFill(vg);
-            nvgBeginPath(vg);
-            nvgRect(vg, pos.x, posInset.y, size.x, sizeInset.y);
-            nvgStrokeWidth(vg, theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG));
-            nvgStrokeColor(vg, color);
-            nvgStroke(vg);
-            // nvgShapeAntiAlias(vg, USE_NANOVG_AA);
-            nvgTranslateZ(vg, 1.0f);
-        }
-    }
-
-    void determineSize(ivec2& prefSize) override {
-        vec2 sizeTotal = {0, 0};
-        for (auto& src : guis) {
-            src->size = prefSize;
-            src->determineSize(src->size);
-            sizeTotal.y += src->size.y;
-        }
-        prefSize.y = math::ceilfS32(getTitleHeight() + sizeTotal.y + padding * 2);
-    }
-
-    void setRowHeight(float height) {
-        setTitleHeight(height);
-        for (auto& src : sources) {
-            src->setRowHeight(height*1.5f);
-        }
-        for (auto& dst : destinations) {
-            dst->setRowHeight(height*1.5f);
-        }
-    }
-
-    void layout() override {
-        auto cs        = getSizeContent();
-        vec2 pos      = {0, getTitleHeight()};
-        for (auto& slot : guis) {
-            slot->pos    = pos;
-            slot->size.x = cs.x;
-            // slot->size.y = math::roundfS32(rowHeight);
-            slot->layout();
-            pos.y = slot->bottom();
-        }
-    }
-};
-
-class guicontainer_modulation final : public guictr_synth_title {
-    guictr_scrollbar scrollContainerModulation;
-    SynthImplUnison* const synth;
-    std::vector<guicontainer_modulation_slot*> slots;
-    bool bGuiNeedsRefresh = true;
-
-public:
-    explicit guicontainer_modulation(SynthImplUnison* synth)
-        : synth(synth) {
-        margin  = 0;
-        padding = 0;
-        setLabel("Modulation");
-        setBackgroundRendered(false);
-        setBackgroundRenderedInset(false);
-        setFlag(FLG_RENDER_LABEL, false);
-        setCanMouseHit(true);
-        scrollContainerModulation.maxHeight = -1;
-        add(&scrollContainerModulation);
-        scrollContainerModulation.setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
-    }
-
-    ~guicontainer_modulation() override {
-        scrollContainerModulation.removeGuis();
-        removeGuis();
-        for (auto& slot : slots) {
-            delete slot;
-        }
-    }
-
-    void layout() override {
-        scrollContainerModulation.pos = {0, getTitleHeight()};
-        scrollContainerModulation.size = size;
-        scrollContainerModulation.maxHeight = size.y;
-        scrollContainerModulation.determineSize(scrollContainerModulation.size);
-        for (auto* gui : guis) {
-            gui->layout();
-        }
-    }
-
-    void setTitleHeight(float height) {
-        guictr_synth_title::setTitleHeight(isFlag(FLG_RENDER_LABEL) ? height*1.5f : 0);
-        for (auto& slot : slots) {
-            slot->setRowHeight(height);
-        }
-    }
-
-    void setFromSynth() {
-        auto modulations = synth->getModulationCount();
-        while (CtrSize(slots) <= modulations) {
-            slots.push_back(new guicontainer_modulation_slot(synth, CtrSize(slots)));
-            scrollContainerModulation.add(slots.back());
-        }
-        for (auto& slot : slots) {
-            slot->setFromSynth();
-        }
-        if (parent && size.x > 0 && size.y > 0) {
-            layout();
-        }
-    }
-
-    void buttonClicked(guibase* button) override {
-        onChildLayoutChanged(this);
-        bGuiNeedsRefresh = true;
-        guictr_base::buttonClicked(button);
-    }
-
-    void onTick(AppCtrl* ctrl) override {
-        if (bGuiNeedsRefresh) {
-            bGuiNeedsRefresh = false;
-            setFromSynth();
-        }
-        guictr_base::onTick(ctrl);
-    }
-
-    void determineSize(ivec2& prefSize) override {
-        ivec2 sizeTotal = {};
-        for (auto& src : guis) {
-            src->size = prefSize;
-            src->determineSize(src->size);
-            sizeTotal.y += src->size.y;
-        }
-        prefSize.y = math::ceilfS32(getTitleHeight() + sizeTotal.y + padding * 2);
-    }
-};
 
 class guiknob_synthparam final : public guiknob_pluginparam {
     SynthImplUnison* const synth;
@@ -3922,7 +2946,7 @@ public:
             synth(synth),
             moduleInstance(module),
             shapeEditor(makeShapeEditor()),
-            modulation(synth),
+            modulation(dynamic_cast<PluginLockable*>(synth), synth),
             ctrOsc1(synth),
             ctrOsc2(synth),
             ctrFm(synth),

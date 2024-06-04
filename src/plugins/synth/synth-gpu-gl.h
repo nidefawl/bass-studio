@@ -8,6 +8,7 @@
 #include "str_util.h"
 #include "types.h"
 #include <cstdint>
+#include <variant>
 
 namespace PluginSynth::GPU {
 
@@ -293,26 +294,35 @@ struct gpu_compute_context_t {
     double time_beats;
     double osc1_unison_voice_count;
     double osc1_unison_detune;
-    double osc1_bleb_duration;
+    double osc1_filter;
     double osc1_stereo;
     double osc1_pw;
     double osc1_pw_mod_rate;
     double osc1_pw_mod_depth;
+    double osc1_filter_keytrack;
+    double osc1_detune_keytrack;
+    double osc1_width_keytrack;
 };
 
 /* keep in sync with shader defines */
-static constexpr size_t NUM_VOICE_INPUT_PARAMETERS = 2;
-static constexpr size_t NUM_SYNTH_INPUT_PARAMETERS = 4;
+static constexpr size_t NUM_VOICE_INPUT_PARAMETERS = 3;
+static constexpr size_t NUM_SYNTH_INPUT_PARAMETERS = 2;
 /*
+
 struct voice_state_input_t {
-    float is_active[N_SAMPLES];
     float velocity[N_SAMPLES];
     float pitch[N_SAMPLES];
 };
 
 struct synth_state_input_t {
     float param_bleb[N_SAMPLES];
+    float param_stereo[N_SAMPLES];
+    float param_pw[N_SAMPLES];
+    float param_filter_keytrack[N_SAMPLES];
+    float param_detune_keytrack[N_SAMPLES];
+    float param_width_keytrack[N_SAMPLES];
 };
+
 */
 
 } // namespace PluginSynth::GPU

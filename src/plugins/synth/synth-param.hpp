@@ -35,8 +35,8 @@ struct SynthParamBase : public SynthParam {
     double getAsDouble() const noexcept {
         return valDouble;
     }
-    double getAsDoubleModulated() const noexcept {
-        return valModulated;
+    double getAsDoubleModulated(double dModAdd = 0.0) const noexcept {
+        return math::clamp(valModulated + dModAdd, 0.0, 1.0);
     }
     void resetToInitial() noexcept {
         valDouble = valModulated = valInitial;

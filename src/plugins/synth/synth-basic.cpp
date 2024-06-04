@@ -65,9 +65,7 @@ struct VoiceSynth {
         if (hint_likely(!bIsActive)) {
             return false;
         }
-        return this->volEnv.stage < EnvelopeStages::Idle;
-        // return this->volEnv.stage < EnvelopeStages::Idle || !this->filter.IsSilent(mode);
-        // return true;
+        return !this->volEnv.IsIdle();
     }
 
     bool IsReleased() const { return volEnv.IsReleased(); }
