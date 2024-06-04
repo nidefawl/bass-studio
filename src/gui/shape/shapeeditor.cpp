@@ -58,7 +58,7 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
     auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
     auto hoverColor = theme->getColor(colHovered);
     fillColor.a = 0.3;
-    for (int32_t pass = 0; pass < 2; ++pass) {
+    for (int32_t pass = 0; !(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && pass < 2; ++pass) {
         if (pass == 0) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, pos.x + pts.front().pos.x*sizeScaled.x-5, pos.y + sizeScaled.y);
@@ -111,7 +111,7 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
         return;
     }
 
-    if (hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts - 1) {
+    if (!(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts - 1) {
         for (int32_t pass = 0; pass < 2; ++pass) {
             int32_t idx = hit.idx;
             if (pass > 0) {
@@ -184,7 +184,7 @@ void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* t
     auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
     auto hoverColor = theme->getColor(colHovered);
     fillColor.a = 0.3;
-    for (int32_t pass = 0; pass < 2; ++pass) {
+    for (int32_t pass = 0; !(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && pass < 2; ++pass) {
         if (pass == 0) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, pos.x + pts.front().pos.x*sizeScaled.x, pos.y + sizeScaled.y);
@@ -228,7 +228,7 @@ void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* t
             nvgFill(vg);
         }
     }
-    if (hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts - 1) {
+    if (!(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts - 1) {
         for (int32_t pass = 0; pass < 2; ++pass) {
             int32_t idx = hit.idx;
             if (pass > 0) {
@@ -318,7 +318,7 @@ void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* them
     auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
     auto hoverColor = theme->getColor(colHovered);
     fillColor.a = 0.3;
-    for (int32_t pass = 0; pass < 2; ++pass) {
+    for (int32_t pass = 0; !(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && pass < 2; ++pass) {
         if (pass == 0) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, pos.x + pts.front().pos.x*size.x-5, pos.y + size.y);
@@ -369,7 +369,7 @@ void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* them
     if (curve.flags & SHAPE_LOCK_POINTS) {
         return;
     }
-    if (hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts) {
+    if (!(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts) {
         for (int32_t pass = 0; pass < 2; ++pass) {
             int32_t idx = hit.idx;
             if (pass > 0) {
@@ -1026,13 +1026,14 @@ bool ShapeEdit::hasControlHandles() const {
 
 void guictr_curve_shape::render(NVGcontext* vg) {
     auto cs = getSizeContent();
-    drawBackground(vg, theme, getPosContent(), cs, margin, isBackgroundRenderedInset());
+    if (isBackgroundRendered())
+        drawBackground(vg, theme, getPosContent(), cs, margin, isBackgroundRenderedInset());
 
     if (!setScissorTransform(vg)) {
         return;
     }
     auto relMousePos = toControlsObjectSpace(parentCtrl->m_mousePos, this);
-    renderEditor(vg, { 0, 0 }, theme, relMousePos, true);
+    renderEditor(vg, { 0, 0 }, theme, relMousePos, isBackgroundRendered());
 }
 
 DAW::Shape::guictr_curve_shape* makeShapeCurveView() {

@@ -38,6 +38,7 @@ enum ShapeFlags {
     SHAPE_INVERT = 1 << 3,
     SHAPE_LOCK_POINTS = 1 << 4,
     SHAPE_UNCLAMPPED = 1 << 5,
+    SHAPE_SHOW_ONLY_CONTROL_POINTS = 1 << 6,
 };
 
 /* struct shape_base_t {
