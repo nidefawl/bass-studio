@@ -51,6 +51,7 @@ void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */ {
         case autolayout_mode::LAYOUT_HORIZONTAL:
             layoutSize.y -= padding * 2;
             break;
+        case LAYOUT_GRID:
         case LAYOUT_NONE:
             break;
     }
@@ -70,6 +71,7 @@ void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */ {
             case autolayout_mode::LAYOUT_HORIZONTAL:
                 pos.x = gui->right() + pad.x;
                 break;
+            case LAYOUT_GRID:
             case LAYOUT_NONE:
                 break;
         }
@@ -130,6 +132,7 @@ void guictr_scrollbar::scrollOffsetChanged(int dir, float offset) {
                 case autolayout_mode::LAYOUT_HORIZONTAL:
                     pos.x += gui->size.x;
                     break;
+                case LAYOUT_GRID:
                 case LAYOUT_NONE:
                     break;
             }

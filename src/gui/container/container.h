@@ -18,7 +18,8 @@ struct guitheme_t;
 enum autolayout_mode : uint8_t {
     LAYOUT_NONE = 0,
     LAYOUT_HORIZONTAL,
-    LAYOUT_VERTICAL
+    LAYOUT_VERTICAL,
+    LAYOUT_GRID
 };
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
@@ -104,6 +105,7 @@ public:
         return layoutMode;
     }
     virtual void layoutEntries(ivec2 pos, ivec2 cs, ivec2 dir);
+    virtual void layoutEntriesGrid(ivec2 pos, ivec2 cs, int32_t maxCols);
     void layout() override;
 
     GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {

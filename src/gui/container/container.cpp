@@ -345,6 +345,43 @@ void guictr_base::layoutEntries(ivec2 pos, ivec2 cs, ivec2 dir) {
         offsetPos += (entrySize + vec2(padding)) * vec2(dir);
     }
 }
+void guictr_base::layoutEntriesGrid(ivec2 pos, ivec2 cs, int32_t maxCols) {
+    int32_t numEntries = 0;
+    for (guibase* gui : guis) {
+        auto f = gui->getFlags();
+        if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
+            continue;
+        numEntries++;
+    }
+    if (numEntries == 0)
+        return;
+    auto numRows = (numEntries + maxCols - 1) / maxCols;
+    auto numCols = math::min(numEntries, maxCols);
+    if (numRows > 1) {
+        cs.y -= padding * (numRows - 1);
+    }
+    if (numCols > 1) {
+        cs.x -= padding * (numCols - 1);
+    }
+    auto entrySize = vec2(cs) / vec2(numCols, numRows);
+    vec2 offsetPos = pos;
+    int32_t col    = 0;
+    for (guibase* gui : guis) {
+        auto f = gui->getFlags();
+        if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
+            continue;
+        gui->pos  = math::roundvecS32(offsetPos);
+        gui->size = math::roundvecS32(entrySize);
+        col++;
+        if (col >= numCols) {
+            col         = 0;
+            offsetPos.x = pos.x;
+            offsetPos.y += entrySize.y + padding;
+        } else {
+            offsetPos.x += entrySize.x + padding;
+        }
+    }
+}
 
 void guictr_base::layout() {
     switch (layoutMode) {
@@ -355,6 +392,9 @@ void guictr_base::layout() {
             break;
         case LAYOUT_VERTICAL:
             layoutEntries({}, getSizeContent(), { 0, 1 });
+            break;
+        case LAYOUT_GRID:
+            layoutEntriesGrid({}, getSizeContent(), 4);
             break;
         default:
             dbgassert(0);
