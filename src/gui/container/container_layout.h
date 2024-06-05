@@ -16,13 +16,19 @@ class BaseCtrl;
 struct guitheme_t;
 
 
-class guictr_stacked final : public guictr_base, public splitter_cb {
+class guictr_stacked : public guictr_base, public splitter_cb {
     struct stacked_entry;
     std::vector<stacked_entry*> entries;
     bool bVerticalLayout = true;
+    float titleHeight = 10.0f;
 public:
     static constexpr int32_t STACK_ENTRY_BTN_SIZE = 24;
     guictr_stacked() : guictr_base() {
+        padding = 0;
+        margin = 0;
+        setVerticalLayout(false);
+        setBackgroundRendered(false);
+        setFlag(FLG_RENDER_LABEL, true);
     }
     ~guictr_stacked();
     void setVerticalLayout(bool bVertical) {
@@ -30,17 +36,43 @@ public:
     }
     int32_t getNumEntries();
     void toggleEntry(int32_t idx, int flags);
-    void addEntry(guictr_base* ctr, String title);
+    void addEntry(guictr_base* ctr);
     void removeEntries();
     void buttonClicked(guibase* button) override;
     void layout() override;
     void render(NVGcontext* vg) override;
+    void renderBackground(NVGcontext* vg) override;
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
     ivec2 getContainerPos() override;
     ivec2 getContainerSize() override;
     int32_t getCollapsedCtrHeight(guictr_base* ctr);
     void updateSplitterPositions();
-    void setSplitters(std::initializer_list<float>&& splitterPos);
+    void setSplitters(const std::vector<float>& splitterPos);
+    void getSplitterPositions(std::vector<float>& splitterPos);
+    void renderContainerLabel(NVGcontext* vg) override {
+        const auto h = getTitleHeight();
+        if (isFlag(FLG_RENDER_LABEL) && label.length() && h > 0) {
+            const auto bgColor = getInnerBackgroundColorFromState(getStateFlags());
+            renderTextLabel(vg,
+                            vec2(getPosContent()) + vec2(padding + 2, h / 2.0) - vec2(0, h),
+                            vec2(getSizeContent()) - vec2(INSET_TITLE + 2, 0),
+                            label,
+                            theme,
+                            titleHeight,
+                            theme->getContrastColor(bgColor),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        }
+    }
+    void setTitleHeight(float height) {
+        titleHeight = height;
+    }
+    float getTitleHeight() const {
+        return label.empty() ? 0 : titleHeight;
+    }
+
+    ivec2 paddingTL(int _padding) const override {
+        return ivec2(_padding - margin * snapSides.x, _padding - margin * snapSides.y + getTitleHeight());
+    }
 };
 class guictr_tabbed : public guictr_base {
 

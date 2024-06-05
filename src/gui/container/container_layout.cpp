@@ -159,9 +159,9 @@ void guictr_stacked::buttonClicked(guibase* button) {
         toggleEntry((int32_t) pos, (&(*it)->btnHideEntry == button ? 1 : (2 | 1)));
         return;
     }
-    //if (parent) {
-    //    parent->buttonClicked(button);
-    //}
+    if (parent) {
+       parent->buttonClicked(button);
+    }
 }
 guictr_stacked::~guictr_stacked() {
     for (stacked_entry* entry : entries) {
@@ -174,8 +174,8 @@ guictr_stacked::~guictr_stacked() {
     dbgassert(guis.size() <= 1);
     removeGuis();
 }
-void guictr_stacked::addEntry(guictr_base* ctr, String title) {
-    auto const entry = new guictr_stacked::stacked_entry{ ctr, std::move(title) };
+void guictr_stacked::addEntry(guictr_base* ctr) {
+    auto const entry = new guictr_stacked::stacked_entry{ ctr, ctr->getLabel() };
     // ctr->add(&entry->btnHideEntry);
     entry->splitter.setSplitterType(bVerticalLayout ? 0 : 1);
     guictr_base::add(ctr);
@@ -184,12 +184,18 @@ void guictr_stacked::addEntry(guictr_base* ctr, String title) {
     this->entries.push_back(entry);
     updateSplitterPositions();
 }
-void guictr_stacked::setSplitters(std::initializer_list<float>&& splitterPos) {
+void guictr_stacked::setSplitters(const std::vector<float>& splitterPos) {
     dbgassert(splitterPos.size() <= entries.size());
     for (size_t i = 0; i < splitterPos.size(); ++i) {
         entries[i]->splitter.setScale(splitterPos.begin()[i]);
     }
     updateSplitterPositions();
+}
+void guictr_stacked::getSplitterPositions(std::vector<float>& splitterPos) {
+    splitterPos.clear();
+    for (auto* entry : entries) {
+        splitterPos.push_back(entry->splitter.getScale());
+    }
 }
 void guictr_stacked::updateSplitterPositions() {
     for (size_t i = 0; i < entries.size(); ++i) {
@@ -212,29 +218,36 @@ void guictr_stacked::removeEntries() {
     }
     entries.clear();
 }
-
-void guictr_stacked::render(NVGcontext* vg) {
-    if (isBackgroundRendered()) {
-        renderBackground(vg);
-    }
-    if (!setScissorTransform(vg)) {
+void guictr_stacked::renderBackground(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
         return;
+    // dbgassert(isBackgroundRendered());
+    // bool focused = parentCtrl->isCtrOrChildFocused(this);
+    float h = titleHeight;
+    titleHeight = 0;
+    drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, isBackgroundRenderedInset());
+    titleHeight = h;
+    renderContainerLabel(vg);
+    /* render debug background if gui flag 1<<16 is set */
+    if ((this->id & (1 << 16)) && size.x > 0 && size.y > 0) {
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y, size.x, size.y);
+        nvgFillColor(vg, rgbaToNvg(0x7fff00ff));
+        nvgFill(vg);
     }
-    for (auto c : guis) {
-        nvgSave(vg);
-        c->render(vg);
-        nvgRestore(vg);
-    }
+}
+void guictr_stacked::render(NVGcontext* vg) {
+    guictr_base::render(vg);
 }
 void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
     updateSplitterPositions();
     this->layout();
 }
 ivec2 guictr_stacked::getContainerPos() {
-    return toScreenSpace({0, 0});
+    return toScreenSpace({getTitleHeight(), 0});
 }
 ivec2 guictr_stacked::getContainerSize() {
-    return size;
+    return ivec2(size.x, size.y - getTitleHeight());
 }
 int32_t guictr_stacked::getCollapsedCtrHeight(guictr_base* ctr) {
     ivec2 ctrPadding = ctr->getPadding();
