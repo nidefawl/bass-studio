@@ -51,6 +51,9 @@ public:
         setBackgroundRendered(false);
         setCanMouseHit(true);        
     }
+    knobtype getKnobType() const {
+        return knobType;
+    }
     virtual float getQuantizationStep() const {
         return 0.0f;
     }
@@ -166,12 +169,16 @@ protected:
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx  = -1;
     float fBeginValue = 0.0f;
+    float m_fontScale = 1.0f;
 public:
     gui_slider_textfield() : gui_textfield() {
         setGuiType(gui_type::GUI_TYPE_SLIDER_TEXTFIELD);
         setCanMouseHit(true);
         setAlignment(gui_textfield::Alignment::Center);
         setReturnCommits(true);
+    }
+    void setFontScale(float f) {
+        m_fontScale = f;
     }
     GuiColor::constant_t getBackgroundColor() const override;
     virtual bool renderAsBipolar();
@@ -197,7 +204,7 @@ public:
     void render(NVGcontext* vg) override;
     void layout() override {
         gui_textfield::layout();
-        setFontSize(size.y);
+        setFontSize(size.y * m_fontScale);
     }
     bool focusEvent(MouseHitEvt& evt, bool focused) override {
         if (!focused) {

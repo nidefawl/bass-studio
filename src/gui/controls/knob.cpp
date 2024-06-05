@@ -612,7 +612,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         nvgFillColor(vg, fontColor);
         if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
             float x = renderTextLabel(vg, vec2(m_layout.pLabel) + vec2(m_layout.sLabel) * 0.5f, m_layout.sLabel, label, theme, m_layout.labelHeight * m_layout.fontScaleLabel, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            float right = m_layout.sLabel.x;
+            float right = m_layout.pLabel.x + m_layout.sLabel.x;
             if (x > right) {
                 if (m_layout.fontScaleLabel > 0.5f) {
                     m_layout.fontScaleLabel -= 0.05f;
@@ -621,7 +621,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         }
         if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
             float x = renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, strValueDisplay, theme, m_layout.valueHeight * m_layout.fontScaleValue, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            float right = m_layout.sValue.x;
+            float right = m_layout.pValue.x + m_layout.sValue.x;
             if (x > right) {
                 if (m_layout.fontScaleValue > 0.5f) {
                     m_layout.fontScaleValue -= 0.05f;
