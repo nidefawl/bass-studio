@@ -4,21 +4,9 @@
 #include "host/plugin/modules.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "plugins/plugin-ui.h"
+#include "lfo-snapshot.hpp"
 
 namespace PluginLFO {
-
-struct impl_channel_snapshot_t;
-
-struct ui_layout_t {
-    int32_t uiId = 0;
-    int32_t numActive = 0;
-};
-
-struct snapshot_t {
-    int32_t version = 0;
-    std::vector<ui_layout_t> uiLayout;
-    std::vector<impl_channel_snapshot_t> channels;
-};
 
 class module_lfo final : public internal_modulator {
     friend class guictr_module_lfo;
