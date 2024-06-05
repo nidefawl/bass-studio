@@ -128,7 +128,7 @@ namespace PluginLFO {
     };
 
     struct lfo_automation_src_synced_t final : public automated_param_t {
-        DAW::Shape::shape_t shape;
+        DAW::Shape::shape_t* shape;
         LFORateMinMaxAutomation* rateMinMax = nullptr;
         LFOSyncParameters* sync = nullptr;
         float getPhase(double dTick) const {
@@ -157,7 +157,7 @@ namespace PluginLFO {
         float sampleCurve(double dTick) const {
             float moduloPhase = getPhase(dTick);
             auto [valMin, valMax] = rateMinMax->getMinMax(dTick);
-            auto value = shape.sampleCurve(moduloPhase, false);
+            auto value = shape->sampleCurve(moduloPhase, false);
             return value * (valMax - valMin) + valMin;
         }
         float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
@@ -236,9 +236,6 @@ namespace PluginLFO {
         LFORateMinMaxAutomation* rateMinMax = nullptr;
         LFOSyncParameters* sync = nullptr;
         float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
-            if (tick < 0) {
-                fIn*=1.001f;
-            }
             const auto s = sampleCurve(tick);
             dbgassert(!fp_math::isNanOrInfd(s));
             const auto valScaled = scale.min + s * (scale.max - scale.min);
@@ -422,10 +419,5 @@ namespace PluginLFO {
         int32_t getModeId() const override {
             return 3;
         }
-    };
-    struct lfo_channel_t : public LFOSyncParameters {
-        bool modeIsShape = true;
-        lfo_automation_src_synced_t srcSync;
-        std::shared_ptr<lfo_automation_src_random_t> srcRand;
     };
 }

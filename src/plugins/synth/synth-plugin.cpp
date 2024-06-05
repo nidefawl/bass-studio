@@ -160,7 +160,7 @@ const std::array<const char*, 1 + ModulationSourceType::NumModulationSources + (
 static_assert(stringsModSource.size() == modSrcTypesOrdered.size(), "stringsModSource.size() does not match modSrcTypesOrdered.size()");
 
 // static constexpr auto MathExprInputLen  = 1 + ModulationSourceType::NumModulationSources;
-const std::array<const char*, MATH_INPUT_LEN> stringsShortSrcNames = {
+const std::array<const char*, MAX_MODULATION_INPUT_PARAMS> stringsShortSrcNames = {
     "x",
     "a",
     "m",
@@ -797,6 +797,9 @@ class SynthImplUnison final : public SynthImpl<SynthImplUnison, ParametersSynthU
 public:
     bool isMathEvalEnabled() const override {
         return getSettingBool(Settings::ExprEvaluationEnabled);
+    }
+    bool isShowModulationRanges() const override{
+        return getSettingBool(Settings::ShowModulationRanges);
     }
 public:
     using UnisonVoiceList = std::array<int32_t, NUM_POLY_VOICES * NUM_UNISON_VOICES>;
@@ -1942,7 +1945,7 @@ public:
         int32_t numActiveVoices                          = 0;
         const auto dt                                    = getSetting(Settings::Oversampling) ? (oneOverSR * 0.5) : oneOverSR;
         const bool bDiagnostic                           = getSetting(Settings::DiagnosticOutputEnabled);
-        if (getSetting(Settings::ShowModulationRanges)) {
+        if (isShowModulationRanges()) {
             std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size()*sizeof(double));
             std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size()*sizeof(double));
         }
@@ -1999,7 +2002,7 @@ public:
                 UpdateVoiceEnvelopeModulations(uv, v);
                 UpdateVoiceEnvelopes(dt, uv, v);
                 if (getSetting(Settings::ShowModulationRanges)) {
-                    for (int j = 0; j < Parameters::kNumParams; ++j) {
+                    for (size_t j = 0; j < modulationValuesMax.size() && j < v.modValues.size(); j++) {
                         modulationValuesMax[j] = math::max(modulationValuesMax[j], v.modValues[j]);
                         modulationValuesMin[j] = math::min(modulationValuesMin[j], v.modValues[j]);
                     }
@@ -2234,7 +2237,7 @@ public:
             if (!paramEntry) {
                 continue;
             }
-            int idx = PARAM_ENABLE + 1 + (&paramEntry - &vecParams.front());
+            int idx = PARAM_OFFSET_IMPL + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
             regparam->setInitial(paramEntry->getAsDouble());
@@ -2325,14 +2328,15 @@ public:
             if (!vecParams[idx]) {
                 continue;
             }
-            auto param = getParam(idx + 1);
+            auto param = getParam(PARAM_OFFSET_IMPL + idx);
             param->setAll(vecParams[idx]->getAsDouble());
         }
     }
 
     void addPropertiesParameterTooltip(Table::tbl& table, int idx) override {
-        if (idx > 0 && idx - 1 < CtrSize(vecParams) && vecParams[idx-1]) {
-            SynthParamBase* param = vecParams[idx-1];
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
             const auto strName    = param->name;
             const auto strDisplay = param->getValueDisplay(param->getAsDouble());
             table.colSizes.resize(2);
@@ -2648,35 +2652,6 @@ float getLayoutHeight(guibase* gui) {
     return gui->theme->get(GuiConstant::CONST_ROW_HEIGHT) * 1.33f;
 }
 
-
-class guiknob_synthparam final : public guiknob_pluginparam {
-    SynthImplUnison* const synth;
-    const ParametersSynthUnison param;
-
-public:
-    explicit guiknob_synthparam(int32_t idx, int32_t idxExternal, SynthImplUnison* _impl, ParametersSynthUnison _param, guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
-        : guiknob_pluginparam(idxExternal, idx, _knobtype),
-            synth(dynamic_cast<SynthImplUnison*>(_impl)),
-            param(_param) {
-        m_layout.inset = 2;
-    }
-    std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() override {
-        if (synth) {
-            if (!synth->getSetting(Settings::ShowModulationRanges)) {
-                return std::nullopt;
-            }
-            auto synthParam = synth->getParam(param);
-            if (synthParam) {
-                return synth->getParamModulationRanges(param);
-            }
-        }
-        return std::nullopt;
-    }
-    ParametersSynthUnison getParam() const {
-        return param;
-    }
-};
-
 class gui_listsynthsettings final : public gui_list_entry {
     SynthImplUnison* const synth;
     const Settings setting;
@@ -2770,124 +2745,6 @@ public:
     }
 };
 
-class guictr_synth_param_container final : public guictr_synth_title {
-    SynthImplUnison* const synth;
-    std::vector<guiknob_synthparam*> knobs;
-    vec2 sliderSize{ 0.0f, 0.0f };
-public:
-    explicit guictr_synth_param_container(SynthImplUnison* synth)
-        : synth(dynamic_cast<SynthImplUnison*>(synth)) {
-        margin  = 4;
-        padding = 4;
-        setBackgroundRendered(true);
-        setBackgroundRenderedInset(true);
-        setFlag(FLG_RENDER_LABEL, true);
-        setCanMouseHit(true);
-    }
-    ~guictr_synth_param_container() override {
-        destroyGuis();
-    }
-
-    void addParamKnob(guiknob_synthparam* knob) {
-        knobs.push_back(knob);
-        add(knob);
-    }
-
-    void render(NVGcontext* vg) override {
-        if (!isVisible()) {
-            log_printf("warning, skip rendering container with state !isVisible()\n");
-            return;
-        }
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        for (auto c : guis) {
-            if (!c->isVisible()) {
-                //log_printf("warning, skip rendering child container with state !isVisible()\n");
-                continue;
-            }
-            if (c->size.x <= 5 || c->size.y <= 5) {
-                continue;
-            }
-            {
-                nvgSave(vg);
-                c->render(vg);
-                nvgRestore(vg);
-            }
-        }
-        if (synth && synth->getSetting(Settings::ShowModulationRanges)) {
-            for (auto k : knobs) {
-                auto valueMin = static_cast<float>(this->synth->getModulationAmountMin(k->getParam()));
-                auto valueMax = static_cast<float>(this->synth->getModulationAmountMax(k->getParam()));
-                auto layout = k->getLayout();
-                auto col = dbgcolorsArray[0];
-                col.a = 0.5;
-                k->renderRangeIndicator(vg, layout.pKnob, layout.sKnob, valueMin, valueMax, col, 9, 10);
-            }
-        }
-    }
-
-    void layout() override {
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
-    }
-
-    void buttonClicked(guibase* button) override {
-        parent->buttonClicked(button);
-    }
-
-    void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) override {
-        int newPadding = 0;
-        while (newPadding < 4 && newPadding * 48 < prefSize.y) {
-            newPadding++;
-        }
-        padding = newPadding;
-        this->setTitleHeight(titleHeight);
-        auto cs                = getSizeContent();
-        const auto knobsPerCol = 3;
-        const auto innerSize   = vec2(cs.x, cs.y - titleHeight);
-        auto knobPos           = ivec2(0, titleHeight);
-        auto sliderSize      = vec2(knobSize.x, innerSize.y);
-        this->sliderSize     = sliderSize;
-        knobSize.y           = (innerSize.y - padding * (knobsPerCol - 1)) / float(knobsPerCol);
-        auto knobSizeRounded = ivec2(math::roundfS32(this->sliderSize.x), math::roundfS32(this->sliderSize.y));
-        int32_t knobIdx      = 0;
-        for (auto knob : guis) {
-            if (knob->id == 1) {
-                auto offset = knobIdx % knobsPerCol;
-                knob->pos   = knobPos + ivec2(0, offset * (knobSize.y + padding));
-                knob->size  = knobSize;
-                knobIdx++;
-                if (knobIdx % knobsPerCol == 0) {
-                    knobPos.x += knobSizeRounded.x + padding;
-                }
-            }
-        }
-        if (knobIdx % knobsPerCol != 0) {
-            knobPos.x += knobSizeRounded.x + padding;
-        }
-        for (auto knob : guis) {
-            if (knob->id == 0) {
-                knob->pos  = knobPos;
-                knob->size = knobSizeRounded;
-                knobPos.x += knobSizeRounded.x + padding;
-            }
-        }
-        vec2 sizeFull = innerSize;
-        for (auto knob : guis) {
-            if (knob->id == 2) {
-                knob->pos  = vec2(knobPos.x, titleHeight);
-                knob->size = sizeFull;
-                knobPos.x += math::floorfS32(sizeFull.x + padding);
-            }
-        }
-        prefSize.x = math::roundfS32(knobPos.x - padding) + padding * 2;
-    }
-};
 
 class guicontainer_plugin_synth_editor final : public guictr_base, public splitter_cb {
     struct _synth_gui_param_knob {
@@ -2922,7 +2779,6 @@ class guicontainer_plugin_synth_editor final : public guictr_base, public splitt
 
     Splitter splitter;
     bool bGuiNeedsRefresh = true;
-
     class gui_synth_stats_list_entry final : public gui_list_entry {
     public:
         String string;
@@ -3096,7 +2952,7 @@ public:
                     break;
             }
             auto idx = static_cast<int32_t>(param);
-            if (moduleInstance) idx++;
+            if (moduleInstance) idx += PARAM_OFFSET_IMPL;
             auto idxExternal = idx;
             if (vst2Instance) idxExternal += PARAM_OFFSET_EXTERNAL;
             auto knob = new guiknob_synthparam(idx, idxExternal, synth,
@@ -3324,6 +3180,8 @@ public:
     }
 
     void layout() override {
+        auto cs = getSizeContent();
+        const auto titleHeight = math::roundfS32(cs.y * 0.1f * 0.27f);
         for (auto& knob : vecParamUI) {
             if (!knob.knob)
                 continue;
@@ -3332,12 +3190,10 @@ public:
                 knob.knob->setLabelsScale(0.2f, 0.2f);
             }
             if (knob.type == guiknob::knobtype::SLIDER_LABELED) {
-                knob.knob->setLabelsFontScale(0.7f, 0.8f);
+                knob.knob->setLabelsFontScale(0.9f, 0.9f);
                 knob.knob->setLabelsScale(0.1f, 0.1f);
             }
         }
-        auto cs                             = getSizeContent();
-        const auto titleHeight = math::roundfS32(cs.y * 0.1f * 0.27f);
         modulation.setTitleHeight(titleHeight);
         const auto controlsWidth   = splitter.leftOrTop(cs.x) - padding / 2;
         const auto modulationWidth = splitter.rightOrBottom(cs.x) - padding / 2;

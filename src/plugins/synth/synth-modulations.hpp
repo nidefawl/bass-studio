@@ -45,9 +45,9 @@ const std::array<const char*, 8> stringsModOp = {
     "Power"
 };
 
-static constexpr size_t MATH_INPUT_LEN = 20;
+static constexpr size_t MAX_MODULATION_INPUT_PARAMS = 20;
 struct MathExprParsed {
-    std::array<double, MATH_INPUT_LEN> inputs{};
+    std::array<double, MAX_MODULATION_INPUT_PARAMS> inputs{};
     mu::Parser parser;
     int32_t nanInfCounter = 0;
 };
@@ -61,7 +61,7 @@ struct MathExpr {
         * @param String strExpression the expression to parse
         * @return MathExpr parsed expression
         */
-    static MathExpr parse(const String& strExpression, const std::array<const char*, MATH_INPUT_LEN>& varNames) {
+    static MathExpr parse(const String& strExpression, const std::array<const char*, MAX_MODULATION_INPUT_PARAMS>& varNames) {
         MathExpr expr;
         if (strExpression.length()) {
             auto shrdP    = std::make_shared<MathExprParsed>();
@@ -86,7 +86,6 @@ struct MathExpr {
 
 struct ModulationInput {
     ModulationType type      = ModulationType::ModulationSource;
-    // ModulationSourceType src = ModulationSourceType::Lfo1;
     int32_t src = -1;
     ModulationOperator op    = ModulationOperator::Multiply;
     double value             = 1.0;
@@ -104,22 +103,22 @@ struct Modulation {
     std::vector<ModulationDestination> destinations;
 };
 
-using ModulationSourceData = std::array<double, MATH_INPUT_LEN>;
+using ModulationSourceData = std::array<double, MAX_MODULATION_INPUT_PARAMS>;
 class ModulationController {
 public:
-static constexpr int32_t MAX_PARAMS = 64;
+static constexpr int32_t MAX_MODULATION_OUTPUT_PARAMS = 64;
     using ModIdxName = std::pair<int32_t, String>;
 protected:
     std::vector<Modulation> modulations;
     std::vector<ModIdxName> modSourceDescs;
     std::vector<ModIdxName> modDestDescs;
-    std::array<const char*, MATH_INPUT_LEN> varNames;
+    std::array<const char*, MAX_MODULATION_INPUT_PARAMS> varNames;
 
     /* for visualization */
     std::array<double, 64> modulationValuesMin{};
     std::array<double, 64> modulationValuesMax{};
 public:
-    const std::array<const char*, MATH_INPUT_LEN>& getVarNames() const {
+    const std::array<const char*, MAX_MODULATION_INPUT_PARAMS>& getVarNames() const {
         return varNames;
     }
 
@@ -130,12 +129,29 @@ public:
         return false;
     }
 
-    double getModulationAmountMin(int32_t param) const {
-        return modulationValuesMin[param];
+    int32_t getModulationIdx(int32_t paramIdx) const {
+        for (int32_t i = 0; i < CtrSize(modulations); i++) {
+            for (auto& dest : modulations[i].destinations) {
+                if (dest.parameter == paramIdx) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
-    double getModulationAmountMax(int32_t param) const {
-        return modulationValuesMax[param];
+    bool isParamModulatable(int32_t param) const {
+        return getModulationIdx(param) != -1;
+    }
+
+    double getModulationAmountMin(int32_t modIdx) const {
+        dbgassert(modIdx >= 0 && modIdx < CtrSize(modulationValuesMin));
+        return modulationValuesMin[modIdx];
+    }
+
+    double getModulationAmountMax(int32_t modIdx) const {
+        dbgassert(modIdx >= 0 && modIdx < CtrSize(modulationValuesMax));
+        return modulationValuesMax[modIdx];
     }
 
     const std::vector<ModIdxName>& getDestinations() const {
@@ -146,13 +162,14 @@ public:
         return modSourceDescs;
     }
 
-    std::optional<std::vector<param_modulation_range_t>> getParamModulationRanges(int32_t _param) {
+    std::optional<std::vector<param_modulation_range_t>> getParamModulationRanges(int32_t modIdx) {
+        dbgassert(modIdx >= 0 && modIdx < MAX_MODULATION_OUTPUT_PARAMS);
         //TODO: result can be cached
         std::optional<std::vector<param_modulation_range_t>> result;
         for (auto& mod : modulations) {
             bool bIsBipolar = IsBipolarModulation(mod);
             for (auto& modDest : mod.destinations) {
-                if (modDest.parameter == _param) {
+                if (modDest.parameter == modIdx) {
                     if (!result) {
                         result = std::vector<param_modulation_range_t>();
                     }
@@ -273,10 +290,10 @@ public:
             // erase entry
             modulation.destinations.erase(modulation.destinations.begin() + destIdx);
             return true;
-        } else if (paramIdx >= 0 && paramIdx < MAX_PARAMS && destIdx == numDestinations) {
+        } else if (paramIdx >= 0 && paramIdx < MAX_MODULATION_OUTPUT_PARAMS && destIdx == numDestinations) {
             modulation.destinations.push_back({ paramIdx, range });
             return true;
-        } else if (paramIdx >= 0 && paramIdx < MAX_PARAMS && destIdx < numDestinations) {
+        } else if (paramIdx >= 0 && paramIdx < MAX_MODULATION_OUTPUT_PARAMS && destIdx < numDestinations) {
             modulation.destinations[destIdx] = { paramIdx, range };
             return true;
         }
@@ -292,7 +309,7 @@ public:
         return false;
     }
 
-    double EvaluateVoiceModulationMathExpr(const MathExpr& expr, std::array<double, MATH_INPUT_LEN>& inputModSources) {
+    double EvaluateVoiceModulationMathExpr(const MathExpr& expr, std::array<double, MAX_MODULATION_INPUT_PARAMS>& inputModSources) {
         if (expr.parsedExpr) {
             auto& parsedExpr = *expr.parsedExpr;
             auto& inputs     = parsedExpr.inputs;
@@ -309,6 +326,10 @@ public:
     }
 
     virtual bool isMathEvalEnabled() const {
+        return true;
+    }
+
+    virtual bool isShowModulationRanges() const {
         return true;
     }
 

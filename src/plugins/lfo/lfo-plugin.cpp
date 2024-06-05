@@ -85,7 +85,12 @@ namespace PluginLFO {
     };
 
     struct module_lfo::lfo_impl_t final : public PluginLockable {
-
+        struct lfo_channel_t : public LFOSyncParameters {
+            bool modeIsShape = true;
+            DAW::Shape::shape_t shape{};
+            lfo_automation_src_synced_t srcSync;
+            std::shared_ptr<lfo_automation_src_random_t> srcRand;
+        };
         module_lfo* const module;
         std::array<lfo_channel_t, NUM_CHANNELS> channels;
         LFOAutomation rateMinMax;
@@ -95,11 +100,12 @@ namespace PluginLFO {
         {
             rateMinMax.module = module;
             for (auto& channel : channels) {
+                channel.shape = initShape;
                 channel.syncFlags = STRAIGHT | DOTTED | TRIPLET;
                 channel.syncRatios = GetSyncRatios(channel.syncFlags);
                 channel.srcSync.rateMinMax = &rateMinMax;
                 channel.srcSync.sync = &channel;
-                channel.srcSync.shape = initShape;
+                channel.srcSync.shape = &channel.shape;
                 channel.modeIsShape = true;
             }
             for (int32_t idx = 0; idx < CtrSize(channels); ++idx) {
@@ -155,7 +161,7 @@ namespace PluginLFO {
                 return shapeDummy;
             if (!assert_expr(chIdx < CtrSize(channels)))
                 return shapeDummy;
-            return channels[chIdx].srcSync.shape;
+            return channels[chIdx].shape;
         }
         int32_t getSyncFlags(int32_t chIdx) const {
             dbgassert(chIdx >= 0 && chIdx < NUM_CHANNELS);
@@ -169,7 +175,7 @@ namespace PluginLFO {
         bool getSnapshot(snapshot_t& snapshot) {
             snapshot.version = BINARY_SNAPSHOT_VERSION;
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
-                auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ i, DAW::Shape::shape_preset_t{2, channels[i].srcSync.shape} };
+                auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ i, DAW::Shape::shape_preset_t{2, channels[i].shape} };
                 impl_channel_snapshot_t channelSnapshot{ std::move(shapeSnapshot), channels[i].syncFlags, channels[i].modeIsShape, channels[i].srcRand ? channels[i].srcRand->getModeId() : -1 };
                 snapshot.channels.push_back(std::move(channelSnapshot));
             }
@@ -179,7 +185,7 @@ namespace PluginLFO {
         bool setSnapshot(const snapshot_t& snapshot) {
             for (int32_t i = 0; i < NUM_CHANNELS && i < CtrSize(snapshot.channels); ++i) {
                 auto& channelSnapshot = snapshot.channels[i];
-                channels[i].srcSync.shape.pts = channelSnapshot.shape.shape.curve.pts;
+                channels[i].shape.pts = channelSnapshot.shape.shape.curve.pts;
                 if (snapshot.version > 2) {
                     setSyncFlags(i, channelSnapshot.syncFlags);
                 }
@@ -196,7 +202,7 @@ namespace PluginLFO {
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
                 auto& channel = channels[i];
                 float phase = channel.srcSync.getPhase(tick);
-                channel.srcSync.shape.renderPhase = phase;
+                channel.shape.renderPhase = phase;
             }
         }
     };

@@ -157,9 +157,14 @@ public:
         this->impl->setBlocksize(sampleFormat.blockSize);
     }
 
+    bool isValidParamIdx(int32_t idxInternal) const {
+        return idxInternal >= 0 && idxInternal < CtrSize(vecParams) && vecParams[idxInternal];
+    }
+
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
-        if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
-            SynthParamBase* param = vecParams[idx-1];
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
             if (param->unit != "dB") {
                 return param->convertValueDisplay(displayValue);
             }
@@ -168,8 +173,9 @@ public:
     }
 
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override {
-        if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
-            SynthParamBase* param = vecParams[idx-1];
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
             if (param->unit != "dB") {
                 String valDisplay     = param->getValueDisplay(value);
                 return {valDisplay, param->unit};
@@ -179,8 +185,9 @@ public:
     }
 
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override {
-        if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
-            SynthParamBase* param = vecParams[idx-1];
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
             if (flags & FLG_PAR_UPDATE_MODULATED) {
                 param->setModulated(val);
             } else {

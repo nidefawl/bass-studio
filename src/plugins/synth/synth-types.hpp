@@ -121,8 +121,8 @@ enum class EnvelopeStages : int32_t {
 struct Envelope {
     static constexpr double MIN_SECONDS = 0.0001;
     static constexpr double MAX_SECONDS = 1.0;
-    static constexpr double GetTimeBaseFromParam(double p) {
-        return 1.0 / (p * (Envelope::MAX_SECONDS - Envelope::MIN_SECONDS) + Envelope::MIN_SECONDS);
+    static constexpr double GetTimeBaseFromParam(double p, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
+        return 1.0 / (p * (dmax - dmin) + dmin);
     }
 
     double a = 0.0;
@@ -165,7 +165,7 @@ struct Envelope {
         return pow(t, shapeExp);
     }
     double clampDuration(double f) {
-        return math::clamp(f, 1.0 / MAX_SECONDS, 1.0 / MIN_SECONDS);
+        return math::clamp(f, 1.0 / 100.0, 1.0 / MIN_SECONDS);
     }
     float getEnvDurationSeconds(EnvelopeStages stage) {
         switch (stage) {

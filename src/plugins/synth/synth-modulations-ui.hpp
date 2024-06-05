@@ -1,6 +1,7 @@
 #pragma once
 #include "gui/container/container.h"
 #include "gui/container/scrollcontainer.h"
+#include "gui/controls/knobpluginparam.h"
 #include "host/plugin/plugin-lockable.h"
 #include "synth-modulations.hpp"
 
@@ -13,10 +14,10 @@ public:
     guictr_synth_title() = default;
 
     void renderContainerLabel(NVGcontext* vg) override {
-        if (isFlag(FLG_RENDER_LABEL) && label.length()) {
+        if (isFlag(FLG_RENDER_LABEL) && label.length() && titleHeight > 0) {
             const auto bgColor = getInnerBackgroundColorFromState(getStateFlags());
             renderTextLabel(vg,
-                            vec2(getPosContent()) + vec2(padding, titleHeight / 2.0),
+                            vec2(getPosContent()) + vec2(padding + 2, titleHeight / 2.0),
                             vec2(getSizeContent()) - vec2(INSET_TITLE + 2, 0),
                             label,
                             theme,
@@ -31,10 +32,20 @@ public:
     }
 
     float getTitleHeight() const {
-        return titleHeight;
+        return label.empty() ? 0 : titleHeight;
     }
 
     virtual void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) {
+    }
+    void layoutEntriesGrid(ivec2 pos, ivec2 cs, int32_t maxCols) override {
+        cs.y -= getTitleHeight();
+        pos.y += getTitleHeight();
+        guictr_base::layoutEntriesGrid(pos, cs, maxCols);
+    }
+    void layoutEntries(ivec2 pos, ivec2 cs, ivec2 dir) override {
+        cs.y -= getTitleHeight();
+        pos.y += getTitleHeight();
+        guictr_base::layoutEntries(pos, cs, dir);
     }
 };
 
@@ -632,6 +643,153 @@ public:
             sizeTotal.y += src->size.y;
         }
         prefSize.y = math::ceilfS32(getTitleHeight() + sizeTotal.y + padding * 2);
+    }
+};
+
+class guiknob_synthparam final : public guiknob_pluginparam {
+    ModulationController* const synth;
+    const int32_t param;
+
+public:
+    explicit guiknob_synthparam(int32_t idx, int32_t idxExternal, ModulationController* _impl, int32_t _param, guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
+        : guiknob_pluginparam(idxExternal, idx, _knobtype),
+            synth(_impl),
+            param(_param) {
+        m_layout.inset = 2;
+    }
+    std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() override {
+        if (synth) {
+            if (!synth->isShowModulationRanges()) {
+                return std::nullopt;
+            }
+            auto modIdx = synth->getModulationIdx(param);
+            if (modIdx < 0) {
+                return std::nullopt;
+            }
+            return synth->getParamModulationRanges(modIdx);
+        }
+        return std::nullopt;
+    }
+    int32_t getParam() const {
+        return param;
+    }
+};
+
+class guictr_synth_param_container : public guictr_synth_title {
+    ModulationController* const synth;
+    std::vector<guiknob_synthparam*> knobs;
+    vec2 sliderSize{ 0.0f, 0.0f };
+public:
+    explicit guictr_synth_param_container(ModulationController* synth)
+        : synth(synth) {
+        margin  = 4;
+        padding = 4;
+        setBackgroundRendered(true);
+        setBackgroundRenderedInset(true);
+        setFlag(FLG_RENDER_LABEL, true);
+        setCanMouseHit(true);
+    }
+    ~guictr_synth_param_container() override {
+        destroyGuis();
+    }
+
+    void addParamKnob(guiknob_synthparam* knob) {
+        knobs.push_back(knob);
+        add(knob);
+    }
+
+    void render(NVGcontext* vg) override {
+        if (!isVisible()) {
+            log_printf("warning, skip rendering container with state !isVisible()\n");
+            return;
+        }
+        if (isBackgroundRendered()) {
+            renderBackground(vg);
+        }
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        for (auto c : guis) {
+            if (!c->isVisible()) {
+                //log_printf("warning, skip rendering child container with state !isVisible()\n");
+                continue;
+            }
+            if (c->size.x <= 5 || c->size.y <= 5) {
+                continue;
+            }
+            {
+                nvgSave(vg);
+                c->render(vg);
+                nvgRestore(vg);
+            }
+        }
+        if (synth && synth->isShowModulationRanges()) {
+            for (auto k : knobs) {
+                auto modIdx = synth->getModulationIdx(k->getParam());
+                if (modIdx < 0)
+                    continue;
+                auto valueMin = static_cast<float>(this->synth->getModulationAmountMin(modIdx));
+                auto valueMax = static_cast<float>(this->synth->getModulationAmountMax(modIdx));
+                auto layout = k->getLayout();
+                auto col = dbgcolorsArray[0];
+                col.a = 0.5;
+                k->renderRangeIndicator(vg, layout.pKnob, layout.sKnob, valueMin, valueMax, col, 9, 10);
+            }
+        }
+    }
+
+    void buttonClicked(guibase* button) override {
+        parent->buttonClicked(button);
+    }
+
+    void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) override {
+        int newPadding = 0;
+        while (newPadding < 4 && newPadding * 48 < prefSize.y) {
+            newPadding++;
+        }
+        padding = newPadding;
+        if (label.empty())
+            titleHeight = 0;
+        this->setTitleHeight(titleHeight);
+        auto cs                = getSizeContent();
+        const auto knobsPerCol = 3;
+        const auto innerSize   = vec2(cs.x, cs.y - titleHeight);
+        auto knobPos           = ivec2(0, titleHeight);
+        auto sliderSize      = vec2(knobSize.x, innerSize.y);
+        this->sliderSize     = sliderSize;
+        knobSize.y           = (innerSize.y - padding * (knobsPerCol - 1)) / float(knobsPerCol);
+        auto knobSizeRounded = ivec2(math::roundfS32(this->sliderSize.x), math::roundfS32(this->sliderSize.y));
+        int32_t knobIdx      = 0;
+        for (auto knob : guis) {
+            if (knob->id == 1) {
+                auto offset = knobIdx % knobsPerCol;
+                knob->pos   = knobPos + ivec2(0, offset * (knobSize.y + padding));
+                knob->size  = knobSize;
+                knobIdx++;
+                if (knobIdx % knobsPerCol == 0) {
+                    knobPos.x += knobSizeRounded.x + padding;
+                }
+            }
+        }
+        if (knobIdx % knobsPerCol != 0) {
+            knobPos.x += knobSizeRounded.x + padding;
+        }
+        for (auto knob : guis) {
+            if (knob->id == 0) {
+                knob->pos  = knobPos;
+                knob->size = knobSizeRounded;
+                knobPos.x += knobSizeRounded.x + padding;
+            }
+        }
+        vec2 sizeFull = innerSize;
+        for (auto knob : guis) {
+            if (knob->id == 2) {
+                knob->pos  = vec2(knobPos.x, titleHeight);
+                knob->size = sizeFull;
+                knobPos.x += math::floorfS32(sizeFull.x + padding);
+            }
+        }
+        prefSize.x = math::roundfS32(knobPos.x - padding) + padding * 2;
     }
 };
 
