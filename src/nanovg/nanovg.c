@@ -2860,14 +2860,14 @@ static int nvg__isTransformFlipped(const float *xform)
 float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const char* string, const char* end)
 {
 	NVGstate* state = nvg__getState(ctx);
-	if (state->fontId == FONS_INVALID) return x;
+	if (state->fontId == FONS_INVALID) return 0;
 
 	FONStextIter iter;
 	FONSquad q;
 	NVGvertex* verts;
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
     float scaledFontSize = state->fontSize * scale;
-	if (scaledFontSize < 2.0f) return x;
+	if (scaledFontSize < 2.0f) return 0;
 
 	float invscale = 1.0f / scale;
 	int cverts = 0;
@@ -2885,7 +2885,7 @@ float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const
 
 	cverts = nvg__maxi(2, (int)(end - string)) * 6; // conservative estimate.
 	verts = nvg__allocTempVerts(ctx, cverts);
-	if (verts == NULL) return x;
+	if (verts == NULL) return 0;
 
 	fonsTextIterInit(ctx->fs, &iter, x*scale, y*scale, string, end, FONS_GLYPH_BITMAP_REQUIRED);
 	float minX = x*scale;
