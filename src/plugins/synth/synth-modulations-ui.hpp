@@ -75,7 +75,7 @@ public:
         vecOpts.emplace_back("None");
         const auto& paramsDest = synth->getDestinations();
         for (auto param : paramsDest) {
-            vecOpts.push_back(param.second);
+            vecOpts.push_back(param.name);
         }
         dropdown.setZOrder(-1);
         dropdown.setOptions(vecOpts);
@@ -86,7 +86,7 @@ public:
                     ThreadLock lock = moduleInstance->lock();
                     const auto& paramsDest = synth->getDestinations();
                     if (idx > 0 && idx-1 < CtrSize(paramsDest)) {
-                        synth->setModulationDestination(slotIndex, destSlotIndex, paramsDest[idx-1].first, knob.getValue());
+                        synth->setModulationDestination(slotIndex, destSlotIndex, paramsDest[idx-1].dstIdx, knob.getValue());
                     } else {
                         synth->setModulationDestination(slotIndex, destSlotIndex, -1, knob.getValue());
                     }
@@ -120,10 +120,10 @@ public:
                 dropdown.setSelectedIndex(0);
             } else {
                 const auto& paramsDest = synth->getDestinations();
-                auto it = std::find_if(std::begin(paramsDest), std::end(paramsDest), [dest](auto& desc) { return desc.first == dest.parameter; });
+                auto it = std::find_if(std::begin(paramsDest), std::end(paramsDest), [dest](auto& desc) { return desc.dstIdx == dest.parameter; });
                 if (std::end(paramsDest) != it) {
                     dropdown.setSelectedIndex(1 + static_cast<int32_t>(it - std::begin(paramsDest)));
-                    dropdown.setCurrentString(it->second);
+                    dropdown.setCurrentString(it->name);
                 } else {
                     dropdown.setSelectedIndex(-1);
                 }
@@ -203,7 +203,7 @@ public:
             auto vecOpts = std::vector<String>();
             auto& paramsSource = synth->getSources();
             for (auto& param : paramsSource) {
-                vecOpts.emplace_back(param.second);
+                vecOpts.emplace_back(param.name);
             }
             dropdownSource.setZOrder(1);
             dropdownSource.setOptions(vecOpts);
@@ -215,7 +215,7 @@ public:
                         auto& paramsSource = synth->getSources();
                         if (idx < CtrSize(paramsSource)) {
                             auto desc = paramsSource[idx];
-                            synth->setModulationType(slotIndex, srcSlotIndex, desc.first);
+                            synth->setModulationType(slotIndex, srcSlotIndex, desc.srcIdx);
                         } else {
                             synth->setModulationType(slotIndex, srcSlotIndex, -1);
                         }
@@ -305,7 +305,7 @@ public:
                     break;
                 case ModulationType::ModulationSource: {
                     auto& paramsSource = synth->getSources();
-                    auto it = std::find_if(paramsSource.cbegin(), paramsSource.cend(), [searchIdx = 2+src.src](auto& desc) { return desc.first == searchIdx; });
+                    auto it = std::find_if(paramsSource.cbegin(), paramsSource.cend(), [searchIdx = 2+src.src](auto& desc) { return desc.srcIdx == searchIdx; });
                     if (it != paramsSource.cend()) {
                         dropdownSource.setSelectedIndex(static_cast<int32_t>(it - paramsSource.cbegin()));
                     } else {
@@ -672,6 +672,32 @@ public:
     }
     int32_t getParam() const {
         return param;
+    }
+};
+class guiknob_synthparam_textfield final : public gui_slider_textfield {
+    ModulationController* synth;
+    int32_t param;
+
+public:
+    guiknob_synthparam_textfield() = default;
+
+    void setSynthParam(ModulationController* synth, int32_t param) {
+        this->synth = synth;
+        this->param = param;
+    }
+
+    std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() override {
+        if (synth) {
+            if (!synth->isShowModulationRanges()) {
+                return std::nullopt;
+            }
+            auto modIdx = synth->getModulationIdx(param);
+            if (modIdx < 0) {
+                return std::nullopt;
+            }
+            return synth->getParamModulationRanges(modIdx);
+        }
+        return std::nullopt;
     }
 };
 

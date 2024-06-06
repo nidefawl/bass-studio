@@ -1177,9 +1177,10 @@ private:
             auto idx = -1 + i;
             modSourceDescs.emplace_back(idx, stringsModSource[i]);
         }
+        int32_t dstIdx = 0;
         for (auto param : parametersModulate) {
             dbgassert(getParam(static_cast<Parameters>(param)));
-            modDestDescs.emplace_back(static_cast<int32_t>(param), getParam(static_cast<Parameters>(param))->name);
+            modDestDescs.emplace_back(dstIdx++, static_cast<int32_t>(param), getParam(static_cast<Parameters>(param))->name);
         }
         varNames = stringsShortSrcNames;
         String defaultPresetPath = App::Platform::toUserdataPath(String("presets/") + PLUGIN_EFFECT_NAME);

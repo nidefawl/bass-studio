@@ -172,7 +172,7 @@ public:
     void Update(double dt) {
         double p = fp_math::silenceNanInfd(this->phase + params->freqHz * dt);
         this->phase = p;
-        envRamp.a = params->rampDuration >= 0.01 ? Envelope::GetTimeBaseFromParam(params->rampDuration, Envelope::MIN_SECONDS, 10.0) : 0;
+        envRamp.a = Envelope::GetTimeBaseFromParam(params->rampDuration);
         envRamp.Update(dt);
     }
     double GetRamp() {
@@ -640,20 +640,20 @@ private:
             parDec->setInitialValue(0.35);
             setParamName(parDec, nameBase + " Decay", nameShort + " Decay", "Dec", "s");
             auto parSus = addFloatParam(envBase[i] + 3);
-            parSus->setInitialValue(0.8);
+            parSus->setRange(0.0, 100.0)->setInitialValue(80.0);
             setParamName(parSus, nameBase + " Sustain", nameShort + " Sustain", "Sus", "%");
             auto parRel = addFloatParam(envBase[i] + 4);
             parRel->setInitialValue(0.35);
             setParamName(parRel, nameBase + " Release", nameShort + " Release", "Release", "s");
             auto parAttShape = addFloatParam(envBase[i] + 5);
-            parAttShape->setInitialValue(0.48);
-            setParamName(parAttShape, nameBase + " Attack Shape", nameShort + " A Shape", "A Shape", "");
+            parAttShape->setRange(-100.0, 100.0)->setInitialValue(0.48);
+            setParamName(parAttShape, nameBase + " Attack Shape", nameShort + " A Shape", "Shape", "%");
             auto parDecShape = addFloatParam(envBase[i] + 6);
-            parDecShape->setInitialValue(0.48);
-            setParamName(parDecShape, nameBase + " Decay Shape", nameShort + " D Shape", "D Shape", "");
+            parDecShape->setRange(-100.0, 100.0)->setInitialValue(0.48);
+            setParamName(parDecShape, nameBase + " Decay Shape", nameShort + " D Shape", "Shape", "%");
             auto parRelShape = addFloatParam(envBase[i] + 7);
-            parRelShape->setInitialValue(0.53);
-            setParamName(parRelShape, nameBase + " Release Shape", nameShort + " R Shape", "R Shape", "");
+            parRelShape->setRange(-100.0, 100.0)->setInitialValue(0.53);
+            setParamName(parRelShape, nameBase + " Release Shape", nameShort + " R Shape", "Shape", "%");
         }
 
         for (size_t i = 0; i < NUM_LFO; i++) {
@@ -684,10 +684,24 @@ private:
             modSourceDescs.emplace_back(idx, stringsModSource[i]);
         }
 
-        for (size_t i = 0; i < NUM_MODULATION_DESTINATIONS; i++) {
-            modDestDescs.emplace_back(i, modDestNames[i]);
-        }
-
+        modDestDescs.emplace_back(ModDest_Osc1Volume, MasterVolume, modDestNames[ModDest_Osc1Volume]);
+        modDestDescs.emplace_back(ModDest_Osc1Filter, Osc1Filter, modDestNames[ModDest_Osc1Filter]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_A_Duration, ADSR_1_A_Duration, modDestNames[ModDest_ADSR_1_A_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_H_Duration, ADSR_1_H_Duration, modDestNames[ModDest_ADSR_1_H_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_D_Duration, ADSR_1_D_Duration, modDestNames[ModDest_ADSR_1_D_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_S_Amount, ADSR_1_S_Amount, modDestNames[ModDest_ADSR_1_S_Amount]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_R_Duration, ADSR_1_R_Duration, modDestNames[ModDest_ADSR_1_R_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_A_Shape, ADSR_1_A_Shape, modDestNames[ModDest_ADSR_1_A_Shape]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_D_Shape, ADSR_1_D_Shape, modDestNames[ModDest_ADSR_1_D_Shape]);
+        modDestDescs.emplace_back(ModDest_ADSR_1_R_Shape, ADSR_1_R_Shape, modDestNames[ModDest_ADSR_1_R_Shape]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_A_Duration, ADSR_2_A_Duration, modDestNames[ModDest_ADSR_2_A_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_H_Duration, ADSR_2_H_Duration, modDestNames[ModDest_ADSR_2_H_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_D_Duration, ADSR_2_D_Duration, modDestNames[ModDest_ADSR_2_D_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_S_Amount, ADSR_2_S_Amount, modDestNames[ModDest_ADSR_2_S_Amount]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_R_Duration, ADSR_2_R_Duration, modDestNames[ModDest_ADSR_2_R_Duration]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_A_Shape, ADSR_2_A_Shape, modDestNames[ModDest_ADSR_2_A_Shape]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_D_Shape, ADSR_2_D_Shape, modDestNames[ModDest_ADSR_2_D_Shape]);
+        modDestDescs.emplace_back(ModDest_ADSR_2_R_Shape, ADSR_2_R_Shape, modDestNames[ModDest_ADSR_2_R_Shape]);
         const std::array mathVars = {
             "x",
             "a",
@@ -1597,18 +1611,42 @@ public:
         const auto idxInternal = idx - PARAM_OFFSET_IMPL;
         if (isValidParamIdx(idxInternal)) {
             SynthParamBase* param = vecParams[idxInternal];
-            if (param && param->enumParam == ParametersSynthGPU::Osc1PulseWidthModRate) {
-                auto v = StringFormat("%.3f", pow(2.0, value * 21.0) * 0.01);
-                return { v, "Hz" };
-            }
-            if (param && (param->enumParam == ParametersSynthGPU::LFO_1_Frequency || param->enumParam == ParametersSynthGPU::LFO_2_Frequency)) {
-                auto& lfoParams = impl->getLFOParams(param->enumParam == ParametersSynthGPU::LFO_1_Frequency ? 0 : 1);
-                if (lfoParams.syncFlags == 0) {
+            if (param) {
+                static constexpr auto enumDurList = {
+                    ADSR_1_A_Duration,
+                    ADSR_1_H_Duration,
+                    ADSR_1_D_Duration,
+                    ADSR_1_R_Duration,
+                    ADSR_2_A_Duration,
+                    ADSR_2_H_Duration,
+                    ADSR_2_D_Duration,
+                    ADSR_2_R_Duration,
+                    LFO_1_RampDuration,
+                    LFO_2_RampDuration
+                };
+                if (std::find(enumDurList.begin(), enumDurList.end(), param->enumParam) != enumDurList.end()) {
+                    alignas(64) float envParamVals[4]{};
+                    alignas(64) float envParamValsScaled[4]{};
+                    envParamVals[0] = value;
+                    ShapeLogLikeSIMD<float, 4>(envParamVals, envParamValsScaled);
+                    auto ms = Envelope::GetSecondsFromParam(envParamValsScaled[0]) * 1000.0;
+                    auto fmt = ms < 10.0 ? "%.3f" : (ms < 100.0 ? "%.2f" : "%.1f");
+                    auto v = StringFormat(fmt, ms);
+                    return { v, "ms" };
+                }
+                if (param->enumParam == ParametersSynthGPU::Osc1PulseWidthModRate) {
                     auto v = StringFormat("%.3f", pow(2.0, value * 21.0) * 0.01);
                     return { v, "Hz" };
                 }
-                auto lfoRateStr = FormatSyncRate(lfoParams.syncRatios, lfoParams.syncFlags, value);
-                return {lfoRateStr, lfoParams.syncFlags != 0 ? "" : param->unit};
+                if ((param->enumParam == ParametersSynthGPU::LFO_1_Frequency || param->enumParam == ParametersSynthGPU::LFO_2_Frequency)) {
+                    auto& lfoParams = impl->getLFOParams(param->enumParam == ParametersSynthGPU::LFO_1_Frequency ? 0 : 1);
+                    if (lfoParams.syncFlags == 0) {
+                        auto v = StringFormat("%.3f", pow(2.0, value * 21.0) * 0.01);
+                        return { v, "Hz" };
+                    }
+                    auto lfoRateStr = FormatSyncRate(lfoParams.syncRatios, lfoParams.syncFlags, value);
+                    return {lfoRateStr, lfoParams.syncFlags != 0 ? "" : param->unit};
+                }
             }
         }
         return module_synth_template<SynthImplGPU>::convertParamValueToDisplay(idx, value);
@@ -1618,7 +1656,7 @@ public:
         const auto idxInternal = idx - PARAM_OFFSET_IMPL;
         if (isValidParamIdx(idxInternal)) {
             SynthParamBase* param = vecParams[idxInternal];
-            if (param && param->enumParam == ParametersSynthGPU::Osc1PulseWidthModRate) {
+            if (param->enumParam == ParametersSynthGPU::Osc1PulseWidthModRate) {
                 auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
                 double parsed = math::clamp(log2(fTextFieldVal * 100.0) / 21.0, 0.0, 1.0);
                 return {float(parsed), true};
@@ -1644,9 +1682,10 @@ public:
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
 };
+
 class guicontainer_plugin_synth_adsr_parameters final : public guictr_base {
     module_synth_gpu* const moduleInstance;
-    std::array<gui_slider_textfield, 8> knobs;
+    std::array<guiknob_synthparam_textfield, 8> knobs;
 public:
     explicit guicontainer_plugin_synth_adsr_parameters(module_synth_gpu* module, int32_t idx) 
         : moduleInstance(module)
@@ -1657,6 +1696,7 @@ public:
         const int envBase[2] = {static_cast<int32_t>(SynthImplGPU::Parameters::ADSR_1_A_Duration), static_cast<int32_t>(SynthImplGPU::Parameters::ADSR_2_A_Duration)};
         for (size_t i = 0; i < knobs.size(); ++i) {
             auto& knob = knobs[i];
+            knob.setSynthParam(moduleInstance->getSynth(), envBase[idx] + i);
             knob.setFontScale(0.75f);
             knob.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + envBase[idx] + i);
             add(&knob);
@@ -2267,17 +2307,6 @@ public:
             }
         }
         return false;
-    }
-
-    guiknob_pluginparam* getKnobFromParameter(int32_t index) {
-        if (moduleInstance->isValidParamIdx(index)) {
-            for (auto& synthKnob : vecParamUI) {
-                if (synthKnob.param == static_cast<ParametersSynthGPU>(index)) {
-                    return synthKnob.knob;
-                }
-            }
-        }
-        return nullptr;
     }
 
     void onChildLayoutChanged(guibase* g) override {

@@ -119,10 +119,20 @@ enum class EnvelopeStages : int32_t {
 };
 
 struct Envelope {
+    static constexpr double OFF_STATE = 0.05;
     static constexpr double MIN_SECONDS = 0.0001;
     static constexpr double MAX_SECONDS = 1.0;
     static constexpr double GetTimeBaseFromParam(double p, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
+        if (p <= OFF_STATE)
+            return 0.0;
+        p = (p - OFF_STATE) / (1.0 - OFF_STATE);
         return 1.0 / (p * (dmax - dmin) + dmin);
+    }
+    static constexpr double GetSecondsFromParam(double p, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
+        if (p <= OFF_STATE)
+            return 0.0;
+        p = (p - OFF_STATE) / (1.0 - OFF_STATE);
+        return p * (dmax - dmin) + dmin;
     }
 
     double a = 0.0;

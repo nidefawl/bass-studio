@@ -4,6 +4,7 @@
 #include "str_util.h"
 #include "types.h"
 #include <array>
+#include <cstdint>
 #include <muParser.h>
 
 namespace PluginSynth {
@@ -110,11 +111,19 @@ using ModulationSourceData = std::array<double, MAX_MODULATION_INPUT_PARAMS>;
 class ModulationController {
 public:
 static constexpr int32_t MAX_MODULATION_OUTPUT_PARAMS = 64;
-    using ModIdxName = std::pair<int32_t, String>;
+    struct ModSrcDesc {
+        int32_t srcIdx;
+        String name;
+    };
+    struct ModDestDesc {
+        int32_t dstIdx;
+        int32_t parameterIdx;
+        String name;
+    };
 protected:
     std::vector<Modulation> modulations;
-    std::vector<ModIdxName> modSourceDescs;
-    std::vector<ModIdxName> modDestDescs;
+    std::vector<ModSrcDesc> modSourceDescs;
+    std::vector<ModDestDesc> modDestDescs;
     std::array<const char*, MAX_MODULATION_INPUT_PARAMS> varNames;
 
     /* for visualization */
@@ -133,11 +142,9 @@ public:
     }
 
     int32_t getModulationIdx(int32_t paramIdx) const {
-        for (int32_t i = 0; i < CtrSize(modulations); i++) {
-            for (auto& dest : modulations[i].destinations) {
-                if (dest.parameter == paramIdx) {
-                    return i;
-                }
+        for (int32_t i = 0; i < CtrSize(modDestDescs); i++) {
+            if (modDestDescs[i].parameterIdx == paramIdx) {
+                return i;
             }
         }
         return -1;
@@ -157,11 +164,11 @@ public:
         return modulationValuesMax[modIdx];
     }
 
-    const std::vector<ModIdxName>& getDestinations() const {
+    const std::vector<ModDestDesc>& getDestinations() const {
         return modDestDescs;
     }
 
-    const std::vector<ModIdxName>& getSources() const {
+    const std::vector<ModSrcDesc>& getSources() const {
         return modSourceDescs;
     }
 
@@ -176,11 +183,11 @@ public:
                     if (!result) {
                         result = std::vector<param_modulation_range_t>();
                     }
-                    auto modIdx = &mod - &modulations.front();
+                    auto slot = static_cast<int32_t>(&mod - &modulations.front());
                     result->push_back(
                             param_modulation_range_t{
-                                    static_cast<int32_t>(modIdx),
-                                    static_cast<int32_t>(modDest.parameter),
+                                    slot,
+                                    modDest.parameter,
                                     static_cast<float>(modDest.range),
                                     bIsBipolar });
                 }
