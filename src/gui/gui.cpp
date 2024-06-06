@@ -30,7 +30,7 @@
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 
 
-NVGcolor dbgcolorsArray[8] = {
+const NVGcolor dbgcolorsArray[8] = {
         nvgRGBA(255, 0, 0, 55),
         nvgRGBA(0, 255, 0, 55),
         nvgRGBA(0, 0, 255, 55),

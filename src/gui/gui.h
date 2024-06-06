@@ -41,7 +41,7 @@ namespace DAW::UI {
     struct Command;
 }
 
-extern NVGcolor dbgcolorsArray[8];
+extern const NVGcolor dbgcolorsArray[8];
 static constexpr int32_t dbgcolorsArraySize = 8;
 
 void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment);
