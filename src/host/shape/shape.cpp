@@ -224,6 +224,10 @@ namespace DAW::Shape {
         return t;
     }
 
+    float shape_t::shapeSegmentPt(float t, const shape_pt_t& pt) const {
+        return shapeSegment(t, pt.shape);
+    }
+
     int shape_t::getMinPt(vec2 local, vec2 scale, float* distance) const {
         int minIdx         = -1;
         float minDist      = 0;

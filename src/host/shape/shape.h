@@ -63,6 +63,7 @@ struct shape_t {
         this->renderPhase = renderPhase;
     }
     float shapeSegment(float t, float shape) const;
+    float shapeSegmentPt(float t, const shape_pt_t& pt) const;
     float sampleCurveOneShot(float posX) const;
     float sampleCurve(float posX, bool sampleLeftRight) const;
     float sampleCurveUnclamped(float posX) const;
