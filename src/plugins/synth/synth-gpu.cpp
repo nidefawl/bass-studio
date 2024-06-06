@@ -2171,8 +2171,8 @@ public:
         ctrStackedOSC.setSplitters({ 0.25f });
         ctrHorizontal.setSplitters(splitterPositions);
         ctrStackedADSR.setSplitters({ 0.45f, 0.9f });
-        ctrStackedLFO1.setSplitters({ 0.8f });
-        ctrStackedLFO2.setSplitters({ 0.8f });
+        ctrStackedLFO1.setSplitters({ 0.6f });
+        ctrStackedLFO2.setSplitters({ 0.6f });
         ctrStackedBothLFOs.setSplitters({ 0.5f });
         editfield.setFlag(FLG_NO_LAYOUT, true);
         editfield.setVisible(false);
@@ -2195,15 +2195,14 @@ public:
     void layout() override {
         const auto cs = getSizeContent();
         const auto titleHeight = math::clamp(math::roundfS32(cs.y * 0.05f), 14, 32);
-        const auto labelScale = titleHeight / float(cs.y);
         for (auto& knob : vecParamUI) {
             if (knob.knob->getKnobType() == guiknob::knobtype::KNOB_LABELED) {
                 knob.knob->setLabelsFontScale(1.2f, 1.2f);
-                knob.knob->setLabelsScale(0.1f, 0.1f);
+                knob.knob->setLabelsScale(0.2f, 0.2f);
             }
             if (knob.knob->getKnobType() == guiknob::knobtype::SLIDER_LABELED) {
-                knob.knob->setLabelsFontScale(1.0f, 1.2f);
-                knob.knob->setLabelsScale(labelScale, labelScale);
+                knob.knob->setLabelsFontScale(1.2f, 1.2f);
+                knob.knob->setLabelsScale(0.2f, 0.2f);
             }
         }
         ctrAmp.setTitleHeight(titleHeight);
