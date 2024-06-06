@@ -4,6 +4,7 @@
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/controls/button.h"
 #include "gui/shape/shapeeditor.h"
+#include "gui/shape/shape-render.hpp"
 #include "host/shape/shape.h"
 #include "math/seq_math.h"
 #include "note.h"

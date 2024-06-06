@@ -37,6 +37,7 @@
 #include "wave/waveform_render_impl.h"
 #include "host/host_pluginmanager.h"
 #include "gui/shape/shapeeditor.h"
+#include "gui/shape/shape-render.hpp"
 
 struct track_gui_entry_t;
 
