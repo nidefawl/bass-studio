@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -356,6 +357,11 @@ private:
     std::vector<DAW::modulation_channel_ref> inputChannelsModulation;
     std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>> mapModulations;
     bool bIsBypassModulation = false;
+    struct param_str_cache_entry_t {
+        param_unit_t valueDisplay;
+        float fValue;
+    };
+    mutable std::map<int32_t, param_str_cache_entry_t> paramStrCache;
 protected:
     const std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>>& getModulationsMap() const {
         return mapModulations;

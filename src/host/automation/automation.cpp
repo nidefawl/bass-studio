@@ -410,6 +410,7 @@ float automatable_t::getParamValue(int32_t idx) {
     return param->getValue();
 }
 
+
 param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
@@ -421,7 +422,15 @@ param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     if (autLane && autLane->isActive()) {
         val = param->getValueAutomated();
     }
-    return convertParamValueToDisplay(param->idx, val);
+    auto& cacheEntry = paramStrCache[param->idx];
+    if ((cacheEntry.valueDisplay.value.empty()&&cacheEntry.valueDisplay.unit.empty()) || cacheEntry.fValue != val) {
+        cacheEntry.valueDisplay = convertParamValueToDisplay(param->idx, val);
+        cacheEntry.fValue = val;
+    } else {
+        static size_t numCacheHits = 0;
+        numCacheHits++;
+    }
+    return cacheEntry.valueDisplay;
 }
 
 param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value) {
@@ -442,7 +451,7 @@ param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value)
         return {"-INF", param->unit};
     }
     if (param->unit == "%") {
-        return {StringFormat("%.3f", value * 100.0f), param->unit};
+        return {StringFormat("%.1f", value * 100.0f), param->unit};
     }
     return { StringFormat("%f", value), param->unit};
 }
