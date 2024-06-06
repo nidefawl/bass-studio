@@ -8,6 +8,7 @@
 #include "platform.h"
 #include "str_util.h"
 #include "types.h"
+#include <GLFW/glfw3.h>
 #include <cstdint>
 #include <variant>
 
@@ -373,8 +374,11 @@ public:
     bool initComputeContext(bool bInitGL = false) {
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         window = glfwCreateWindow(512, 512, "GPU Synth", NULL, NULL);
+        if (!assert_expr(window != nullptr)) {
+            return false;
+        }
         GlfwContextSwitch ctxSwitch(window);
-        if (!glad_glDispatchCompute && bInitGL && !gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+        if (!glad_glDispatchCompute && !gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
             return false;
         }
         if (!glad_glDispatchCompute) {

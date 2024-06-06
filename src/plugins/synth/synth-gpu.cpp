@@ -765,7 +765,7 @@ public:
             }
             updateEnvelopeParameters(v);
         }
-        if (!initComputeContext()) {
+        if (!assert_expr(initComputeContext())) {
             return;
         }
         // auto blockSize = moduleSynthInstance->getSampleFormat().blockSize;

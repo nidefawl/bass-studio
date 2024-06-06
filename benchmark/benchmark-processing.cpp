@@ -1,5 +1,7 @@
+#include <GLFW/glfw3.h>
 #include <benchmark/benchmark.h>
 #include <array>
+#include "config.h"
 #include "host/automation/automation.h"
 #include "logging.h"
 #include "note.h"
@@ -153,6 +155,7 @@ int main(int argc, char** argv) {
     App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
 
+    glfwInit();
     auto dawInstance = std::make_shared<DawInstance>();
     try {
         const channelnum_t inputChannels = 2;
@@ -488,8 +491,8 @@ int main(int argc, char** argv) {
             testGroups2(context);
             host->cacheAudioGraph = true;
         };
-
-        auto testSynth = [&trDataMidi](TestContext* context) {
+        int32_t moduleType = PLUGIN_TYPE_SYNTH;
+        auto testSynth = [&trDataMidi,&moduleType](TestContext* context) {
             DawInstance* dawInstance = context->dawInstance;
             auto host = dawInstance->getHost();
             // BUS_TOP_n
@@ -516,13 +519,13 @@ int main(int argc, char** argv) {
                         track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH, -1);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, moduleType, -1);
                         dbgassert(pluginInstance);
-                        pluginInstance->setParamValue(29, 0.8f, FLG_PAR_UPDATE_INIT);
-                        pluginInstance->setParamValue(31, 0.8f, FLG_PAR_UPDATE_INIT);
-                        pluginInstance->setParamValue(40, 1.0f, FLG_PAR_UPDATE_INIT);
-                        pluginInstance->setParamValue(41, 1.0f, FLG_PAR_UPDATE_INIT);
-                        dbgassert(pluginInstance);
+                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+0, 0.8f, FLG_PAR_UPDATE_INIT); // master volume
+                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+1, 0.0f, FLG_PAR_UPDATE_INIT); // poly mode
+                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+2, 0.3f, FLG_PAR_UPDATE_INIT); // filter cutoff
+                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+3, 1.0f, FLG_PAR_UPDATE_INIT); // unison voice count
+                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+4, 1.0f, FLG_PAR_UPDATE_INIT); // unison detune
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
                         pluginInstance->onEnable();
                         track1->getStage()->pluginsChanged();
@@ -533,6 +536,11 @@ int main(int argc, char** argv) {
 
             auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
             dawInstance->addTrackImpl(0, trackMaster, 0);
+        };
+        auto testGpuSynth = [&testSynth,&moduleType](TestContext* context) {
+            moduleType = PLUGIN_TYPE_SYNTH_GPU;
+            testSynth(context);
+            moduleType = PLUGIN_TYPE_SYNTH;
         };
         auto testSynthDisabledFilter = [&testSynth](TestContext* context) {
             PluginSynth::gDebugOverrides = 0|2|4|8|16;
@@ -551,12 +559,16 @@ int main(int argc, char** argv) {
             testSynth(context);
         };
 
-        std::array<TestContext, 5> synthBenchmarks = {
-            TestContext{"1 Synth", false, dawInstance.get(), testSynth },
-            TestContext{"1 Synth Filter Disabled", false, dawInstance.get(), testSynthDisabledFilter },
-            TestContext{"1 Synth Modulation Disabled", false, dawInstance.get(), testSynthDisabledModulation },
-            TestContext{"1 Synth LFO Disabled", false, dawInstance.get(), testSynthDisabledLfo },
-            TestContext{"1 Synth All Disabled", false, dawInstance.get(), testSynthAllDisabled },
+        std::array<TestContext, 1> synthBenchmarksGPU = {
+            TestContext{"1 Synth (GPU)", false, dawInstance.get(), testGpuSynth },
+        };
+
+        std::array<TestContext, 5> synthBenchmarksCPU = {
+            TestContext{"1 Synth (CPU)", false, dawInstance.get(), testSynth },
+            TestContext{"1 Synth (CPU) Filter Disabled", false, dawInstance.get(), testSynthDisabledFilter },
+            TestContext{"1 Synth (CPU) Modulation Disabled", false, dawInstance.get(), testSynthDisabledModulation },
+            TestContext{"1 Synth (CPU) LFO Disabled", false, dawInstance.get(), testSynthDisabledLfo },
+            TestContext{"1 Synth (CPU) All Disabled", false, dawInstance.get(), testSynthAllDisabled },
         };
 
         std::array<TestContext, 10> processingBenchmarks = {
@@ -572,7 +584,11 @@ int main(int argc, char** argv) {
             TestContext{"32 Tracks (2x2x4 Groups, Arp, Graph Cache)", false, dawInstance.get(), testGroupsCached },
         };
         try {
-            for (TestContext& benchmarkCtxt : synthBenchmarks) {
+            for (TestContext& benchmarkCtxt : synthBenchmarksGPU) {
+                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            }
+
+            for (TestContext& benchmarkCtxt : synthBenchmarksCPU) {
                 benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
             }
 
@@ -600,6 +616,7 @@ int main(int argc, char** argv) {
     }
 
     dawInstance->destroy();
+    glfwTerminate();
     getGlobalLogger()->setLevel(Log::LEVEL_ALL);
     log_lf(Log::L_INFO, "exit 0\n");
     return 0;
