@@ -263,7 +263,7 @@ double waveform_mix(double phase, double phase_inc, double bleb) {
 void processSynthUnison()
 {
     const uint i = gl_LocalInvocationIndex.x;
-    const double sample_offset = ctx.time_samples + double(i) - ctx.time_sample_phase_reset;
+    const double sample_offset = ctx.time_samples + double(i)/*  - ctx.time_sample_phase_reset */;
     const float t = float(sample_offset * ctx.one_over_samplerate);
     const int VC = int(round(ctx.osc1_unison_voice_count));
     vec2 s_lr = vec2(0.0);
@@ -277,25 +277,30 @@ void processSynthUnison()
         {
             const float a = state_in.voices[j].velocity[i];
             const float f = state_in.voices[j].pitch[i]; // hz
-            const double pitchLogScale = double(floor(log2(f / 440.0))) + 5.0;
-            double detune_keytrack = 1.0 + clamp(pitchLogScale * 32.0, -1.0, 1.0) * ctx.osc1_detune_keytrack;
-            double filter_keytrack = 1.0 + clamp((pitchLogScale-4.0) * -0.8, -1.0, 1.0) * state_in_synth.synth.param_filter_keytrack[i];
+            const double pitchLogScale = double(log2(f / 440.0)) + 2.0;
+            double osc1_det_keytrack_bipolar = ctx.osc1_detune_keytrack * 2.0 - 1.0;
+            double osc1_detune = ctx.osc1_unison_detune * (1.0 + clamp((pitchLogScale + 2.0)*0.66, -1.0, 1.0) * osc1_det_keytrack_bipolar);
+            double osc1_flt_keytrack_bipolar = state_in_synth.synth.param_filter_keytrack[i] * 2.0 - 1.0;
+            double filter_keytrack = 1.0 + clamp((pitchLogScale-1.0) * -0.8, -1.0, 1.0) * osc1_flt_keytrack_bipolar;
             double stereo_width = state_in_synth.synth.param_stereo[i];
-            stereo_width += (0.0+clamp((pitchLogScale-2.0)*0.25, -1.0, 1.0) * ctx.osc1_width_keytrack);
+            stereo_width += (0.0+clamp((pitchLogScale+1.0)*0.25, -1.0, 1.0) * (ctx.osc1_width_keytrack * 2.0 - 1.0));
             stereo_width = clamp(stereo_width, 0.0, 1.0);
             for (int u = 0; u < N_UNISON_VOICES && u < VC; ++u)
             {
                 float uv_index = VC <= 1 ? 0.5 : float(u) / float(VC-1);
                 float uv_index_centered = uv_index * 2.0 - 1.0;
-                double uv_f = double(f) - double(abs(uv_index_centered+0.04)) * ctx.osc1_unison_detune * detune_keytrack;
+                double uv_f = double(f) - double(abs(uv_index_centered)) * osc1_detune;
                 float uv_p = noise2(j + seed, u*N_POLY_VOICES+j);
+                if (uv_p < 0.0) {
+                    uv_p = -uv_p;
+                }
                 double phase_inc = uv_f * ctx.one_over_samplerate;
                 double p = phase_inc * sample_offset + double(uv_p);
                 float panLR = (pow(abs(uv_index_centered), 2.0) * sign(uv_index_centered) * float(stereo_width) + 1.0) * 0.5;
                 vec2 pan_lr = normalize(mix(vec2(1.0, 0.0), vec2(0.0, 1.0), panLR));
                 double param_filter = state_in.voices[j].param_filter[i] * max(filter_keytrack, 0.02);
-                param_filter = max(0.0, param_filter * 128.0);
-                // param_filter = max(0.0, (pow(float(param_filter), 1.5)) * 128.0);
+                // param_filter = max(0.0, param_filter * 128.0);
+                param_filter = max(0.0, (pow(float(param_filter), 1.5)) * 128.0);
 #if N_PROGRAM == PROGRAM_SAW
                 s_lr += float(saw(p, phase_inc, param_filter)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_SINE

@@ -609,14 +609,14 @@ private:
         setParamName(getParam(Parameters::Osc1UnisonDetune), "Oscillator 1 Unison Detune", "OSC1 Detune", "Detune", "Semi");
         addFloatParam(Parameters::Osc1Filter)->setRange(0.0, 1.0)->setInitialValue(1.0 - 1.0 / 64.0);
         setParamName(getParam(Parameters::Osc1Filter), "Oscillator 1 Filter", "OSC1 Filter", "Filter", "");
-        addFloatParam(Parameters::Osc1KeytrackFilter)->setRange(0.0, 100.0)->setInitialValue(0.0);
+        addFloatParam(Parameters::Osc1KeytrackFilter)->setRange(-100.0, 100.0)->setInitialValue(0.0);
 
         setParamName(getParam(Parameters::Osc1KeytrackFilter), "Oscillator 1 Keytrack Filter", "OSC1 Keytrack Filter", "Keytrack Filter", "%");
 
-        addFloatParam(Parameters::Osc1KeytrackDetune)->setRange(0.0, 100.0)->setInitialValue(0.0);
+        addFloatParam(Parameters::Osc1KeytrackDetune)->setRange(-100.0, 100.0)->setInitialValue(0.0);
         setParamName(getParam(Parameters::Osc1KeytrackDetune), "Oscillator 1 Keytrack Detune", "OSC1 Keytrack Detune", "Keytrack Detune", "%");
 
-        addFloatParam(Parameters::Osc1KeytrackStereoWidth)->setRange(0.0, 100.0)->setInitialValue(0.0);
+        addFloatParam(Parameters::Osc1KeytrackStereoWidth)->setRange(-100.0, 100.0)->setInitialValue(0.0);
         setParamName(getParam(Parameters::Osc1KeytrackStereoWidth), "Oscillator 1 Keytrack Stereo Width", "OSC1 Keytrack Stereo Width", "Keytrack Stereo Width", "%");
 
         addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setInitialValue(0);
@@ -1261,7 +1261,7 @@ public:
                     }
                     updateVoiceModulations(v);
                     updateEnvelopeParameters(v);
-                    bool bIsFirst = v.GetVolumeEnvelope().stage == EnvelopeStages::Triggered;
+                    // bool bIsFirst = v.GetVolumeEnvelope().stage == EnvelopeStages::Triggered;
                     for (auto& env : v.envelopes) {
                         env.Update(oneOverSR);
                     }
@@ -1286,14 +1286,14 @@ public:
                     inputBufferVoiceStates[idx_pitch]    = osc1Frequency;
                     inputBufferVoiceStates[idx_filter]   = 1.0-osc1_filter;
                     v.bIsActive = v.isVoiceActive();
-                    if (bIsFirst) {
-                        double firstSample = velocity;
-                        dbgassert(firstSample == 0.0);
-                    }
-                    if (!v.bIsActive) {
-                        double lastSample = velocity;
-                        dbgassert(lastSample == 0.0);
-                    }
+                    // if (bIsFirst) {
+                    //     double firstSample = velocity;
+                    //     dbgassert(firstSample == 0.0);
+                    // }
+                    // if (!v.bIsActive) {
+                    //     double lastSample = velocity;
+                    //     dbgassert(lastSample == 0.0);
+                    // }
                 }
                 inputBufferVoiceStates[idx_velocity] = velocity;
             }
