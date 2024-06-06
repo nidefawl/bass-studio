@@ -12,6 +12,7 @@
 #include "gui/controls/button.h"
 #include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
+#include "gui/shape/shape-render.hpp"
 #include "gui/shape/shapeeditor.h"
 #include "hires_timer.h"
 #include "host/shape/shape.h"
@@ -28,6 +29,7 @@
 #include "synth-gpu-gl.h"
 #include "synth-modulations-ui.hpp"
 #include "synth-modulations.hpp"
+#include "synth-param.hpp"
 #include "synth-plugin.h"
 #include "synth-snapshot.h"
 #include "synth-template.hpp"
@@ -528,7 +530,7 @@ private:
     host_buffer_t ssboOutput{};
     host_buffer_t ssboOutputWaveform{};
     std::array<host_buffer_t*, 4> hostBuffers{&ssboInputSynthState, &ssboInputVoiceStates, &ssboOutput, &ssboOutputWaveform};
-    PluginSynth::GPU::shader_gpu_compute gpuProgram{};
+    PluginSynth::GPU::gpu_program gpuProgram{};
 
     int64_t timePerfLog = 0;
     int64_t timeCheckShader = 0;
@@ -736,7 +738,7 @@ public:
             params.shape = {};
             params.shape.name = "LFO " + std::to_string(i + 1) + " Shape";
             params.shape.pts = DAW::Shape::GetShape(DAW::Shape::ShapeWaveform::SHAPE_TRIANGLE);
-            params.shape.flags = DAW::Shape::ShapeFlags::SHAPE_CYCLIC;
+            params.shape.flags = DAW::Shape::ShapeFlags::SHAPE_CYCLIC | DAW::Shape::ShapeFlags::SHAPE_SHAPED;
             params.syncFlags = STRAIGHT | DOTTED | TRIPLET;
             params.syncFlags = 0;
             params.syncRatios = GetSyncRatios(params.syncFlags);
@@ -797,22 +799,35 @@ public:
             OnParamChange(static_cast<Parameters>(param->enumParam));
         }
     }
-    void reloadShader(shader_gpu_compute_defs_t defs) {
-        auto res = loadshader_synth(defs, this->gpuProgram);
-        if (std::holds_alternative<String>(res)) {
-            log_lf(Log::L_ERROR, "%s\n", std::get<String>(res).c_str());
-            timeLastShaderError = getTimeMillis();
-        } else {
-            this->gpuProgram = std::get<shader_gpu_compute>(res);
-            // adjust program param
-            auto param = GetParamEnum(Parameters::Osc1Waveform);
-            std::vector<String> programNames;
-            for (int32_t i = 0; i < this->gpuProgram.numPrograms; i++) {
-                programNames.push_back(this->gpuProgram.programDescs[i].name);
-            }
-            param->setStrings(programNames.begin(), programNames.end());
+    void reloadShader(gpu_program_definitions_t defs) {
+        auto res = loadGPUProgram(defs, this->gpuProgram);
+        checkGLError("loadGPUProgram");
+        switch (res.type) {
+            case gpu_program_loadresult::Type::PROGRAM_LOAD_ERROR:
+                log_lf(Log::L_ERROR, "%s\n", res.strError.c_str());
+                timeLastShaderError = getTimeMillis();
+                break;
+            case gpu_program_loadresult::Type::PROGRAM_LOAD_SUCCESS:
+                this->gpuProgram = *res.gpuProgram;
+                updateProgramList();
+                break;
+            case gpu_program_loadresult::Type::PROGRAM_LOAD_NO_CHANGE:
+                break;
         }
-        checkGLError("loadshader_synth");
+    }
+    void updateProgramList() {
+        // adjust program param
+        auto param = GetParamEnum(Parameters::Osc1Waveform);
+        std::vector<String> programNames;
+        for (int32_t i = 0; i < this->gpuProgram.numPrograms; i++) {
+            programNames.push_back(this->gpuProgram.programDescs[i].name);
+        }
+        param->setStrings(programNames.begin(), programNames.end());
+        auto regParam = moduleSynthInstance->getParam(PARAM_OFFSET_IMPL + static_cast<size_t>(Parameters::Osc1Waveform));
+        auto intParam = dynamic_cast<SynthParam_Int*>(param);
+        if (regParam && intParam) {
+            regParam->quantizationSteps = intParam->iMax - intParam->iMin + 1;
+        }
     }
     void initGlResources() {
         if (!glad_glDispatchCompute) {
@@ -1729,46 +1744,80 @@ public:
         removeGuis();
     }
 };
+
+struct sampled_pt_t {
+    vec2 pos;
+};
+struct sampled_curved_t {
+    std::vector<sampled_pt_t> pts;
+    int32_t flags = DAW::Shape::SHAPE_FLAGS_NONE;
+    inline float shapeSegmentPt(float t, const sampled_pt_t& pt) const {
+        return t;
+    }
+};
+class guictr_sampled_curve_shape final : public guictr_base, public DAW::Shape::RenderShape<sampled_curved_t> {
+    friend class guictr_curve_editor;
+    sampled_curved_t curveInternal;
+public:
+    guictr_sampled_curve_shape()
+    {
+        curveInternal.pts.push_back({ { 0, 0 } });
+        padding = 4;
+        margin = 4;
+        setBackgroundRendered(true);
+        setCanMouseHit(true);
+    }
+    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
+        return GuiColor::COL_BG_DRKER2;
+    }
+    void render(NVGcontext* vg) override {
+        if (isBackgroundRendered()) {
+            renderBackground(vg);
+        }
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        renderShapeView(vg, theme, &curveInternal, {}, getSizeContent());
+    }
+    sampled_curved_t& getShape() {
+        return curveInternal;
+    }
+    const sampled_curved_t& getShape() const {
+        return curveInternal;
+    }
+};
 class guicontainer_plugin_synth_adsr_shape final : public guictr_base {
     module_synth_gpu* const moduleInstance;
     int32_t idx;
-    DAW::Shape::guictr_curve_shape* const shapeAdsr;
+    guictr_sampled_curve_shape shapeAdsr;
     DAW::Shape::guictr_curve_shape* const shapeAdsrControls;
     bool bNeedsShapeSet = true;
     int32_t ticks = 0;
 public:
     explicit guicontainer_plugin_synth_adsr_shape(module_synth_gpu* module, int32_t idx) 
         : moduleInstance(module), idx(idx),
-        shapeAdsr(DAW::Shape::makeShapeCurveView()),
         shapeAdsrControls(DAW::Shape::makeShapeCurveView())
     {
         padding = 0;
         margin  = 0;
         setBackgroundRendered(false);
-        shapeAdsr->setBackgroundRendered(true);
-        shapeAdsr->setBackgroundRenderedInset(false);
-        shapeAdsr->setCanMouseHit(false);
-        shapeAdsr->id = 3;
-        shapeAdsr->margin = 0;
-        shapeAdsr->padding = 2;
-        add(shapeAdsr);
         shapeAdsrControls->setBackgroundRendered(false);
         shapeAdsrControls->setBackgroundRenderedInset(false);
         shapeAdsrControls->setCanMouseHit(true);
         shapeAdsrControls->id = 4;
         shapeAdsrControls->margin = 0;
         shapeAdsrControls->padding = 2;
+        add(&shapeAdsr);
         add(shapeAdsrControls);
         shapeAdsrControls->zOrder = 1;
     }
     ~guicontainer_plugin_synth_adsr_shape() override {
         removeGuis();
-        delete this->shapeAdsr;
         delete this->shapeAdsrControls;
     }
     void layout() override {
-        shapeAdsr->pos = shapeAdsrControls->pos = {};
-        shapeAdsr->size = shapeAdsrControls->size = size;
+        shapeAdsr.pos = shapeAdsrControls->pos = {};
+        shapeAdsr.size = shapeAdsrControls->size = size;
         guictr_base::layout();
     }
     void onTick(AppCtrl* ctrl) override {
@@ -1794,7 +1843,7 @@ public:
         bNeedsShapeSet = true;
     }
     void setShapeFromLogFunction() {
-        auto& shapeAdsrSampled = this->shapeAdsr->getShape();
+        auto& shapeAdsrSampled = this->shapeAdsr.getShape();
         auto& shapeAdsrControls = this->shapeAdsrControls->getShape();
         shapeAdsrControls.pts.clear();
         shapeAdsrSampled.pts.clear();
@@ -1807,8 +1856,7 @@ public:
             float stepPos = s / static_cast<float>(numSamples);
             std::fill(std::begin(envParamVals), std::end(envParamVals), stepPos);
             ShapeLogLikeSIMD<float, 8>(envParamVals, envParamValsScaled);
-            // shapeAdsrSampled.pts.push_back({{ pos + s, envelope.value }, 0.5});
-            shapeAdsrSampled.pts.push_back({{ stepPos, envParamValsScaled[0] }, 0.5});
+            shapeAdsrSampled.pts.push_back({{ stepPos, envParamValsScaled[0] }});
         }
         shapeAdsrSampled.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_LOCK_POINTS;
         shapeAdsrControls.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_SHOW_ONLY_CONTROL_POINTS;
@@ -1817,7 +1865,7 @@ public:
         // convert synth impls outputBufferWaveform to shape
         const auto& sampleFormat = moduleInstance->getSampleFormat();
         // sample ADSR and show in second shape editor
-        auto& shapeAdsrSampled = this->shapeAdsr->getShape();
+        auto& shapeAdsrSampled = this->shapeAdsr.getShape();
         auto& shapeAdsrControls = this->shapeAdsrControls->getShape();
         shapeAdsrSampled.pts.clear();
         
@@ -1874,7 +1922,7 @@ public:
                     lastSample = pos + s;
                 }
                 if (bAddPoint) {
-                    shapeAdsrSampled.pts.push_back({{ pos + s, envelope.value }, 0.5});
+                    shapeAdsrSampled.pts.push_back({{ pos + s, envelope.value }});
                     // if (outIdx < samplecount_t(test.size())) {
                     //     test[outIdx] = envelope.value;
                     // }
@@ -1965,7 +2013,7 @@ public:
 
 class guicontainer_plugin_synth_gpu final : public guictr_base {
     module_synth_gpu* const moduleInstance;
-    DAW::Shape::guictr_curve_shape* const shapeOscWaveform;
+    guictr_sampled_curve_shape shapeOscWaveform;
     i_ctr_shape_editor* const shapeEditorLfo1;
     i_ctr_shape_editor* const shapeEditorLfo2;
     guicontainer_plugin_synth_adsr adsr1;
@@ -1995,7 +2043,6 @@ public:
 
     explicit guicontainer_plugin_synth_gpu(module_synth_gpu* module) 
         : moduleInstance(module),
-        shapeOscWaveform(DAW::Shape::makeShapeCurveView()),
         shapeEditorLfo1(makeShapeEditor()),
         shapeEditorLfo2(makeShapeEditor()),
         adsr1(module, 0),
@@ -2013,8 +2060,6 @@ public:
         ctrStackedLFO2.setVerticalLayout(true);
         ctrStackedOSC.setVerticalLayout(true);
         ctrStackedBothLFOs.setVerticalLayout(true);
-        shapeOscWaveform->setBackgroundRendered(false);
-        shapeOscWaveform->setCanMouseHit(true);
         auto const synth = module->getSynth();
         auto makeParamKnob = [synth](auto p, auto knobType) {
             return new guiknob_synthparam(PARAM_OFFSET_IMPL + p, PARAM_OFFSET_IMPL + p, synth, p, knobType);
@@ -2126,10 +2171,10 @@ public:
         ctrAmp.setLabel("Amp");
         ctrAmp.setBackgroundRendered(true);
         ctrHorizontal.addEntry(&ctrAmp);
-            ctrStackedOSC.addEntry(shapeOscWaveform);
+            ctrStackedOSC.addEntry(&shapeOscWaveform);
             ctrStackedOSC.addEntry(&ctrOsc);
             ctrStackedOSC.setLabel("OSC 1");
-            shapeOscWaveform->setBackgroundRendered(false);
+            shapeOscWaveform.setBackgroundRendered(false);
             ctrOsc.setBackgroundRendered(false);
             ctrStackedOSC.setBackgroundRendered(true);
         ctrHorizontal.addEntry(&ctrStackedOSC);
@@ -2187,7 +2232,6 @@ public:
         ctrStackedADSR.removeEntries();
         ctrStackedLFO1.removeEntries();
         ctrStackedLFO2.removeEntries();
-        delete this->shapeOscWaveform;
         delete shapeEditorLfo1->getGuiContainer();
         delete shapeEditorLfo2->getGuiContainer();
     }
@@ -2311,7 +2355,7 @@ public:
     }
 
     void rightClicked(MouseEvent& evt, guibase* what) override {
-        auto safeRef = this->shapeOscWaveform ? this->shapeOscWaveform->toRef() : SafeRef<guibase>();
+        auto safeRef = this->shapeOscWaveform.toRef();
         parentCtrl->openContextMenu(new guictr_module_synth_gpu_context_menu(moduleInstance, safeRef), evt.mousepos);
     }
 
@@ -2325,26 +2369,22 @@ public:
         guictr_base::prerender(vg);
         // convert synth impls outputBufferWaveform to shape
         auto synth = moduleInstance->getSynth();
-        auto& shape = this->shapeOscWaveform->getShape();
+        auto& shape = this->shapeOscWaveform.getShape();
         auto& waveform = synth->ssboOutputWaveform.buffer;
         shape.pts.clear();
         shape.pts.reserve(waveform.size());
         for (size_t i = 0; i < waveform.size(); i++) {
             float x = i / static_cast<float>(waveform.size());
-            shape.pts.push_back({{ x, waveform[i] * 0.5 + 0.5 }, 0.5});
+            shape.pts.push_back({{ x, waveform[i] * 0.5 + 0.5 }});
         }
         shape.flags = DAW::Shape::SHAPE_CYCLIC | DAW::Shape::SHAPE_LOCK_POINTS;
     }
 
 
     void setUiLayout(const ui_layout_t& layout) {
-        if (shapeOscWaveform) {
-            // shapeEditorCtr->setVisible(layout.bShapeEditorVisible);
-        }
     }
 
     bool getUiLayout(ui_layout_t& layout) const {
-        // layout.bShapeEditorVisible = shapeEditorCtr->isVisible();
         return true;
     }
 

@@ -65,11 +65,16 @@ public:
     std::vector<float> outputBuffer;
     std::vector<float> outputBufferWaveform;
 
+    int32_t currentProgramId = 0;
+    int32_t currentProgram() {
+        return currentProgramId;
+    }
+
     GLuint ubo = 0;
     ssbo_ringbuffer_t<4> ssboInput{};
     ssbo_ringbuffer_t<4> ssboOutput{};
     ssbo_ringbuffer_t<4> ssboOutputWaveform{};
-    PluginSynth::GPU::shader_gpu_compute gpuProgram{};
+    PluginSynth::GPU::gpu_program gpuProgram{};
 
     hires_timer_t perfTimer;
     int64_t timePerfLog = 0;
@@ -83,7 +88,6 @@ public:
         gpuContext.bpm = tempo100 / 100.0;
         gpuContext.unison_voice_count = unisonVoiceCount;
         gpuContext.unison_detune = unisonDetune;
-        gpuContext.bleb_duration = blebDuration; 
         gpuContext.one_over_samplerate = 1.0 / sampleFormat.sampleRate;
     }
     
@@ -97,17 +101,17 @@ public:
         ssboOutputWaveform.genBuffers();
         checkGLError("genBuffers");
 
-        auto res = loadshader_synth(shader_gpu_compute_defs_t{sampleFormat.blockSize, 2, NUM_POLY_VOICES, NUM_UNISON_VOICES}, this->gpuProgram);
-        checkGLError("loadshader_synth");
+        auto res = loadGPUProgram(gpu_program_definitions_t{currentProgram(), sampleFormat.blockSize, 2, NUM_POLY_VOICES, NUM_UNISON_VOICES}, this->gpuProgram);
+        checkGLError("loadGPUProgram");
         if (std::holds_alternative<String>(res)) {
             log_lf(Log::L_ERROR, "%s\n", std::get<String>(res).c_str());
         } else {
-            this->gpuProgram = std::get<shader_gpu_compute>(res);
+            this->gpuProgram = std::get<gpu_program>(res);
         }
         timeCheckShader = getTimeMillis();
         timePerfLog = getTimeMillis();
 
-        inputBuffer.resize(gpuProgram.blocksize * NUM_POLY_VOICES * 3);
+        inputBuffer.resize(gpuProgram.blocksize * NUM_POLY_VOICES * NUM_VOICE_INPUT_PARAMETERS);
         outputBuffer.resize(gpuProgram.blocksize * gpuProgram.channels);
         outputBufferWaveform.resize(gpuProgram.blocksize);
 
@@ -158,18 +162,18 @@ public:
         if (!gpuProgram.is_valid() || tmNow_ms - timeCheckShader > 1000) {
             if (tmNow_ms - timeLastShaderError > 333) {
                 timeCheckShader = tmNow_ms;
-                auto res = loadshader_synth(shader_gpu_compute_defs_t{audioblock->samples, audioblock->channels, NUM_POLY_VOICES, NUM_UNISON_VOICES}, gpuProgram);
+                auto res = loadGPUProgram(gpu_program_definitions_t{currentProgram(), audioblock->samples, audioblock->channels, NUM_POLY_VOICES, NUM_UNISON_VOICES}, gpuProgram);
                 if (std::holds_alternative<String>(res)) {
                     log_lf(Log::L_ERROR, "%s\n", std::get<String>(res).c_str());
                     timeLastShaderError = tmNow_ms;
                 } else {
-                    gpuProgram = std::get<shader_gpu_compute>(res);
+                    gpuProgram = std::get<gpu_program>(res);
                 }
             }
         }
         perfTimer.reset();
         audioblock->clear();
-        inputBuffer.resize(gpuProgram.blocksize * NUM_POLY_VOICES * 3);
+        inputBuffer.resize(gpuProgram.blocksize * NUM_POLY_VOICES * NUM_VOICE_INPUT_PARAMETERS);
         outputBuffer.resize(gpuProgram.blocksize * gpuProgram.channels);
         outputBufferWaveform.resize(gpuProgram.blocksize);
 
@@ -180,15 +184,17 @@ public:
                 auto tmSecs = (absTime * gpuContext.one_over_samplerate) + i * 0.3;
                 tmSecs = fmod(tmSecs, 6.0);
                 boolean bIsNoteActive = tmSecs < 2.0;
-                auto idx_is_active = i * (3 * gpuProgram.blocksize) + s;
+                auto idx_is_active = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize) + s;
                 auto idx_velocity = idx_is_active + gpuProgram.blocksize;
                 auto idx_pitch = idx_velocity + gpuProgram.blocksize;
+                auto idx_bleb = idx_pitch + gpuProgram.blocksize;
                 inputBuffer[idx_is_active] = float(bIsNoteActive);
                 inputBuffer[idx_pitch] = 1000.0 + i * 100.0;
                 inputBuffer[idx_velocity] = 0.5;
+                inputBuffer[idx_bleb] = 2.0;
             }
         }
-    
+
         ssboInput.uploadBuffer(inputBuffer.data(), inputBuffer.size() * sizeof(float));
 
         checkGLError("glBindBuffer");

@@ -112,7 +112,7 @@ int main(int, char*[]) {
         checkGLError("glBindBuffer");
 
         audioHost->startAudio(settings.iosettings);
-        PluginSynth::GPU::shader_gpu_compute shader{};
+        PluginSynth::GPU::gpu_program shader{};
         {
             auto stream =audioHost->getStreamSharedPtr(0);
 #ifdef _WIN32
@@ -144,7 +144,7 @@ int main(int, char*[]) {
             ctxt.time_samples = sampleFormat.blockSize * 4444;
             ctxt.time_seconds = ctxt.time_samples / ctxt.samplerate;
             ctxt.time_beats = ctxt.time_samples / (ctxt.samplerate * 60 / ctxt.bpm);
-            PluginSynth::GPU::shader_gpu_compute_defs_t defs = {
+            PluginSynth::GPU::gpu_program_definitions_t defs = {
                 .blocksize = sampleFormat.blockSize,
                 .channels = channels,
                 .polyVoices = 32,
@@ -154,7 +154,7 @@ int main(int, char*[]) {
             if (std::holds_alternative<String>(res)) {
                 log_lf(Log::L_ERROR, "%s\n", std::get<String>(res).c_str());
             } else {
-                shader = std::get<PluginSynth::GPU::shader_gpu_compute>(res);
+                shader = std::get<PluginSynth::GPU::gpu_program>(res);
             }
             auto timeStart = getTimeSecondsD();
             auto timeRenderStart = timeStart;
