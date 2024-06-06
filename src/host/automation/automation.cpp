@@ -446,7 +446,7 @@ param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value)
     if (param->unit == "dB") {
         float fGain = 1.0f;
         if (dsp_util::getGainLvl(value, fGain)) {
-            return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
+            return {StringFormat("%.1f", dsp_util::dBFS(fGain)), param->unit};
         }
         return {"-INF", param->unit};
     }

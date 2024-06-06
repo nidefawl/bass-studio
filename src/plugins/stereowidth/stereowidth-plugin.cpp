@@ -131,12 +131,9 @@ namespace PluginStereoWidth {
         if (param->unit == "dB") {
             float fGain = 1.0f;
             if (dsp_util::getGainLvlWithRange(value, MTR_CEIL, DBFS_MUTE_POS, fGain)) {
-                return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
+                return {StringFormat("%.1f", dsp_util::dBFS(fGain)), param->unit};
             }
             return {"-INF", param->unit};
-        }
-        if (param->unit == "%") {
-            return {StringFormat("%.3f", value * 200.0f), param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }

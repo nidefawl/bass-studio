@@ -253,7 +253,10 @@ private:
             if (format.empty()) {
                 switch (p->type) {
                     case SynthParam::ParamType::FLOAT:
-                        p->format = "%.3f";
+                        if (p->unit == "%")
+                            p->format = "%.1f";
+                        else
+                            p->format = "%.3f";
                         break;
                     case SynthParam::ParamType::INT:
                         p->format = "%d";
@@ -1096,7 +1099,10 @@ private:
             if (format.empty()) {
                 switch (p->type) {
                     case SynthParam::ParamType::FLOAT:
-                        p->format = "%.3f";
+                        if (p->unit == "%")
+                            p->format = "%.1f";
+                        else
+                            p->format = "%.3f";
                         break;
                     case SynthParam::ParamType::INT:
                         p->format = "%d";

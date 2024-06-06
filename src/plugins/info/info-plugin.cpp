@@ -36,7 +36,7 @@ namespace PluginHostInfo {
     const char* const PLUGIN_PRODUCT_NAME = "HostInfo VST2.4";
     void timeInfoToStrings(VstTimeInfo* timeinfo, std::vector<String>& strings) {
         strings.push_back(StringFormat("samplePos %.4f", timeinfo->samplePos));
-        strings.push_back(StringFormat("sampleRate %.3f", timeinfo->sampleRate));
+        strings.push_back(StringFormat("sampleRate %.1f", timeinfo->sampleRate));
         strings.push_back(StringFormat("nanoSeconds %.2f", timeinfo->nanoSeconds));
         strings.push_back(StringFormat("ppqPos %.5f", timeinfo->ppqPos));
         strings.push_back(StringFormat("tempo %.4f", timeinfo->tempo));
