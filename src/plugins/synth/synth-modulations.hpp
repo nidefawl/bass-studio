@@ -68,6 +68,9 @@ struct MathExpr {
             auto& p       = shrdP->parser;
             auto itInputs = shrdP->inputs.begin();
             for (auto& name : varNames) {
+                if (*name == 0) {
+                    break;
+                }
                 auto& var = *itInputs;
                 p.DefineVar(name, &var);
                 ++itInputs;
