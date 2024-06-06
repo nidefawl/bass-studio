@@ -49,6 +49,28 @@ namespace PluginSynth::GPU {
 static constexpr uint16_t NUM_AUDIO_CHANNELS = 2;
 static constexpr uint16_t NUM_POLY_VOICES   = 32;
 static constexpr uint16_t MAX_UNISON_VOICES   = 32;
+
+/* keep in sync with shader defines */
+static constexpr size_t NUM_VOICE_INPUT_PARAMETERS = 3;
+static constexpr size_t NUM_SYNTH_INPUT_PARAMETERS = 2;
+/*
+
+struct voice_state_input_t {
+    float velocity[N_SAMPLES];
+    float pitch[N_SAMPLES];
+};
+
+struct synth_state_input_t {
+    float param_bleb[N_SAMPLES];
+    float param_stereo[N_SAMPLES];
+    float param_pw[N_SAMPLES];
+    float param_filter_keytrack[N_SAMPLES];
+    float param_detune_keytrack[N_SAMPLES];
+    float param_width_keytrack[N_SAMPLES];
+};
+
+*/
+
 static constexpr uint16_t NUM_ADSR = 2;
 static constexpr uint16_t NUM_LFO = 3;
 
@@ -56,6 +78,7 @@ static constexpr uint16_t MAX_SYNTH_PARAMS = 256;
 static constexpr uint16_t MAX_PARAMS_PER_ADSR = 32;
 static constexpr uint16_t MAX_PARAMS_PER_LFO = 16;
 static constexpr uint16_t MAX_ADSR_LFO = 8;
+
 
 enum ModDestinations : int32_t {
     ModDest_Osc1Volume = 0,
@@ -473,7 +496,7 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     return true;
 }
 
-class SynthImplGPU final : public SynthImpl<SynthImplGPU, ParametersSynthGPU>, public ModulationController {
+class SynthImplGPU final : public SynthImpl<SynthImplGPU, ParametersSynthGPU>, public ModulationController, public DAW::GPU::GPUAudioProcessor {
 private:
     friend class guicontainer_plugin_synth_gpu;
     friend class guicontainer_plugin_synth_adsr_shape;
@@ -487,38 +510,8 @@ private:
     DAW::Shape::shape_t oscShape;
     std::vector<std::shared_ptr<PluginViewContainer>> views;
 
-
-    int32_t currentProgramId = 0;
-    int32_t currentProgram() const { return currentProgramId; }
-    GLFWwindow* window = nullptr;
-    gpu_compute_context_t gpuContext{};
-    GLuint ubo = 0;
-    struct host_buffer_t {
-        ssbo_ringbuffer_t<16> ssbo{};
-        std::vector<float> buffer;
-        void downloadBuffer() {
-            ssbo.downloadBufferDelayed(buffer.data(), buffer.size() * sizeof(float));
-        }
-        void uploadBuffer() {
-            ssbo.uploadBuffer(buffer.data(), buffer.size() * sizeof(float));
-        }
-        void clearBuffer() {
-            std::fill(std::begin(buffer), std::end(buffer), 0.0f);
-        }
-        void incrementFrame() {
-            ssbo.incrementFrame();
-        }
-    };
-    host_buffer_t ssboInputSynthState{};
-    host_buffer_t ssboInputVoiceStates{};
-    host_buffer_t ssboOutput{};
-    host_buffer_t ssboOutputWaveform{};
-    std::array<host_buffer_t*, 4> hostBuffers{&ssboInputSynthState, &ssboInputVoiceStates, &ssboOutput, &ssboOutputWaveform};
-    PluginSynth::GPU::gpu_program gpuProgram{};
-
     int64_t timePerfLog = 0;
     int64_t timeCheckShader = 0;
-    int64_t timeLastShaderError = 0;
     double timeComputeAvg = -2.0;
     hires_timer_t perfTimer;
 
@@ -719,16 +712,39 @@ public:
 
     ~SynthImplGPU()
     {
-        if (window) {
-            GlfwContextSwitch ctxSwitch(window);
-            releaseGlResources();
-        }
         for (auto* ptr : vecParams) {
             delete ptr;
         }
-        if (window)
-            glfwDestroyWindow(window);
     }
+
+    void updateProgramList() override {
+        // adjust program param
+        auto param = GetParamEnum(ParametersSynthGPU::Osc1Waveform);
+        std::vector<String> programNames;
+        for (int32_t i = 0; i < this->gpuProgram.numPrograms; i++) {
+            programNames.push_back(this->gpuProgram.programDescs[i].name);
+        }
+        param->setStrings(programNames.begin(), programNames.end());
+        auto regParam = moduleSynthInstance->getParam(PARAM_OFFSET_IMPL + static_cast<size_t>(Parameters::Osc1Waveform));
+        auto intParam = dynamic_cast<SynthParam_Int*>(param);
+        if (regParam && intParam) {
+            regParam->quantizationSteps = intParam->iMax - intParam->iMin + 1;
+        }
+    }
+
+    void setBlocksize(blocksize_t blockSize) override {
+        SynthImpl::setBlocksize(blockSize);
+        GlfwContextSwitch ctxSwitch(window);
+        if (gpuProgram.blocksize != blockSize) {
+            reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
+        }
+        ssboInputSynthState.buffer.resize(blockSize * NUM_SYNTH_INPUT_PARAMETERS);
+        ssboInputVoiceStates.buffer.resize(blockSize * NUM_POLY_VOICES * NUM_VOICE_INPUT_PARAMETERS);
+        ssboOutput.buffer.resize(blockSize * gpuProgram.channels);
+        ssboOutputWaveform.buffer.resize(blockSize);
+        GPUAudioProcessor::reallocateSSBOs();
+    }
+
     void init() override {
         for (size_t i = 0; i < lfoParameters.size(); i++) {
             auto& params = lfoParameters[i];
@@ -749,13 +765,18 @@ public:
             }
             updateEnvelopeParameters(v);
         }
-        if (!glad_glDispatchCompute) {
+        if (!initComputeContext()) {
             return;
         }
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        // auto blockSize = moduleSynthInstance->getSampleFormat().blockSize;
+        // if (blockSize == 0) {
+        //     blockSize = 512;
+        // }
+        // reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
 
-        window = glfwCreateWindow(512, 512, "GPU Synth", NULL, NULL);
-        GlfwContextSwitch ctxSwitch(window);
+        timeCheckShader = getTimeMillis();
+        timePerfLog = getTimeMillis();
+
         auto sampleRate = moduleSynthInstance->getSampleFormat().sampleRate;
         if (!sampleRate) sampleRate = 44100;
         // print inputBuffer size in mega bytes
@@ -771,92 +792,10 @@ public:
         const auto outputPerSec = outputSizePerSample * sampleRate * sizeof(float) / 1024.0 / 1024.0;
         log_lf(Log::L_INFO, "outputBuffer bandwidth: %f MB/s\n", outputPerSec);
 
-        int work_grp_cnt[3];
-
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2]);
-
-        log_lf(Log::L_INFO, "max global (total) work group counts x:%i y:%i z:%i\n",
-        work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2]);
-        int work_grp_size[3];
-
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2]);
-
-        log_lf(Log::L_INFO, "max local (in one shader) work group sizes x:%i y:%i z:%i\n",
-        work_grp_size[0], work_grp_size[1], work_grp_size[2]);
-        int work_grp_inv;
-        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
-        log_lf(Log::L_INFO, "max local work group invocations %i\n", work_grp_inv);
-    
-        initGlResources();
         for (auto param : vecParams) {
             if (!param) continue;
             OnParamChange(static_cast<Parameters>(param->enumParam));
         }
-    }
-    void reloadShader(gpu_program_definitions_t defs) {
-        auto res = loadGPUProgram(defs, this->gpuProgram);
-        checkGLError("loadGPUProgram");
-        switch (res.type) {
-            case gpu_program_loadresult::Type::PROGRAM_LOAD_ERROR:
-                log_lf(Log::L_ERROR, "%s\n", res.strError.c_str());
-                timeLastShaderError = getTimeMillis();
-                break;
-            case gpu_program_loadresult::Type::PROGRAM_LOAD_SUCCESS:
-                this->gpuProgram = *res.gpuProgram;
-                updateProgramList();
-                break;
-            case gpu_program_loadresult::Type::PROGRAM_LOAD_NO_CHANGE:
-                break;
-        }
-    }
-    void updateProgramList() {
-        // adjust program param
-        auto param = GetParamEnum(Parameters::Osc1Waveform);
-        std::vector<String> programNames;
-        for (int32_t i = 0; i < this->gpuProgram.numPrograms; i++) {
-            programNames.push_back(this->gpuProgram.programDescs[i].name);
-        }
-        param->setStrings(programNames.begin(), programNames.end());
-        auto regParam = moduleSynthInstance->getParam(PARAM_OFFSET_IMPL + static_cast<size_t>(Parameters::Osc1Waveform));
-        auto intParam = dynamic_cast<SynthParam_Int*>(param);
-        if (regParam && intParam) {
-            regParam->quantizationSteps = intParam->iMax - intParam->iMin + 1;
-        }
-    }
-    void initGlResources() {
-        if (!glad_glDispatchCompute) {
-            return;
-        }
-        glGenBuffers(1, &ubo);
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-        checkGLError("glBindBuffer");
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(gpu_compute_context_t), nullptr, GL_STREAM_DRAW);
-        checkGLError("glBufferData");
-        for (auto* buffer : hostBuffers) {
-            buffer->ssbo.genBuffers();
-        }
-        checkGLError("genBuffers");
-
-        // auto blockSize = moduleSynthInstance->getSampleFormat().blockSize;
-        // if (blockSize == 0) {
-        //     blockSize = 512;
-        // }
-        // reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
-
-        timeCheckShader = getTimeMillis();
-        timePerfLog = getTimeMillis();
-    }
-    void setBlocksize(blocksize_t bs) override {
-        SynthImpl::setBlocksize(bs);
-        GlfwContextSwitch ctxSwitch(window);
-        if (gpuProgram.blocksize != bs) {
-            reloadShader({bs, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
-        }
-        allocateForBlockSize(bs);
     }
 
     std::array<double, 1>& getOtherParams() {
@@ -865,32 +804,6 @@ public:
 
     LFOParameters& getLFOParams(int32_t lfoIdx) {
         return lfoParameters[lfoIdx];
-    }
-
-    void allocateForBlockSize(samplecount_t blockSize) {
-        ssboInputSynthState.buffer.resize(blockSize * NUM_SYNTH_INPUT_PARAMETERS);
-        ssboInputVoiceStates.buffer.resize(blockSize * NUM_POLY_VOICES * NUM_VOICE_INPUT_PARAMETERS);
-        ssboOutput.buffer.resize(blockSize * gpuProgram.channels);
-        ssboOutputWaveform.buffer.resize(blockSize);
-        for (auto* buffer : hostBuffers) {
-            buffer->clearBuffer();
-            for (size_t i = 0; i < buffer->ssbo.size(); i++) {
-                buffer->ssbo.allocate(buffer->buffer.size() * sizeof(float), GL_DYNAMIC_DRAW);
-                buffer->uploadBuffer();
-                buffer->incrementFrame();
-            }
-        }
-        checkGLError("allocateForBlockSize");
-    }
-
-    void releaseGlResources() {
-        for (auto* buffer : hostBuffers) {
-            buffer->ssbo.destroy();
-        }
-        glDeleteBuffers(1, &ubo);
-        gpuProgram.destroy();
-        gpuProgram = {};
-        ubo = 0;
     }
 
     void OnParamChange(Parameters parameter) override {
@@ -1203,10 +1116,7 @@ public:
 
         const int nOversample = 1;
         const auto bpm100 = host->prjGlobals.tempo100;
-        int framesPerAutomationUpdate = state == playback_state::status_render ? 8 : 8;
-        if (state == playback_state::status_render) {
-            framesPerAutomationUpdate = 8;
-        }
+        int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
 
         const int32_t programId = currentProgramId % gpuProgram.programs.size();
         const auto sampleRate = moduleSynthInstance->format.sampleRate;
@@ -1319,7 +1229,7 @@ public:
 
         glBindBuffer(GL_UNIFORM_BUFFER, ubo);
         checkGLError("glBindBuffer");
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(gpu_compute_context_t), &gpuContext, GL_STREAM_DRAW);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(gpuContext), &gpuContext, GL_STREAM_DRAW);
         checkGLError("glBufferData");
         glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboInputSynthState.ssbo.current());

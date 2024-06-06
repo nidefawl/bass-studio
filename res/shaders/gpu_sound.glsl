@@ -1,7 +1,16 @@
 #version 430
-#define N_CHANNELS 2
-#define N_SAMPLES 512
-// N_SAMPLES * N_CHANNELS * float
+/* These macros are set by the preprocessor */
+#define N_PROGRAM 0
+#define N_CHANNELS 0
+#define N_SAMPLES 0 // must not exceed 1024
+
+/* define any number of programs */
+#define PROGRAM_NAME_DUMMY "DUMMYYOU"
+
+#if N_SAMPLES < 1
+    #error "N_SAMPLES must be defined"
+#endif
+
 layout(std430, binding = 0) buffer block_in
 {
 	float samples[N_SAMPLES * N_CHANNELS];

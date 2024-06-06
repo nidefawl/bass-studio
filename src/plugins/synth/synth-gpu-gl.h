@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fileio.h"
+#include "gl/gl_context.hpp"
 #include "gl/gl_shader.h"
 #include "glheaders.h"
 #include "logging.h"
@@ -10,7 +11,7 @@
 #include <cstdint>
 #include <variant>
 
-namespace PluginSynth::GPU {
+namespace DAW::GPU {
 
 struct gpu_program_definitions_t {
     samplecount_t blocksize = 512;
@@ -48,6 +49,7 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
     auto compileProgram = [](const auto& src, int32_t programNr, bool isWaveformSampler) ->  std::variant<GLuint, String> {
         String sourceCopy = src;
         GLuint shader1 = glCreateShader(GL_COMPUTE_SHADER);
+        dbgassert(shader1);
         StrUtil::StringReplace(sourceCopy, "#define N_PROGRAM 0", "#define N_PROGRAM " + std::to_string(programNr));
         if (isWaveformSampler) {
             StrUtil::StringReplace(sourceCopy, "#define IS_WAVEFORM_SAMPLER 0", "#define IS_WAVEFORM_SAMPLER 1");
@@ -176,9 +178,10 @@ inline std::variant<gpu_program, String> loadshader(const gpu_program_definition
     }
     auto& sourcefiles = glSourceLoader->sources;
     auto& file0Source = sourcefiles[0].source;
-    StrUtil::StringReplace(file0Source, "#define N_CHANNELS 2", "#define N_CHANNELS " + std::to_string(defs.channels));
-    StrUtil::StringReplace(file0Source, "#define N_SAMPLES 512", "#define N_SAMPLES " + std::to_string(defs.blocksize));
+    StrUtil::StringReplace(file0Source, "#define N_CHANNELS 0", "#define N_CHANNELS " + std::to_string(defs.channels));
+    StrUtil::StringReplace(file0Source, "#define N_SAMPLES 0", "#define N_SAMPLES " + std::to_string(defs.blocksize));
     sourcefiles[0].source += sourcefiles[1].source;
+    log_lf(Log::L_DEBUG, "Source code:\n%s\n", StringAsCStr(sourcefiles[0].source));
     auto newShader = compileGPUProgram(sourcefiles[0], defs);
     if (std::holds_alternative<gpu_program>(newShader)) {
         previous.destroy();
@@ -221,8 +224,9 @@ inline gpu_program_loadresult loadGPUProgram(gpu_program_definitions_t defs, gpu
     auto res = compileGPUProgram(sourcefiles[0], defs);
     if (std::holds_alternative<gpu_program>(res)) {
         previous.destroy();
+        return {gpu_program_loadresult::Type::PROGRAM_LOAD_SUCCESS, "", std::get<gpu_program>(res)};
     }
-    return {gpu_program_loadresult::Type::PROGRAM_LOAD_SUCCESS, "", std::get<gpu_program>(res)};
+    return {gpu_program_loadresult::Type::PROGRAM_LOAD_ERROR, std::get<String>(res), previous};
 }
 
 template<size_t N>
@@ -312,25 +316,130 @@ struct gpu_compute_context_t {
     double osc1_width_keytrack;
 };
 
-/* keep in sync with shader defines */
-static constexpr size_t NUM_VOICE_INPUT_PARAMETERS = 3;
-static constexpr size_t NUM_SYNTH_INPUT_PARAMETERS = 2;
-/*
+    
+class GPUAudioProcessor {
+protected:
+    struct host_buffer_t {
+        ssbo_ringbuffer_t<16> ssbo{};
+        std::vector<float> buffer;
+        void downloadBuffer() {
+            ssbo.downloadBufferDelayed(buffer.data(), buffer.size() * sizeof(float));
+        }
+        void uploadBuffer() {
+            ssbo.uploadBuffer(buffer.data(), buffer.size() * sizeof(float));
+        }
+        void clearBuffer() {
+            std::fill(std::begin(buffer), std::end(buffer), 0.0f);
+        }
+        void incrementFrame() {
+            ssbo.incrementFrame();
+        }
+    };
+    GLFWwindow* window = nullptr;
+    gpu_program gpuProgram{};
+    gpu_compute_context_t gpuContext{};
+    int32_t currentProgramId = 0;
+    host_buffer_t ssboInputSynthState{};
+    host_buffer_t ssboInputVoiceStates{};
+    host_buffer_t ssboOutput{};
+    host_buffer_t ssboOutputWaveform{};
+    GLuint ubo = 0;
+    std::array<host_buffer_t*, 4> hostBuffers{&ssboInputSynthState, &ssboInputVoiceStates, &ssboOutput, &ssboOutputWaveform};
+    int64_t timeLastShaderError = 0;
 
-struct voice_state_input_t {
-    float velocity[N_SAMPLES];
-    float pitch[N_SAMPLES];
+    /* Set ssbo to size of host_buffer_t::buffer */
+    void reallocateSSBOs() {
+        for (auto* buffer : hostBuffers) {
+            buffer->clearBuffer();
+            for (size_t i = 0; i < buffer->ssbo.size(); i++) {
+                buffer->ssbo.allocate(buffer->buffer.size() * sizeof(float), GL_DYNAMIC_DRAW);
+                buffer->uploadBuffer();
+                buffer->incrementFrame();
+            }
+        }
+        checkGLError("allocateForBlockSize");
+    }
+public:
+    GPUAudioProcessor() {
+    }
+    ~GPUAudioProcessor()
+    {
+        GlfwContextSwitch ctxSwitch(window);
+        if (window) {
+            releaseGlResources();
+            glfwDestroyWindow(window);
+        }
+    }
+    bool initComputeContext(bool bInitGL = false) {
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        window = glfwCreateWindow(512, 512, "GPU Synth", NULL, NULL);
+        GlfwContextSwitch ctxSwitch(window);
+        if (!glad_glDispatchCompute && bInitGL && !gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+            return false;
+        }
+        if (!glad_glDispatchCompute) {
+            return false;
+        }
+        int work_grp_cnt[3];
+
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2]);
+
+        log_lf(Log::L_INFO, "max global (total) work group counts x:%i y:%i z:%i\n",
+        work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2]);
+        int work_grp_size[3];
+
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2]);
+
+        log_lf(Log::L_INFO, "max local (in one shader) work group sizes x:%i y:%i z:%i\n",
+        work_grp_size[0], work_grp_size[1], work_grp_size[2]);
+        int work_grp_inv;
+        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
+        log_lf(Log::L_INFO, "max local work group invocations %i\n", work_grp_inv);
+        glGenBuffers(1, &ubo);
+        glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+        checkGLError("glBindBuffer");
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(gpu_compute_context_t), nullptr, GL_STREAM_DRAW);
+        checkGLError("glBufferData");
+        for (auto* buffer : hostBuffers) {
+            buffer->ssbo.genBuffers();
+        }
+        checkGLError("genBuffers");
+
+        return true;
+    }
+    int32_t currentProgram() const { return currentProgramId; }
+    void reloadShader(gpu_program_definitions_t defs) {
+        auto res = loadGPUProgram(defs, this->gpuProgram);
+        checkGLError("loadGPUProgram");
+        switch (res.type) {
+            case gpu_program_loadresult::Type::PROGRAM_LOAD_ERROR:
+                log_lf(Log::L_ERROR, "%s\n", res.strError.c_str());
+                timeLastShaderError = getTimeMillis();
+                break;
+            case gpu_program_loadresult::Type::PROGRAM_LOAD_SUCCESS:
+                this->gpuProgram = *res.gpuProgram;
+                updateProgramList();
+                break;
+            case gpu_program_loadresult::Type::PROGRAM_LOAD_NO_CHANGE:
+                break;
+        }
+    }
+    virtual void updateProgramList() {
+
+    }
+    void releaseGlResources() {
+        for (auto* buffer : hostBuffers) {
+            buffer->ssbo.destroy();
+        }
+        glDeleteBuffers(1, &ubo);
+        gpuProgram.destroy();
+        gpuProgram = {};
+        ubo = 0;
+    }
 };
 
-struct synth_state_input_t {
-    float param_bleb[N_SAMPLES];
-    float param_stereo[N_SAMPLES];
-    float param_pw[N_SAMPLES];
-    float param_filter_keytrack[N_SAMPLES];
-    float param_detune_keytrack[N_SAMPLES];
-    float param_width_keytrack[N_SAMPLES];
-};
-
-*/
-
-} // namespace PluginSynth::GPU
+} // namespace DAW::GPU

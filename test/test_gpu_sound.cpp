@@ -112,7 +112,7 @@ int main(int, char*[]) {
         checkGLError("glBindBuffer");
 
         audioHost->startAudio(settings.iosettings);
-        PluginSynth::GPU::gpu_program shader{};
+        DAW::GPU::gpu_program shader{};
         {
             auto stream =audioHost->getStreamSharedPtr(0);
 #ifdef _WIN32
@@ -144,17 +144,17 @@ int main(int, char*[]) {
             ctxt.time_samples = sampleFormat.blockSize * 4444;
             ctxt.time_seconds = ctxt.time_samples / ctxt.samplerate;
             ctxt.time_beats = ctxt.time_samples / (ctxt.samplerate * 60 / ctxt.bpm);
-            PluginSynth::GPU::gpu_program_definitions_t defs = {
+            DAW::GPU::gpu_program_definitions_t defs = {
                 .blocksize = sampleFormat.blockSize,
                 .channels = channels,
                 .polyVoices = 32,
                 .unisonVoices = 32
             };
-            auto res = PluginSynth::GPU::loadshader(defs, shader);
+            auto res = DAW::GPU::loadshader(defs, shader);
             if (std::holds_alternative<String>(res)) {
                 log_lf(Log::L_ERROR, "%s\n", std::get<String>(res).c_str());
             } else {
-                shader = std::get<PluginSynth::GPU::gpu_program>(res);
+                shader = std::get<DAW::GPU::gpu_program>(res);
             }
             auto timeStart = getTimeSecondsD();
             auto timeRenderStart = timeStart;
@@ -212,10 +212,10 @@ int main(int, char*[]) {
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo2);
                 checkGLError("glBindBufferBase");
-                glUseProgram(shader.programSynth);
+                glUseProgram(shader.programs[0]);
                 checkGLError("glUseProgram");
                 glMemoryBarrier(GL_UNIFORM_BARRIER_BIT|GL_SHADER_STORAGE_BARRIER_BIT);
-                glDispatchCompute(audioblock->samples, 1, 1);
+                glDispatchCompute(1, 1, 1);
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
                 checkGLError("glDispatchCompute");
                 glFinish();
