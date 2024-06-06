@@ -59,6 +59,7 @@
 #include "gl/gl_framebuffer.h"
 #include "gl/gl_vbo.h"
 #include "gl/gl_util.h"
+#include "gl/gl_context.hpp"
 #include "window_impl.h"
 #include "platform.h"
 
@@ -222,7 +223,6 @@ protected:
 
     bool redrawFlagged       = false;
     bool reentrant           = false;
-    bool bIsFirstTimeReload  = true;
     bool bFameRendered = false;
     int frameNumber          = 0;
     int frameCountFPS        = 0;
@@ -240,6 +240,11 @@ protected:
     String fpsStats;
     prof_stats_window_t renderStatsWindow{};
     hires_timer_t timerProfileWindow;
+
+#ifndef NDEBUG
+    int64_t tmLastShaderReloadMillis = 0;
+    int64_t fileDateShaderSource = 0;
+#endif
 
 public:
     GLFWwindow* glfw = nullptr;
@@ -267,20 +272,22 @@ public:
 protected:
 
     void reloadCustomShaders() {
-        if (FileExists(App::Platform::toResourcePath("nanovg.vsh"))
-            || FileExists(App::Platform::toResourcePath("nanovg.fsh"))) {
-            String strShaderSrcVertex;
+#ifndef NDEBUG
+        if (getTimeMillis() - tmLastShaderReloadMillis >= 1000) {
+            tmLastShaderReloadMillis = getTimeMillis();
+            auto pathShaderSrc = App::Platform::toResourcePath("nanovg.fsh");
+            auto curTimeStamp = FileTimeGetter(pathShaderSrc).getWriteTimeI64();
+            if (curTimeStamp == 0 || curTimeStamp == fileDateShaderSource) {
+                return;
+            }
+            fileDateShaderSource = curTimeStamp;
             String strShaderSrcFragment;
-            int64_t ret1 = ReadFileText("nanovg.vsh", strShaderSrcVertex);
-            int64_t ret2 = ReadFileText("nanovg.fsh", strShaderSrcFragment);
-            if (ret1 != -1 && ret2 != -1) {
-                int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strShaderSrcVertex), StringAsCStr(strShaderSrcFragment));
-                if (statusErr && bIsFirstTimeReload) {
-                    throw appexception("Couldn't initialize nanovg");
-                }
-                bIsFirstTimeReload = false;
+            if (ReadFileText("nanovg.fsh", strShaderSrcFragment) != -1) {
+                GlfwContextSwitch ctxSwitch(glfw);
+                nvgReloadShaders(nanovgCtxt, NVG_GLSL_VERT, StringAsCStr(strShaderSrcFragment));
             }
         }
+#endif
     }
 
 private:
@@ -698,7 +705,6 @@ class appwindow_main : public appwindow, public window_main {
     AppCtrl* const ctrl;
     std::shared_ptr<AppCtrl> sharedCtrl;
     int64_t tmDblClick               = 0;
-    // int64_t tmLastShaderReloadMillis = 0;
     bool bEnableWindowProfiling = false;
     bool bHasRedrawRequest = false;
 protected:
@@ -802,12 +808,7 @@ public:
         //overlay/child window lifetime management
         releaseOverlayWindows();
 
-        /* if (getTimeMillis() - tmLastShaderReloadMillis >= 1000) {
-            tmLastShaderReloadMillis = getTimeMillis();
-            glfwMakeContextCurrent(glfw);
-            reloadCustomShaders();
-            glfwMakeContextCurrent(nullptr);
-        } */
+        reloadCustomShaders();
 
         timerProfileWindow.reset();
         ctrl->onAppTick();
@@ -1190,6 +1191,7 @@ public:
         //glfwWindowHint(GLFW_FLOATING, 1);
         safe_strcpy(this->nameDbg, title , strlen(title));
         appwindow::createBaseWindow(WINDOW_IS_RESIZABLE, title, w, h, share);
+        dbgassert(glfwGetCurrentContext());
 #if 0
         LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
         if (parent) {
@@ -1746,6 +1748,7 @@ void appwindow::createBaseWindow(int flags, const char* title, int w, int h, GLF
 
     initOGL();
     initContext();
+    dbgassert(glfwGetCurrentContext());
 
     ImageBuf imgBufDawIcon;
     if (ReadImage(StringFormat("icons/daw_icon.png"), imgBufDawIcon) > 0) {

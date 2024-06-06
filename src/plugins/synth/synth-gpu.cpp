@@ -5,6 +5,7 @@
 #include "event.h"
 #include "gl/gl_util.h"
 #include "gl/gl_vbo.h"
+#include "gl/gl_context.hpp"
 #include "glheaders.h"
 #include "gui/container/container.h"
 #include "gui/container/container_layout.h"
@@ -97,23 +98,6 @@ const std::array<const char*, NUM_MODULATION_DESTINATIONS> modDestNames = {
     "ADSR 2 A Shape",
     "ADSR 2 D Shape",
     "ADSR 2 R Shape",
-};
-
-class GlfwContextSwitch {
-    GLFWwindow* const window;
-    GLFWwindow* const curContext;
-public:
-    GlfwContextSwitch(GLFWwindow* window) : window(window), curContext(glfwGetCurrentContext()) {
-        if (curContext != window) {
-            glfwMakeContextCurrent(window);
-            checkGLError("glfwMakeContextCurrent");
-        }
-    }
-    ~GlfwContextSwitch() {
-        if (curContext != window) {
-            glfwMakeContextCurrent(curContext);
-        }
-    }
 };
 
 struct LFOParameters  : public ::PluginLFO::LFOSyncParameters {
