@@ -12,6 +12,7 @@
 #define NUM_SYNTH_INPUT_PARAMETERS 2
 
 /* define any number of programs */
+#define PROGRAM_NAME_EMPTY "Empty"
 #define PROGRAM_NAME_ANALOG_SAW "Analog-Saw"
 #define PROGRAM_NAME_SAW "Saw"
 #define PROGRAM_NAME_SQUARE "PWM Square"
@@ -20,6 +21,7 @@
 #define PROGRAM_NAME_SINE "Sine"
 
 #define M_PI 3.1415926538
+
 #if N_SAMPLES < 1
     #error "N_SAMPLES must be defined"
 #endif
@@ -152,7 +154,7 @@ double square(double phase, double phase_inc, double bleb, double pw) {
 
 double osc_pulsewidth(double pw, double t, double phase_offset) {
     double f = pow(2.0, float(ctx.osc1_pw_mod_rate) * 21.0) * 0.01;
-    double pw_mod = pw + 0.5 * ctx.osc1_pw_mod_depth * sin(float(2*M_PI*(t*f+phase_offset)));
+    double pw_mod = pw + 0.5 * ctx.osc1_pw_mod_depth * sin(float(2.0 * M_PI * (t * f + phase_offset)));
     return clamp(pw_mod, 0.15, 0.85);
 }
 
@@ -230,7 +232,7 @@ double sine(double phase, double phase_inc, double bleb) {
 }
 
 double saw_analog(double phase, double phase_inc, double bleb) {
-    double saw = 2*(sin(float(fract(phase)*1.5705))-0.5);
+    double saw = 2.0 * (sin(float(fract(phase)*1.5705))-0.5);
     saw = -saw;
     // same as saw, but with a different shape
     double dura = bleb * 4.0;
@@ -267,10 +269,9 @@ void processSynthUnison()
     const float t = float(sample_offset * ctx.one_over_samplerate);
     const int VC = int(round(ctx.osc1_unison_voice_count));
     vec2 s_lr = vec2(0.0);
-    float vs = VC / 256.0;
     float uv_gain_range = 0.4;
     float uv_gain_adj = VC < 2 ? 1.5 : 1.0 / sqrt(float(VC));
-    float seed = 2;
+    float seed = 2.0;
     for (int j = 0; j < N_POLY_VOICES; j++)
     {
         if (state_in.voices[j].velocity[i] >= 0.0)
@@ -346,10 +347,13 @@ void sampleWaveform()
     double s = weird_tri(phase, phase_inc, param_filter);
 #elif N_PROGRAM == PROGRAM_ANALOG_SAW
     double s = saw_analog(phase, phase_inc, param_filter);
+#else
+    double s = 0.0;
 #endif
     waveform_out.samples[i] = float(s);
 }
 
+#if N_PROGRAM != PROGRAM_EMPTY
 void main() {
 #if IS_WAVEFORM_SAMPLER == 1
     sampleWaveform();
@@ -357,3 +361,9 @@ void main() {
     processSynthUnison();
 #endif
 }
+#else
+void main() {
+    audioblock_out.samples[gl_LocalInvocationIndex.x] = 0.0;
+    audioblock_out.samples[gl_LocalInvocationIndex.x + N_SAMPLES] = 0.0;
+}
+#endif

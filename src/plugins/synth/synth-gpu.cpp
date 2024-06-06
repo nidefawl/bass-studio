@@ -46,6 +46,7 @@
 #include <vector>
 
 namespace PluginSynth::GPU {
+uint32_t gDebugBenchmarkFlags = 0;
 static constexpr uint16_t NUM_AUDIO_CHANNELS = 2;
 static constexpr uint16_t NUM_POLY_VOICES   = 32;
 static constexpr uint16_t MAX_UNISON_VOICES   = 32;
@@ -735,7 +736,7 @@ public:
     void setBlocksize(blocksize_t blockSize) override {
         SynthImpl::setBlocksize(blockSize);
         GlfwContextSwitch ctxSwitch(window);
-        if (gpuProgram.blocksize != blockSize) {
+        if (!gpuProgram.is_valid() || gpuProgram.blocksize != blockSize) {
             reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
         }
         ssboInputSynthState.buffer.resize(blockSize * NUM_SYNTH_INPUT_PARAMETERS);
@@ -1094,6 +1095,13 @@ public:
     }
 
     void processGpuSynth(float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
+        const bool bIsBenchmark = gDebugBenchmarkFlags & 1;
+        const bool bDbgSkipBufferBuild = gDebugBenchmarkFlags & 2;
+        const bool bDbgSkipGPUDispatch = gDebugBenchmarkFlags & 4;
+        const bool bDbgSkipAll = gDebugBenchmarkFlags & 8;
+        if (bDbgSkipAll) {
+            return;
+        }
         if (!glad_glDispatchCompute) {
             return;
         }
@@ -1107,7 +1115,7 @@ public:
             gpuProgram = {};
         }
         auto tmNow_ms = getTimeMillis();
-        if (!gpuProgram.is_valid() || tmNow_ms - timeCheckShader > 1000) {
+        if (!bIsBenchmark && (!gpuProgram.is_valid() || tmNow_ms - timeCheckShader > 1000)) {
             if (tmNow_ms - timeLastShaderError > 2000) {
                 timeCheckShader = tmNow_ms;
                 reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
@@ -1147,7 +1155,10 @@ public:
         ssboInputSynthState.clearBuffer();
         ssboInputVoiceStates.clearBuffer();
         const bool bHasAutomationOrModulation = true; // TODO: implement
-        for (int s = 0; s < gpuProgram.blocksize; s++) {
+        if (bDbgSkipBufferBuild) {
+            midiQueue.Clear();
+        }
+        for (int s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
             if (s % nOversample == 0) {
                 FlushMidi(s / nOversample);
             }
@@ -1223,43 +1234,46 @@ public:
         }
 
         perfTimer.reset();
-        ssboInputSynthState.uploadBuffer();
-        ssboInputVoiceStates.uploadBuffer();
-        checkGLError("glBufferData");
+        if (!bDbgSkipGPUDispatch) {
+            ssboInputSynthState.uploadBuffer();
+            ssboInputVoiceStates.uploadBuffer();
+            checkGLError("glBufferData");
 
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-        checkGLError("glBindBuffer");
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(gpuContext), &gpuContext, GL_STREAM_DRAW);
-        checkGLError("glBufferData");
-        glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboInputSynthState.ssbo.current());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboInputVoiceStates.ssbo.current());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboOutput.ssbo.current());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboOutputWaveform.ssbo.current());
-        glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+            glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+            checkGLError("glBindBuffer");
+            glBufferData(GL_UNIFORM_BUFFER, sizeof(gpuContext), &gpuContext, GL_STREAM_DRAW);
+            checkGLError("glBufferData");
+            glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboInputSynthState.ssbo.current());
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboInputVoiceStates.ssbo.current());
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboOutput.ssbo.current());
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboOutputWaveform.ssbo.current());
+            glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+            checkGLError("glBindBufferBase");
+        }
 
-        checkGLError("glBindBufferBase");
-        if (gpuProgram.programs[programId]) {
+        if (gpuProgram.programs[programId] && !bDbgSkipGPUDispatch) {
             glUseProgram(gpuProgram.programs[programId]);
             checkGLError("glUseProgram");
             glDispatchCompute(1, 1, 1);
             checkGLError("glDispatchCompute");
         }
 
-        if (gpuProgram.programsWaveform[programId]) {
+        if (gpuProgram.programsWaveform[programId] && !bDbgSkipGPUDispatch) {
             glUseProgram(gpuProgram.programsWaveform[programId]);
             checkGLError("glBufferData");
             glDispatchCompute(1, 1, 1);
         }
-
-        glFinish();
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT|GL_BUFFER_UPDATE_BARRIER_BIT);
-        if (gpuProgram.programs[programId]) {
+        if (!bDbgSkipGPUDispatch) {
+            glFinish();
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT|GL_BUFFER_UPDATE_BARRIER_BIT);
+        }
+        if (gpuProgram.programs[programId] && !bDbgSkipGPUDispatch) {
             ssboOutput.downloadBuffer();
         } else {
             ssboOutput.clearBuffer();
         }
-        if (gpuProgram.programsWaveform[programId]) {
+        if (gpuProgram.programsWaveform[programId] && !bDbgSkipGPUDispatch) {
             ssboOutputWaveform.downloadBuffer();
         } else {
             ssboOutputWaveform.clearBuffer();
@@ -1285,7 +1299,9 @@ public:
                 outputs[ch][sampleIdx] = val;
             }
         }
-
+        if (bIsBenchmark) {
+            return;
+        }
         tmNow_ms = getTimeMillis();
         auto tmTotal_ms = perfTimer.getTimeDoubleReset() * 1000.0;
         if (tmNow_ms - timePerfLog >= 10000 || tmTotal_ms > timeComputeAvg * 10.0) {
@@ -1647,7 +1663,8 @@ public:
 
 class guicontainer_plugin_synth_other_parameters final : public guictr_base {
     module_synth_gpu* const moduleInstance;
-    std::array<gui_numberinput_double, 1> knobs;
+    std::array<gui_numberinput_double, 2> knobs;
+    gui_numberinput_u32 debugFlags;
 public:
     explicit guicontainer_plugin_synth_other_parameters(module_synth_gpu* module) 
         : moduleInstance(module)
@@ -1673,6 +1690,9 @@ public:
                     break;
             }
         }
+        debugFlags.setLabel("Debug Flags");
+        debugFlags.setRef(&gDebugBenchmarkFlags);
+        add(&debugFlags);
     }
     ~guicontainer_plugin_synth_other_parameters() override {
         removeGuis();

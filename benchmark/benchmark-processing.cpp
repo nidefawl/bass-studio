@@ -3,6 +3,7 @@
 #include <array>
 #include "config.h"
 #include "host/automation/automation.h"
+#include "host/plugin/modules.h"
 #include "logging.h"
 #include "note.h"
 #include "str_util.h"
@@ -37,6 +38,9 @@ namespace DebugAlloc {
 
 namespace PluginSynth {
     extern int32_t gDebugOverrides;
+}
+namespace PluginSynth::GPU {
+    extern uint32_t gDebugBenchmarkFlags;
 }
 
 extern volatile bool fatalError;
@@ -491,8 +495,8 @@ int main(int argc, char** argv) {
             testGroups2(context);
             host->cacheAudioGraph = true;
         };
-        int32_t moduleType = PLUGIN_TYPE_SYNTH;
-        auto testSynth = [&trDataMidi,&moduleType](TestContext* context) {
+        int32_t pluginType = PLUGIN_TYPE_SYNTH;
+        auto testSynth = [&trDataMidi,&pluginType](TestContext* context) {
             DawInstance* dawInstance = context->dawInstance;
             auto host = dawInstance->getHost();
             // BUS_TOP_n
@@ -519,13 +523,22 @@ int main(int argc, char** argv) {
                         track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, moduleType, -1);
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, pluginType, -1);
                         dbgassert(pluginInstance);
-                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+0, 0.8f, FLG_PAR_UPDATE_INIT); // master volume
-                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+1, 0.0f, FLG_PAR_UPDATE_INIT); // poly mode
-                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+2, 0.3f, FLG_PAR_UPDATE_INIT); // filter cutoff
-                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+3, 1.0f, FLG_PAR_UPDATE_INIT); // unison voice count
-                        pluginInstance->setParamValue(PARAM_OFFSET_IMPL+4, 1.0f, FLG_PAR_UPDATE_INIT); // unison detune
+                        if (pluginType == PLUGIN_TYPE_SYNTH_GPU) {
+                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+0, 0.8f, FLG_PAR_UPDATE_INIT); // master volume
+                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+1, 0.0f, FLG_PAR_UPDATE_INIT); // poly mode
+                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+2, 0.0f, FLG_PAR_UPDATE_INIT); // osc1 Waveform
+                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+3, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison voice count
+                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+4, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison detune
+                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+5, 0.9f, FLG_PAR_UPDATE_INIT); // osc1 filter
+                        } else if (pluginType == PLUGIN_TYPE_SYNTH) {
+                            pluginInstance->setParamValue(29, 0.8f, FLG_PAR_UPDATE_INIT);
+                            pluginInstance->setParamValue(31, 0.8f, FLG_PAR_UPDATE_INIT);
+                            pluginInstance->setParamValue(40, 1.0f, FLG_PAR_UPDATE_INIT);
+                            pluginInstance->setParamValue(41, 1.0f, FLG_PAR_UPDATE_INIT);
+                        }
+
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
                         pluginInstance->onEnable();
                         track1->getStage()->pluginsChanged();
@@ -537,10 +550,56 @@ int main(int argc, char** argv) {
             auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
             dawInstance->addTrackImpl(0, trackMaster, 0);
         };
-        auto testGpuSynth = [&testSynth,&moduleType](TestContext* context) {
-            moduleType = PLUGIN_TYPE_SYNTH_GPU;
-            testSynth(context);
-            moduleType = PLUGIN_TYPE_SYNTH;
+        auto testSynthGPU = [&trDataMidi](TestContext* context, float program) {
+            DawInstance* dawInstance = context->dawInstance;
+            auto host = dawInstance->getHost();
+            auto track1 = dawInstance->createNewTrack(TRACK_TYPE_MIDI);
+            track1->getClips() = trDataMidi;
+            dawInstance->addTrackImpl(-1, track1, 0);
+            track1->getStage()->arp->setParamValue(PARAM_ENABLE, 0.0f, FLG_PAR_UPDATE_INIT);
+            track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
+            track1->getStage()->arp->setParamValue(ARP_PARAM_PATTERN, 0.0f, FLG_PAR_UPDATE_INIT);
+            track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
+            track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
+
+            auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_GPU, -1);
+            dbgassert(pluginInstance);
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+0, 0.8f, FLG_PAR_UPDATE_INIT); // master volume
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+1, 0.0f, FLG_PAR_UPDATE_INIT); // poly mode
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+2, program, FLG_PAR_UPDATE_INIT); // osc1 Waveform
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+3, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison voice count
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+4, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison detune
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+5, 0.9f, FLG_PAR_UPDATE_INIT); // osc1 filter
+
+            host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
+            pluginInstance->onEnable();
+            track1->getStage()->pluginsChanged();
+            auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
+            dawInstance->addTrackImpl(0, trackMaster, 0);
+        };
+        auto testGpuSynthProgramFirst = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1;
+            testSynthGPU(context, 0.0f);
+        };
+        auto testGpuSynthProgramLast = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1;
+            testSynthGPU(context, 1.0f);
+        };
+        auto testGpuSynthSkipHostBufferBuild = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1|2;
+            testSynthGPU(context, 1.0f);
+        };
+        auto testGpuSynthSkipGPUDispatch = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1|4;
+            testSynthGPU(context, 1.0f);
+        };
+        auto testGpuSynthSkipBufferAndDispatch = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1|2|4;
+            testSynthGPU(context, 1.0f);
+        };
+        auto testGpuSynthSkipAll = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1|8;
+            testSynthGPU(context, 1.0f);
         };
         auto testSynthDisabledFilter = [&testSynth](TestContext* context) {
             PluginSynth::gDebugOverrides = 0|2|4|8|16;
@@ -559,8 +618,13 @@ int main(int argc, char** argv) {
             testSynth(context);
         };
 
-        std::array<TestContext, 1> synthBenchmarksGPU = {
-            TestContext{"1 Synth (GPU)", false, dawInstance.get(), testGpuSynth },
+        std::array<TestContext, 6> synthBenchmarksGPU = {
+            TestContext{"1 Synth (GPU) - First Program", false, dawInstance.get(), testGpuSynthProgramFirst },
+            TestContext{"1 Synth (GPU) - Last Program", false, dawInstance.get(), testGpuSynthProgramLast },
+            TestContext{"1 Synth (GPU) - Skip Host Buffer Build", false, dawInstance.get(), testGpuSynthSkipHostBufferBuild },
+            TestContext{"1 Synth (GPU) - Skip GPU dispatch", false, dawInstance.get(), testGpuSynthSkipGPUDispatch },
+            TestContext{"1 Synth (GPU) - Skip Host Buffer Build and GPU dispatch", false, dawInstance.get(), testGpuSynthSkipBufferAndDispatch },
+            TestContext{"1 Synth (GPU) - Skip All", false, dawInstance.get(), testGpuSynthSkipAll },
         };
 
         std::array<TestContext, 5> synthBenchmarksCPU = {
@@ -585,18 +649,20 @@ int main(int argc, char** argv) {
         };
         try {
             for (TestContext& benchmarkCtxt : synthBenchmarksGPU) {
-                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+                auto b = benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+                b->MinTime(5.0);
             }
 
-            for (TestContext& benchmarkCtxt : synthBenchmarksCPU) {
-                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
-            }
+            // for (TestContext& benchmarkCtxt : synthBenchmarksCPU) {
+            //     benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            // }
 
-            for (TestContext& benchmarkCtxt : processingBenchmarks) {
-                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
-            }
+            // for (TestContext& benchmarkCtxt : processingBenchmarks) {
+            //     benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            // }
 
             benchmark::Initialize(&argc, argv);
+            
             if (::benchmark::ReportUnrecognizedArguments(argc, argv))
                 return 1;
             benchmark::RunSpecifiedBenchmarks();
