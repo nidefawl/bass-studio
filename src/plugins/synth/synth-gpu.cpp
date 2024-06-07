@@ -294,9 +294,6 @@ struct VoiceSynth {
     bool IsReleased() const { return GetVolumeEnvelope().IsReleased(); }
     double GetVolume() const { return GetVolumeEnvelope().value; }
 
-    void ResetPhases(bool bRandomPhase) {
-    }
-
     void ResetEnvelopes() {
         for (auto& env : envelopes) {
             env.Reset();
@@ -323,7 +320,7 @@ struct VoiceSynth {
         if (!bTriggerMono) {
             ResetEnvelopes();
             for (auto& lfo : lfos) {
-                lfo.setPhase(0.0);
+                lfo.setPhase(lfo.getParameters().phaseOffset);
                 lfo.resetRamp();
             }
         }
@@ -1336,7 +1333,7 @@ public:
         }
         for (size_t i = 0; i < lfosSongPos.size(); i++) {
             auto& lfoSongPos = lfosSongPos[i];
-            lfoSongPos.setPhase(0.0);
+            lfoSongPos.setPhase(lfoSongPos.getParameters().phaseOffset);
             lfoSongPos.Update(oneOverSR*samplePos);
         }
         for (int s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
