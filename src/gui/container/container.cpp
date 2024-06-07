@@ -396,6 +396,9 @@ void guictr_base::layout() {
         case LAYOUT_GRID:
             layoutEntriesGrid({}, getSizeContent(), 4);
             break;
+        case LAYOUT_STACK:
+            layoutEntries({}, getSizeContent(), { 0, 0 });
+            break;
         default:
             dbgassert(0);
     }

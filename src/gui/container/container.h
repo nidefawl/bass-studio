@@ -19,7 +19,8 @@ enum autolayout_mode : uint8_t {
     LAYOUT_NONE = 0,
     LAYOUT_HORIZONTAL,
     LAYOUT_VERTICAL,
-    LAYOUT_GRID
+    LAYOUT_GRID,
+    LAYOUT_STACK, // stack all elements on top of each other
 };
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
