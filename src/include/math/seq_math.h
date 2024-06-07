@@ -602,4 +602,8 @@ namespace math {
     inline float smoothstep(float t) {
         return t * t * (3.0f - 2.0f * t);
     }
+
+    inline double smoothstep(double t) {
+        return t * t * (3.0 - 2.0 * t);
+    }
 }// namespace math
