@@ -12,13 +12,13 @@
 #define NUM_SYNTH_INPUT_PARAMETERS 2
 
 /* define any number of programs */
-#define PROGRAM_NAME_EMPTY "Empty"
 #define PROGRAM_NAME_ANALOG_SAW "Analog-Saw"
 #define PROGRAM_NAME_SAW "Saw"
 #define PROGRAM_NAME_SQUARE "PWM Square"
 #define PROGRAM_NAME_TRIANGLE "Triangle"
 #define PROGRAM_NAME_WEIRD_TRI "Weird-Tri"
 #define PROGRAM_NAME_SINE "Sine"
+#define PROGRAM_NAME_EMPTY "Empty"
 
 #define M_PI 3.1415926538
 
@@ -363,7 +363,11 @@ void main() {
 }
 #else
 void main() {
+#if IS_WAVEFORM_SAMPLER == 1
+    sampleWaveform();
+#else
     audioblock_out.samples[gl_LocalInvocationIndex.x] = 0.0;
     audioblock_out.samples[gl_LocalInvocationIndex.x + N_SAMPLES] = 0.0;
+#endif
 }
 #endif
