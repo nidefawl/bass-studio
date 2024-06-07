@@ -606,9 +606,9 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
             note.time += clipStart;
             if (options.bCutNotes)
                 note.len = math::min(note.end(), clipEnd) - note.time;
-            // if (cutIntersectingNotesFindDupe(list, note) == -1) {
-            //     continue;
-            // }
+            if (cutIntersectingNotesFindDupe(list, note) == -1) {
+                continue;
+            }
             auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
                 return n.time > note.time;
             });
