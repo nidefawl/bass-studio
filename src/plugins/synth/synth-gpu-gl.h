@@ -305,6 +305,7 @@ struct gpu_compute_context_t {
     double time_seconds;
     double time_samples;
     double time_beats;
+    double osc1_gain;
     double osc1_unison_voice_count;
     double osc1_unison_detune;
     double osc1_filter;

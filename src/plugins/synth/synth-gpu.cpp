@@ -77,6 +77,7 @@ struct synth_state_input_t {
 
 static constexpr uint16_t NUM_ADSR = 2;
 static constexpr uint16_t NUM_LFO = 3;
+static constexpr uint16_t NUM_MOD_SRC_RAND = 2;
 
 static constexpr uint16_t MAX_SYNTH_PARAMS = 256;
 static constexpr uint16_t MAX_PARAMS_PER_ADSR = 32;
@@ -86,7 +87,7 @@ static constexpr uint16_t MAX_ADSR_LFO = 8;
 
 enum ModDestinations : int32_t {
     ModDest_MasterVolume = 0,
-    ModDest_Osc1Volume,
+    ModDest_Osc1Gain,
     ModDest_Osc1Filter,
     ModDest_Osc1PulseWidth,
     ModDest_ADSR_1_A_Duration,
@@ -261,11 +262,11 @@ struct VoiceSynth {
     note_t noteT = {};
     std::array<Envelope, NUM_ADSR> envelopes;
     std::array<SynthLfo, NUM_LFO> lfos;
+    std::array<double, NUM_MOD_SRC_RAND> randoms;
     double frequency       = 0.0;
     double targetFrequency = 0.0;
     double pitchBend       = 1.0;
     bool bIsActive         = false;
-    double randValueTrigger = 0.0;
     int32_t seqNr = 0;
     seq_rand rand;
 
@@ -312,7 +313,9 @@ struct VoiceSynth {
 
     void Start(bool bTriggerMono) {
         bIsActive = true;
-        randValueTrigger = rand.rng_double();
+        for (auto& r : randoms) {
+            r = rand.rng_double();
+        }
         if (!bTriggerMono) {
             ResetEnvelopes();
             for (auto& lfo : lfos) {
@@ -329,7 +332,7 @@ struct VoiceSynth {
 enum ParametersSynthGPU : size_t {
     MasterVolume = 0,
     VoiceMode,
-    Osc1Volume,
+    Osc1Gain,
     Osc1Waveform,
     Osc1UnisonVoiceCount,
     Osc1UnisonDetune,
@@ -369,7 +372,7 @@ enum ParametersSynthGPU : size_t {
     LFO_2_RampDuration,
 };
 
-static constexpr std::array<const char*, 14> stringsModSource = {
+static constexpr std::array<const char*, 17> stringsModSource = {
     "None",
     "Function",
     "Constant",
@@ -381,9 +384,12 @@ static constexpr std::array<const char*, 14> stringsModSource = {
     "Lfo1",
     "Lfo2",
     "Lfo3",
-    "Random (S&H)",
-    "Alt (0/1)",
-    "Filter"
+    "OSC1 Filter",
+    "Note Alternating",
+    "Note Random 1",
+    "Note Random 2",
+    "Note Phase (0-1)",
+    "Note Held (Fade 0-1-0)",
 };
 const std::array modSourceVarNames = {
     "x",
@@ -648,8 +654,8 @@ private:
         addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode.begin(), stringsVoiceMode.end())->setInitialValue(0);
         setParamName(getParam(Parameters::VoiceMode), "Voice Mode");
 
-        addFloatParam(Parameters::Osc1Volume)->setRange(0.0, 1.0)->setInitialValue(dsp_util::gainToLinScale(1.0));
-        setParamName(getParam(Parameters::Osc1Volume), "Oscillator 1 Gain", "OSC1 Gain", "Gain", "dB");
+        addFloatParam(Parameters::Osc1Gain)->setRange(0.0, 1.0)->setInitialValue(dsp_util::gainToLinScale(1.0));
+        setParamName(getParam(Parameters::Osc1Gain), "Oscillator 1 Gain", "OSC1 Gain", "Gain", "dB");
         addEnumParam(Parameters::Osc1Waveform)->setRange(0, 3)->setInitialValue(0);
         setParamName(getParam(Parameters::Osc1Waveform), "Oscillator 1 Waveform", "OSC1 Wave", "Wave");
         addIntParam(Parameters::Osc1UnisonVoiceCount)->setRange(1, MAX_UNISON_VOICES)->setInitialValue(3);
@@ -752,8 +758,9 @@ private:
         }
         static constexpr std::array modDestParamMapping = {
             std::pair{ModDest_MasterVolume, MasterVolume},
-            std::pair{ModDest_Osc1Volume, Osc1Volume},
+            std::pair{ModDest_Osc1Gain, Osc1Gain},
             std::pair{ModDest_Osc1Filter, Osc1Filter},
+            std::pair{ModDest_Osc1PulseWidth, Osc1PulseWidth},
             std::pair{ModDest_ADSR_1_A_Duration, ADSR_1_A_Duration},
             std::pair{ModDest_ADSR_1_H_Duration, ADSR_1_H_Duration},
             std::pair{ModDest_ADSR_1_D_Duration, ADSR_1_D_Duration},
@@ -1097,22 +1104,38 @@ public:
         p.trigger = GetParamEnum(static_cast<P>(P::LFO_1_TriggerMode + lfoIdx * MAX_PARAMS_PER_LFO))->getEnumValue<LFOParameters::LFOTriggerMode>();
     }
 
-    void updateVoiceModulations(VoiceSynth& v) {
+    void updateVoiceModulations(ModulationSourceData& modSrcData, VoiceSynth& v, double tickPos) {
+        //TODO: Only calculate used mod sources
+        auto itOut = modSrcData.begin();
+
+        const auto noteStart = double(v.noteT.start());
+        const auto noteLen   = double(math::max(1, v.noteT.len));
+        const auto notePhase = math::clamp( double(tickPos - noteStart) / noteLen, 0.0, 1.0);
+        const auto noteProgress = tickPos - noteStart;
+        const auto fNoteFadeDurationTicks = 64.0;
+        const auto fFadeIn = math::smoothstep(math::clamp(noteProgress / fNoteFadeDurationTicks, 0.0, 1.0));
+        const auto fFadeOut = math::smoothstep(math::clamp((noteStart+noteLen-tickPos) / fNoteFadeDurationTicks, 0.0, 1.0));
+        const auto noteFade = math::clamp(fFadeIn * fFadeOut, 0.0, 1.0);
+
+        *itOut++ = 0.0; // input value
+        *itOut++ = v.GetVolumeEnvelope().value;
+        *itOut++ = v.GetFilterEnvelope().value;
+        *itOut++ = v.velocity;
+        *itOut++ = noteToLinearScale(v.noteT.pitch);
+        *itOut++ = v.noteT.pitch / 127.0;
+        *itOut++ = getVoiceLfoValue(v, 0) * v.lfos[0].GetRamp();
+        *itOut++ = getVoiceLfoValue(v, 1) * v.lfos[1].GetRamp();
+        *itOut++ = getVoiceLfoValue(v, 2) * v.lfos[2].GetRamp();
+        *itOut++ = gpuContext.osc1_filter;
+        *itOut++ = v.seqNr % 2;
+        *itOut++ = v.randoms[0];
+        *itOut++ = v.randoms[1];
+        *itOut++ = notePhase;
+        *itOut++ = noteFade;
+        auto len = itOut - modSrcData.begin();
+
         auto& voiceModulations = v.modValues;
         std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
-        ModulationSourceData modSrcData{};
-        modSrcData[0] = 0.0; // input value
-        modSrcData[1] = v.GetVolumeEnvelope().value;
-        modSrcData[2] = v.GetFilterEnvelope().value;
-        modSrcData[3] = v.velocity;
-        modSrcData[4] = noteToLinearScale(v.noteT.pitch);
-        modSrcData[5] = v.noteT.pitch / 127.0;
-        modSrcData[6] = getVoiceLfoValue(v, 0) * v.lfos[0].GetRamp();
-        modSrcData[7] = getVoiceLfoValue(v, 1) * v.lfos[1].GetRamp();
-        modSrcData[8] = getVoiceLfoValue(v, 2) * v.lfos[2].GetRamp();
-        modSrcData[9] = v.randValueTrigger;
-        modSrcData[10] = v.seqNr % 2;
-        modSrcData[11] = gpuContext.osc1_filter;
         ProcessModulations(modSrcData, voiceModulations);
     }
     double getVoiceLfoValue(const VoiceSynth& v, int32_t lfoIdx) {
@@ -1165,16 +1188,6 @@ public:
         gpuContext.time_samples = samplePos;
         gpuContext.time_seconds = samplePos * gpuContext.one_over_samplerate;
         gpuContext.time_beats = hostInfo->m_vstTimeInfo.ppqPos;
-        gpuContext.osc1_unison_voice_count = GetParamInt(Parameters::Osc1UnisonVoiceCount)->Value();
-        gpuContext.osc1_unison_detune = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
-        gpuContext.osc1_filter = GetParamFloat(Parameters::Osc1Filter)->getAsDoubleModulated();
-        gpuContext.osc1_stereo = GetParamFloat(Parameters::Osc1Stereo)->getAsDoubleModulated();
-        gpuContext.osc1_pw = GetParamFloat(Parameters::Osc1PulseWidth)->getAsDoubleModulated();
-        gpuContext.osc1_pw_mod_rate = GetParamFloat(Parameters::Osc1PulseWidthModRate)->getAsDoubleModulated();
-        gpuContext.osc1_pw_mod_depth = GetParamFloat(Parameters::Osc1PulseWidthModDepth)->getAsDoubleModulated();
-        gpuContext.osc1_filter_keytrack = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
-        gpuContext.osc1_detune_keytrack = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
-        gpuContext.osc1_width_keytrack = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
         const auto voiceMode = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
 
         double osc1_filter = 0.0;
@@ -1189,11 +1202,14 @@ public:
         if (bDbgSkipBufferBuild) {
             midiQueue.Clear();
         }
+        const double songPosSeconds = oneOverSR * samplePos;
         for (size_t i = 0; i < lfosSongPos.size(); i++) {
             auto& lfoSongPos = lfosSongPos[i];
             lfoSongPos.setPhase(lfoSongPos.getParameters().phaseOffset);
-            lfoSongPos.Update(oneOverSR*samplePos);
+            lfoSongPos.Update(songPosSeconds);
         }
+        std::array<double, 64>* modValuesActive = &voices[0].modValues;
+        std::fill(modValuesActive->begin(), modValuesActive->end(), 0.0f);
         for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
             static int32_t maxPolyCountSeen = 0;
             int32_t polyCount = std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; });
@@ -1202,8 +1218,7 @@ public:
                 maxPolyCountSeen = polyCount;
             }
             if (!polyCount) {
-                auto hostInfo = moduleSynthInstance->getHostCallback();
-                gpuContext.time_sample_phase_reset = hostInfo->m_vstTimeInfo.samplePos;
+                gpuContext.time_sample_phase_reset = samplePos + s;
             }
 
             const auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
@@ -1221,9 +1236,6 @@ public:
                 osc1_stereo = GetParamFloat(Parameters::Osc1Stereo)->getAsDoubleModulated();
                 osc1_filter_keytrack = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
             }
-            const float masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated();
-            float masterGain = 0.0;
-            dsp_util::getGainLvl(masterVolume, masterGain);
 
             inputBufferSynthState[s + gpuProgram.blocksize * 0] = osc1_filter_keytrack;
             inputBufferSynthState[s + gpuProgram.blocksize * 1] = osc1_stereo;
@@ -1243,8 +1255,10 @@ public:
                         auto& lfo = v.lfos[l];
                         lfo.Update(oneOverSR);
                     }
-                    updateVoiceModulations(v);
+                    ModulationSourceData modSrcData{};
+                    updateVoiceModulations(modSrcData, v, tickPos);
                     updateEnvelopeParameters(v);
+                    modValuesActive = &v.modValues;
                     // bool bIsFirst = v.GetVolumeEnvelope().stage == EnvelopeStages::Triggered;
                     for (auto& env : v.envelopes) {
                         env.Update(oneOverSR);
@@ -1256,14 +1270,19 @@ public:
                     if (v.bIsActive) {
                         float volEnv = v.GetVolumeEnvelope().value;
                         if (v.noteT.len > 0 && otherParams[0] > 0.0f) {
-                            const float noteProgress = v.noteT.end() - tickPos;
-                            const float fNoteFadeDurationTicks = 64.0f;
-                            float fFadeIn = math::smoothstep(math::clamp(noteProgress / fNoteFadeDurationTicks, 0.0f, 1.0f));
-                            float fFadeOut = math::smoothstep(math::clamp((v.noteT.len - noteProgress) / fNoteFadeDurationTicks, 0.0f, 1.0f));
-                            float noteFade = 1.0 + (fFadeIn * fFadeOut - 1.0) * otherParams[0];
+                            float noteFade = 1.0 + (modSrcData[14] - 1.0) * otherParams[0];
                             volEnv *= noteFade;
                         }
-                        velocity = masterGain * (v.velocity + v.modValues[ModDestinations::ModDest_Osc1Volume]) * volEnv;
+                        const float masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_MasterVolume]);
+                        float masterGain = 0.0;
+                        dsp_util::getGainLvl(masterVolume, masterGain);
+                        const float osc1GainParam = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_Osc1Gain]);
+                        float osc1Gain = 0.0;
+                        dsp_util::getGainLvl(osc1GainParam, osc1Gain);
+                        velocity = (osc1Gain+v.modValues[ModDestinations::ModDest_Osc1Gain]);
+                        velocity *= v.velocity;
+                        velocity *= volEnv;
+                        velocity *= masterGain;
                     }
                     const auto idx_pitch    = idx_base + gpuProgram.blocksize * 1 + s;
                     const auto idx_filter   = idx_base + gpuProgram.blocksize * 2 + s;
@@ -1282,6 +1301,18 @@ public:
                 inputBufferVoiceStates[idx_velocity] = velocity;
             }
         }
+        auto& modVals = *modValuesActive;
+        gpuContext.osc1_gain = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Gain]);
+        gpuContext.osc1_unison_voice_count = GetParamInt(Parameters::Osc1UnisonVoiceCount)->Value();
+        gpuContext.osc1_unison_detune = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
+        gpuContext.osc1_filter = GetParamFloat(Parameters::Osc1Filter)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Filter]);
+        gpuContext.osc1_stereo = GetParamFloat(Parameters::Osc1Stereo)->getAsDoubleModulated();
+        gpuContext.osc1_pw = GetParamFloat(Parameters::Osc1PulseWidth)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1PulseWidth]);
+        gpuContext.osc1_pw_mod_rate = GetParamFloat(Parameters::Osc1PulseWidthModRate)->getAsDoubleModulated();
+        gpuContext.osc1_pw_mod_depth = GetParamFloat(Parameters::Osc1PulseWidthModDepth)->getAsDoubleModulated();
+        gpuContext.osc1_filter_keytrack = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
+        gpuContext.osc1_detune_keytrack = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
+        gpuContext.osc1_width_keytrack = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
 
         perfTimer.reset();
         if (!bDbgSkipGPUDispatch) {
@@ -1539,6 +1570,12 @@ public:
                 case P::Osc1Coarse:
                 case P::Osc1UnisonDetune:
                 case P::Osc1PulseWidth:
+                case P::ADSR_1_A_Shape:
+                case P::ADSR_1_D_Shape:
+                case P::ADSR_1_R_Shape:
+                case P::ADSR_2_A_Shape:
+                case P::ADSR_2_D_Shape:
+                case P::ADSR_2_R_Shape:
                     regparam->isBiPolar = true;
                     break;
                 default:
@@ -2218,7 +2255,7 @@ public:
         for (auto p : {
             LFO_2_Frequency, 
             LFO_2_TriggerMode,
-            LFO_1_Phase,
+            LFO_2_Phase,
             LFO_2_RampDuration,
         }) {
             auto knob = makeParamKnob(p, guiknob::knobtype::KNOB_LABELED);
@@ -2235,6 +2272,7 @@ public:
             vecParamUI.push_back({ p, knob });
         }
         for (auto p : {
+            Osc1Gain,
             Osc1Waveform,
             Osc1UnisonVoiceCount,
             Osc1UnisonDetune,
