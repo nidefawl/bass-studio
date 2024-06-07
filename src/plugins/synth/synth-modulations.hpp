@@ -54,7 +54,7 @@ struct MathExprParsed {
 };
 
 struct MathExpr {
-    String str;
+    String str = "x";
     std::shared_ptr<MathExprParsed> parsedExpr;
     /**
         * @brief parse the expression and store the parsed expression. 

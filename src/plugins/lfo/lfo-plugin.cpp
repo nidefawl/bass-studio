@@ -1,6 +1,7 @@
 #include "lfo-types.hpp"
 #include "lfo-plugin.h"
 #include "lfo-snapshot.hpp"
+#include "lfo-ui.hpp"
 #include "assert_dbg.h"
 #include "host/automation/automation.h"
 #include "event.h"
@@ -54,7 +55,7 @@ namespace PluginLFO {
     class LFOAutomation : public LFORateMinMaxAutomation {
     public:
         internal_modulator* module = nullptr;
-        std::pair<float, float> getMinMax(double dTick) const {
+        std::pair<float, float> getMinMax(double dTick) const override {
             auto host = module->getPluginManager();
             if (!host || stl_contains(stack, this)) {
                 return {
@@ -69,7 +70,7 @@ namespace PluginLFO {
             stack.pop_back();
             return { valMin, valMax };
         }
-        std::tuple<float, float, float> getRatePhase(double dTick) const {
+        std::tuple<float, float, float> getRatePhase(double dTick) const override {
             auto host = module->getPluginManager();
             if (!host || stl_contains(stack, this)) {
                 return { module->getParamValue(PARAM_LFO_RATE), module->getParamValue(PARAM_LFO_PHASE), module->getParamValue(PARAM_LFO_PHASE_RESET_TICKS) };
@@ -514,229 +515,6 @@ namespace PluginLFO {
                 onChildLayoutChanged(this);
             }
         }
-        class ctxtmenu_lfo_base : public ctxtmenu_entry {
-        protected:
-            module_lfo* const module;
-            int32_t channel;
-            int32_t perRowEntries;
-
-            struct _entry {
-                int id;
-                int x;
-                int y;
-                int w;
-                String name;
-            };
-            std::vector<_entry> entries;
-
-        public:
-            const int pad   = 10;
-            const int inset = 5;
-        public:
-            ctxtmenu_lfo_base(module_lfo* _module, int32_t _channel, String _title, int _id)
-                : ctxtmenu_entry(std::move(_title), _id),
-                module(_module), channel(_channel)
-            {
-            }
-
-            void layout(ivec2 size, float _fontSize, determine_string_width& strw) override {
-                width = size.x;
-                this->fontSize = _fontSize;
-                const int h    = math::roundfS32(_fontSize);
-                layoutE(width, h, perRowEntries);
-            }
-
-            void layoutE(int tw, int h, int perRow) {
-                int iX      = inset;
-                int iY      = h + 2;
-                int elW     = (tw - inset * 2) / perRow;
-                for (auto& e : entries) {
-                    this->height = iY + h;
-                    e.x = iX;
-                    e.y = iY;
-                    e.w = elW;
-                    iX += e.w;
-                    if (iX >= tw - inset * 2) {
-                        iX = inset;
-                        iY += h;
-                    }
-                }
-            }
-
-            bool contains(ivec2& ctxtSize, ivec2& mouse) const override {
-                return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
-            }
-
-            int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
-                if (contains(ctxtSize, mouse)) {
-                    const auto h = this->fontSize;
-                    for (auto& e : entries) {
-                        if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
-                            return this->id + e.id;
-                        }
-                    }
-                }
-                return -1;
-            }
-        };
-
-        class ctxtmenu_lfo_sync final : public ctxtmenu_lfo_base {
-        public:
-            ctxtmenu_lfo_sync(module_lfo* _module, int32_t _channel, String _title, int _id)
-                : ctxtmenu_lfo_base(_module, _channel, _title, _id)
-            {
-                entries.push_back({ NoteRatio::STRAIGHT, 0, 0, 0, "Straight" });
-                entries.push_back({ NoteRatio::TRIPLET, 0, 0, 0, "Triplet" });
-                entries.push_back({ NoteRatio::DOTTED, 0, 0, 0, "Dotted" });
-                entries.push_back({ 0, 0, 0, 0, "Off" });
-                perRowEntries = 3;
-            }
-
-
-            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-                auto h = fontSize * 1.1f;
-
-                int32_t sync = module->getSyncRatio(channel);
-                for (auto& e : entries) {
-                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
-                        nvgBeginPath(vg);
-                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-                        nvgFill(vg);
-                    }
-                    if ((e.id&sync) || (e.id == 0 && sync == 0)) {
-                        nvgBeginPath(vg);
-                        nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
-                        nvgFill(vg);
-                    }
-                }
-
-                renderTextLabel(vg,
-                                vec2(leftOffset(), y + h * 0.5f),
-                                vec2(width, h),
-                                title,
-                                theme,
-                                fontSize,
-                                theme->getColor(GuiColor::COL_TEXT),
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-
-                for (auto& e : entries) {
-                    renderTextLabel(vg,
-                                    vec2(e.x + 20.0f, y + e.y + h * 0.5f),
-                                    vec2(width, h),
-                                    e.name,
-                                    theme,
-                                    fontSize * 0.9f,
-                                    theme->getColor(GuiColor::COL_TEXT),
-                                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                }
-            }
-        };
-
-        class ctxtmenu_lfo_mode final : public ctxtmenu_lfo_base {
-        public:
-            ctxtmenu_lfo_mode(module_lfo* _module, int32_t _channel, String _title, int _id)
-                : ctxtmenu_lfo_base(_module, _channel, _title, _id)
-            {
-                entries.push_back({ 0, 0, 0, 0, "Shape" });
-                entries.push_back({ 1, 0, 0, 0, "Random" });
-                perRowEntries = 2;
-            }
-
-            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-                auto h = fontSize * 1.1f;
-
-                int32_t isShapeMode = module->isShapeMode(channel);
-                for (auto& e : entries) {
-                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
-                        nvgBeginPath(vg);
-                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-                        nvgFill(vg);
-                    }
-                    if ((e.id == 0) == isShapeMode) {
-                        nvgBeginPath(vg);
-                        nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
-                        nvgFill(vg);
-                    }
-                }
-
-                renderTextLabel(vg,
-                                vec2(leftOffset(), y + h * 0.5f),
-                                vec2(width, h),
-                                title,
-                                theme,
-                                fontSize,
-                                theme->getColor(GuiColor::COL_TEXT),
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-
-                for (auto& e : entries) {
-                    renderTextLabel(vg,
-                                    vec2(e.x + 20.0f, y + e.y + h * 0.5f),
-                                    vec2(width, h),
-                                    e.name,
-                                    theme,
-                                    fontSize * 0.9f,
-                                    theme->getColor(GuiColor::COL_TEXT),
-                                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                }
-            }
-        };
-
-        class ctxtmenu_lfo_random_mode final : public ctxtmenu_lfo_base {
-        public:
-            ctxtmenu_lfo_random_mode(module_lfo* _module, int32_t _channel, String _title, int _id)
-                : ctxtmenu_lfo_base(_module, _channel, _title, _id)
-            {
-                entries.push_back({ 0, 0, 0, 0, "Smooth" });
-                entries.push_back({ 1, 0, 0, 0, "Linear" });
-                entries.push_back({ 2, 0, 0, 0, "Exponential" });
-                entries.push_back({ 3, 0, 0, 0, "Sample & Hold" });
-                perRowEntries = 2;
-            }
-
-            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-                auto h = fontSize * 1.1f;
-
-                int32_t randomMode = module->getRandomMode(channel);
-                for (auto& e : entries) {
-                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
-                        nvgBeginPath(vg);
-                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-                        nvgFill(vg);
-                    }
-                    if (e.id == randomMode) {
-                        nvgBeginPath(vg);
-                        nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
-                        nvgFill(vg);
-                    }
-                }
-
-                renderTextLabel(vg,
-                                vec2(leftOffset(), y + h * 0.5f),
-                                vec2(width, h),
-                                title,
-                                theme,
-                                fontSize,
-                                theme->getColor(GuiColor::COL_TEXT),
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-
-                for (auto& e : entries) {
-                    renderTextLabel(vg,
-                                    vec2(e.x + 20.0f, y + e.y + h * 0.5f),
-                                    vec2(width, h),
-                                    e.name,
-                                    theme,
-                                    fontSize * 0.9f,
-                                    theme->getColor(GuiColor::COL_TEXT),
-                                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                }
-            }
-        };
 
         class guictr_module_lfo_context_menu final : public guictxtmenu {
             module_lfo* const module;
@@ -749,10 +527,11 @@ namespace PluginLFO {
                 maxHeight = 0;
                 this->fontSize = FONT_SIZE_CTXT_SMALL;
                 this->paddingV = 0;
-                addEntry(new ctxtmenu_lfo_sync(module, channel, "Sync", 100));
-                addEntry(new ctxtmenu_lfo_mode(module, channel, "Mode", 200));
+                using namespace DAW::LFO;
+                addEntry(new ctxtmenu_lfo_sync<module_lfo>(module, channel, "Sync", 100));
+                addEntry(new ctxtmenu_lfo_mode<module_lfo>(module, channel, "Mode", 200));
                 addEntry(new DAW::Shape::ctxtmenu_lfo_shape_select("Shape", 400));
-                addEntry(new ctxtmenu_lfo_random_mode(module, channel, "Random", 300));
+                addEntry(new ctxtmenu_lfo_random_mode<module_lfo>(module, channel, "Random", 300));
             }
             bool clickedElement(ctxtmenu_entry* e, int _id) override {
                 if (_id >= 400) {
@@ -790,7 +569,7 @@ namespace PluginLFO {
                             flags |= clicked;
                         }
                     }
-                    module->setSyncRatio(0, flags);
+                    module->setSyncRatio(channel, flags);
                     return true;
                 }
                 closeContextMenu();

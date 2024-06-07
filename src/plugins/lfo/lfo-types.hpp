@@ -1,9 +1,11 @@
 #pragma once
+#include "rand.h"
 #include "types.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "math/seq_math.h"
 #include "host/plugin/internal/internal-plugin.h"
+#include <cstdint>
 #include <vector>
 
 namespace PluginLFO {
@@ -102,7 +104,7 @@ namespace PluginLFO {
         return syncRatios;
     }
 
-    inline float GetSyncRate(const std::vector<LFOSyncRatio>& syncRatios, bool bIsSync, float paramValue) {
+    /* inline float GetSyncRate(const std::vector<LFOSyncRatio>& syncRatios, bool bIsSync, float paramValue) {
         if (!bIsSync || syncRatios.empty()) {
             return GetScaledRate(paramValue);
         }
@@ -110,7 +112,7 @@ namespace PluginLFO {
         int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, CtrSize(syncRatios) - 1);
         const LFOSyncRatio& syncRatio = syncRatios[index];
         return float(TICKS_BAR * syncRatio.numerator) / syncRatio.denominator;
-    }
+    } */
 
     inline String FormatSyncRate(const std::vector<LFOSyncRatio>& syncRatios, int32_t syncFlags, float paramValue) {
         if (!syncFlags) {
@@ -125,6 +127,14 @@ namespace PluginLFO {
         virtual ~LFORateMinMaxAutomation() = default;
         virtual std::pair<float, float> getMinMax(double dTick) const = 0;
         virtual std::tuple<float, float, float> getRatePhase(double dTick) const = 0;
+        virtual float getScaledRate(LFOSyncParameters* sync, float rate) { 
+            if (sync->syncRatios.empty() || !sync->syncFlags) {
+                return GetScaledRate(rate);
+            }
+            auto index = math::clamp<int32_t>(math::floorfS32(rate * CtrSize(sync->syncRatios)), 0, CtrSize(sync->syncRatios) - 1);
+            auto ratio = sync->syncRatios[index];
+            return float(TICKS_BAR * ratio.numerator) / ratio.denominator;
+        };
     };
 
     struct lfo_automation_src_synced_t final : public automated_param_t {
@@ -134,20 +144,12 @@ namespace PluginLFO {
         float getPhase(double dTick) const {
             const auto [fRate, fPhase, fPhaseDuration] = rateMinMax->getRatePhase(dTick);
 
-            double fPhaseOffset = 0.0f;
+            
             if (fPhaseDuration > 0) {
                 double phaseDuration = GetScaledResetTicks(fPhaseDuration);
                 dTick = fmod(dTick, phaseDuration);
             }
-            if (sync->syncRatios.empty()) {
-                fPhaseOffset = dTick / GetScaledRate(fRate);
-            } else {
-                auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(sync->syncRatios)), 0, CtrSize(sync->syncRatios) - 1);
-                auto ratio = sync->syncRatios[index];
-                double barPos = dTick / double(TICKS_BAR);
-                fPhaseOffset = double((barPos * ratio.denominator) / ratio.numerator);
-            }
-            double phase = fPhaseOffset + fPhase;
+            double phase = dTick / rateMinMax->getScaledRate(sync, fRate) + fPhase;
             double _unused = 0.0;
             float moduloPhase = float(std::modf(phase, &_unused));
             // ensure phase is positive
@@ -235,6 +237,13 @@ namespace PluginLFO {
     struct lfo_automation_src_random_t : public automated_param_t {
         LFORateMinMaxAutomation* rateMinMax = nullptr;
         LFOSyncParameters* sync = nullptr;
+        uint64_t seed = 0;
+        void setSeed(uint64_t seed) {
+            seq_rand r;
+            r.rng_seed(seed); r.rng_seed(r.rng_rand());
+            this->seed = r.rng_rand();
+            this->seed = r.rng_rand();
+        }
         float modulateValue(double tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
             const auto s = sampleCurve(tick);
             dbgassert(!fp_math::isNanOrInfd(s));
@@ -306,17 +315,7 @@ namespace PluginLFO {
         }
         virtual float getPhase(double dTick) const {
             const auto [fRate, fPhase, fPhaseDuration] = rateMinMax->getRatePhase(dTick);
-            double fPhaseOffset = 0.0f;
-            if (sync->syncRatios.empty()) {
-                fPhaseOffset = dTick / GetScaledRate(fRate);
-            } else {
-                auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(sync->syncRatios)), 0, CtrSize(sync->syncRatios) - 1);
-                auto ratio = sync->syncRatios[index];
-                double barPos = dTick / double(TICKS_BAR);
-                fPhaseOffset = double((barPos * ratio.denominator) / ratio.numerator);
-            }
-            auto phase = fPhaseOffset + fPhase;
-            return phase;
+            return dTick / rateMinMax->getScaledRate(sync, fRate) + fPhase;
         }
         virtual float sampleCurve(double dTick) const = 0;
         virtual int32_t getModeId() const = 0;
@@ -333,15 +332,18 @@ namespace PluginLFO {
             }
             return { prevTick, nextTick };
         }
+        virtual uint64_t customSeed(uint64_t seed) const {
+            return seed + this->seed;
+        }
     };
     struct lfo_automation_src_random_smooth_t final : public lfo_automation_src_random_t {
         float sampleCurve(double dTick) const override {
             float phase = getPhase(dTick);
             seq_rand r;
             auto [prevTick, nextTick] = getPrevNextTick(phase);
-            r.rng_seed(prevTick);
+            r.rng_seed(customSeed(prevTick));
             auto v0 = r.rng_double();
-            r.rng_seed(nextTick);
+            r.rng_seed(customSeed(nextTick));
             auto v1 = r.rng_double();
             float _unused = 0.0f;
             float v = std::modf(phase, &_unused);
@@ -360,9 +362,9 @@ namespace PluginLFO {
             float phase = getPhase(dTick);
             seq_rand r;
             auto [prevTick, nextTick] = getPrevNextTick(phase);
-            r.rng_seed(prevTick);
+            r.rng_seed(customSeed(prevTick));
             auto v0 = r.rng_double();
-            r.rng_seed(nextTick);
+            r.rng_seed(customSeed(nextTick));
             auto v1 = r.rng_double();
             float _unused = 0.0f;
             float v = std::modf(phase, &_unused);
@@ -381,10 +383,10 @@ namespace PluginLFO {
             float phase = getPhase(dTick);
             seq_rand r;
             auto [prevTick, nextTick] = getPrevNextTick(phase);
-            r.rng_seed(prevTick);
+            r.rng_seed(customSeed(prevTick));
             auto v0 = r.rng_double();
             auto shape0 = r.rng_double();
-            r.rng_seed(nextTick);
+            r.rng_seed(customSeed(nextTick));
             auto v1 = r.rng_double();
             float _unused = 0.0f;
             float v = std::modf(phase, &_unused);
@@ -411,7 +413,7 @@ namespace PluginLFO {
             float phase = getPhase(dTick);
             seq_rand r;
             auto [prevTick, nextTick] = getPrevNextTick(phase);
-            r.rng_seed(prevTick);
+            r.rng_seed(customSeed(prevTick));
             auto v0 = r.rng_double();
             auto v = v0;
             return scaleMinMax(dTick, v);

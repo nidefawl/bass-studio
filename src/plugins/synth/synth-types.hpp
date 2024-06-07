@@ -117,9 +117,14 @@ enum class EnvelopeStages : int32_t {
     Release,
     Idle,
 };
+enum class EnvelopeShaping : int32_t {
+    None = 0,
+    Pow,
+    Exp,
+};
 
 struct Envelope {
-    static constexpr double OFF_STATE = 0.05;
+    static constexpr double OFF_STATE = 0.02;
     static constexpr double MIN_SECONDS = 0.0001;
     static constexpr double MAX_SECONDS = 1.0;
     static constexpr double GetTimeBaseFromParam(double p, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
@@ -134,18 +139,24 @@ struct Envelope {
         p = (p - OFF_STATE) / (1.0 - OFF_STATE);
         return p * (dmax - dmin) + dmin;
     }
+    static constexpr double GetParamFromTimeMillis(double tMillis, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
+        if (tMillis <= 0.0)
+            return 0.0;
+        double t = tMillis / 1000.0;
+        return math::clamp((t - dmin) / (dmax - dmin), 0.0, 1.0) * (1.0 - OFF_STATE) + OFF_STATE;
+    }
 
+    double phase    = 0.0;
+    double value    = 0.0;
+    double relValue = 0.0;
     double a = 0.0;
     double h = 0.0;
     double d = 0.5;
     double s = 1.0;
     double r = 0.5;
-
-    EnvelopeStages stage = EnvelopeStages::Idle;
-    double value    = 0.0;
-    double relValue = 0.0;
-    double phase    = 0.0;
     std::array<double, 3> shapes = {0.75, 0.35, 0.25};
+    EnvelopeStages stage = EnvelopeStages::Idle;
+    EnvelopeShaping shaping = EnvelopeShaping::Pow;
 
     bool IsReleased() const { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
 
@@ -163,16 +174,36 @@ struct Envelope {
     }
     bool IsIdle() const { return stage == EnvelopeStages::Idle; }
 
-    float shapeSegment(float t, float shape) {
-        float shapeBi  = 1.0 - shape * 2.0;
-        float shapeExp = 0.0;
-        float scale2   = 0.2 + t * 0.8;
-        if (shapeBi < 0.0) {
-            shapeExp = 1.0 + scale2 * abs(shapeBi) * 16.0;
-        } else {
-            shapeExp = 1.0 / (1.0 + scale2 * abs(shapeBi) * 16.0);
+    double shapeSegmentExp(double x, double shape) {
+        double shapeBi = 1.0 - shape * 2.0;
+        return exp((1.0 - x) * shapeBi) * x;
+    }
+    // does not sound clean enough (noticable in short attack phase)
+    double shapeSegmentPow(double x, double shape) {
+        double shapeBi  = 1.0 - shape * 2.0;
+        double shapeBiAbs = fabs(shapeBi);
+        if (shapeBiAbs != 0.0) {
+            double shapeExp = 0.0;
+            double scale2   = 0.2 + x * 0.8;
+            if (shapeBi < 0.0) {
+                shapeExp = 1.0 + scale2 * shapeBiAbs * 16.0;
+            } else {
+                shapeExp = 1.0 / (1.0 + scale2 * shapeBiAbs * 16.0);
+            }
+            return pow(x, shapeExp);
         }
-        return pow(t, shapeExp);
+        return x;
+    }
+    double shapeSegment(double x, double shape) {
+        switch (shaping) {
+            case EnvelopeShaping::Exp:
+                return shapeSegmentExp(x, shape);
+            case EnvelopeShaping::Pow:
+                return shapeSegmentPow(x, shape);
+            case EnvelopeShaping::None:
+            default:
+                return x;
+        }
     }
     double clampDuration(double f) {
         return math::clamp(f, 1.0 / 100.0, 1.0 / MIN_SECONDS);
@@ -695,11 +726,11 @@ inline double noteToLinearScale(double note, double minNote = 69.0) {
 }
 
 template<typename FPType, size_t LEN_SIMD = 8>
-inline void ShapeLogLikeSIMD(FPType valsIn[LEN_SIMD], FPType valsOut[LEN_SIMD], FPType exponent = 0.75f) {
+inline void ShapeLogLikeSIMD(const FPType valsIn[LEN_SIMD], FPType valsOut[LEN_SIMD], FPType exponent = 0.75f) {
     using Vec4D      = glm::vec<4, FPType, glm::aligned_highp>;
-    auto sse8Float   = reinterpret_cast<__m256*>(&valsIn[0]);
-    *sse8Float       = math::simd::log_v8f(*sse8Float);
-    auto pIn         = &valsIn[0];
+    auto sse8Float   = reinterpret_cast<const __m256*>(&valsIn[0]);
+   __m256 sse8Float2 = math::simd::log_v8f(*sse8Float);
+    auto pIn         = reinterpret_cast<FPType*>(&sse8Float2);
     FPType* pDataOut = &valsOut[0];
     for (size_t j = 0; j < LEN_SIMD; j += 4) {
         Vec4D& valsRef = *reinterpret_cast<Vec4D*>(&pIn[0]);
