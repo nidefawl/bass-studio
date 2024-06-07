@@ -4,6 +4,7 @@
 #include "synth-types.hpp"
 #include "synth-param.hpp"
 #include "host/plugin/plugin-lockable.h"
+#include "types.h"
 
 namespace PluginSynth {
 
@@ -18,6 +19,7 @@ struct HostTempo {
     double ppqPos;
 };
 
+
 template <typename T, class P>
 class SynthImpl : public PluginLockable {
 public:
@@ -25,7 +27,7 @@ public:
     friend class PluginVST2_Synth;
     friend class module_synth_unison;
     friend class module_synth_mono;
-private:
+protected:
     module_synth_template<T>* const moduleInstance;
 protected:
     std::vector<SynthParamBase*> vecParams;
@@ -34,6 +36,7 @@ protected:
     IMidiQueue midiQueue;
     double oneOverSR = 1.0 / 44100.0;
     bool bIsInitSamplerate = false;
+    int32_t noteSequenceNr = 0;
 public:
     explicit SynthImpl(module_synth_template<T>* module)
         : 
@@ -130,6 +133,172 @@ public:
         auto bpm100 = host->prjGlobals.tempo100;
         auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         this->moduleInstance->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
+    }
+
+    template<typename VoiceListType>
+    void ProcessMidiSample(T& meAsDerived, VoiceListType& voices, VoiceModes voiceMode, samplecount_t sampleInBlock, double tickPos) {
+        while (!midiQueue.Empty()) {
+            auto message = midiQueue.Peek();
+            if (message.mOffset > sampleInBlock) break;
+
+            // auto voiceMode      = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
+            auto status         = message.StatusMsg();
+            auto ctrl           = message.ControlChangeIdx();
+            auto velocity       = pow(message.Velocity() * .0078125, 1.25);
+
+            if (status == IMidiMsg::kNoteOn && velocity == 0) status = IMidiMsg::kNoteOff;
+            note_t noteDaw;
+            bool bHasNoteDaw = message.note.has_value();
+            if (message.note) {
+                noteDaw = message.note.value();
+            } else {
+                noteDaw = note_t{
+                    .pitch = message.NoteNumber(),
+                    .velocity = message.Velocity(),
+                    .time = math::floordS32(tickPos),
+                    .len = TICKS_QUARTER,
+                    .flags = NoteFlags::ENABLED | NoteFlags::IS_HELD | NoteFlags::REALTIME,
+                    .channel = static_cast<int8_t>(message.Channel()),
+                };
+            }
+
+            switch (status) {
+                case IMidiMsg::kNoteOff:
+                    if (bHasNoteDaw) {
+                        auto itRemoved = std::remove_if(
+                                    std::begin(heldNotes),
+                                    std::end(heldNotes),
+                                    [noteB=noteDaw](const auto& noteA) { return noteA.pitch == noteB.pitch && noteA.channel == noteB.channel && noteA.time == noteB.time; });
+                        // check if something has been removed:
+                        bool bRemoved = itRemoved != std::end(heldNotes);
+                        if (bRemoved) {
+                            heldNotes.erase(itRemoved, std::end(heldNotes));
+                        } else {
+                            log_lf(Log::L_WARN, "NoteOff without NoteOn %s\n", noteName(noteDaw.pitch));
+                        }
+
+                        switch (voiceMode) {
+                            case VoiceModes::Poly:
+                                for (auto& voice : voices) {
+                                    if (voice.isNotReleased() && voice.noteT.pitch == noteDaw.pitch
+                                        && voice.noteT.channel == noteDaw.channel
+                                        && voice.noteT.time == noteDaw.time) {
+                                            voice.Release();
+                                            break;
+                                        }
+                                }
+                                break;
+                            case VoiceModes::Mono:
+                            case VoiceModes::Legato:
+                                if (heldNotes.empty())
+                                    voices[0].Release();
+                                else
+                                    voices[0].SetNote(heldNotes.back());
+                                break;
+                            default:
+                                break;
+                        }
+                    } else {
+                        auto itRemoved = std::remove_if(
+                                    std::begin(heldNotes),
+                                    std::end(heldNotes),
+                                    [noteB=noteDaw](const auto& noteA) { return noteA.pitch == noteB.pitch && noteA.channel == noteB.channel; });
+                        // check if something has been removed:
+                        bool bRemoved = itRemoved != std::end(heldNotes);
+                        if (bRemoved) {
+                            heldNotes.erase(itRemoved, std::end(heldNotes));
+                        } else {
+                            log_lf(Log::L_WARN, "NoteOff without NoteOn %s\n", noteName(noteDaw.pitch));
+                        }
+
+                        switch (voiceMode) {
+                            case VoiceModes::Poly:
+                                for (auto& voice : voices)
+                                    if (voice.noteT.pitch == noteDaw.pitch && voice.noteT.channel == noteDaw.channel) voice.Release();
+                                break;
+                            case VoiceModes::Mono:
+                            case VoiceModes::Legato:
+                                if (heldNotes.empty())
+                                    voices[0].Release();
+                                else
+                                    voices[0].SetNote(heldNotes.back());
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    break;
+                case IMidiMsg::kNoteOn:
+                    switch (voiceMode) {
+                        case VoiceModes::Poly: {
+                            // get the quietest voice, prioritizing voices that are released
+                            auto voiceEnd = std::end(voices);
+                            auto voice    = std::min_element(
+                                    std::begin(voices),
+                                    voiceEnd,
+                                    [](auto& a, auto& b) {
+                                        bool aReleased = !a.isVoiceActive();
+                                        if (aReleased == !b.isVoiceActive()) {
+                                            auto volA = a.GetVolume();
+                                            auto volB = b.GetVolume();
+                                            if (volA <= 0.0 && volB <= 0.0) {
+                                                return a.seqNr < b.seqNr;
+                                            }
+                                            return volA < volB;
+                                        }
+                                        return aReleased;
+                                    });
+                            voice->SetNote(noteDaw);
+                            voice->SetVelocity(velocity);
+                            voice->ResetPitch();
+                            meAsDerived.StartVoice(*voice, voiceMode);
+                            voice->seqNr = noteSequenceNr++;
+                            break;
+                        }
+                        default:
+                        case VoiceModes::Mono:
+                            voices[0].SetNote(noteDaw);
+                            voices[0].SetVelocity(velocity);
+                            meAsDerived.StartVoice(voices[0], voiceMode);
+                            voices[0].seqNr = noteSequenceNr++;
+                            break;
+                        case VoiceModes::Legato:
+                            voices[0].SetNote(noteDaw);
+                            if (heldNotes.empty()) {
+                                voices[0].SetVelocity(velocity);
+                                voices[0].ResetPitch();
+                                voices[0].Start(true);
+                                meAsDerived.StartVoice(voices[0], voiceMode);
+                                voices[0].seqNr = noteSequenceNr++;
+                            }
+                            break;
+                    }
+
+                    heldNotes.push_back(noteDaw);
+                    break;
+                case IMidiMsg::kPitchWheel: {
+                    auto pitchBendFactor = pitchFactor(message.PitchWheel() * 2.0);
+                    for (auto& voice : voices) voice.SetPitchBendFactor(pitchBendFactor);
+                    break;
+                }
+                case IMidiMsg::kControlChange: {
+                    switch (ctrl) {
+                        case IMidiMsg::kAllNotesOff:
+                            for (auto& voice : voices) {
+                                voice.Release();
+                            }
+                            heldNotes.clear();
+                            break;
+                        default:
+                            break;
+                    }
+                } break;
+                default:
+                    log_lf(Log::L_WARN, "Unhandled midi msg %d\n", (int32_t) status);
+                    break;
+            }
+            midiQueue.Remove();
+        }
     }
 };
 

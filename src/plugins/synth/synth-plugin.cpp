@@ -566,7 +566,7 @@ struct Voice {
         return rand.rng_double() * 0.5;
     }
 
-    bool isVoiceActive(const FilterModes mode) const {
+    bool isVoiceActive() const {
         if (hint_likely(!bIsActive)) {
             return false;
         }
@@ -682,7 +682,14 @@ public:
     }
     bool IsInactive() const {
         return std::all_of(first, last, [](auto& voice) { return !voice.bIsActive; });
-    };
+    }
+    bool isVoiceActive() const {
+        return std::any_of(first, last, [](auto& voice) { return voice.bIsActive; });
+    }
+
+    bool isNotReleased() const {
+        return !this->voices[0].IsReleased();
+    }
     double GetVolume() const {
         auto voice = std::max_element(
                 first, last,
@@ -734,8 +741,7 @@ public:
         });
     }
 
-    void Start(HostTempo& tempo, double lfoPhaseDrift) {
-        // seqNr++;
+    void Start(bool bTriggerMono) {
         numUnisonActive = static_cast<int32_t>(last - first);
     }
     void UpdateVoiceDrift(double dt, const HostTempo& tempo) {
@@ -1393,168 +1399,6 @@ private:
         return (rnd32Bits & 0xFFFF) / (float) 0xFFFF;
     }
 
-    void StartVoice(VoiceUnison& voice, bool bTriggerMono) {
-        auto holdVolEnv = GetParamEnum(Parameters::VolEnvTriggerMode)->Value() == 1;
-        auto holdModEnv = GetParamEnum(Parameters::ModEnvTriggerMode)->Value() == 1;
-        auto holdLfo1 = GetParamEnum(Parameters::Lfo1TriggerMode)->Value() == 1;
-        auto holdLfo1Ramp = GetParamEnum(Parameters::Lfo1RampTriggerMode)->Value() == 1;
-        auto holdOsc1Phase = GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 1;
-        auto holdOsc2Phase = GetParamEnum(Parameters::Osc2PhaseResetMode)->Value() == 1;
-        
-        voice.Start(tempo, lfoPhaseDrift);
-        dbgassert(voice.numUnisonActive == unisonVoiceCount);
-        voice.visitVoices([&](Voice& v) {
-            bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
-            UpdateVoiceEnvelopeModulations(voice, v);
-            UpdateVoiceModulations(voice, v);
-            v.bTriggerSmoothing = !isSilent;
-            v.Start(holdOsc1Phase, holdOsc2Phase);
-            if (!holdVolEnv || isSilent) {
-                v.volEnv.Reset();
-                v.filter.Reset();
-            }
-            if (!holdModEnv || isSilent) {
-                v.modEnv.Reset();
-            }
-            if (!holdLfo1Ramp || isSilent) {
-                v.lfoEnv.Reset();
-            }
-            if (!holdLfo1 || isSilent) {
-                bool bFadeLfo = !isSilent;//v.volEnv.stage < EnvelopeStages::Idle;
-                v.prevLfoValue = v.lfoValue;
-                double phase = GetModulatedParamVoice(v, Parameters::LfoPhase);
-                v.lfo1.initPhase(phase + lfoPhaseDrift * this->driftValue * v.rand.rng_double(), bFadeLfo);
-                // log_lf(Log::L_DEBUG, "voice %d:%d lfo phase %f\n", voice.indexPoly, v.indexUnison, v.lfo1.phase);
-                v.lfo2.initPhase(lfoPhaseDrift * v.driftValue, bFadeLfo);
-            }
-        });
-        maxUnisonVoice    = math::max(maxUnisonVoice, unisonVoiceCount);
-        maxPolyVoiceIndex = math::max(maxPolyVoiceIndex, static_cast<int32_t>(&voice - &voices[0]) + 1);
-    }
-
-    void FlushMidi(int sample) {
-        while (!midiQueue.Empty()) {
-            auto message = midiQueue.Peek();
-            if (message.mOffset > sample) break;
-
-            auto voiceMode      = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
-            auto status         = message.StatusMsg();
-            auto ctrl           = message.ControlChangeIdx();
-            auto velocity       = pow(message.Velocity() * .0078125, 1.25);
-
-            if (status == IMidiMsg::kNoteOn && velocity == 0) status = IMidiMsg::kNoteOff;
-            note_t noteDaw;
-            if (message.note) {
-                noteDaw = message.note.value();
-            } else {
-                noteDaw = note_t{
-                    .pitch = message.NoteNumber(),
-                    .velocity = message.Velocity(),
-                    .time = 0,
-                    .len = TICKS_QUARTER,
-                    .flags = NoteFlags::ENABLED | NoteFlags::IS_HELD | NoteFlags::REALTIME,
-                    .channel = static_cast<int8_t>(message.Channel()),
-                };
-            }
-
-            switch (status) {
-                case IMidiMsg::kNoteOff:
-                    heldNotes.erase(
-                        std::remove_if(
-                                std::begin(heldNotes),
-                                std::end(heldNotes),
-                                [noteB=noteDaw](const auto& noteA) { return noteA.pitch == noteB.pitch && noteA.channel == noteB.channel; }),
-                        std::end(heldNotes));
-
-                    switch (voiceMode) {
-                        case VoiceModes::Poly:
-                            for (auto& voice : voices)
-                                if (voice.noteNr == noteDaw.pitch) voice.Release();
-                            break;
-                        case VoiceModes::Mono:
-                        case VoiceModes::Legato:
-                            if (heldNotes.empty())
-                                voices[0].Release();
-                            else
-                                voices[0].SetNote(heldNotes.back());
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                case IMidiMsg::kNoteOn:
-                    switch (voiceMode) {
-                        case VoiceModes::Poly: {
-                            // get the quietest voice, prioritizing voices that are released
-                            auto voiceEnd = polyVoiceCount >= CtrSize(voices) ? std::end(voices) : std::begin(voices) + polyVoiceCount;
-                            auto voice    = std::min_element(
-                                    std::begin(voices),
-                                    voiceEnd,
-                                    [](auto& a, auto& b) {
-                                        bool aReleased = a.IsInactive();
-                                        if (aReleased == b.IsInactive()) {
-                                            auto volA = a.GetVolume();
-                                            auto volB = b.GetVolume();
-                                            if (volA <= 0.0 && volB <= 0.0) {
-                                                return a.seqNr < b.seqNr;
-                                            }
-                                            return volA < volB;
-                                        }
-                                        return aReleased;
-                                    });
-                            dbgassert(voice->getNumUnisonVoices() == unisonVoiceCount);
-                            voice->SetNote(noteDaw);
-                            voice->SetVelocity(velocity);
-                            voice->ResetPitch();
-                            StartVoice(*voice, false);
-                            voice->seqNr = seq++;
-                            break;
-                        }
-                        default:
-                        case VoiceModes::Mono:
-                            voices[0].SetNote(noteDaw);
-                            voices[0].SetVelocity(velocity);
-                            StartVoice(voices[0], true);
-                            voices[0].seqNr = 1;
-                            break;
-                        case VoiceModes::Legato:
-                            voices[0].SetNote(noteDaw);
-                            if (heldNotes.empty()) {
-                                voices[0].SetVelocity(velocity);
-                                voices[0].ResetPitch();
-                                StartVoice(voices[0], true);
-                                voices[0].seqNr = 1;
-                            }
-                            break;
-                    }
-
-                    heldNotes.push_back(noteDaw);
-                    break;
-                case IMidiMsg::kPitchWheel: {
-                    auto pitchBendFactor = pitchFactor(message.PitchWheel() * 2.0);
-                    for (auto& voice : voices) voice.SetPitchBendFactor(pitchBendFactor);
-                    break;
-                }
-                case IMidiMsg::kControlChange: {
-                    switch (ctrl) {
-                        case IMidiMsg::kAllNotesOff:
-                            for (auto& voice : voices) {
-                                voice.Release();
-                            }
-                            heldNotes.clear();
-                            break;
-                        default:
-                            break;
-                    }
-                } break;
-                default:
-                    log_lf(Log::L_WARN, "Unhandled midi msg %d\n", (int32_t) status);
-                    break;
-            }
-            midiQueue.Remove();
-        }
-    }
-
     void UpdateParameters(double dt) {
         osc1Wave.Update(dt);
         osc1SplitMix += (targetOsc1SplitMix - osc1SplitMix) * 100.0 * dt;
@@ -1652,7 +1496,7 @@ private:
             int32_t numAc = 0;
             for (int32_t unisonIndex = 0; unisonIndex < maxUnisonVoice; ++unisonIndex) {
                 auto& v        = uv.getVoice(unisonIndex);
-                bool bIsActive = v.isVoiceActive(filterMode);
+                bool bIsActive = v.isVoiceActive();
                 dbgassert(!(!v.bIsActive && bIsActive));
                 v.bIsActive = bIsActive;
                 if (bIsActive) {
@@ -1937,6 +1781,45 @@ public:
         };
     }
 
+    void StartVoice(VoiceUnison& voice, VoiceModes mode) {
+        auto holdVolEnv = GetParamEnum(Parameters::VolEnvTriggerMode)->Value() == 1;
+        auto holdModEnv = GetParamEnum(Parameters::ModEnvTriggerMode)->Value() == 1;
+        auto holdLfo1 = GetParamEnum(Parameters::Lfo1TriggerMode)->Value() == 1;
+        auto holdLfo1Ramp = GetParamEnum(Parameters::Lfo1RampTriggerMode)->Value() == 1;
+        auto holdOsc1Phase = GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 1;
+        auto holdOsc2Phase = GetParamEnum(Parameters::Osc2PhaseResetMode)->Value() == 1;
+        
+        voice.Start(mode != VoiceModes::Poly);
+        dbgassert(voice.numUnisonActive == unisonVoiceCount);
+        voice.visitVoices([&](Voice& v) {
+            bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
+            UpdateVoiceEnvelopeModulations(voice, v);
+            UpdateVoiceModulations(voice, v);
+            v.bTriggerSmoothing = !isSilent;
+            v.Start(holdOsc1Phase, holdOsc2Phase);
+            if (!holdVolEnv || isSilent) {
+                v.volEnv.Reset();
+                v.filter.Reset();
+            }
+            if (!holdModEnv || isSilent) {
+                v.modEnv.Reset();
+            }
+            if (!holdLfo1Ramp || isSilent) {
+                v.lfoEnv.Reset();
+            }
+            if (!holdLfo1 || isSilent) {
+                bool bFadeLfo = !isSilent;//v.volEnv.stage < EnvelopeStages::Idle;
+                v.prevLfoValue = v.lfoValue;
+                double phase = GetModulatedParamVoice(v, Parameters::LfoPhase);
+                v.lfo1.initPhase(phase + lfoPhaseDrift * this->driftValue * v.rand.rng_double(), bFadeLfo);
+                // log_lf(Log::L_DEBUG, "voice %d:%d lfo phase %f\n", voice.indexPoly, v.indexUnison, v.lfo1.phase);
+                v.lfo2.initPhase(lfoPhaseDrift * v.driftValue, bFadeLfo);
+            }
+        });
+        maxUnisonVoice    = math::max(maxUnisonVoice, unisonVoiceCount);
+        maxPolyVoiceIndex = math::max(maxPolyVoiceIndex, static_cast<int32_t>(&voice - &voices[0]) + 1);
+    }
+
     void ProcessSynth(AudioBlock* in, float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) override {
         // lockProcessing only locks VST2 versions of the plugin
         auto lock = this->lockProcessing();
@@ -1969,17 +1852,19 @@ public:
         }
 
         /**
-            * framesPerAutomationUpdate 
-            * 1 is highest precission, automation is updated every sample
-            * this can be lowered to lower CPU load
-            */
+        * framesPerAutomationUpdate 
+        * 1 is highest precission, automation is updated every sample
+        * this can be lowered to lower CPU load
+        */
         int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
+        const auto bpm100 = host->prjGlobals.tempo100;
         for (int s = 0; s < nFrames; s++) {
+            auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
             if (host && moduleSynthUnisonInstance && (s % framesPerAutomationUpdate) == 0) {
-                ReadAutomation(host, tick, state, s, nFrames, nOversample);
+                this->moduleInstance->updateAutomatedParameters(host, math::floordS32(tickPos), state);
             }
             if (s % nOversample == 0) {
-                FlushMidi(s / nOversample);
+                ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos);
             }
             UpdateParameters(dt);
             UpdateDrift(dt);

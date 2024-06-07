@@ -85,8 +85,10 @@ static constexpr uint16_t MAX_ADSR_LFO = 8;
 
 
 enum ModDestinations : int32_t {
-    ModDest_Osc1Volume = 0,
+    ModDest_MasterVolume = 0,
+    ModDest_Osc1Volume,
     ModDest_Osc1Filter,
+    ModDest_Osc1PulseWidth,
     ModDest_ADSR_1_A_Duration,
     ModDest_ADSR_1_H_Duration,
     ModDest_ADSR_1_D_Duration,
@@ -103,28 +105,14 @@ enum ModDestinations : int32_t {
     ModDest_ADSR_2_A_Shape,
     ModDest_ADSR_2_D_Shape,
     ModDest_ADSR_2_R_Shape,
-};
-static constexpr uint16_t NUM_MODULATION_DESTINATIONS = 18;
-// as name
-const std::array<const char*, NUM_MODULATION_DESTINATIONS> modDestNames = {
-    "OSC 1 Volume",
-    "OSC 1 Filter",
-    "ADSR 1 A Duration",
-    "ADSR 1 H Duration",
-    "ADSR 1 D Duration",
-    "ADSR 1 S Amount",
-    "ADSR 1 R Duration",
-    "ADSR 1 A Shape",
-    "ADSR 1 D Shape",
-    "ADSR 1 R Shape",
-    "ADSR 2 A Duration",
-    "ADSR 2 H Duration",
-    "ADSR 2 D Duration",
-    "ADSR 2 S Amount",
-    "ADSR 2 R Duration",
-    "ADSR 2 A Shape",
-    "ADSR 2 D Shape",
-    "ADSR 2 R Shape",
+    ModDest_LFO_1_Frequency,
+    ModDest_LFO_1_TriggerMode,
+    ModDest_LFO_1_Phase,
+    ModDest_LFO_1_RampDuration,
+    ModDest_LFO_2_Frequency,
+    ModDest_LFO_2_TriggerMode,
+    ModDest_LFO_2_Phase,
+    ModDest_LFO_2_RampDuration,
 };
 
 struct LFOParameters  : public ::PluginLFO::LFOSyncParameters {
@@ -277,6 +265,9 @@ struct VoiceSynth {
     double targetFrequency = 0.0;
     double pitchBend       = 1.0;
     bool bIsActive         = false;
+    double randValueTrigger = 0.0;
+    int32_t seqNr = 0;
+    seq_rand rand;
 
 
     bool isVoiceActive() const {
@@ -284,6 +275,10 @@ struct VoiceSynth {
             return false;
         }
         return !GetVolumeEnvelope().IsIdle();
+    }
+
+    bool isNotReleased() const {
+        return !GetVolumeEnvelope().IsReleased();
     }
 
     Envelope& GetVolumeEnvelope() { return envelopes[0]; }
@@ -317,6 +312,7 @@ struct VoiceSynth {
 
     void Start(bool bTriggerMono) {
         bIsActive = true;
+        randValueTrigger = rand.rng_double();
         if (!bTriggerMono) {
             ResetEnvelopes();
             for (auto& lfo : lfos) {
@@ -333,6 +329,7 @@ struct VoiceSynth {
 enum ParametersSynthGPU : size_t {
     MasterVolume = 0,
     VoiceMode,
+    Osc1Volume,
     Osc1Waveform,
     Osc1UnisonVoiceCount,
     Osc1UnisonDetune,
@@ -372,7 +369,7 @@ enum ParametersSynthGPU : size_t {
     LFO_2_RampDuration,
 };
 
-static constexpr std::array<const char*, 11> stringsModSource = {
+static constexpr std::array<const char*, 14> stringsModSource = {
     "None",
     "Function",
     "Constant",
@@ -383,7 +380,24 @@ static constexpr std::array<const char*, 11> stringsModSource = {
     "Note",
     "Lfo1",
     "Lfo2",
-    "Lfo3"
+    "Lfo3",
+    "Random (S&H)",
+    "Alt (0/1)",
+    "Filter"
+};
+const std::array modSourceVarNames = {
+    "x",
+    "a",
+    "m",
+    "v",
+    "p",
+    "n",
+    "l",
+    "l2",
+    "l3",
+    "r",
+    "alt",
+    "f"
 };
 static constexpr size_t NUM_MODULATION_SOURCES = stringsModSource.size();
 
@@ -625,7 +639,7 @@ private:
             dbgassert(!p->hierarchicalName.empty());
         };
 
-        addFloatParam(Parameters::MasterVolume)->setRange(0.0, 1.0)->setInitialValue(dsp_util::gainToLinScale(0.25));
+        addFloatParam(Parameters::MasterVolume)->setRange(0.0, 1.0)->setInitialValue(dsp_util::gainToLinScale(0.5));
         setParamName(getParam(Parameters::MasterVolume), "Master Volume", "Volume", "Vol", "dB");
 
         const std::array<const char*, 2> stringsVoiceMode = {
@@ -634,6 +648,8 @@ private:
         addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode.begin(), stringsVoiceMode.end())->setInitialValue(0);
         setParamName(getParam(Parameters::VoiceMode), "Voice Mode");
 
+        addFloatParam(Parameters::Osc1Volume)->setRange(0.0, 1.0)->setInitialValue(dsp_util::gainToLinScale(1.0));
+        setParamName(getParam(Parameters::Osc1Volume), "Oscillator 1 Gain", "OSC1 Gain", "Gain", "dB");
         addEnumParam(Parameters::Osc1Waveform)->setRange(0, 3)->setInitialValue(0);
         setParamName(getParam(Parameters::Osc1Waveform), "Oscillator 1 Waveform", "OSC1 Wave", "Wave");
         addIntParam(Parameters::Osc1UnisonVoiceCount)->setRange(1, MAX_UNISON_VOICES)->setInitialValue(3);
@@ -731,34 +747,44 @@ private:
             modSourceDescs.emplace_back(idx, stringsModSource[i]);
         }
 
-        modDestDescs.emplace_back(ModDest_Osc1Volume, MasterVolume, modDestNames[ModDest_Osc1Volume]);
-        modDestDescs.emplace_back(ModDest_Osc1Filter, Osc1Filter, modDestNames[ModDest_Osc1Filter]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_A_Duration, ADSR_1_A_Duration, modDestNames[ModDest_ADSR_1_A_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_H_Duration, ADSR_1_H_Duration, modDestNames[ModDest_ADSR_1_H_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_D_Duration, ADSR_1_D_Duration, modDestNames[ModDest_ADSR_1_D_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_S_Amount, ADSR_1_S_Amount, modDestNames[ModDest_ADSR_1_S_Amount]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_R_Duration, ADSR_1_R_Duration, modDestNames[ModDest_ADSR_1_R_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_A_Shape, ADSR_1_A_Shape, modDestNames[ModDest_ADSR_1_A_Shape]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_D_Shape, ADSR_1_D_Shape, modDestNames[ModDest_ADSR_1_D_Shape]);
-        modDestDescs.emplace_back(ModDest_ADSR_1_R_Shape, ADSR_1_R_Shape, modDestNames[ModDest_ADSR_1_R_Shape]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_A_Duration, ADSR_2_A_Duration, modDestNames[ModDest_ADSR_2_A_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_H_Duration, ADSR_2_H_Duration, modDestNames[ModDest_ADSR_2_H_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_D_Duration, ADSR_2_D_Duration, modDestNames[ModDest_ADSR_2_D_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_S_Amount, ADSR_2_S_Amount, modDestNames[ModDest_ADSR_2_S_Amount]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_R_Duration, ADSR_2_R_Duration, modDestNames[ModDest_ADSR_2_R_Duration]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_A_Shape, ADSR_2_A_Shape, modDestNames[ModDest_ADSR_2_A_Shape]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_D_Shape, ADSR_2_D_Shape, modDestNames[ModDest_ADSR_2_D_Shape]);
-        modDestDescs.emplace_back(ModDest_ADSR_2_R_Shape, ADSR_2_R_Shape, modDestNames[ModDest_ADSR_2_R_Shape]);
-        const std::array mathVars = {
-            "x",
-            "a",
-            "m",
-            "v",
-            "p",
-            "n"
-        };
         for (size_t i = 0; i < this->varNames.size(); i++) {
-            this->varNames[i] = i < mathVars.size() ? mathVars[i] : "";
+            this->varNames[i] = i < modSourceVarNames.size() ? modSourceVarNames[i] : "";
+        }
+        static constexpr std::array modDestParamMapping = {
+            std::pair{ModDest_MasterVolume, MasterVolume},
+            std::pair{ModDest_Osc1Volume, Osc1Volume},
+            std::pair{ModDest_Osc1Filter, Osc1Filter},
+            std::pair{ModDest_ADSR_1_A_Duration, ADSR_1_A_Duration},
+            std::pair{ModDest_ADSR_1_H_Duration, ADSR_1_H_Duration},
+            std::pair{ModDest_ADSR_1_D_Duration, ADSR_1_D_Duration},
+            std::pair{ModDest_ADSR_1_S_Amount, ADSR_1_S_Amount},
+            std::pair{ModDest_ADSR_1_R_Duration, ADSR_1_R_Duration},
+            std::pair{ModDest_ADSR_1_A_Shape, ADSR_1_A_Shape},
+            std::pair{ModDest_ADSR_1_D_Shape, ADSR_1_D_Shape},
+            std::pair{ModDest_ADSR_1_R_Shape, ADSR_1_R_Shape},
+            std::pair{ModDest_ADSR_2_A_Duration, ADSR_2_A_Duration},
+            std::pair{ModDest_ADSR_2_H_Duration, ADSR_2_H_Duration},
+            std::pair{ModDest_ADSR_2_D_Duration, ADSR_2_D_Duration},
+            std::pair{ModDest_ADSR_2_S_Amount, ADSR_2_S_Amount},
+            std::pair{ModDest_ADSR_2_R_Duration, ADSR_2_R_Duration},
+            std::pair{ModDest_ADSR_2_A_Shape, ADSR_2_A_Shape},
+            std::pair{ModDest_ADSR_2_D_Shape, ADSR_2_D_Shape},
+            std::pair{ModDest_ADSR_2_R_Shape, ADSR_2_R_Shape},
+            std::pair{ModDest_LFO_1_Frequency, LFO_1_Frequency},
+            std::pair{ModDest_LFO_1_TriggerMode, LFO_1_TriggerMode},
+            std::pair{ModDest_LFO_1_Phase, LFO_1_Phase},
+            std::pair{ModDest_LFO_1_RampDuration, LFO_1_RampDuration},
+            std::pair{ModDest_LFO_2_Frequency, LFO_2_Frequency},
+            std::pair{ModDest_LFO_2_TriggerMode, LFO_2_TriggerMode},
+            std::pair{ModDest_LFO_2_Phase, LFO_2_Phase},
+            std::pair{ModDest_LFO_2_RampDuration, LFO_2_RampDuration},
+        };
+        for (const auto& mapping : modDestParamMapping) {
+            auto param = getParam(mapping.second);
+            if (assert_expr(param)) {
+                modDestDescs.emplace_back(mapping.first, mapping.second, param->getShortName());
+
+            }
         }
     }
 
@@ -818,6 +844,9 @@ public:
         for (auto* ptr : vecParams) {
             delete ptr;
         }
+    }
+    void StartVoice(VoiceSynth& voice, VoiceModes mode) {
+        voice.Start(mode == VoiceModes::Mono);
     }
 
     void updateProgramList() override {
@@ -1019,180 +1048,6 @@ public:
         v.Start(bTriggerMono);
     }
 
-    void FlushMidi(int sample) {
-        while (!midiQueue.Empty()) {
-            auto message = midiQueue.Peek();
-            if (message.mOffset > sample) break;
-
-            auto voiceMode      = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
-            auto status         = message.StatusMsg();
-            auto ctrl           = message.ControlChangeIdx();
-            auto velocity       = pow(message.Velocity() * .0078125, 1.25);
-
-            if (status == IMidiMsg::kNoteOn && velocity == 0) status = IMidiMsg::kNoteOff;
-            note_t noteDaw;
-            bool bHasNoteDaw = message.note.has_value();
-            if (message.note) {
-                noteDaw = message.note.value();
-            } else {
-                noteDaw = note_t{
-                    .pitch = message.NoteNumber(),
-                    .velocity = message.Velocity(),
-                    .time = math::floordS32(moduleSynthInstance->hostCallback->m_vstTimeInfo.ppqPos),
-                    .len = TICKS_QUARTER,
-                    .flags = NoteFlags::ENABLED | NoteFlags::IS_HELD | NoteFlags::REALTIME,
-                    .channel = static_cast<int8_t>(message.Channel()),
-                };
-            }
-            static int32_t maxPolyCountSeen = 0;
-            int32_t polyCount = std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; });
-            if (polyCount > maxPolyCountSeen) {
-                log_lf(Log::L_WARN, "Max poly count seen: %d\n", polyCount);
-                maxPolyCountSeen = polyCount;
-            }
-            if (!polyCount) {
-                auto hostInfo = moduleSynthInstance->getHostCallback();
-                gpuContext.time_sample_phase_reset = hostInfo->m_vstTimeInfo.samplePos;
-            }
-
-            switch (status) {
-                case IMidiMsg::kNoteOff:
-                    if (bHasNoteDaw) {
-                        auto itRemoved = std::remove_if(
-                                    std::begin(heldNotes),
-                                    std::end(heldNotes),
-                                    [noteB=noteDaw](const auto& noteA) { return noteA.pitch == noteB.pitch && noteA.channel == noteB.channel && noteA.time == noteB.time; });
-                        // check if something has been removed:
-                        bool bRemoved = itRemoved != std::end(heldNotes);
-                        if (bRemoved) {
-                            heldNotes.erase(itRemoved, std::end(heldNotes));
-                        } else {
-                            log_lf(Log::L_WARN, "NoteOff without NoteOn %s\n", noteName(noteDaw.pitch));
-                        }
-
-                        switch (voiceMode) {
-                            case VoiceModes::Poly:
-                                for (auto& voice : voices) {
-                                    if (voice.noteT.pitch == noteDaw.pitch
-                                        && voice.noteT.channel == noteDaw.channel
-                                        && voice.noteT.time == noteDaw.time) {
-                                            voice.Release();
-                                            break;
-                                        }
-                                }
-                                break;
-                            case VoiceModes::Mono:
-                            case VoiceModes::Legato:
-                                if (heldNotes.empty())
-                                    voices[0].Release();
-                                else
-                                    voices[0].SetNote(heldNotes.back());
-                                break;
-                            default:
-                                break;
-                        }
-                    } else {
-                        auto itRemoved = std::remove_if(
-                                    std::begin(heldNotes),
-                                    std::end(heldNotes),
-                                    [noteB=noteDaw](const auto& noteA) { return noteA.pitch == noteB.pitch && noteA.channel == noteB.channel; });
-                        // check if something has been removed:
-                        bool bRemoved = itRemoved != std::end(heldNotes);
-                        if (bRemoved) {
-                            heldNotes.erase(itRemoved, std::end(heldNotes));
-                        } else {
-                            log_lf(Log::L_WARN, "NoteOff without NoteOn %s\n", noteName(noteDaw.pitch));
-                        }
-
-                        switch (voiceMode) {
-                            case VoiceModes::Poly:
-                                for (auto& voice : voices)
-                                    if (voice.noteT.pitch == noteDaw.pitch && voice.noteT.channel == noteDaw.channel) voice.Release();
-                                break;
-                            case VoiceModes::Mono:
-                            case VoiceModes::Legato:
-                                if (heldNotes.empty())
-                                    voices[0].Release();
-                                else
-                                    voices[0].SetNote(heldNotes.back());
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    break;
-                case IMidiMsg::kNoteOn:
-                    switch (voiceMode) {
-                        case VoiceModes::Poly: {
-                            // get the quietest voice, prioritizing voices that are released
-                            auto voiceEnd = std::end(voices);
-                            auto voice    = std::min_element(
-                                    std::begin(voices),
-                                    voiceEnd,
-                                    [](auto& a, auto& b) {
-                                        bool aReleased = !a.bIsActive;
-                                        if (aReleased == !b.bIsActive) {
-                                            auto volA = a.GetVolume();
-                                            auto volB = b.GetVolume();
-                                            // if (volA <= 0.0 && volB <= 0.0) {
-                                            //     return a.seqNr < b.seqNr;
-                                            // }
-                                            return volA < volB;
-                                        }
-                                        return aReleased;
-                                    });
-                            voice->SetNote(noteDaw);
-                            voice->SetVelocity(velocity);
-                            voice->ResetPitch();
-                            voice->Start(false);
-                            // voice->seqNr = seq++;
-                            break;
-                        }
-                        default:
-                        case VoiceModes::Mono:
-                            voices[0].SetNote(noteDaw);
-                            voices[0].SetVelocity(velocity);
-                            voices[0].Start(true);
-                            // voices[0].seqNr = 1;
-                            break;
-                        case VoiceModes::Legato:
-                            voices[0].SetNote(noteDaw);
-                            if (heldNotes.empty()) {
-                                voices[0].SetVelocity(velocity);
-                                voices[0].ResetPitch();
-                                voices[0].Start(true);
-                                // voices[0].seqNr = 1;
-                            }
-                            break;
-                    }
-
-                    heldNotes.push_back(noteDaw);
-                    break;
-                case IMidiMsg::kPitchWheel: {
-                    auto pitchBendFactor = pitchFactor(message.PitchWheel() * 2.0);
-                    for (auto& voice : voices) voice.SetPitchBendFactor(pitchBendFactor);
-                    break;
-                }
-                case IMidiMsg::kControlChange: {
-                    switch (ctrl) {
-                        case IMidiMsg::kAllNotesOff:
-                            for (auto& voice : voices) {
-                                voice.Release();
-                            }
-                            heldNotes.clear();
-                            break;
-                        default:
-                            break;
-                    }
-                } break;
-                default:
-                    log_lf(Log::L_WARN, "Unhandled midi msg %d\n", (int32_t) status);
-                    break;
-            }
-            midiQueue.Remove();
-        }
-    }
-
     samplecount_t getLatency() override { return gpuProgram.blocksize * (ssboOutput.ssbo.size() - 1); }
 
     void updateEnvelopeParameters(VoiceSynth& v) {
@@ -1243,7 +1098,6 @@ public:
     }
 
     void updateVoiceModulations(VoiceSynth& v) {
-
         auto& voiceModulations = v.modValues;
         std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
         ModulationSourceData modSrcData{};
@@ -1256,6 +1110,9 @@ public:
         modSrcData[6] = getVoiceLfoValue(v, 0) * v.lfos[0].GetRamp();
         modSrcData[7] = getVoiceLfoValue(v, 1) * v.lfos[1].GetRamp();
         modSrcData[8] = getVoiceLfoValue(v, 2) * v.lfos[2].GetRamp();
+        modSrcData[9] = v.randValueTrigger;
+        modSrcData[10] = v.seqNr % 2;
+        modSrcData[11] = gpuContext.osc1_filter;
         ProcessModulations(modSrcData, voiceModulations);
     }
     double getVoiceLfoValue(const VoiceSynth& v, int32_t lfoIdx) {
@@ -1318,6 +1175,7 @@ public:
         gpuContext.osc1_filter_keytrack = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
         gpuContext.osc1_detune_keytrack = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
         gpuContext.osc1_width_keytrack = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
+        const auto voiceMode = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
 
         double osc1_filter = 0.0;
         double osc1_filter_keytrack = 0.0;
@@ -1336,9 +1194,21 @@ public:
             lfoSongPos.setPhase(lfoSongPos.getParameters().phaseOffset);
             lfoSongPos.Update(oneOverSR*samplePos);
         }
-        for (int s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
+        for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
+            static int32_t maxPolyCountSeen = 0;
+            int32_t polyCount = std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; });
+            if (polyCount > maxPolyCountSeen) {
+                log_lf(Log::L_WARN, "Max poly count seen: %d\n", polyCount);
+                maxPolyCountSeen = polyCount;
+            }
+            if (!polyCount) {
+                auto hostInfo = moduleSynthInstance->getHostCallback();
+                gpuContext.time_sample_phase_reset = hostInfo->m_vstTimeInfo.samplePos;
+            }
+
+            const auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
             if (s % nOversample == 0) {
-                FlushMidi(s / nOversample);
+                ProcessMidiSample(*this, voices, voiceMode, s, tickPos);
             }
             if (host && moduleSynthInstance && (s % framesPerAutomationUpdate) == 0) {
                 ReadAutomation(host, tick, state, s, nFrames, nOversample);
@@ -1360,7 +1230,6 @@ public:
 
             const auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
             const auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
-            const auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
             for (size_t i = 0; i < lfosSongPos.size(); i++) {
                 lfosSongPos[i].Update(oneOverSR);
             }
