@@ -285,13 +285,17 @@ public:
         }
     }
     ~guictr_tabbed_test() override {
-        //remove the entries we have to delete, base class would see dangling ptr otherwise
-        remove(ctr_properties);
-        remove(ctr_theme);
-        remove(ctr_list);
+        removeGuis();
         delete ctr_properties;
         delete ctr_theme;
         delete ctr_list;
+        for (auto* folder : folders) {
+            for (auto* entry : folder->entries) {
+                delete entry;
+            }
+            folder->entries.clear();
+            delete folder;
+        }
     }
     void setControl(BaseCtrl* parentCtrl) override {
         guictr_tabbed::setControl(parentCtrl);
