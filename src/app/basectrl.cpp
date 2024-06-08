@@ -76,7 +76,8 @@ KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key
     return kevt;
 }
 ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui) {
-    std::vector<guibase*> guiHierachy;
+    static thread_local std::vector<guibase*> guiHierachy;
+    guiHierachy.clear();
     gui->getHierachy(guiHierachy);
     while (!guiHierachy.empty()) {
         guibase* b = guiHierachy.back();

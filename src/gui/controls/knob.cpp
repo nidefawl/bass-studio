@@ -373,8 +373,8 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
     }
     auto modRangesOptional = getKnobModulationRanges();
     if (knobType == knobtype::SLIDER_LABELED) {
-        if (modRangesOptional && !modRangesOptional.value().empty()) {
-            const auto& modRanges = modRangesOptional.value();
+        if (modRangesOptional && !modRangesOptional.value()->empty()) {
+            const auto& modRanges = *modRangesOptional.value();
             const auto numMods = CtrSize(modRanges);
             dbgassert(numMods);
             for (int i = 0; i < numMods; i++) {
@@ -453,8 +453,8 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
     } else {
         const float rangeScaled = bIsBipolar ? range * 0.5f : range;
         const float startOffset = bIsBipolar ? start + rangeScaled : start;
-        if (modRangesOptional && !modRangesOptional.value().empty()) {
-            const auto& modRanges = modRangesOptional.value();
+        if (modRangesOptional && !modRangesOptional.value()->empty()) {
+            const auto& modRanges = *modRangesOptional.value();
             const auto numMods = CtrSize(modRanges);
             dbgassert(numMods);
             float perModWidth = (lineThickness + 0.0f) / float(numMods);
@@ -1007,7 +1007,7 @@ bool gui_slider_textfield::renderAsBipolar() {
     }
     return false;
 };
-std::optional<std::vector<param_modulation_range_t>> guiknob::getKnobModulationRanges() {
+std::optional<std::vector<param_modulation_range_t>*> guiknob::getKnobModulationRanges() {
     return std::nullopt;
 }
 
@@ -1027,6 +1027,6 @@ void gui_slider_textfield::setAutomationRef(automatable_t* _paramAutomatable, in
         setFlag(FLG_RENDER_LABEL, false);
     }
 }
-std::optional<std::vector<param_modulation_range_t>> gui_slider_textfield::getKnobModulationRanges() {
+std::optional<std::vector<param_modulation_range_t>*> gui_slider_textfield::getKnobModulationRanges() {
     return std::nullopt;
 }

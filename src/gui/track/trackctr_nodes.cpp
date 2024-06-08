@@ -719,7 +719,7 @@ void renderBusPortMeter(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, cons
 
     const auto hZero = (1.0f - scaledZero) * mtrSize.x;
     const auto xZero = mtrPos.x + mtrSize.x - hZero;
-    auto lvls         = meter->getLevels();
+    auto& lvls       = meter->getLevels();
     auto y           = mtrPos.y;
     auto channelH    = (mtrSize.y - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
 

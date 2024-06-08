@@ -859,8 +859,10 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
 void gui_track::renderTrackFolded(NVGcontext* vg) {
     auto ctrTracks = m_trackentry->parent;
     if (!m_track->children.empty()) {
-        std::vector<track_gui_entry_t*> children;
-        std::vector<track_t*> queue;
+        static thread_local std::vector<track_gui_entry_t*> children;
+        static thread_local std::vector<track_t*> queue;
+        children.clear();
+        queue.clear();
         queue.push_back(m_track);
         while (!queue.empty()) {
             track_t* const tr = queue.back();

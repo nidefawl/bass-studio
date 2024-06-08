@@ -160,7 +160,7 @@ public:
 
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     virtual void setToDefaultValue();
-    virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges();
+    virtual std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges();
     void storeEditModulationTransform(NVGcontext* vg);
 };
 
@@ -219,7 +219,7 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     void updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal);
-    virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges();
+    virtual std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges();
 };
 
 template<int N>

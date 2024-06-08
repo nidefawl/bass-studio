@@ -180,8 +180,9 @@ public:
             cn->onTick(since);
         }
     }
-    std::vector<meter_lvls> getLevels() const {
-        std::vector<meter_lvls> v(channels.size());
+    std::vector<meter_lvls>& getLevels() const {
+        static thread_local std::vector<meter_lvls> v;
+        v.resize(channels.size());
         auto it = v.begin();
         for (auto& cn : channels) {
             *it++ = cn->getLevels();

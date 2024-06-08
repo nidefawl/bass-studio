@@ -37,7 +37,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 
     const float hZero = (1.0f - scaledZero) * mtrSize.y;
     const float yZero = mtrPos.y + mtrSize.y - hZero;
-    auto lvls         = meter->getLevels();
+    auto& lvls        = meter->getLevels();
     float x           = mtrPos.x;
     float channelW    = (mtrSize.x - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
 
@@ -213,7 +213,7 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
 
     const auto hZero = (1.0f - scaledZero) * mtrSize.x;
     const auto xZero = mtrPos.x + mtrSize.x - hZero;
-    auto lvls         = meter->getLevels();
+    auto& lvls       = meter->getLevels();
     auto y           = mtrPos.y;
     auto channelH    = (mtrSize.y - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
 
