@@ -610,8 +610,19 @@ void guiknob_labeled_base::layout() {
         m_layout.pKnob       = pos;
         m_layout.sKnob       = size;
     }
+    m_textLabelParamName.pos = m_layout.pLabel;
+    m_textLabelParamName.size = m_layout.sLabel;
+    m_textLabelParamValue.pos = m_layout.pValue;
+    m_textLabelParamValue.size = m_layout.sValue;
+    m_textLabelParamName.fontSize = m_layout.labelHeight * m_layout.fontScaleLabel;
+    m_textLabelParamValue.fontSize = m_layout.valueHeight * m_layout.fontScaleValue;
 }
 
+void guiknob_labeled_base::onTick(AppCtrl* ctrl) {
+    guiknob::onTick(ctrl);
+    m_textLabelParamName.adjustWidth();
+    m_textLabelParamValue.adjustWidth();
+}
 void guiknob_labeled_base::render(NVGcontext* vg) {
     storeEditModulationTransform(vg);
     if (!isRenderableSizeAndContext(vg))
@@ -660,22 +671,8 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         nvgSave(vg);
         nvgIntersectScissor(vg, minPos.x, minPos.y, sMax.x, sMax.y);
         nvgFillColor(vg, fontColor);
-        if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
-            float x = renderTextLabel(vg, vec2(m_layout.pLabel) + vec2(m_layout.sLabel) * 0.5f, m_layout.sLabel, label, theme, m_layout.labelHeight * m_layout.fontScaleLabel, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            if (x > 0 && x > m_layout.sLabel.x) {
-                if (m_layout.fontScaleLabel > 0.5f) {
-                    m_layout.fontScaleLabel -= 0.05f;
-                }
-            }
-        }
-        if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
-            float x = renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, strValueDisplay, theme, m_layout.valueHeight * m_layout.fontScaleValue, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            if (x > 0 && x > m_layout.sValue.x) {
-                if (m_layout.fontScaleValue > 0.5f) {
-                    m_layout.fontScaleValue -= 0.05f;
-                }
-            }
-        }
+        m_textLabelParamName.render(vg, theme, label, fontColor);
+        m_textLabelParamValue.render(vg, theme, strValueDisplay, fontColor);
         nvgRestore(vg);
     }
 }

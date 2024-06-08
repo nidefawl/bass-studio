@@ -1,8 +1,10 @@
 #pragma once
+#include <nanovg_min.h>
 #include <vector>
 #include <memory>
 #include <functional>
 #include "keyboard.h"
+#include "math/seq_math.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include "color_util.h"
@@ -10,6 +12,7 @@
 #include "gui/container/container.h"
 #include "gui/plugin/pluginviewcontainers.h"
 #include "gui/controls/knob.h"
+#include "theme.h"
 
 
 class guiknob_labeled_base : public guiknob {
@@ -34,6 +37,9 @@ public:
 
 protected:
     knob_layout m_layout{};
+private:
+    textlabel_dynamic_t m_textLabelParamName;
+    textlabel_dynamic_t m_textLabelParamValue;
 public:
     explicit guiknob_labeled_base(knobtype knobType)
         : guiknob(knobType)
@@ -54,6 +60,7 @@ public:
     }
     knob_layout getLayout() const { return m_layout; }
     void layout() override;
+    void onTick(AppCtrl*) override;
     void render(NVGcontext* vg) override;
     void handleDraggedBegin(MouseEvent& evt) override {
         bool isTopLabelClick = m_layout.labelHeight > 0 && evt.relMousepos.y < m_layout.labelHeight;
