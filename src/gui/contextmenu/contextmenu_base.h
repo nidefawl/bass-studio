@@ -99,6 +99,117 @@ public:
         return false;
     }
 };
+
+struct ctxmenu_enum_select_entry {
+    int32_t id = 0;
+    String name;
+    int32_t x = 0;
+    int32_t y = 0;
+    int32_t w = 0;
+};
+template<typename EntryType>
+class ctxtmenu_enum_option_select_base : public ctxtmenu_entry {
+protected:
+    int32_t perRowEntries = 6;
+    std::vector<EntryType> entries;
+    const int pad   = 10;
+    const int inset = 5;
+    int32_t selectedId = -1;
+public:
+    ctxtmenu_enum_option_select_base(int32_t _id, String _title)
+        : ctxtmenu_entry(std::move(_title), _id)
+    {
+        width = 200;
+    }
+    void addEntry(EntryType e) {
+        entries.push_back(e);
+    }
+    virtual bool isEntrySelected(ctxmenu_enum_select_entry& e) const {
+        return e.id == selectedId;
+    }
+    void setSelectedId(int32_t id) {
+        selectedId = id;
+    }
+    int32_t getSelectedId() const {
+        return selectedId;
+    }
+
+    void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
+        auto h = fontSize * 1.1f;
+
+        for (auto& e : entries) {
+            if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
+                nvgBeginPath(vg);
+                nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+                nvgFill(vg);
+            }
+            if (isEntrySelected(e)) {
+                nvgBeginPath(vg);
+                nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
+                nvgFill(vg);
+            }
+        }
+
+        renderTextLabel(vg,
+                        vec2(leftOffset(), y + h * 0.5f),
+                        vec2(width, h),
+                        title,
+                        theme,
+                        fontSize,
+                        theme->getColor(GuiColor::COL_TEXT),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+        for (auto& e : entries) {
+            renderTextLabel(vg,
+                            vec2(e.x + 20.0f, y + e.y + h * 0.5f),
+                            vec2(width, h),
+                            e.name,
+                            theme,
+                            fontSize * 0.9f,
+                            theme->getColor(GuiColor::COL_TEXT),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        }
+    }
+
+    void layout(ivec2 size, float _fontSize, determine_string_width& strw) override {
+        width = size.x;
+        this->fontSize = _fontSize;
+        const int h    = math::roundfS32(_fontSize);
+        layoutE(width, h, math::max(1, math::min(perRowEntries, int(entries.size()))));
+    }
+
+    void layoutE(int tw, int h, int perRow) {
+        int iX      = inset;
+        int iY      = h + 2;
+        int elW     = (tw - inset * 2) / perRow;
+        for (auto& e : entries) {
+            this->height = iY + h;
+            e.x = iX;
+            e.y = iY;
+            e.w = elW;
+            iX += e.w;
+            if (iX >= tw - inset * 2) {
+                iX = inset;
+                iY += h;
+            }
+        }
+    }
+
+    int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
+        if (contains(ctxtSize, mouse)) {
+            const auto h = this->fontSize;
+            for (auto& e : entries) {
+                if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
+                    return this->id + e.id;
+                }
+            }
+        }
+        return -1;
+    }
+};
+
 class guictxtmenu_base : public guictr_base {
 protected:
     int paddingV = 2;

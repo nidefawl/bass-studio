@@ -10,6 +10,7 @@
 
 #include "assert_dbg.h"
 #include "gui/container/container_builder.h"
+#include "gui/contextmenu/contextmenu.h"
 #include "gui/controls/button.h"
 #include "gui/dialog/dialogs.h"
 #include "gui/gui.h"
@@ -145,6 +146,7 @@ class guictr_bgimage : public guictr_base {
         }
     }
 };
+
 class guictr_testgui : public guictr_base {
     static constexpr int64_t numKnobs = 220;
     std::array<guiknob*, numKnobs> knobs{};
@@ -155,7 +157,8 @@ class guictr_testgui : public guictr_base {
 
     gui_color_pick colorPick;
     guidropdown_generic<String> dropdown;
-    guibutton testButton;
+    guibutton testButtonDialog;
+    guibutton testButtonRightClickMe;
     gui_numberinput_i32 field;
     gui_textfield textField;
     guictr_debugstrings debugstrings;
@@ -168,6 +171,7 @@ public:
     ~guictr_testgui() override;
     void render(NVGcontext* vg) override;
     void layout() override;
+    void rightClicked(MouseEvent& evt, guibase* what) override;
     void buttonClicked(guibase* button) override;
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
@@ -328,7 +332,8 @@ public:
 guictr_testgui::guictr_testgui() : guictr_base(), field(nullptr), ctrTabbed(new guictr_tabbed_test()) {
     setBackgroundRendered(true);
     add(&this->colorPick);
-    add(&testButton);
+    add(&testButtonDialog);
+    add(&testButtonRightClickMe);
     add(&textField);
     add(&field);
     add(ctrTabbed);
@@ -393,7 +398,8 @@ guictr_testgui::guictr_testgui() : guictr_base(), field(nullptr), ctrTabbed(new 
         knobs[i]->setValueRef(&knobVals[i]);
         add(knobs[i]);
     }
-    testButton.setText("Show Yes/No Dialog");
+    testButtonDialog.setText("Show Yes/No Dialog");
+    testButtonRightClickMe.setText("Right Click Me");
 }
 guictr_testgui::~guictr_testgui() {
     removeGuis();
@@ -403,9 +409,41 @@ guictr_testgui::~guictr_testgui() {
     }
 }
 
+void guictr_testgui::rightClicked(MouseEvent& evt, guibase* what) {
+    guictr_base::rightClicked(evt, what);
+    if (what == &testButtonRightClickMe) {
+        log_printf("Right clicked on testButton\n");
+        class guictxtmenu_test : public guictxtmenu {
+            ctxtmenu_enum_option_select_base<ctxmenu_enum_select_entry>* selectAnimal;
+        public:
+            guictxtmenu_test() : guictxtmenu() {
+                selectAnimal = new ctxtmenu_enum_option_select_base<ctxmenu_enum_select_entry>(123, "Select Animal");
+                selectAnimal->addEntry({ 0, "Ape" });
+                selectAnimal->addEntry({ 1, "Bear" });
+                selectAnimal->addEntry({ 2, "Cat" });
+                selectAnimal->addEntry({ 3, "Dog" });
+                addEntry(selectAnimal);
+            }
+            virtual bool clickedElement(ctxtmenu_entry* e, int _id) {
+                if (_id >= 123) {
+                    auto animal = _id - 123;
+                    log_printf("Selected animal %d\n", animal);
+                    if (animal >= 0 && animal < 4) {
+                        if (animal == 3)
+                            animal = 2;
+                        selectAnimal->setSelectedId(animal);
+                    }
+                }
+                return true;
+            }
+        };
+        parentCtrl->openContextMenu(new guictxtmenu_test(), evt.mousepos);
+    }
+
+}
 
 void guictr_testgui::buttonClicked(guibase* button) {
-    if (&testButton == button) {
+    if (&testButtonDialog == button) {
         auto dlg = new guidialog_cb_yes_no("Load Image", "Are you sure?");
         dlg->cb = [this](int result) {
             // parentCtrl->closeContextMenus();
@@ -525,12 +563,14 @@ void guictr_testgui::layout() {
     textField.pos     = ivec2(field.left(), field.bottom() + 22);
     dropdown.size     = ivec2(320, 32);
     dropdown.pos      = ivec2(field.left(), textField.bottom() + 22);
-    testButton.size   = ivec2(320, 32);
-    testButton.pos    = ivec2(field.left(), dropdown.bottom() + 22);
+    testButtonDialog.size   = ivec2(320, 32);
+    testButtonDialog.pos    = ivec2(field.left(), dropdown.bottom() + 22);
+    testButtonRightClickMe.size = ivec2(320, 32);
+    testButtonRightClickMe.pos = ivec2(testButtonDialog.left(), testButtonDialog.bottom() + 22);
     ctrTabbed->pos    = { cs.x / 2, 0 };
     ctrTabbed->size.x = cs.x / 2;
     ctrTabbed->size.y = cs.y;
-    debugstrings.pos  = ivec2(5, testButton.bottom()+22);
+    debugstrings.pos  = ivec2(5, testButtonRightClickMe.bottom()+22);
     debugstrings.size = ivec2(400, 200);
     debugstrings.setBackgroundRendered(true);
     auto ctrPos = debugstrings.getLeftBottom();
