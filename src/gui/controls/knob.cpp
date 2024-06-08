@@ -774,8 +774,8 @@ void gui_slider_textfield::render(NVGcontext* vg) {
             renderSlider(vg, insetP, insetS, fScaled, param->isBiPolar, theme->getColor(GuiColor::COL_KNOB_MODULATED));
         }
         auto modRangesOptional = getKnobModulationRanges();
-        if (modRangesOptional && !modRangesOptional.value().empty()) {
-            const auto& modRanges = modRangesOptional.value();
+        if (modRangesOptional && !modRangesOptional.value()->empty() && insetS.y >= 10) {
+            const auto& modRanges = *modRangesOptional.value();
             const auto numMods = CtrSize(modRanges);
             dbgassert(numMods);
             float perModHeight = (insetS.y) / float(numMods);
@@ -800,7 +800,7 @@ void gui_slider_textfield::render(NVGcontext* vg) {
                     if (endS < startS) {
                         std::swap(startS, endS);
                     }
-                    auto heightSlider = math::min(float(size.y)*0.5f, perModHeight - 4.0f);
+                    auto heightSlider = math::min(float(size.y)*0.5f, math::max(2.0f, perModHeight - 4.0f));
                     nvgBeginPath(vg);
                     nvgRect(vg, startS, posY+(perModHeight-heightSlider)*0.5, endS - startS, heightSlider);
                     nvgFillColor(vg, color);
