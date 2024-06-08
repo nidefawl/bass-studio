@@ -657,7 +657,7 @@ public:
             param(_param) {
         m_layout.inset = 2;
     }
-    std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() override {
+    std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges() override {
         if (synth) {
             if (!synth->isShowModulationRanges()) {
                 return std::nullopt;
@@ -686,7 +686,7 @@ public:
         this->param = param;
     }
 
-    std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() override {
+    std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges() override {
         if (synth) {
             if (!synth->isShowModulationRanges()) {
                 return std::nullopt;

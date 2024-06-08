@@ -118,7 +118,7 @@ enum class EnvelopeStages : int32_t {
     Idle,
 };
 enum class EnvelopeShaping : int32_t {
-    None = 0,
+    Linear = 0,
     Pow,
     Exp,
 };
@@ -200,7 +200,7 @@ struct Envelope {
                 return shapeSegmentExp(x, shape);
             case EnvelopeShaping::Pow:
                 return shapeSegmentPow(x, shape);
-            case EnvelopeShaping::None:
+            case EnvelopeShaping::Linear:
             default:
                 return x;
         }

@@ -172,23 +172,25 @@ public:
         return modSourceDescs;
     }
 
-    std::optional<std::vector<param_modulation_range_t>> getParamModulationRanges(int32_t modIdx) {
+    std::optional<std::vector<param_modulation_range_t>*> getParamModulationRanges(int32_t modIdx) {
         dbgassert(modIdx >= 0 && modIdx < MAX_MODULATION_OUTPUT_PARAMS);
         //TODO: result can be cached
-        std::optional<std::vector<param_modulation_range_t>> result;
+        static thread_local std::vector<param_modulation_range_t> tmpVec;
+        std::optional<std::vector<param_modulation_range_t>*> result;
         for (auto& mod : modulations) {
             bool bIsBipolar = IsBipolarModulation(mod);
             for (auto& modDest : mod.destinations) {
                 if (modDest.parameter == modIdx) {
                     if (!result) {
-                        result = std::vector<param_modulation_range_t>();
+                        tmpVec.clear();
+                        result = &tmpVec;
                     }
-                    auto slot = static_cast<int32_t>(&mod - &modulations.front());
-                    result->push_back(
+                    auto slot = int32_t(&mod - &modulations.front());
+                     (*result)->push_back(
                             param_modulation_range_t{
                                     slot,
                                     modDest.parameter,
-                                    static_cast<float>(modDest.range),
+                                    float(modDest.range),
                                     bIsBipolar });
                 }
             }

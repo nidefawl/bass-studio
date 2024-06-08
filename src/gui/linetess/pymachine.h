@@ -9,7 +9,7 @@ namespace PyMachine {
 
 }// namespace PyMachine
 
-#define USE_PYTHON
+// #define USE_PYTHON
 #endif
 
 namespace DAW {

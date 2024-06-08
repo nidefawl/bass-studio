@@ -237,7 +237,7 @@ public:
             double _unused;
             p = std::modf(p, &_unused); 
         }
-        return params->shape.sampleCurve(static_cast<float>(p), false);
+        return params->shape.sampleCurve(float(p), false);
     }
     double GetRampedLfo() const {
         double lfo = GetLfo();
@@ -585,6 +585,7 @@ private:
     int64_t timeCheckShader = 0;
     double timeComputeAvg = -2.0;
     hires_timer_t perfTimer;
+    VoiceSynth tmpVoice;
 
 private:
     void initImpl() {
@@ -595,17 +596,17 @@ private:
             this->vecParams[idx] = param;
         };
         auto addFloatParam = [&addParam](size_t enumParam) -> SynthParam_Float* {
-            SynthParam_Float* param = new SynthParam_Float(static_cast<Parameters>(enumParam));
+            SynthParam_Float* param = new SynthParam_Float(Parameters(enumParam));
             addParam(param, enumParam);
             return param;
         };
         auto addIntParam = [&addParam](size_t enumParam) -> SynthParam_Int* {
-            SynthParam_Int* param = new SynthParam_Int(static_cast<Parameters>(enumParam));
+            SynthParam_Int* param = new SynthParam_Int(Parameters(enumParam));
             addParam(param, enumParam);
             return param;
         };
         auto addEnumParam = [&addParam](size_t enumParam) -> SynthParam_Enum* {
-            SynthParam_Enum* param = new SynthParam_Enum(static_cast<Parameters>(enumParam));
+            SynthParam_Enum* param = new SynthParam_Enum(Parameters(enumParam));
             addParam(param, enumParam);
             return param;
         };
@@ -692,7 +693,7 @@ private:
         setParamName(getParam(Parameters::Osc1PulseWidthModDepth), "Oscillator 1 Pulse Width Mod Depth", "OSC1 PW Mod Depth", "PW Mod Depth", "%");
 
 
-        const int envBase[2] = {static_cast<int32_t>(Parameters::ADSR_1_A_Duration), static_cast<int32_t>(Parameters::ADSR_2_A_Duration)};
+        const int envBase[2] = {int32_t(Parameters::ADSR_1_A_Duration), int32_t(Parameters::ADSR_2_A_Duration)};
         const String parNames[2] = {"Volume", "Filter"};
         const String parNamesShort[2] = {"EnvV", "EnvF"};
         for (size_t i = 0; i < 2; i++) {
@@ -809,7 +810,7 @@ private:
         alignas(64) float envParamVals[8]{};
         alignas(64) float envParamValsScaled[8]{};
         for (int i = 0; i < 8; i++) {
-            envParamVals[i] = static_cast<float>(i / (7.0));
+            envParamVals[i] = float(i / (7.0));
         }
         auto maxIt = 25;
         double closestVal = 1e9;
@@ -864,7 +865,7 @@ public:
             programNames.push_back(this->gpuProgram.programDescs[i].name);
         }
         param->setStrings(programNames.begin(), programNames.end());
-        auto regParam = moduleSynthInstance->getParam(PARAM_OFFSET_IMPL + static_cast<size_t>(Parameters::Osc1Waveform));
+        auto regParam = moduleSynthInstance->getParam(PARAM_OFFSET_IMPL + int32_t(Parameters::Osc1Waveform));
         auto intParam = dynamic_cast<SynthParam_Int*>(param);
         if (regParam && intParam) {
             regParam->quantizationSteps = intParam->iMax - intParam->iMin + 1;
@@ -937,7 +938,7 @@ public:
 
         for (auto param : vecParams) {
             if (!param) continue;
-            OnParamChange(static_cast<Parameters>(param->enumParam));
+            OnParamChange(Parameters(param->enumParam));
         }
     }
 
@@ -951,6 +952,25 @@ public:
 
     SynthLfo& getGlobalLFO(int32_t lfoIdx) {
         return lfosSongPos[lfoIdx];
+    }
+
+    EnvelopeShaping getAdsrShapeMode(int32_t chIdx) const {
+        return voices[0].envelopes[0].shaping;
+    }
+
+    VoiceSynth& getTempVoiceUI() {
+        return tmpVoice;
+    }
+
+    void setAdsrShapeMode(int32_t chIdx, EnvelopeShaping mode) {
+        for (auto& voice : voices) {
+            if (chIdx >= 0 && chIdx < CtrSize(voice.envelopes)) {
+                voice.envelopes[chIdx].shaping = mode;
+            }
+        }
+        if (chIdx >= 0 && chIdx < CtrSize(tmpVoice.envelopes)) {
+            tmpVoice.envelopes[chIdx].shaping = mode;
+        }
     }
 
     int32_t getSyncFlags(int32_t chIdx) const {
@@ -1032,7 +1052,7 @@ public:
 
         switch (parameter) {
             case Parameters::Osc1Waveform:
-                currentProgramId = static_cast<int32_t>(value);
+                currentProgramId = int32_t(value);
                 break;
             case Parameters::VoiceMode:
                 switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
@@ -1101,7 +1121,7 @@ public:
         p.freqHz = p.paramToFreqHz(lfoFreq);
         p.phaseOffset = vecParams[P::LFO_1_Phase + lfoIdx * MAX_PARAMS_PER_LFO]->getAsDoubleModulated();
         p.rampDuration = vecParams[P::LFO_1_RampDuration + lfoIdx * MAX_PARAMS_PER_LFO]->getAsDoubleModulated();
-        p.trigger = GetParamEnum(static_cast<P>(P::LFO_1_TriggerMode + lfoIdx * MAX_PARAMS_PER_LFO))->getEnumValue<LFOParameters::LFOTriggerMode>();
+        p.trigger = GetParamEnum(Parameters(P::LFO_1_TriggerMode + lfoIdx * MAX_PARAMS_PER_LFO))->getEnumValue<LFOParameters::LFOTriggerMode>();
     }
 
     void updateVoiceModulations(ModulationSourceData& modSrcData, VoiceSynth& v, double tickPos) {
@@ -1132,8 +1152,6 @@ public:
         *itOut++ = v.randoms[1];
         *itOut++ = notePhase;
         *itOut++ = noteFade;
-        auto len = itOut - modSrcData.begin();
-
         auto& voiceModulations = v.modValues;
         std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
         ProcessModulations(modSrcData, voiceModulations);
@@ -1444,7 +1462,7 @@ public:
             const auto numDestinations = CtrSize(modulation.destinations);
             for (int32_t j = 0; j < numDestinations; ++j) {
                 const auto& dest = modulation.destinations[j];
-                modSnapshot.destinations.push_back({ static_cast<int32_t>(dest.parameter), dest.range });
+                modSnapshot.destinations.push_back({ int32_t(dest.parameter), dest.range });
             }
             snapshot.modulations.push_back(modSnapshot);
         }
@@ -1515,7 +1533,7 @@ public:
 
         for (auto& param : vecParams) {
             if (!param) continue;
-            OnParamChange(static_cast<Parameters>(param->enumParam));
+            OnParamChange(Parameters(param->enumParam));
         }
         for (auto& v : voices) {
             updateEnvelopeParameters(v);
@@ -1627,6 +1645,9 @@ public:
             }
         }
         getSynth()->onPresetLoaded();
+        for (auto& view : views) {
+            view->onPresetLoaded();
+        }
     }
     void getUiSnapshot(snapshot_t& snapshot);
     void setUiSnapshot(snapshot_t& snapshot);
@@ -1681,7 +1702,7 @@ public:
         if (isValidParamIdx(idxInternal)) {
             SynthParamBase* param = vecParams[idxInternal];
             if (param->enumParam == ParametersSynthGPU::Osc1PulseWidthModRate) {
-                auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+                auto fTextFieldVal = float(atof(StringAsCStr(displayValue.value)));
                 double parsed = math::clamp(log2(fTextFieldVal * 100.0) / 21.0, 0.0, 1.0);
                 return {float(parsed), true};
             }
@@ -1698,7 +1719,7 @@ public:
                         }
                     }
                 } else {
-                    auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+                    auto fTextFieldVal = float(atof(StringAsCStr(displayValue.value)));
                     return {math::clamp(PluginLFO::RateToParam(fTextFieldVal), 0.0f, 1.0f), true};
                 }
             }
@@ -1717,7 +1738,7 @@ public:
         padding = 0;
         margin  = 0;
         setBackgroundRendered(false);
-        const int envBase[2] = {static_cast<int32_t>(SynthImplGPU::Parameters::ADSR_1_A_Duration), static_cast<int32_t>(SynthImplGPU::Parameters::ADSR_2_A_Duration)};
+        const int envBase[2] = {int32_t(SynthImplGPU::Parameters::ADSR_1_A_Duration), int32_t(SynthImplGPU::Parameters::ADSR_2_A_Duration)};
         for (size_t i = 0; i < knobs.size(); ++i) {
             auto& knob = knobs[i];
             knob.setSynthParam(moduleInstance->getSynth(), envBase[idx] + i);
@@ -1902,7 +1923,7 @@ public:
         for (samplecount_t s = 0; s < numSamples; s++) {
             alignas(64) float envParamVals[8]{};
             alignas(64) float envParamValsScaled[8]{};
-            float stepPos = s / static_cast<float>(numSamples);
+            float stepPos = s / float(numSamples);
             std::fill(std::begin(envParamVals), std::end(envParamVals), stepPos);
             ShapeLogLikeSIMD<float, 8>(envParamVals, envParamValsScaled);
             shapeAdsrSampled.pts.push_back({{ stepPos, envParamValsScaled[0] }});
@@ -1919,9 +1940,10 @@ public:
         shapeAdsrSampled.pts.clear();
         
 
-        VoiceSynth voiceTmp;
-        moduleInstance->getSynth()->updateEnvelopeParameters(voiceTmp);
-        Envelope& envelope = voiceTmp.envelopes[idx];
+        auto synth = moduleInstance->getSynth();
+        auto& voiceTempUi = synth->getTempVoiceUI();
+        synth->updateEnvelopeParameters(voiceTempUi);
+        Envelope& envelope = voiceTempUi.envelopes[idx];
         envelope.Reset();
         envelope.Start();
         const auto sampleRate = sampleFormat.sampleRate;
@@ -2030,6 +2052,53 @@ public:
     }
 };
 
+class ctxtmenu_entry_adsr_shape_function_select final : public ctxtmenu_enum_option_select_base<ctxmenu_enum_select_entry> {
+    module_synth_gpu* const moduleInstance;
+    int32_t channel;
+public:
+    ctxtmenu_entry_adsr_shape_function_select(module_synth_gpu* _module, int32_t _channel, String _title, int32_t _id)
+        : ctxtmenu_enum_option_select_base(_id, std::move(_title)), moduleInstance(_module), channel(_channel) 
+    {
+        using E = PluginSynth::EnvelopeShaping;
+        entries.push_back({ int32_t(E::Linear), "Linear" });
+        entries.push_back({ int32_t(E::Pow), "Pow" });
+        entries.push_back({ int32_t(E::Exp), "Exp" });
+    }
+    bool isEntrySelected(ctxmenu_enum_select_entry& e) const override {
+        auto const synth = moduleInstance->getSynth();
+        return int32_t(synth->getAdsrShapeMode(channel)) == e.id;
+    }
+};
+
+class guictr_module_adsr_context_menu final : public guictxtmenu {
+    module_synth_gpu* const moduleInstance;
+    int32_t channel;
+public:
+    explicit guictr_module_adsr_context_menu(module_synth_gpu* _module, int32_t _channel)
+        : guictxtmenu(), moduleInstance(_module), channel(_channel) 
+    {
+        this->size.x   = 220;
+        maxHeight = 0;
+        this->fontSize = FONT_SIZE_CTXT_SMALL;
+        this->paddingV = 0;
+        addEntry(new ctxtmenu_entry_adsr_shape_function_select(moduleInstance, channel, "Shaping", 100));
+    }
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
+        auto const synth = moduleInstance->getSynth();
+        if (_id >= 100) {
+            auto lock = synth->lock();
+            int clicked = _id - 100;
+            if (clicked >= 0 && clicked <= int32_t(EnvelopeShaping::Exp)) {
+                synth->setAdsrShapeMode(channel, EnvelopeShaping(clicked));
+                moduleInstance->onPresetLoaded(); // meh
+            }
+            return true;
+        }
+        closeContextMenu();
+        return true;
+    }
+};
+
 class guictr_module_lfo_context_menu final : public guictxtmenu {
     module_synth_gpu* const moduleInstance;
     int32_t channel;
@@ -2056,10 +2125,9 @@ public:
             if (shapeIdx < 0 || shapeIdx > ShapeWaveform::SHAPE_PULSE_INV) {
                 return false;
             }
-            auto waveform = static_cast<ShapeWaveform>(shapeIdx);
             auto lock = synth->lock();
             auto& params = synth->getLFOParams(channel);
-            params.shape.pts = GetShape(waveform);
+            params.shape.pts = GetShape(ShapeWaveform(shapeIdx));
             synth->setShapeMode(channel);
         } else if (_id >= 300) {
             auto randomIdx = _id - 300;
@@ -2445,11 +2513,18 @@ public:
         }
     }
     void onTick(AppCtrl* ctrl) override {
+        guictr_base::onTick(ctrl);
         if (bGuiNeedsRefresh) {
             ctrModulation.setFromSynth();
             layout();
             bGuiNeedsRefresh = false;
         }
+    }
+
+    void onPresetLoaded() {
+        bGuiNeedsRefresh = true;
+        adsr1.flagNeedsShapeSet();
+        adsr2.flagNeedsShapeSet();
     }
 
     void onSetParameter(int32_t index, float value) {
@@ -2468,7 +2543,7 @@ public:
             if (internalIdx >= int32_t(ADSR_2_A_Duration) && internalIdx - int32_t(ADSR_2_A_Duration) < MAX_PARAMS_PER_ADSR)
                 adsr2.flagNeedsShapeSet();
             for (auto& synthKnob : vecParamUI) {
-                if (synthKnob.param == static_cast<ParametersSynthGPU>(internalIdx)) {
+                if (synthKnob.param == ParametersSynthGPU(internalIdx)) {
                     synthKnob.knob->setValueInit(value);
                 }
             }
@@ -2498,15 +2573,30 @@ public:
 
     void rightClicked(MouseEvent& evt, guibase* what) override {
         while (what) {
-            int32_t idx = -1;
+            int32_t lfoIdx = -1;
             if (what == &this->ctrStackedLFO1) {
-                idx = 0;
+                lfoIdx = 0;
             } else if (what == &this->ctrStackedLFO2) {
-                idx = 1;
+                lfoIdx = 1;
             }
-            if (idx > -1) {
-                parentCtrl->openContextMenu(new guictr_module_lfo_context_menu(moduleInstance, idx), evt.mousepos);
+
+            if (lfoIdx > -1) {
+                parentCtrl->openContextMenu(new guictr_module_lfo_context_menu(moduleInstance, lfoIdx), evt.mousepos);
+                break;
             }
+
+            int32_t adsrIdx = -1;
+            if (what == &this->adsr1) {
+                adsrIdx = 0;
+            } else if (what == &this->adsr2) {
+                adsrIdx = 1;
+            }
+
+            if (adsrIdx > -1) {
+                parentCtrl->openContextMenu(new guictr_module_adsr_context_menu(moduleInstance, adsrIdx), evt.mousepos);
+                break;
+            }
+
             what = what->parent;
         }
     }
@@ -2526,7 +2616,7 @@ public:
         shape.pts.clear();
         shape.pts.reserve(waveform.size());
         for (size_t i = 0; i < waveform.size(); i++) {
-            float x = i / static_cast<float>(waveform.size());
+            float x = i / float(waveform.size());
             shape.pts.push_back({{ x, waveform[i] * 0.5 + 0.5 }});
         }
         shape.flags = DAW::Shape::SHAPE_CYCLIC | DAW::Shape::SHAPE_LOCK_POINTS;
@@ -2606,6 +2696,9 @@ public:
     }
     bool isViewSupported(int32_t uiId) const override {
         return uiId != UID_VIEW_CTR_NODES;
+    }
+    void onPresetLoaded() override {
+        ctr_main.onPresetLoaded();
     }
 };
 

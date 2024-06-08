@@ -21,6 +21,7 @@ public:
     virtual void onGuiOpen()              = 0;
     /* may be called multiple times */
     virtual void onGuiClose()                               = 0;
+    virtual void onPresetLoaded() { }
     virtual void setFree() {
         onGuiClose();
         inUse = false;
