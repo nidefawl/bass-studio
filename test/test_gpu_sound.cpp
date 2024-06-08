@@ -35,8 +35,8 @@
 
 
 
-#ifdef _WIN32
 static GLFWwindow* window = nullptr;
+#ifdef _WIN32
 static BOOL WINAPI CtrlCHandler(DWORD dwType) {
     if (window) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
