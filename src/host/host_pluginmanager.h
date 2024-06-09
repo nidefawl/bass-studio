@@ -194,6 +194,9 @@ public:
     size_t getNumAudioStages() const {
         return allAudioStages.size();
     }
+    size_t getNumPluginsLoaded() const {
+        return pluginInstances.size();
+    }
     bool addDeferredEffect(effectbase* plugin);
     void getDeferredEffects(std::vector<effectbase*>& effects) {
         effects = pluginsDeferred;
