@@ -96,7 +96,7 @@ static const char* const noteNames[12]{
 };
 
 const char* noteName(int note) {//DONT KEEP REFERENCE
-    static thread_local std::array<char, 32> FormatBuffer{};
+    static constinit thread_local std::array<char, 32> FormatBuffer{};
     int noteNameIdx = math::clamp(note % 12, 0, 11);
 #ifdef __APPLE__
     int ret = snprintf(FormatBuffer.data(), FormatBuffer.size(), "%s%d", noteNames[noteNameIdx], (note / 12) - 2);

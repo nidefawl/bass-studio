@@ -1,11 +1,11 @@
-#include <thread>
-#include <mutex>
-#include "thread.h"
 #include "types.h"
-#include <unordered_map>
-#include <atomic>
+#include "compiler.h"
+#include "thread.h"
 #include "str_util.h"
 #include "assert_dbg.h"
+#include <mutex>
+#include <atomic>
+#include <thread>
 
 
 namespace {
@@ -14,7 +14,7 @@ namespace {
         seqthreads::ThreadType threadType = seqthreads::ThreadType::Unknown;
         bool isKnownThread = false;
         bool isInternalThread = false;
-        String threadName;
+        char threadName[32] = {0};
     };
 
     int32_t getNextThreadId() noexcept {
@@ -22,8 +22,8 @@ namespace {
         return thread_idx.fetch_add(1, std::memory_order_acquire);
     }
 
-    thread_local threadlocal_threadinfo_t threadPrivateTls;
-    thread_local threadlocal_threadinfo_t* tlsThreadInfo = nullptr;
+    DAW_CXX_CONSTINIT thread_local threadlocal_threadinfo_t threadPrivateTls;
+    DAW_CXX_CONSTINIT thread_local threadlocal_threadinfo_t* tlsThreadInfo = nullptr;
 
     void registerThreadInternal(const String& threadName, bool isKnownThread, bool isInternalThread, seqthreads::ThreadType threadType) {
         static std::mutex gRegisterMutex;
@@ -32,7 +32,8 @@ namespace {
         auto* threadInfo          = &threadPrivateTls;
         threadInfo->threadId      = getNextThreadId();
         threadInfo->threadType    = threadType;
-        threadInfo->threadName    = threadName + "-" + std::to_string(threadInfo->threadId);
+        const auto threadNameWithId = threadName + "-" + std::to_string(threadInfo->threadId);
+        safe_strcpy(threadInfo->threadName, threadNameWithId);
         threadInfo->isKnownThread = isKnownThread;
         threadInfo->isInternalThread = isInternalThread;
         tlsThreadInfo             = threadInfo;
@@ -77,7 +78,7 @@ namespace seqthreads {
             registerThreadInternal("unknown", false, false, seqthreads::ThreadType::Unknown);
             threadInfo = tlsThreadInfo;
         }
-        return threadInfo ? threadInfo->threadName : "unknown";
+        return threadInfo && threadInfo->threadName[0] ? threadInfo->threadName : "unknown";
     }
 
     void threadSleep(int32_t millis) {

@@ -433,7 +433,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
     /** add all pre-loop notes */
     bool fillLoop  = loopEnabled && localEnd > preLoopLen;
     bool inPreLoop = localStart < preLoopLen;
-    static thread_local std::vector<note_t> listLoop;
+    static DAW_CXX_CONSTINIT thread_local std::vector<note_t> listLoop;
     auto grooveIdx = selectedGroove;
     auto groove = groove_data_t{};
     if (grooveIdx >= 0) {
@@ -582,7 +582,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
     if (cutRight <= cutLeft)
         return 0;
 
-    static thread_local clip_notes_t notesView; // TODO: avoid heap allocation
+    static /* DAW_CXX_CONSTINIT */ thread_local clip_notes_t notesView; // TODO: avoid heap allocation
     getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd), notesView, options);
 #if 0
     size_t posOld = list.size();

@@ -1,11 +1,12 @@
 #include "TestBase.hpp"
 #include <vector>
+#include "compiler.h"
 #include "saferef.h"
 
 
 namespace test_saferef {
 class SomeObject;
-static thread_local SafeRefStorage<SomeObject>* safeRefs;
+DAW_CXX_CONSTINIT thread_local SafeRefStorage<SomeObject>* safeRefs;
 class SomeObject {
     int32_t m_id;
 public:

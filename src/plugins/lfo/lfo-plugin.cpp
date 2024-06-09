@@ -51,7 +51,7 @@ namespace PluginLFO {
     constexpr int32_t PARAM_LFO_MAXIMUM = 19;
     constexpr int32_t PARAM_LFO_PHASE_RESET_TICKS = 20;
 
-    thread_local std::vector<const LFORateMinMaxAutomation*> stack;
+    DAW_CXX_CONSTINIT thread_local std::vector<const LFORateMinMaxAutomation*> stack;
     class LFOAutomation : public LFORateMinMaxAutomation {
     public:
         internal_modulator* module = nullptr;

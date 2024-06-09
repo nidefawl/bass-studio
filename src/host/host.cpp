@@ -901,7 +901,7 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
     if (is64BitSumming) {
         tmpBlockSumming = &AllocateSummingAudioBuffer(tmp, ptrBlockMixDst->channels, ptrBlockMixDst->samples);
     }
-    static thread_local track_audio_src srcTemp{};
+    static DAW_CXX_CONSTINIT thread_local track_audio_src srcTemp{};
     auto& src = srcTemp;
     int32_t numMixed = 0;
     for (const DAW::track_source_t& tracksrc : allSources)

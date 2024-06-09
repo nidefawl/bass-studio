@@ -859,8 +859,8 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
 void gui_track::renderTrackFolded(NVGcontext* vg) {
     auto ctrTracks = m_trackentry->parent;
     if (!m_track->children.empty()) {
-        static thread_local std::vector<track_gui_entry_t*> children;
-        static thread_local std::vector<track_t*> queue;
+        static DAW_CXX_CONSTINIT thread_local std::vector<track_gui_entry_t*> children;
+        static DAW_CXX_CONSTINIT thread_local std::vector<track_t*> queue;
         children.clear();
         queue.clear();
         queue.push_back(m_track);

@@ -79,7 +79,7 @@ int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, 
                 return filter;
             };
         };
-        static thread_local FilterCoeffs filterCoeffs;
+        static DAW_CXX_CONSTINIT thread_local FilterCoeffs filterCoeffs;
         auto filter = filterCoeffs.get(sampleRate, downsampleBits);
         if (!assert_expr(filter)) {
             return -1;

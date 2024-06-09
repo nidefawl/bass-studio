@@ -1003,7 +1003,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
     auto cache = audiocache::getInstance();
     tick_t audioBegin = math::max(start, loopStart);
     tick_t audioEnd   = loopEnd < 0 ? end : math::min(end, loopEnd);
-    static thread_local std::vector<clip_t*> clips;
+    static DAW_CXX_CONSTINIT thread_local std::vector<clip_t*> clips;
     if (clips.capacity() == 0) {
         clips.reserve(16);
     } else {
@@ -1190,9 +1190,9 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 
     tmr.reset();
     this->noteEventsProcessed.clear();
-    static thread_local std::vector<note_t> notes;
-    static thread_local std::vector<midievent_ctrl_t> ctrlEvents;
-    static thread_local std::vector<midievent_note_t> noteEvents;
+    static DAW_CXX_CONSTINIT thread_local std::vector<note_t> notes;
+    static DAW_CXX_CONSTINIT thread_local std::vector<midievent_ctrl_t> ctrlEvents;
+    static DAW_CXX_CONSTINIT thread_local std::vector<midievent_note_t> noteEvents;
     if (notes.capacity() == 0) {
         notes.reserve(128);
     } else {

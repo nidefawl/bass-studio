@@ -15,7 +15,7 @@
 
 
 namespace daw_tls {
-    static thread_local tlsinstance tls;
+    static DAW_CXX_CONSTINIT thread_local tlsinstance tls;
     bool isTlsInitialized() {
         return tls.tlsInitialized;
     }
