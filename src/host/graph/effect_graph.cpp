@@ -305,7 +305,7 @@ namespace DAW {
         makeOrGetTrackNode(audioStageOutputs, track_node_type_t::AUDIOSTAGE, stage->stageId.outputStageId, 0);
         for (effectbase* effect : stage->effects) {
             const auto effectIdI32 = static_cast<audiostageid_i32>(effect->projectGlobalId);
-            effect_node_t& trackCfg = makeOrGetTrackNode(map, track_node_type_t::EFFECT, effectIdI32, 0);
+            effect_node_t& trackCfg = makeOrGetTrackNode(map, track_node_type_t::EFFECT, effectIdI32, effect->getPluginLatency());
             for (channel_ref_t inputChannel : effect->inputChannels) {
                 if (inputChannel.type == stage_type::INPUT_DEFAULT) {
                     channel_ref_t tmp;
