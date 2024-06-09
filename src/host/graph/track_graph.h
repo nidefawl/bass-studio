@@ -3,8 +3,14 @@
 #include "host/daw_channel.h"
 #include "assert_dbg.h"
 #include "host/track/track_types.h"
+#include "segmented-vector.hpp"
 #include "types.h"
 #include <vector>
+
+#ifndef NDEBUG
+#define VALIDATE_TRACKS_INPUT
+#define VALIDATE_GRAPH_CORRECTNESS
+#endif
 
 class track_t;
 class effectbase;
@@ -65,47 +71,29 @@ namespace DAW {
      *
      */
     struct track_graph_t {
+        DAW::SegmentedVector<track_node_t, 1024> memPoolTrackNodes;
         std::vector<track_node_t*> roots;// output nodes (Master, )
         std::vector<track_node_ptr> nodes;
         std::vector<track_source_t> externalOutputRouting;
         samplecount_t maxLatencySamples = 0;
 
         track_graph_t() = default;
+        ~track_graph_t() = default;
         track_graph_t(const track_graph_t& graph) = delete;
         track_graph_t& operator=(const track_graph_t& graph) = delete;
-        ~track_graph_t() {
-            for (auto ptr : nodes) {
-                delete ptr;
-            }
-        }
     };
     struct processing_graph_t {
+        DAW::SegmentedVector<processing_track_node_t, 1024> memPoolProcNodes;
         std::vector<processing_track_node_t*> nodesFlatOrdered;
-        std::vector<processing_track_node_t*> roots; // audio_stage output buffer
-        std::vector<processing_track_node_ptr> nodes;// audio_stage input buffer, effects, audio_stage output buffer
+        std::vector<processing_track_node_t*> roots;  // nodes that have no parents
+        std::vector<processing_track_node_ptr> nodes;
         std::shared_ptr<track_graph_t> trackGraph;
-        ~processing_graph_t();
-        processing_graph_t()                                = default;
+        ~processing_graph_t() = default;
+        processing_graph_t()  = default;
         processing_graph_t(const processing_graph_t& graph) = delete;
         processing_graph_t& operator=(const processing_graph_t& graph) = delete;
     };
 
-    inline const processing_track_node_t* getNodeConst(const std::vector<processing_track_node_t*>& nodes, audiostageid_i32 stageId) {
-        for (const auto* ptr : nodes) {
-            if (ptr->stageId == stageId) {
-                return ptr;
-            }
-        }
-        return nullptr;
-    }
-    inline processing_track_node_t* getNode(const std::vector<processing_track_node_t*>& nodes, audiostageid_i32 stageId) {
-        for (auto* ptr : nodes) {
-            if (ptr->stageId == stageId) {
-                return ptr;
-            }
-        }
-        return nullptr;
-    }
 
     struct removed_track_routings {
         audio_stage_ref_t stageRef;
