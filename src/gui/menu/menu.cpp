@@ -1,6 +1,7 @@
 #include "menu.h"
 #include "buildinfo.h"
 #include "guicolors.h"
+#include "guiglobals.h"
 #include "renderresources.h"
 #include "window.h"
 #include <nanovg.h>
@@ -225,14 +226,25 @@ void guictr_menubar::render(NVGcontext* vg) {
     for (guibase* gui : guis) {
         gui->render(vg);
     }
-    String strInfo = BuildInfo::BUILD_BINARY_VERSION;
-    if (strInfo.length() > 0) {
-        renderTextLabel(vg,
+    const auto* buildVersion = BuildInfo::BUILD_BINARY_VERSION;
+    float offsetX = 0.0f;
+    if (buildVersion) {
+        offsetX += size.y*0.5f + renderTextLabel(vg,
                         vec2(size.x - size.y*0.25f, size.y * 0.5f),
                         vec2(size),
-                        strInfo,
+                        buildVersion,
                         theme,
                         size.y,
+                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    }
+    if (label.length() > 0) {
+        renderTextLabel(vg,
+                        vec2(size.x - size.y*0.25f - offsetX, size.y * 0.5f),
+                        vec2(size),
+                        label,
+                        theme,
+                        size.y * FONT_AUTOSCALE,
                         theme->getColor(GuiColor::COL_LABEL_INACTIVE),
                         NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }

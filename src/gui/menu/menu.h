@@ -13,6 +13,7 @@
 #include "gui/contextmenu/contextmenu.h"
 #include "menu.h"
 #include "window.h"
+#include "buildinfo.h"
 
 class guimenu_ctxtentry final : public ctxtmenu_entry {
 public:
@@ -67,6 +68,7 @@ public:
     guictr_menubar_entry* currentMenu = nullptr;
     explicit guictr_menubar(ngui::MenuBar& _menubar) : guictr_base(), menubar(_menubar) {
         padding = 0;
+        label = BuildInfo::BUILD_BINARY_VERSION;
     }
     ~guictr_menubar() override {
 
