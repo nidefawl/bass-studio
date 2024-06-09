@@ -1122,6 +1122,10 @@ audiofile_t* audiocache::getDerivedSample(const clip_audio_t& clipAudio) const {
     return it != mapId.end() ? it->second : nullptr;
 }
 
+size_t audiocache::getNumAudioSamplesLoaded() const {
+    return list.size();
+}
+
 bool audiocache::fileloader::isFinished() const {
     if (!error.empty())
         return true;

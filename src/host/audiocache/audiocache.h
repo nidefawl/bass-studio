@@ -163,6 +163,7 @@ public:
     audiofile_t* getDerivedSample(clip_audio_t& clipAudio, std::atomic<bool>* abortFlag = nullptr);
     audiofile_t* getDerivedSample(const clip_audio_t& clipAudio) const;
     audiofile_t* getByFilename(const String& pathFile);
+    size_t getNumAudioSamplesLoaded() const;
     void store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v);
     void load(samplefile_index_t& v, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir);
     void saveSamples(const std::vector<int32_t>& refSampleIds);
