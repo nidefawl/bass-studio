@@ -23,7 +23,7 @@ void DrawShapeOneShot(const ShapeType& curve, NVGcontext*vg, const guitheme_t* t
     auto fillColor = lineColor;
     auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
     auto hoverColor = theme->getColor(colHovered);
-    fillColor.a = 0.3;
+    fillColor.a = 0.3f;
     for (int32_t pass = 0; !(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && pass < 2; ++pass) {
         if (pass == 0) {
             nvgBeginPath(vg);
@@ -150,7 +150,7 @@ void DrawShapeUnclamped(const ShapeType& curve, NVGcontext*vg, const guitheme_t*
     auto fillColor = lineColor;
     auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
     auto hoverColor = theme->getColor(colHovered);
-    fillColor.a = 0.3;
+    fillColor.a = 0.3f;
     for (int32_t pass = 0; !(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && pass < 2; ++pass) {
         if (pass == 0) {
             nvgBeginPath(vg);
@@ -289,7 +289,7 @@ void DrawShapeCyclic(const ShapeType& curve, NVGcontext*vg, const guitheme_t* th
     auto fillColor = lineColor;
     const auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
     const auto hoverColor = theme->getColor(colHovered);
-    fillColor.a = 0.3;
+    fillColor.a = 0.3f;
     for (int32_t pass = 0; !(curve.flags&SHAPE_SHOW_ONLY_CONTROL_POINTS) && pass < 2; ++pass) {
         if (pass == 0) {
             nvgBeginPath(vg);
