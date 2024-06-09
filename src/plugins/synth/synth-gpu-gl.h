@@ -364,7 +364,7 @@ protected:
 public:
     GPUAudioProcessor() {
     }
-    ~GPUAudioProcessor()
+    virtual ~GPUAudioProcessor()
     {
         GlfwContextSwitch ctxSwitch(window);
         if (window) {

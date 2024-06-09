@@ -130,6 +130,7 @@ protected:
     std::array<double, 64> modulationValuesMin{};
     std::array<double, 64> modulationValuesMax{};
 public:
+    virtual ~ModulationController() = default;
     const std::array<const char*, MAX_MODULATION_INPUT_PARAMS>& getVarNames() const {
         return varNames;
     }
@@ -175,7 +176,7 @@ public:
     std::optional<std::vector<param_modulation_range_t>*> getParamModulationRanges(int32_t modIdx) {
         dbgassert(modIdx >= 0 && modIdx < MAX_MODULATION_OUTPUT_PARAMS);
         //TODO: result can be cached
-        static thread_local std::vector<param_modulation_range_t> tmpVec;
+        static /* constinit */ thread_local std::vector<param_modulation_range_t> tmpVec;
         std::optional<std::vector<param_modulation_range_t>*> result;
         for (auto& mod : modulations) {
             bool bIsBipolar = IsBipolarModulation(mod);
