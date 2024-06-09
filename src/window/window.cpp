@@ -2098,7 +2098,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
 void windowTickTimerRun() {
     std::vector<appwindow*> localWindowTimerHandleList = windowTimerHandleList;
+#if ENABLE_ALLOCATION_TRACKING != 0
     DebugAlloc::beginTrace();
+#endif
     for (appwindow* window : localWindowTimerHandleList) {
         if (STL_CONTAINS(windowTimerHandleList, window)) {
             if (window->isWindowNotHidden()) {
@@ -2106,20 +2108,16 @@ void windowTickTimerRun() {
             }
         }
     }
+#if ENABLE_ALLOCATION_TRACKING != 0
     static DebugAlloc::AllocStats lastAllocStats;
     lastAllocStats = DebugAlloc::endTrace();
-    /* static int ticks = 0;
-    static bool bIsTrace = false;
+    static int ticks = 0;
     if (++ticks > 50) {
         ticks = 0;
-        if (!bIsTrace) {
-            DebugAlloc::beginTrace();
-        } else {
-            DebugAlloc::endTrace();
-            DebugAlloc::beginTrace();
-        }
-        bIsTrace = true;
-    } */
+        String stats = lastAllocStats.toString();
+        log_lf(Log::L_DEBUG, "AllocStats: %s\n", StringAsCStr(stats));
+    }
+#endif
 }
 
 #if BUILD_DAW_HOST

@@ -1023,7 +1023,6 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
             return 0;
         }
     }
-    DebugAlloc::beginTrace();
 
     if (enableProfiling) {
         stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
@@ -1142,8 +1141,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
         stats.timings["Block.Tracks.Tick"] = timerProfile.getTimeReset();
     }
 #endif
-    static DebugAlloc::AllocStats lastAllocStats;
-    lastAllocStats = DebugAlloc::endTrace();
+
     //AudioBlock::EndTrace();
 
     if (!bypassSampleConversion) {
@@ -1283,6 +1281,9 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     }
 
     if (canProcess && impl->processingGraph) {
+#if ENABLE_ALLOCATION_TRACKING != 0
+        DebugAlloc::beginTrace();
+#endif
         int64_t timeRouting = 0;
         int64_t timeProcessing = 0;
         int64_t timeResampleOutput = 0;
@@ -1337,6 +1338,16 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             stats.timings["Block.TrackOutputRouting"] = timeRouting/audioProp.numBlocksInternal;
             stats.timings["Block.ResampleOutput"] = timeResampleOutput/audioProp.numBlocksInternal;
         }
+#if ENABLE_ALLOCATION_TRACKING != 0
+        static DebugAlloc::AllocStats lastAllocStats;
+        lastAllocStats = DebugAlloc::endTrace();
+        static int ticks = 0;
+        if (++ticks > 50) {
+            ticks = 0;
+            String stats = lastAllocStats.toString();
+            log_lf(Log::L_DEBUG, "AllocStats: %s\n", StringAsCStr(stats));
+        }
+#endif
     }
 
 
