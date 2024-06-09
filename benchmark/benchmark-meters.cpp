@@ -73,10 +73,6 @@ int main(int argc, char** argv) {
                     context->blockInput->fillNoise(rnd, 1.0f);
                     context->meter.update(context->blockInput, 1.0f);
                 }
-                auto lvls = context->meter.getLevels();
-                // for (auto& level : lvls) {
-                //     log_printf("Levels: fMax %f, fPeak %f, fLvl %f\n", level.fMax, level.fPeak, level.fLvl);
-                // }
                 context->isSetupComplete = true;
             }
             for (auto _ : state) {
@@ -116,10 +112,6 @@ int main(int argc, char** argv) {
                     context->blockInput->fillNoise(rnd, 1.0f);
                     context->meter.update(context->blockInput, 1.0f);
                 }
-                // auto& lvls = context->meter.getLevels();
-                // for (auto& level : lvls) {
-                //     log_printf("Levels: fMax %f, fPeak %f, fLvl %f\n", level.fMax, level.fPeak, level.fLvl);
-                // }
                 context->isSetupComplete = true;
             }
             for (auto _ : state) {

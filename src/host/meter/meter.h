@@ -147,13 +147,13 @@ public:
         return { offsetChannels, _numChannels };
     }
 
-    float getRms(int i) const {
-        dbgassert(channels.size());
-        return channels[i]->fLvl;
+    float getRms(channelnum_t chIdx) const {
+        dbgassert(chIdx < channels.size());
+        return channels[chIdx]->fLvl;
     }
-    float getMax(int i) const {
-        dbgassert(channels.size());
-        return channels[i]->fMax;
+    float getMax(channelnum_t chIdx) const {
+        dbgassert(chIdx < channels.size());
+        return channels[chIdx]->fMax;
     }
     float getMaxRMS() const {
         dbgassert(channels.size());
@@ -171,23 +171,18 @@ public:
         }
         return f;
     }
-    float getStandingPeak(int i) const {
-        dbgassert(channels.size());
-        return channels[i]->fPeak;
+    float getStandingPeak(channelnum_t chIdx) const {
+        dbgassert(chIdx < channels.size());
+        return channels[chIdx]->fPeak;
     }
     void onTick(double since) {
         for (auto& cn : channels) {
             cn->onTick(since);
         }
     }
-    std::vector<meter_lvls>& getLevels() const {
-        static thread_local std::vector<meter_lvls> v;
-        v.resize(channels.size());
-        auto it = v.begin();
-        for (auto& cn : channels) {
-            *it++ = cn->getLevels();
-        }
-        return v;
+    const meter_lvls getChannelLvls(channelnum_t chIdx) const {
+        dbgassert(chIdx < channels.size());
+        return channels[chIdx]->getLevels();
     }
     
     void update(const AudioBlock* block, float fTrackGain) {

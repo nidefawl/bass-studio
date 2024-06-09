@@ -132,14 +132,6 @@ public:
             cn->onTick(since);
         }
     }
-    std::vector<meter_lvls> getLevels() const {
-        std::vector<meter_lvls> v(channels.size());
-        auto it = v.begin();
-        for (auto& cn : channels) {
-            *it++ = cn->getLevels();
-        }
-        return v;
-    }
     
     void update(const AudioBlock* block, float fTrackGain) {
         for (size_t i = 0; i < math::min<size_t>(block->channels, channels.size()); i++) {
