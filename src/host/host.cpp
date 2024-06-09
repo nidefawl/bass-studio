@@ -31,6 +31,7 @@
 #include "tls.h"
 #include "types.h"
 #include "util/profiling.h"
+#include "util/trace_allocations.hpp"
 #include "fileio.h"
 #include "host/track/track.h"
 #include "basectrl.h"
@@ -80,10 +81,6 @@
 #define NUM_AUDIOPROCESSING_THREADS_INITIAL 8
 
 static int32_t dbgStep = 1;
-namespace DebugAlloc {
-    void beginTrace();
-    void endTrace();
-}
 
 
 namespace DAW {
@@ -999,7 +996,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
     const bool enableProfiling = (dbgStep%333) != 0;
-    //AudioBlock::BeginTrace();
+    // AudioBlock::BeginTrace();
 
     project_t* const project = ctrl->getProject();
 
@@ -1026,7 +1023,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
             return 0;
         }
     }
-    // DebugAlloc::beginTrace();
+    DebugAlloc::beginTrace();
 
     if (enableProfiling) {
         stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
@@ -1145,7 +1142,8 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
         stats.timings["Block.Tracks.Tick"] = timerProfile.getTimeReset();
     }
 #endif
-    // DebugAlloc::endTrace();
+    static DebugAlloc::AllocStats lastAllocStats;
+    lastAllocStats = DebugAlloc::endTrace();
     //AudioBlock::EndTrace();
 
     if (!bypassSampleConversion) {

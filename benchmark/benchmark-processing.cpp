@@ -27,14 +27,10 @@
 #include "types.h"
 #include "util/testing_environment.h"
 #include "host/host_pluginmanager.h"
+#include "util/trace_allocations.hpp"
 
 #include <memory>
 #include <functional>
-
-namespace DebugAlloc {
-    void beginTrace();
-    void endTrace();
-}
 
 namespace PluginSynth {
     extern int32_t gDebugOverrides;

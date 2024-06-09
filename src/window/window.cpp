@@ -7,6 +7,7 @@
 #include "platform/linux/windowsize.h"
 #include "tls.h"
 #include "util/profiling.h"
+#include "util/trace_allocations.hpp"
 #include <GLFW/glfw3.h>
 #include <memory>
 #include <utility>
@@ -77,7 +78,7 @@ void sendExposeEvent(GLFWwindow* glfw);
 #endif
 
 
-const int64_t GUI_TICK_DELAY_NS = 20000L; // GUI Tick Rate: 20ms
+const int64_t GUI_TICK_DELAY_MICROS = 20000L; // GUI Tick Rate: 20ms
 
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
@@ -2018,8 +2019,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             bool bForceRender = mainWindow->getRedrawRequest();
             int64_t tmHRNow = hiresRuntime.getTime();
             int64_t tmLRNow = tmHRNow/1000L;
-            if (tmHRNow - tmHRLastTick >= GUI_TICK_DELAY_NS) {//TODO: figure out good tick rate
-                appStats.tickTimerDelay = tmHRNow - tmHRLastTick - GUI_TICK_DELAY_NS;
+            if (tmHRNow - tmHRLastTick >= GUI_TICK_DELAY_MICROS) {//TODO: figure out good tick rate
+                appStats.tickTimerDelay = tmHRNow - tmHRLastTick - GUI_TICK_DELAY_MICROS;
                 tmHRLastTick            = tmHRNow;
                 hiresTimer1.reset();
                 windowTickTimerRun();
@@ -2095,9 +2096,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
     return fatalError ? 1 : 0;
 }
 
-
 void windowTickTimerRun() {
     std::vector<appwindow*> localWindowTimerHandleList = windowTimerHandleList;
+    DebugAlloc::beginTrace();
     for (appwindow* window : localWindowTimerHandleList) {
         if (STL_CONTAINS(windowTimerHandleList, window)) {
             if (window->isWindowNotHidden()) {
@@ -2105,6 +2106,20 @@ void windowTickTimerRun() {
             }
         }
     }
+    static DebugAlloc::AllocStats lastAllocStats;
+    lastAllocStats = DebugAlloc::endTrace();
+    /* static int ticks = 0;
+    static bool bIsTrace = false;
+    if (++ticks > 50) {
+        ticks = 0;
+        if (!bIsTrace) {
+            DebugAlloc::beginTrace();
+        } else {
+            DebugAlloc::endTrace();
+            DebugAlloc::beginTrace();
+        }
+        bIsTrace = true;
+    } */
 }
 
 #if BUILD_DAW_HOST
