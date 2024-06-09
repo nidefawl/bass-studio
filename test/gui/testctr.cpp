@@ -464,6 +464,7 @@ void guictr_testgui::buttonClicked(guibase* button) {
     }
 }
 void guictr_testgui::render(NVGcontext* vg) {
+    if (!vg) return;
     if (isBackgroundRendered()) {
         renderBackground(vg);
     }
