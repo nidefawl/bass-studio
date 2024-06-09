@@ -28,6 +28,7 @@
 #include "util/testing_environment.h"
 #include "host/host_pluginmanager.h"
 #include "util/trace_allocations.hpp"
+#include "plugins/synth/synth-gpu-parameters.h"
 
 #include <memory>
 #include <functional>
@@ -491,8 +492,7 @@ int main(int argc, char** argv) {
             testGroups2(context);
             host->cacheAudioGraph = true;
         };
-        int32_t pluginType = PLUGIN_TYPE_SYNTH;
-        auto testSynth = [&trDataMidi,&pluginType](TestContext* context) {
+        auto testSynth = [&trDataMidi](TestContext* context) {
             DawInstance* dawInstance = context->dawInstance;
             auto host = dawInstance->getHost();
             // BUS_TOP_n
@@ -518,17 +518,11 @@ int main(int argc, char** argv) {
                         track1->getStage()->arp->setParamValue(ARP_PARAM_PATTERN, 0.0f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
+                        int32_t pluginType = PLUGIN_TYPE_SYNTH;
 
                         auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, pluginType, -1);
                         dbgassert(pluginInstance);
-                        if (pluginType == PLUGIN_TYPE_SYNTH_GPU) {
-                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+0, 0.8f, FLG_PAR_UPDATE_INIT); // master volume
-                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+1, 0.0f, FLG_PAR_UPDATE_INIT); // poly mode
-                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+2, 0.0f, FLG_PAR_UPDATE_INIT); // osc1 Waveform
-                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+3, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison voice count
-                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+4, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison detune
-                            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+5, 0.9f, FLG_PAR_UPDATE_INIT); // osc1 filter
-                        } else if (pluginType == PLUGIN_TYPE_SYNTH) {
+                        if (pluginType == PLUGIN_TYPE_SYNTH) {
                             pluginInstance->setParamValue(29, 0.8f, FLG_PAR_UPDATE_INIT);
                             pluginInstance->setParamValue(31, 0.8f, FLG_PAR_UPDATE_INIT);
                             pluginInstance->setParamValue(40, 1.0f, FLG_PAR_UPDATE_INIT);
@@ -546,56 +540,60 @@ int main(int argc, char** argv) {
             auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
             dawInstance->addTrackImpl(0, trackMaster, 0);
         };
-        auto testSynthGPU = [&trDataMidi](TestContext* context, float program) {
+        auto testSynthGPU = [&trDataMidi](TestContext* context, float program, int32_t unisonVoiceCount) {
             DawInstance* dawInstance = context->dawInstance;
             auto host = dawInstance->getHost();
             auto track1 = dawInstance->createNewTrack(TRACK_TYPE_MIDI);
             track1->getClips() = trDataMidi;
             dawInstance->addTrackImpl(-1, track1, 0);
-            track1->getStage()->arp->setParamValue(PARAM_ENABLE, 0.0f, FLG_PAR_UPDATE_INIT);
-            track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
-            track1->getStage()->arp->setParamValue(ARP_PARAM_PATTERN, 0.0f, FLG_PAR_UPDATE_INIT);
-            track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
-            track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
-
+            float fMax = float(PluginSynth::GPU::MAX_UNISON_VOICES - 1);
+            float fParam = math::clamp((unisonVoiceCount - 1) / fMax, 0.0f, 1.0f);
             auto pluginInstance = dawInstance->getHost()->makeModuleInstance(MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_GPU, -1);
             dbgassert(pluginInstance);
-            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+0, 0.8f, FLG_PAR_UPDATE_INIT); // master volume
-            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+1, 0.0f, FLG_PAR_UPDATE_INIT); // poly mode
-            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+2, program, FLG_PAR_UPDATE_INIT); // osc1 Waveform
-            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+3, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison voice count
-            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+4, 1.0f, FLG_PAR_UPDATE_INIT); // osc1 unison detune
-            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+5, 0.9f, FLG_PAR_UPDATE_INIT); // osc1 filter
+            using P = PluginSynth::GPU::ParametersSynthGPU;
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+P::MasterVolume, 0.8f, FLG_PAR_UPDATE_INIT);
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+P::VoiceMode, 0.0f, FLG_PAR_UPDATE_INIT);
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+P::Osc1Waveform, program, FLG_PAR_UPDATE_INIT);
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+P::Osc1UnisonVoiceCount, fParam, FLG_PAR_UPDATE_INIT);
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+P::Osc1UnisonDetune, 1.0f, FLG_PAR_UPDATE_INIT);
+            pluginInstance->setParamValue(PARAM_OFFSET_IMPL+P::Osc1Filter, 0.9f, FLG_PAR_UPDATE_INIT);
 
             host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
             pluginInstance->onEnable();
             track1->getStage()->pluginsChanged();
-            auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
-            dawInstance->addTrackImpl(0, trackMaster, 0);
+            dawInstance->addTrackImpl(0, new track_t(TRACK_TYPE_MASTER, "master", true), 0);
+        };
+        auto testGpuSynthProgramFirst1Voice = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1;
+            testSynthGPU(context, 0.0f, 1);
+        };
+        auto testGpuSynthProgramLast1Voice = [&testSynthGPU](TestContext* context) {
+            PluginSynth::GPU::gDebugBenchmarkFlags = 1;
+            testSynthGPU(context, 1.0f, 1);
         };
         auto testGpuSynthProgramFirst = [&testSynthGPU](TestContext* context) {
             PluginSynth::GPU::gDebugBenchmarkFlags = 1;
-            testSynthGPU(context, 0.0f);
+            testSynthGPU(context, 0.0f, 32);
         };
         auto testGpuSynthProgramLast = [&testSynthGPU](TestContext* context) {
             PluginSynth::GPU::gDebugBenchmarkFlags = 1;
-            testSynthGPU(context, 1.0f);
+            testSynthGPU(context, 1.0f, 32);
         };
         auto testGpuSynthSkipHostBufferBuild = [&testSynthGPU](TestContext* context) {
             PluginSynth::GPU::gDebugBenchmarkFlags = 1|2;
-            testSynthGPU(context, 1.0f);
+            testSynthGPU(context, 0.0f, 32);
         };
         auto testGpuSynthSkipGPUDispatch = [&testSynthGPU](TestContext* context) {
             PluginSynth::GPU::gDebugBenchmarkFlags = 1|4;
-            testSynthGPU(context, 1.0f);
+            testSynthGPU(context, 0.0f, 32);
         };
         auto testGpuSynthSkipBufferAndDispatch = [&testSynthGPU](TestContext* context) {
             PluginSynth::GPU::gDebugBenchmarkFlags = 1|2|4;
-            testSynthGPU(context, 1.0f);
+            testSynthGPU(context, 0.0f, 32);
         };
         auto testGpuSynthSkipAll = [&testSynthGPU](TestContext* context) {
             PluginSynth::GPU::gDebugBenchmarkFlags = 1|8;
-            testSynthGPU(context, 1.0f);
+            testSynthGPU(context, 0.0f, 32);
         };
         auto testSynthDisabledFilter = [&testSynth](TestContext* context) {
             PluginSynth::gDebugOverrides = 0|2|4|8|16;
@@ -614,9 +612,11 @@ int main(int argc, char** argv) {
             testSynth(context);
         };
 
-        std::array<TestContext, 6> synthBenchmarksGPU = {
-            TestContext{"1 Synth (GPU) - First Program", false, dawInstance.get(), testGpuSynthProgramFirst },
-            TestContext{"1 Synth (GPU) - Last Program", false, dawInstance.get(), testGpuSynthProgramLast },
+        std::array<TestContext, 8> synthBenchmarksGPU = {
+            TestContext{"1 Synth (GPU) - 1 UVoice - First Program", false, dawInstance.get(), testGpuSynthProgramFirst1Voice },
+            TestContext{"1 Synth (GPU) - 1 UVoice - Last Program", false, dawInstance.get(), testGpuSynthProgramLast1Voice },
+            TestContext{"1 Synth (GPU) - 32 UVoices - First Program", false, dawInstance.get(), testGpuSynthProgramFirst },
+            TestContext{"1 Synth (GPU) - 32 UVoices - Last Program", false, dawInstance.get(), testGpuSynthProgramLast },
             TestContext{"1 Synth (GPU) - Skip Host Buffer Build", false, dawInstance.get(), testGpuSynthSkipHostBufferBuild },
             TestContext{"1 Synth (GPU) - Skip GPU dispatch", false, dawInstance.get(), testGpuSynthSkipGPUDispatch },
             TestContext{"1 Synth (GPU) - Skip Host Buffer Build and GPU dispatch", false, dawInstance.get(), testGpuSynthSkipBufferAndDispatch },
@@ -644,18 +644,26 @@ int main(int argc, char** argv) {
             TestContext{"32 Tracks (2x2x4 Groups, Arp, Graph Cache)", false, dawInstance.get(), testGroupsCached },
         };
         try {
+            for (size_t i = 0; i < 5; i++) {
+                auto ctxt = new TestContext{"1 Synth (GPU) - 1 UVoice - First Program", false, dawInstance.get(), testGpuSynthProgramFirst1Voice };
+                benchmark::RegisterBenchmark(ctxt->benchmarkName, BenchMarkRun, ctxt);
+            }
+            for (size_t i = 0; i < 5; i++) {
+                auto ctxt = new TestContext{"1 Synth (GPU) - 32 UVoice - First Program", false, dawInstance.get(), testGpuSynthProgramFirst };
+                benchmark::RegisterBenchmark(ctxt->benchmarkName, BenchMarkRun, ctxt);
+            }
             for (TestContext& benchmarkCtxt : synthBenchmarksGPU) {
                 auto b = benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
                 b->MinTime(5.0);
             }
 
-            // for (TestContext& benchmarkCtxt : synthBenchmarksCPU) {
-            //     benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
-            // }
+            for (TestContext& benchmarkCtxt : synthBenchmarksCPU) {
+                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            }
 
-            // for (TestContext& benchmarkCtxt : processingBenchmarks) {
-            //     benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
-            // }
+            for (TestContext& benchmarkCtxt : processingBenchmarks) {
+                benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            }
 
             benchmark::Initialize(&argc, argv);
             

@@ -47,16 +47,10 @@
 #include <nanovg_min.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include "synth-gpu-parameters.h"
 
 namespace PluginSynth::GPU {
 uint32_t gDebugBenchmarkFlags = 0;
-static constexpr uint16_t NUM_AUDIO_CHANNELS = 2;
-static constexpr uint16_t NUM_POLY_VOICES   = 32;
-static constexpr uint16_t MAX_UNISON_VOICES   = 32;
-
-/* keep in sync with shader defines */
-static constexpr size_t NUM_VOICE_INPUT_PARAMETERS = 3;
-static constexpr size_t NUM_SYNTH_INPUT_PARAMETERS = 2;
 /*
 
 struct voice_state_input_t {
@@ -78,11 +72,6 @@ struct synth_state_input_t {
 static constexpr uint16_t NUM_ADSR = 2;
 static constexpr uint16_t NUM_LFO = 3;
 static constexpr uint16_t NUM_MOD_SRC_RAND = 2;
-
-static constexpr uint16_t MAX_SYNTH_PARAMS = 256;
-static constexpr uint16_t MAX_PARAMS_PER_ADSR = 32;
-static constexpr uint16_t MAX_PARAMS_PER_LFO = 16;
-static constexpr uint16_t MAX_ADSR_LFO = 8;
 
 
 enum ModDestinations : int32_t {
@@ -329,48 +318,6 @@ struct VoiceSynth {
     }
 };
 
-enum ParametersSynthGPU : size_t {
-    MasterVolume = 0,
-    VoiceMode,
-    Osc1Gain,
-    Osc1Waveform,
-    Osc1UnisonVoiceCount,
-    Osc1UnisonDetune,
-    Osc1Filter,
-    Osc1KeytrackFilter,
-    Osc1KeytrackDetune,
-    Osc1KeytrackStereoWidth,
-    Osc1Coarse,
-    Osc1Fine,
-    Osc1Stereo,
-    Osc1PulseWidth,
-    Osc1PulseWidthModDepth,
-    Osc1PulseWidthModRate,
-    ADSR_1_A_Duration = MAX_SYNTH_PARAMS,
-    ADSR_1_H_Duration,
-    ADSR_1_D_Duration,
-    ADSR_1_S_Amount,
-    ADSR_1_R_Duration,
-    ADSR_1_A_Shape,
-    ADSR_1_D_Shape,
-    ADSR_1_R_Shape,
-    ADSR_2_A_Duration = MAX_SYNTH_PARAMS + MAX_PARAMS_PER_ADSR,
-    ADSR_2_H_Duration,
-    ADSR_2_D_Duration,
-    ADSR_2_S_Amount,
-    ADSR_2_R_Duration,
-    ADSR_2_A_Shape,
-    ADSR_2_D_Shape,
-    ADSR_2_R_Shape,
-    LFO_1_Frequency = MAX_SYNTH_PARAMS + MAX_ADSR_LFO * MAX_PARAMS_PER_ADSR,
-    LFO_1_TriggerMode, // 0 = note resets phase, 1 = one shot (note resets phase), 2 = song position
-    LFO_1_Phase,
-    LFO_1_RampDuration,
-    LFO_2_Frequency = MAX_SYNTH_PARAMS + MAX_ADSR_LFO * MAX_PARAMS_PER_ADSR + MAX_PARAMS_PER_LFO,
-    LFO_2_TriggerMode,
-    LFO_2_Phase,
-    LFO_2_RampDuration,
-};
 
 static constexpr std::array<const char*, 17> stringsModSource = {
     "None",
@@ -1347,7 +1294,7 @@ public:
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboInputVoiceStates.ssbo.current());
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboOutput.ssbo.current());
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboOutputWaveform.ssbo.current());
-            glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+            // glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
             checkGLError("glBindBufferBase");
         }
 
@@ -1364,8 +1311,8 @@ public:
             glDispatchCompute(1, 1, 1);
         }
         if (!bDbgSkipGPUDispatch) {
-            glFinish();
-            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT|GL_BUFFER_UPDATE_BARRIER_BIT);
+            // glFinish();
+            // glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT|GL_BUFFER_UPDATE_BARRIER_BIT);
         }
         if (gpuProgram.programs[programId] && !bDbgSkipGPUDispatch) {
             ssboOutput.downloadBuffer();
