@@ -363,15 +363,19 @@ struct lfo_snapshot_t {
     int32_t randomModeId = 0;
     int32_t syncFlags;
 };
+struct adsr_snapshot_t {
+    int32_t shapingMode = 0;
+};
 struct snapshot_t {
     int32_t version = 0;
     std::vector<PluginSynth::param_float_snapshot_t> params;
     std::vector<modulation_snapshot_t> modulations;
+    std::vector<adsr_snapshot_t> adsrs;
     std::vector<lfo_snapshot_t> lfos;
     std::vector<ui_layout_t> uiLayout;
 };
 
-static constexpr int32_t SYNTH_GPU_SNAPSHOT_VERSION = 1;
+static constexpr int32_t SYNTH_GPU_SNAPSHOT_VERSION = 0;
 
 std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snapshot) {
     dbgassert(snapshot.version == SYNTH_GPU_SNAPSHOT_VERSION);
@@ -384,6 +388,8 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
     out.write(size_t{snapshot.modulations.size()});
     out.write(size_t{snapshot.uiLayout.size()});
     out.write(size_t{snapshot.lfos.size()});
+    out.write(size_t{snapshot.adsrs.size()});
+
     for (const auto& p : snapshot.params) {
         out.write(p.paramIdx);
         out.write(p.value);
@@ -415,6 +421,10 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
         out.write(lfo.randomModeId);
         out.write(lfo.syncFlags);
     }
+    for (const auto& adsr : snapshot.adsrs) {
+        out.write(int32_t{1});
+        out.write(adsr.shapingMode);
+    }
     out.setPos(0);
     out.write(size_t(shrdHeapVec->size()));
     return shrdHeapVec;
@@ -437,6 +447,7 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     size_t numModulations = 0;
     size_t numUiLayouts = 0;
     size_t numLfos = 0;
+    size_t numAdsrs = 0;
     if (!in.read(numParams) || numParams > 1000)
         return false;
     if (!in.read(numModulations) || numModulations > 1000)
@@ -445,10 +456,13 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
         return false;
     if (!in.read(numLfos) || numLfos > 1000)
         return false;
+    if (!in.read(numAdsrs) || numAdsrs > 1000)
+        return false;
     snapshot.params.resize(numParams);
     snapshot.uiLayout.resize(numUiLayouts);
     snapshot.modulations.resize(numModulations);
     snapshot.lfos.resize(numLfos);
+    snapshot.adsrs.resize(numAdsrs);
 
     for (auto& p : snapshot.params) {
         if (!in.read(p.paramIdx))
@@ -508,7 +522,16 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
             return false;
         if (!in.read(lfo.syncFlags))
             return false;
-        // snapshot.shapes.push_back(std::move(shape));
+    }
+
+    for (auto& adsr : snapshot.adsrs) {
+        int32_t version = 0;
+        if (!in.read(version))
+            return false;
+        if (version < 1)
+            return false;
+        if (!in.read(adsr.shapingMode))
+            return false;
     }
     snapshotOut = std::move(snapshot);
     return true;
@@ -902,7 +925,10 @@ public:
     }
 
     EnvelopeShaping getAdsrShapeMode(int32_t chIdx) const {
-        return voices[0].envelopes[0].shaping;
+        if (chIdx >= 0 && chIdx < CtrSize(tmpVoice.envelopes)) {
+            return tmpVoice.envelopes[chIdx].shaping;
+        }
+        return EnvelopeShaping::Pow;
     }
 
     VoiceSynth& getTempVoiceUI() {
@@ -1420,6 +1446,11 @@ public:
             auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ 0, DAW::Shape::shape_preset_t{2, lfo.shape} };
             snapshot.lfos.emplace_back(std::move(shapeSnapshot), lfo.modeIsShape, lfo.randomModeId, lfo.syncFlags);
         }
+        const auto numEnvelopes = CtrSize(tmpVoice.envelopes);
+        snapshot.adsrs.reserve(numEnvelopes);
+        for (int32_t i = 0; i < numEnvelopes; ++i) {
+            snapshot.adsrs.push_back({ int32_t(tmpVoice.envelopes[i].shaping) });
+        }
         return true;
     }
 
@@ -1476,6 +1507,14 @@ public:
             lfoParams.syncFlags = lfoSnapshot.syncFlags;
             lfoParams.shape = lfoSnapshot.shape.shape.curve;
             lfoParams.shape.flags = DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC;
+        }
+
+        for (size_t i = 0; i < this->tmpVoice.envelopes.size() && i < snapshot.adsrs.size(); i++) {
+            auto& adsr = this->tmpVoice.envelopes[i];
+            adsr.shaping = EnvelopeShaping(snapshot.adsrs[i].shapingMode);
+            for (auto& v : voices) {
+                v.envelopes[i].shaping = adsr.shaping;
+            }
         }
 
         for (auto& param : vecParams) {
