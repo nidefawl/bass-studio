@@ -660,6 +660,7 @@ protected:
     size_t dawCtrlWindowIndex = 0; // (dawCtrlWindowIndex > 0) == isCompanion()
     std::array<dawview_layout_t, 10> layouts;
     SafeRef<guibase> guiEditModulation;
+    size_t statsTickDelay = 0;
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;

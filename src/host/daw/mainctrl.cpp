@@ -92,6 +92,9 @@
 #include "wave/waveform_render_impl.h"
 #include "window_impl.h"
 #include "window.h"
+#ifdef _WIN32
+#include <psapi.h>
+#endif
 
 constexpr int32_t GUITICKS_MOUSEHOVER_UNTIL_SELECT = 10;
 
@@ -1293,6 +1296,44 @@ void DawCtrl::onTick() {
     for (guictr_base* ctr : renderContainers) {
         if (ctr->isVisible())
             ctr->onTick(this);
+    }
+    if (statsTickDelay++ > 100) {
+        statsTickDelay = 0;
+        auto menu = view->getMenu();
+        auto daw = getDaw();
+        if (menu && daw) {
+            auto host = daw->getHost();
+            dbgassert(host);
+            auto sfInternal = daw->getHost()->getSampleFormatInternal();
+            auto latency = daw->getHost()->getLatency();
+            host_stats_reducted_t stats{};
+            host->getShortStats(stats);
+            double memUsageMb = -1.0;
+    #ifdef _WIN32
+            PROCESS_MEMORY_COUNTERS memCounter;
+            BOOL result = GetProcessMemoryInfo(GetCurrentProcess(),
+                                            &memCounter,
+                                            sizeof(memCounter));
+            if (result) {
+                memUsageMb = memCounter.WorkingSetSize / 1024.0 / 1024.0;
+            }
+    #endif
+            double latencyMs = latency * 1000.0 / sfInternal.sampleRate;
+            size_t numPlugins = host->getNumPluginsLoaded();
+            size_t numSamplesLoaded = daw->getAudioCache()->getNumAudioSamplesLoaded();
+            auto fmt = "[CPU %.1f%%] [MEM %.2fMB] [L %zds/%.1fms] [Int SR %u BS %u] [Plugins %zu] [Audiosamples %zu]";
+            /* log_lf(Log::L_DEBUG, fmt,
+                stats.usage,
+                memUsageMb,
+                latency,
+                latencyMs,
+                sfInternal.sampleRate,
+                sfInternal.blockSize,
+                numPlugins,
+                numSamplesLoaded); */
+            String labelInfo = StringFormat(fmt, stats.usage, memUsageMb, latency, latencyMs, sfInternal.sampleRate, sfInternal.blockSize, numPlugins, numSamplesLoaded);
+            menu->setLabel(std::move(labelInfo));
+        }
     }
 }
 
