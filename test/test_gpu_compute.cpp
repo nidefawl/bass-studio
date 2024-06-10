@@ -75,8 +75,6 @@ public:
         }
 
         audioblock->clear();
-        const int nOversample = 1;
-        // const auto bpm100 = host->prjGlobals.tempo100;
         const int32_t programMax = math::max(1, CtrSize(gpuProgram.programs));
         const int32_t programId = currentProgramId % programMax;
         const auto sampleRate = sampleFormat.sampleRate;
@@ -101,13 +99,13 @@ public:
         double osc1_filter = 0.7;
         double osc1_filter_keytrack = 0.0;
         double osc1_stereo = 0.0;
-        int32_t minVoiceIdx = -1;
-        int32_t maxVoiceIdx = -1;
+        ssize_t minVoiceIdx = -1;
+        ssize_t maxVoiceIdx = -1;
         for (int s = 0; s < gpuProgram.blocksize; s++) {
             auto absTime = gpuContext.time_samples + s;
             inputBufferSynthState[s + gpuProgram.blocksize * 0] = float(osc1_filter_keytrack);
             inputBufferSynthState[s + gpuProgram.blocksize * 1] = float(osc1_stereo);
-            for (size_t i = 0; i < NUM_POLY_VOICES; i++) {
+            for (ssize_t i = 0; i < NUM_POLY_VOICES; i++) {
                 const auto idx_base = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize);
                 const auto idx_velocity = idx_base + s;
                 float velocity = -1.0;
@@ -136,7 +134,7 @@ public:
                 inputBufferVoiceStates[idx_velocity] = velocity;
             }
         }
-        int32_t numActiveVoicesBlock = minVoiceIdx == -1 ? 0 : maxVoiceIdx - minVoiceIdx + 1;
+        size_t numActiveVoicesBlock = minVoiceIdx == -1 ? 0 : maxVoiceIdx - minVoiceIdx + 1;
         perfTimer.reset();
         ssboInputSynthState.uploadBuffer();
         ssboInputVoiceStates.uploadBuffer();
@@ -217,10 +215,11 @@ public:
         }
         timeComputeAvg = 0.95 * timeComputeAvg + 0.05 * tmTotal_ms;
     }
-    void setTime(double samplePos) {
-        gpuContext.time_samples = samplePos;
-        gpuContext.time_seconds = samplePos * gpuContext.one_over_samplerate;
-        gpuContext.time_beats = samplePos * gpuContext.one_over_samplerate * gpuContext.bpm / 60.0;
+    void setTime(samplecount_t samplePos) {
+        double dSamplePos = double(samplePos);
+        gpuContext.time_samples = dSamplePos;
+        gpuContext.time_seconds = dSamplePos * gpuContext.one_over_samplerate;
+        gpuContext.time_beats = dSamplePos * gpuContext.one_over_samplerate * gpuContext.bpm / 60.0;
     }
 };
 } // namespace PluginSynth::GPU
@@ -231,8 +230,6 @@ int main(int, char*[]) {
         App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
         auto& tls = daw_tls::initNewTls();
         loadSettings(*tls.settings);
-        auto& settings = *tls.settings;
-
         std::vector<float> outputBuffer;
 
         glfwInitHint(GLFW_COCOA_MENUBAR, GLFW_FALSE);
@@ -254,11 +251,6 @@ int main(int, char*[]) {
         auto window = test.getWindow();
         GlfwContextSwitch ctxSwitch(window);
         test.setBlocksize(sampleFormat.blockSize);
-        auto timeStart = getTimeSecondsD();
-        auto timeRenderStart = timeStart;
-        auto timeLastPerfLog = timeStart;
-        int32_t warmupBlocks = 0;
-        double tmComputeAvg = -1.0;
         AudioBlock audioblock(2, test.sampleFormat.blockSize);
         samplecount_t samplePos = 0;
         samplecount_t numIterations = 0;
