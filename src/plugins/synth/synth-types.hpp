@@ -276,7 +276,7 @@ struct Envelope {
                     phase = 0.0;
                     stage = EnvelopeStages::Idle;
                 } else {
-                    value = shapeSegment(1.0 - phase, shapes[2]) * relValue;
+                    value = shapeSegment(1.0 - phase, 1.0 - shapes[2]) * relValue;
                     phase += clampDuration(r) * dt;
                 }
                 break;
