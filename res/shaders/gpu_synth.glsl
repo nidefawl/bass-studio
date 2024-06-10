@@ -8,7 +8,7 @@
 #define IS_WAVEFORM_SAMPLER 0
 
 /* These macros are to be kept in sync with c++ */
-#define NUM_VOICE_INPUT_PARAMETERS 3
+#define NUM_VOICE_INPUT_PARAMETERS 5
 #define NUM_SYNTH_INPUT_PARAMETERS 2
 
 /* define any number of programs */
@@ -36,6 +36,8 @@ struct voice_state_input_t {
     float velocity[N_SAMPLES];
     float pitch[N_SAMPLES];
     float param_filter[N_SAMPLES];
+    float param_detune[N_SAMPLES];
+    float param_detune_keytrack[N_SAMPLES];
 };
 
 struct synth_state_input_t {
@@ -280,8 +282,10 @@ void processSynthUnison()
             const float a = state_in.voices[j].velocity[i];
             const float f = state_in.voices[j].pitch[i]; // hz
             const double pitchLogScale = double(log2(f / 440.0)) + 2.0;
-            double osc1_det_keytrack_bipolar = ctx.osc1_detune_keytrack * 2.0 - 1.0;
-            double osc1_detune = ctx.osc1_unison_detune * (1.0 + clamp((pitchLogScale + 2.0)*0.66, -1.0, 1.0) * osc1_det_keytrack_bipolar);
+            double osc1_det_keytrack_bipolar = state_in.voices[j].param_detune_keytrack[i] * 2.0 - 1.0;
+            double osc1_detune = state_in.voices[j].param_detune[i] * (1.0 + clamp((pitchLogScale + 2.0)*0.66, -1.0, 1.0) * osc1_det_keytrack_bipolar);
+            // double osc1_det_keytrack_bipolar = ctx.osc1_detune_keytrack * 2.0 - 1.0;
+            // double osc1_detune = ctx.osc1_unison_detune * (1.0 + clamp((pitchLogScale + 2.0)*0.66, -1.0, 1.0) * osc1_det_keytrack_bipolar);
             double osc1_flt_keytrack_bipolar = state_in_synth.synth.param_filter_keytrack[i] * 2.0 - 1.0;
             double filter_keytrack = 1.0 + clamp((pitchLogScale-1.0) * -0.8, -1.0, 1.0) * osc1_flt_keytrack_bipolar;
             double stereo_width = state_in_synth.synth.param_stereo[i];

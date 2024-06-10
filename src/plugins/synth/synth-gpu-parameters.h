@@ -11,13 +11,13 @@ enum {
 
 enum {
     NUM_AUDIO_CHANNELS = 2,
-    NUM_POLY_VOICES    = 32,
-    MAX_UNISON_VOICES  = 32,
+    NUM_POLY_VOICES    = 24,
+    MAX_UNISON_VOICES  = 16,
 };
 
 /* keep in sync with shader defines */
 enum {
-    NUM_VOICE_INPUT_PARAMETERS = 3,
+    NUM_VOICE_INPUT_PARAMETERS = 5,
     NUM_SYNTH_INPUT_PARAMETERS = 2,
 };
 

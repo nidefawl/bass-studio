@@ -126,7 +126,7 @@ public:
     }
     virtual void initSampleRate() {
     }
-    virtual void setBlocksize(blocksize_t bs) {
+    virtual void setBlocksize(samplecount_t bs) {
     }
 
     void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {

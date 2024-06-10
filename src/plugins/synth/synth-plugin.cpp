@@ -1246,7 +1246,7 @@ public:
         notifyUiChanges();
     }
 
-    void setBlocksize(blocksize_t bs) override {
+    void setBlocksize(samplecount_t bs) override {
         this->oversampler.resize(2, bs);
     }
 

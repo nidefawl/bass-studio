@@ -126,7 +126,7 @@ struct LFOParameters  : public ::PluginLFO::LFOSyncParameters {
         if (!syncFlags || syncRatios.empty()) {
             return math::max(pow(2.0, d * 21.0) * 0.01, 0.001);
         } else {
-            auto index = math::clamp<int32_t>(math::floorfS32(d * CtrSize(syncRatios)), 0, CtrSize(syncRatios) - 1);
+            auto index = math::clamp<int32_t>(math::floordS32(d * CtrSize(syncRatios)), 0, CtrSize(syncRatios) - 1);
             return double(syncRatios[index].denominator * bpm) / double(syncRatios[index].numerator * 60.0 * 4.0);
         }
     }
@@ -223,7 +223,7 @@ public:
         if (params->trigger == LFOParameters::OneShot) {
             p = math::min(1.0, p);
         } else {
-            double _unused;
+            double _unused = 0.0;
             p = std::modf(p, &_unused); 
         }
         return params->shape.sampleCurve(float(p), false);
@@ -242,19 +242,21 @@ public:
         return { params->freq, params->phaseOffset, 0 };
     }
     float getScaledRate(PluginLFO::LFOSyncParameters* sync, float rate) override { 
-        return 1.0 / params->paramToFreqHz(rate);
+        return float(1.0 / params->paramToFreqHz(rate));
     };
 };
 struct VoiceSynth {
     std::array<double, 64> modValues{};
     double velocity     = 0.0;
     note_t noteT = {};
-    std::array<Envelope, NUM_ADSR> envelopes;
-    std::array<SynthLfo, NUM_LFO> lfos;
-    std::array<double, NUM_MOD_SRC_RAND> randoms;
+    std::array<Envelope, NUM_ADSR> envelopes{};
+    std::array<SynthLfo, NUM_LFO> lfos{};
+    std::array<double, NUM_MOD_SRC_RAND> randoms{};
     double frequency       = 0.0;
     double targetFrequency = 0.0;
     double pitchBend       = 1.0;
+    double unisonDetune = 0.0;
+    double unisonDetuneKeytrack = 0.0;
     bool bIsActive         = false;
     int32_t seqNr = 0;
     seq_rand rand;
@@ -338,6 +340,7 @@ static constexpr std::array<const char*, 17> stringsModSource = {
     "Note Phase (0-1)",
     "Note Held (Fade 0-1-0)",
 };
+
 const std::array modSourceVarNames = {
     "x",
     "a",
@@ -352,6 +355,7 @@ const std::array modSourceVarNames = {
     "alt",
     "f"
 };
+
 static constexpr size_t NUM_MODULATION_SOURCES = stringsModSource.size();
 
 struct ui_layout_t {
@@ -361,7 +365,7 @@ struct lfo_snapshot_t {
     DAW::Shape::shape_snapshot_t shape{};
     bool modeIsShape = true;
     int32_t randomModeId = 0;
-    int32_t syncFlags;
+    int32_t syncFlags = 0;
 };
 struct adsr_snapshot_t {
     int32_t shapingMode = 0;
@@ -631,7 +635,7 @@ private:
         setParamName(getParam(Parameters::Osc1Waveform), "Oscillator 1 Waveform", "OSC1 Wave", "Wave");
         addIntParam(Parameters::Osc1UnisonVoiceCount)->setRange(1, MAX_UNISON_VOICES)->setInitialValue(3);
         setParamName(getParam(Parameters::Osc1UnisonVoiceCount), "Oscillator 1 Unison Voices", "OSC1 Unison", "Unison", "Voices");
-        addFloatParam(Parameters::Osc1UnisonDetune)->setRange(-6.0, 6.0)->setInitialValue(-0.2);
+        addFloatParam(Parameters::Osc1UnisonDetune)->setRange(-6.0, 6.0)->setInitialValue(0.0);
         setParamName(getParam(Parameters::Osc1UnisonDetune), "Oscillator 1 Unison Detune", "OSC1 Detune", "Detune", "Semi");
         addFloatParam(Parameters::Osc1Filter)->setRange(0.0, 1.0)->setInitialValue(1.0 - 1.0 / 64.0);
         setParamName(getParam(Parameters::Osc1Filter), "Oscillator 1 Filter", "OSC1 Filter", "Filter", "");
@@ -809,7 +813,7 @@ private:
             double lastVal = envParamVals[lastIdx];
             double s = lastVal - firstVal;
             for (int i = 0; i < 8; i++) {
-                envParamVals[i] = firstVal + (i / 7.0) * s;
+                envParamVals[i] = float(firstVal + (i / 7.0) * s);
             }
         }
         return closestVal;
@@ -825,12 +829,15 @@ public:
     }
     void StartVoice(VoiceSynth& voice, VoiceModes mode) {
         voice.Start(mode == VoiceModes::Mono);
+        voice.unisonDetune = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
+        voice.unisonDetuneKeytrack = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
     }
 
     void updateProgramList() override {
         // adjust program param
         auto param = GetParamEnum(ParametersSynthGPU::Osc1Waveform);
         std::vector<String> programNames;
+        programNames.reserve(this->gpuProgram.numPrograms);
         for (int32_t i = 0; i < this->gpuProgram.numPrograms; i++) {
             programNames.push_back(this->gpuProgram.programDescs[i].name);
         }
@@ -842,16 +849,16 @@ public:
         }
     }
 
-    void setBlocksize(blocksize_t blockSize) override {
-        SynthImpl::setBlocksize(blockSize);
+    void setBlocksize(samplecount_t blocksize) override {
+        SynthImpl::setBlocksize(blocksize);
         GlfwContextSwitch ctxSwitch(window);
-        if (!gpuProgram.is_valid() || gpuProgram.blocksize != blockSize) {
-            reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
+        if (!gpuProgram.is_valid() || gpuProgram.blocksize != blocksize) {
+            reloadShader({blocksize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
         }
-        ssboInputSynthState.buffer.resize(blockSize * NUM_SYNTH_INPUT_PARAMETERS);
-        ssboInputVoiceStates.buffer.resize(blockSize * NUM_POLY_VOICES * NUM_VOICE_INPUT_PARAMETERS);
-        ssboOutput.buffer.resize(blockSize * gpuProgram.channels);
-        ssboOutputWaveform.buffer.resize(blockSize);
+        ssboInputSynthState.buffer.resize(blocksize * size_t(NUM_SYNTH_INPUT_PARAMETERS));
+        ssboInputVoiceStates.buffer.resize(blocksize * size_t(NUM_POLY_VOICES) * size_t(NUM_VOICE_INPUT_PARAMETERS));
+        ssboOutput.buffer.resize(blocksize * gpuProgram.channels);
+        ssboOutputWaveform.buffer.resize(blocksize);
         GPUAudioProcessor::reallocateSSBOs();
     }
 
@@ -901,7 +908,7 @@ public:
         log_lf(Log::L_INFO, "inputBuffer bandwidth: %f MB/s\n", inputPerSec);
 
         // also print output buffer size and bandwidth
-        const auto outputSizePerSample = 3;
+        const auto outputSizePerSample = size_t(3);
         log_lf(Log::L_INFO, "outputBuffer size: %f MB\n", outputSizePerSample * gpuProgram.blocksize * sizeof(float) / 1024.0 / 1024.0);
         const auto outputPerSec = outputSizePerSample * sampleRate * sizeof(float) / 1024.0 / 1024.0;
         log_lf(Log::L_INFO, "outputBuffer bandwidth: %f MB/s\n", outputPerSec);
@@ -1044,10 +1051,6 @@ public:
         }
     }
 
-    void StartVoice(VoiceSynth& v, bool bTriggerMono) {
-        v.Start(bTriggerMono);
-    }
-
     samplecount_t getLatency() override { return gpuProgram.blocksize * (ssboOutput.ssbo.size() - 1); }
 
     void updateEnvelopeParameters(VoiceSynth& v) {
@@ -1086,7 +1089,7 @@ public:
             v.envelopes[i].shapes[2] = envSusShape[i * 4 + 3];
         }
     }
-    void updateLFOParameters(LFOParameters& p, int32_t lfoIdx) {
+    void updateLFOParameters(LFOParameters& p, size_t lfoIdx) {
         using P = Parameters;
         const double lfoFreq = vecParams[P::LFO_1_Frequency + lfoIdx * MAX_PARAMS_PER_LFO]->getAsDoubleModulated();
         p.bpm = gpuContext.bpm;
@@ -1169,7 +1172,8 @@ public:
         const auto bpm100 = host->prjGlobals.tempo100;
         int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
 
-        const int32_t programId = currentProgramId % gpuProgram.programs.size();
+        const int32_t programMax = math::max(1, CtrSize(gpuProgram.programs));
+        const int32_t programId = currentProgramId % programMax;
         const auto sampleRate = moduleSynthInstance->format.sampleRate;
 
         const auto hostInfo = moduleSynthInstance->getHostCallback();
@@ -1202,10 +1206,10 @@ public:
         std::array<double, 64>* modValuesActive = &voices[0].modValues;
         std::fill(modValuesActive->begin(), modValuesActive->end(), 0.0f);
         for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
-            static int32_t maxPolyCountSeen = 0;
-            int32_t polyCount = std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; });
+            static int64_t maxPolyCountSeen = 0;
+            int64_t polyCount = std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; });
             if (polyCount > maxPolyCountSeen) {
-                log_lf(Log::L_WARN, "Max poly count seen: %d\n", polyCount);
+                log_lf(Log::L_WARN, "Max poly count seen: %zd\n", polyCount);
                 maxPolyCountSeen = polyCount;
             }
             if (!polyCount) {
@@ -1228,8 +1232,8 @@ public:
                 osc1_filter_keytrack = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
             }
 
-            inputBufferSynthState[s + gpuProgram.blocksize * 0] = osc1_filter_keytrack;
-            inputBufferSynthState[s + gpuProgram.blocksize * 1] = osc1_stereo;
+            inputBufferSynthState[s + gpuProgram.blocksize * 0] = float(osc1_filter_keytrack);
+            inputBufferSynthState[s + gpuProgram.blocksize * 1] = float(osc1_stereo);
 
             const auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
             const auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
@@ -1264,12 +1268,12 @@ public:
                             float noteFade = 1.0 + (modSrcData[14] - 1.0) * otherParams[0];
                             volEnv *= noteFade;
                         }
-                        const float masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_MasterVolume]);
+                        const double masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_MasterVolume]);
                         float masterGain = 0.0;
-                        dsp_util::getGainLvl(masterVolume, masterGain);
-                        const float osc1GainParam = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_Osc1Gain]);
+                        dsp_util::getGainLvl(float(masterVolume), masterGain);
+                        const double osc1GainParam = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_Osc1Gain]);
                         float osc1Gain = 0.0;
-                        dsp_util::getGainLvl(osc1GainParam, osc1Gain);
+                        dsp_util::getGainLvl(float(osc1GainParam), osc1Gain);
                         velocity = (osc1Gain+v.modValues[ModDestinations::ModDest_Osc1Gain]);
                         velocity *= v.velocity;
                         velocity *= volEnv;
@@ -1277,8 +1281,12 @@ public:
                     }
                     const auto idx_pitch    = idx_base + gpuProgram.blocksize * 1 + s;
                     const auto idx_filter   = idx_base + gpuProgram.blocksize * 2 + s;
-                    inputBufferVoiceStates[idx_pitch]    = osc1Frequency;
-                    inputBufferVoiceStates[idx_filter]   = 1.0-osc1_filter;
+                    const auto idx_detune   = idx_base + gpuProgram.blocksize * 3 + s;
+                    const auto idx_detune_keytrack = idx_base + gpuProgram.blocksize * 4 + s;
+                    inputBufferVoiceStates[idx_pitch]  = float(osc1Frequency);
+                    inputBufferVoiceStates[idx_filter] = float(1.0 - osc1_filter);
+                    inputBufferVoiceStates[idx_detune] = float(v.unisonDetune);
+                    inputBufferVoiceStates[idx_detune_keytrack] = float(v.unisonDetuneKeytrack);
                     v.bIsActive = v.isVoiceActive();
                     // if (bIsFirst) {
                     //     double firstSample = velocity;
@@ -1552,7 +1560,7 @@ public:
             int idx = PARAM_OFFSET_IMPL + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
-            regparam->setInitial(paramEntry->getAsDouble());
+            regparam->setInitial(float(paramEntry->getAsDouble()));
             regparam->extensiveName  = paramEntry->name;
             regparam->name  = paramEntry->shortName;
             regparam->shortLabel  = paramEntry->hierarchicalName;
@@ -1627,7 +1635,12 @@ public:
             }
             auto param = getParam(PARAM_OFFSET_IMPL + idx);
             if (assert_expr(param)) {
-                param->setAll(vecParams[idx]->getAsDouble());
+                auto paramValue = param->getValue();
+                auto paramImpl = vecParams[idx]->valDouble;
+                if (paramImpl != paramValue) {
+                    log_lf(Log::L_WARN, "param %s: %f != %f\n", param->name.c_str(), paramImpl, paramValue);
+                    param->setAll(float(vecParams[idx]->getAsDouble()));
+                }
             }
         }
         getSynth()->onPresetLoaded();
@@ -1710,7 +1723,7 @@ public:
                 }
             }
         }
-        return internalplugin::convertParamValueDisplay(idx, displayValue);
+        return module_synth_template<SynthImplGPU>::convertParamValueDisplay(idx, displayValue);
     }
 };
 
@@ -2235,7 +2248,7 @@ public:
             for (samplecount_t j = 0; j < samplecount_t(numPoints); ++j) {
                 auto t = begin + double(j * range) / numPoints;
                 auto v = lfo.getSourceRand()->sampleCurve(t);
-                auto normalizedT = (t - begin) / float(range);
+                auto normalizedT = float((t - begin) / range);
                 auto& pt = shape.pts[j];
                 pt.pos.x = normalizedT;
                 pt.pos.y = v;
@@ -2516,9 +2529,15 @@ public:
     void onSetParameter(int32_t index, float value) {
         if (index == -1) {
             bGuiNeedsRefresh = true;
+            auto* const synth = moduleInstance->getSynth();
             for (auto& synthKnob : vecParamUI) {
-                if (synthKnob.knob)
-                    synthKnob.knob->setValueInit(moduleInstance->getSynth()->getParam(synthKnob.param)->getAsDouble());
+                if (synthKnob.knob) {
+                    auto param = synth->getParam(synthKnob.param);
+                    if (!assert_expr(param)) {
+                        continue;
+                    }
+                    synthKnob.knob->setValueInit(float(param->getAsDouble()));
+                }
             }
             return;
         }
