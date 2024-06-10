@@ -681,8 +681,8 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
     }
     std::array<double, 64>* modValuesActive = &voices[0].modValues;
     std::fill(modValuesActive->begin(), modValuesActive->end(), 0.0f);
-    ssize_t minVoiceIdx = -1;
-    ssize_t maxVoiceIdx = -1;
+    int64_t minVoiceIdx = -1;
+    int64_t maxVoiceIdx = -1;
     for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
         static int64_t maxPolyCountSeen = 0;
         int64_t polyCount               = std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; });
@@ -718,7 +718,7 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
         for (size_t i = 0; i < lfosSongPos.size(); i++) {
             lfosSongPos[i].Update(oneOverSR);
         }
-        for (ssize_t i = 0; i < NUM_POLY_VOICES; i++) {
+        for (int64_t i = 0; i < NUM_POLY_VOICES; i++) {
             const auto idx_base     = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize);
             const auto idx_velocity = idx_base + s;
             auto& v                 = voices[i];
