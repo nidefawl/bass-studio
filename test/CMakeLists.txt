@@ -18,7 +18,6 @@ else()
   #list(APPEND TC_WARNING_FLAGS -Og )
   list(APPEND TC_WARNING_FLAGS -Wall -Wextra -pedantic -Wnon-virtual-dtor -Woverloaded-virtual)
   list(APPEND TC_WARNING_FLAGS -Wconversion)
-  list(APPEND TC_WARNING_FLAGS -w)
 endif()
 
 message(STATUS "TESTS WARNINGS ${TC_WARNING_FLAGS}")
