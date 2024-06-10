@@ -1244,7 +1244,7 @@ public:
                 const auto idx_base = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize);
                 const auto idx_velocity = idx_base + s;
                 auto& v = voices[i];
-                float velocity = -1.0;
+                double velocity = -1.0;
                 if (v.bIsActive) {
                     for (size_t l = 0; l < v.lfos.size(); l++) {
                         auto& lfo = v.lfos[l];
@@ -1263,9 +1263,9 @@ public:
                     const auto baseFrequency = v.frequency * v.pitchBend;
                     const auto osc1Frequency = osc1Tune * baseFrequency;
                     if (v.bIsActive) {
-                        float volEnv = v.GetVolumeEnvelope().value;
+                        double volEnv = v.GetVolumeEnvelope().value;
                         if (v.noteT.len > 0 && otherParams[0] > 0.0f) {
-                            float noteFade = 1.0 + (modSrcData[14] - 1.0) * otherParams[0];
+                            double noteFade = 1.0 + (modSrcData[14] - 1.0) * otherParams[0];
                             volEnv *= noteFade;
                         }
                         const double masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_MasterVolume]);
@@ -1297,7 +1297,7 @@ public:
                     //     dbgassert(lastSample == 0.0);
                     // }
                 }
-                inputBufferVoiceStates[idx_velocity] = velocity;
+                inputBufferVoiceStates[idx_velocity] = float(velocity);
             }
         }
         auto& modVals = *modValuesActive;
