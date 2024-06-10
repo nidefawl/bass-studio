@@ -751,16 +751,16 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
                     double noteFade = 1.0 + (modSrcData[14] - 1.0) * otherParams[0];
                     volEnv *= noteFade;
                 }
-                // const double masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_MasterVolume]);
-                // float masterGain = 0.0;
-                // dsp_util::getGainLvl(float(masterVolume), masterGain);
-                // const double osc1GainParam = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_Osc1Gain]);
-                // float osc1Gain = 0.0;
-                // dsp_util::getGainLvl(float(osc1GainParam), osc1Gain);
-                // velocity = (osc1Gain+v.modValues[ModDestinations::ModDest_Osc1Gain]);
-                velocity = v.velocity;
+                const double masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_MasterVolume]);
+                float masterGain = 0.0;
+                dsp_util::getGainLvl(float(masterVolume), masterGain);
+                const double osc1GainParam = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_Osc1Gain]);
+                float osc1Gain = 0.0;
+                dsp_util::getGainLvl(float(osc1GainParam), osc1Gain);
+                velocity = (osc1Gain+v.modValues[ModDestinations::ModDest_Osc1Gain]);
+                velocity *= v.velocity;
                 velocity *= volEnv;
-                // velocity *= masterGain;
+                velocity *= masterGain;
 
                 const auto idx_pitch                        = idx_base + gpuProgram.blocksize * 1 + s;
                 const auto idx_filter                       = idx_base + gpuProgram.blocksize * 2 + s;
