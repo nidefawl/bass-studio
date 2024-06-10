@@ -1,3 +1,4 @@
+#include <cstring>
 #ifdef _WIN32
 #include "config.h"
 #include "str_util.h"
@@ -32,14 +33,22 @@
 
 bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* size) {
     HWND hwnd = glfwGetWin32Window(glfw);
-    size->valid = GetWindowPlacement(hwnd, &(size->p)) != 0;
+    WINDOWPLACEMENT p{};
+    p.length = sizeof(WINDOWPLACEMENT);
+    size->valid = GetWindowPlacement(hwnd, &p) != 0;
+    if (size->valid && sizeof(WINDOWPLACEMENT) <= sizeof(size->data)) {
+        memcpy(&size->data[0], &p, sizeof(WINDOWPLACEMENT));
+    }
     return true;
 }
 
 bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* size) {
-    if (size->valid) {
+    if (size->valid && sizeof(WINDOWPLACEMENT) <= sizeof(size->data)) {
         HWND hwnd = glfwGetWin32Window(glfw);
-        return SetWindowPlacement(hwnd, &(size->p)) != 0;
+        WINDOWPLACEMENT p{};
+        memcpy(&p, &size->data[0], sizeof(WINDOWPLACEMENT));
+        p.length = sizeof(WINDOWPLACEMENT);
+        return SetWindowPlacement(hwnd, &p) != 0;
     }
     return false;
 }

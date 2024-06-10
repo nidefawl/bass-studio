@@ -20,11 +20,13 @@ using namespace cereal;
 
 #ifdef _WIN32
 #include "platform/win/windowsize.h"
+#include <windows.h>
 
 template <class Archive>
-void serialize(Archive& ar, appwindow_size_t& settings) {
-    auto& p = settings.p;
-    ar(settings.valid,
+void serialize(Archive& ar, appwindow_size_t& size) {
+    WINDOWPLACEMENT p{};
+    memcpy(&p, &size.data[0], sizeof(WINDOWPLACEMENT));
+    ar(size.valid,
        p.flags,
        p.showCmd,
        (int32_t&) p.ptMinPosition.x,
@@ -35,6 +37,7 @@ void serialize(Archive& ar, appwindow_size_t& settings) {
        (int32_t&) p.rcNormalPosition.top,
        (int32_t&) p.rcNormalPosition.right,
        (int32_t&) p.rcNormalPosition.bottom);
+    memcpy(&size.data[0], &p, sizeof(WINDOWPLACEMENT));
 }
 #endif
 #if defined(__linux__) || defined(__APPLE__)
