@@ -68,6 +68,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include <glm/gtx/fast_exponential.hpp>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
@@ -81,11 +82,11 @@ const uint32_t PLUGIN_UID = 1314080845; //"SYNT";
 const char* const PLUGIN_PRODUCT_NAME = "Synth";
 
 
-static constexpr uint16_t NUM_POLY_VOICES   = 64;
-static constexpr uint16_t NUM_UNISON_VOICES = 16;
+static constexpr size_t NUM_POLY_VOICES   = 64;
+static constexpr size_t NUM_UNISON_VOICES = 16;
 constexpr bool USE_THREADING = false;
-constexpr uint16_t AUDIOPROCESSING_THREADS = USE_THREADING ? 32 : 0;
-constexpr uint16_t AUDIOPROCESSING_TASKS = (USE_THREADING) ? NUM_POLY_VOICES * NUM_UNISON_VOICES : 0;
+constexpr size_t AUDIOPROCESSING_THREADS = USE_THREADING ? 32 : 0;
+constexpr size_t AUDIOPROCESSING_TASKS = (USE_THREADING) ? NUM_POLY_VOICES * NUM_UNISON_VOICES : 0;
 
 
 enum ModulationSourceType {
@@ -894,8 +895,8 @@ private:
             return *v;
         }
     };
-    std::array<WorkerThread, AUDIOPROCESSING_THREADS> threads;
-    std::array<SynthVoicProcessTask, AUDIOPROCESSING_TASKS> tasks;
+    std::array<WorkerThread, AUDIOPROCESSING_THREADS> threads{};
+    std::array<SynthVoicProcessTask, AUDIOPROCESSING_TASKS> tasks{};
     uint32_t threadsRunningCount = 0;
     uint32_t threadCount = AUDIOPROCESSING_THREADS;
 
@@ -1247,7 +1248,7 @@ public:
     }
 
     void setBlocksize(samplecount_t bs) override {
-        this->oversampler.resize(2, bs);
+        this->oversampler.resize(2, int32_t(bs));
     }
 
     int32_t getActiveVoiceCount() {
@@ -1435,7 +1436,7 @@ private:
         alignas(64) FPType envParamVals[LEN_SIMD]{};
         alignas(64) FPType envParamValsScaled[LEN_SIMD]{};
         for (int i = 0; i < LEN_USED; i++) {
-            envParamVals[i] = math::clamp<FPType>(GetModulatedParamVoice(voice, envParms[i]), 1.0E-12, 1.0);
+            envParamVals[i] = math::clamp<FPType>(float(GetModulatedParamVoice(voice, envParms[i])), 1.0E-12, 1.0);
         }
         auto sizeofarr = sizeof(envParamVals);
         bool bAllEqual = std::memcmp(voice.envelopeValuesCached.data(), envParamVals, sizeofarr) == 0;
@@ -2070,7 +2071,7 @@ public:
                 switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
                     case VoiceModes::Mono:
                     case VoiceModes::Legato:
-                        for (int i = 1; i < NUM_POLY_VOICES; i++) {
+                        for (size_t i = 1; i < NUM_POLY_VOICES; i++) {
                             voices[i].Release();
                         }
                         break;
@@ -2129,7 +2130,7 @@ public:
             int idx = PARAM_OFFSET_IMPL + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
-            regparam->setInitial(paramEntry->getAsDouble());
+            regparam->setInitial(float(paramEntry->getAsDouble()));
             regparam->extensiveName  = paramEntry->name;
             regparam->name  = paramEntry->shortName;
             regparam->shortLabel  = paramEntry->hierarchicalName;
@@ -2218,7 +2219,7 @@ public:
                 continue;
             }
             auto param = getParam(PARAM_OFFSET_IMPL + idx);
-            param->setAll(vecParams[idx]->getAsDouble());
+            param->setAll(float(vecParams[idx]->getAsDouble()));
         }
     }
 
@@ -2275,7 +2276,7 @@ PluginVST2_Synth::PluginVST2_Synth(audioMasterCallback audioMaster)
     isSynth(true);
     programsAreChunks(true);
     impl->init();
-    setInitialDelay(impl->getLatency());
+    setInitialDelay(VstInt32(impl->getLatency()));
 }
 
 PluginVST2_Synth::~PluginVST2_Synth() {
@@ -2934,7 +2935,7 @@ public:
             bGuiNeedsRefresh = true;
             for (auto& synthKnob : vecParamUI) {
                 if (synthKnob.knob)
-                    synthKnob.knob->setValueInit(synth->getParam(synthKnob.param)->getAsDouble());
+                    synthKnob.knob->setValueInit(float(synth->getParam(synthKnob.param)->getAsDouble()));
             }
             return;
         }
@@ -3233,7 +3234,7 @@ public:
         auto voicePos = vec2(inset);
         auto voiceSize = vec2(voiceWidth, cs.y - inset * 2);
         {
-            for (int polyIndex = 0; polyIndex < NUM_POLY_VOICES; ++polyIndex) {
+            for (size_t polyIndex = 0; polyIndex < NUM_POLY_VOICES; ++polyIndex) {
                 nvgBatchedRect(vg, voicePos.x, voicePos.y, voiceSize.x-2, voiceSize.y);
                 voicePos.x += voiceSize.x;    
             }
@@ -3600,7 +3601,7 @@ void module_synth_unison::settingChanged(Settings setting, float value) {
 void PluginVST2_Synth::settingChanged(int32_t setting, float value) {
     log_lf(Log::L_DEBUG, "Setting changed: %s %f\n", stringsSettings[setting], value);
     if (setting == Settings::Oversampling) {
-        setInitialDelay(getSynth()->getLatency());
+        setInitialDelay(VstInt32(getSynth()->getLatency()));
     }
 }
 

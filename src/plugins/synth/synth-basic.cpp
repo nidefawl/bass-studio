@@ -20,10 +20,12 @@
 #include <nanovg.h>
 #include <nanovg_min.h>
 
+#include <utility>
+
 class ctxtmenu_toggle_setting final : public ctxtmenu_entry {
 public:
     ctxtmenu_toggle_setting(String _title, int _id)
-        : ctxtmenu_entry(_title, _id)
+        : ctxtmenu_entry(std::move(_title), _id)
     {
         auto icon = ICON_PLUS;
         setIcon(&RenderResources::imgIcons[icon], GuiColor::COL_WHITE);
@@ -365,7 +367,7 @@ public:
         dbgassert(!fp_math::isNanOrInfd(out));
         double volEnvSmoothed = volEnvValue;
         if (voice.noteT.len > 0) {
-            const float noteProgress = voice.noteT.end() - tickPos;
+            const float noteProgress = float(voice.noteT.end() - tickPos);
             const float fFadeLen = 128.0f;
             float fFadeIn = math::smoothstep(math::clamp(noteProgress / fFadeLen, 0.0f, 1.0f));
             float fFadeOut = math::smoothstep(math::clamp((voice.noteT.len - noteProgress) / fFadeLen, 0.0f, 1.0f));
@@ -504,7 +506,7 @@ public:
             int idx = PARAM_ENABLE + 1 + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
-            regparam->setInitial(paramEntry->getAsDouble());
+            regparam->setInitial(float(paramEntry->getAsDouble()));
             regparam->name  = paramEntry->shortName;
             regparam->unit  = paramEntry->unit;
             switch (paramEntry->type) {
@@ -568,7 +570,7 @@ public:
                 continue;
             }
             auto param = getParam(idx + 1);
-            param->setAll(vecParams[idx]->getAsDouble());
+            param->setAll(float(vecParams[idx]->getAsDouble()));
         }
     }
     void getUiSnapshot(snapshot_t& snapshot);
@@ -655,11 +657,11 @@ public:
                     DAW::Shape::shape_t shape;
                     shape.flags = DAW::Shape::SHAPE_CYCLIC | DAW::Shape::SHAPE_LOCK_POINTS;
                     /* use synthRandUI to generate some random peaks */
-                    std::array<float, 16> peaks;
+                    std::array<float, 16> peaks{};
                     float phase = 0.0f;
                     float phaseStep = 1.0f / peaks.size();
                     for (auto& peak : peaks) {
-                        peak = synthRandUI.rng_double() * 0.5f + 0.5f;
+                        peak = float(synthRandUI.rng_double() * 0.5 + 0.5);
                         shape.pts.push_back(DAW::Shape::shape_pt_t{{phase, peak*2.0f - 1.0f}, 0.5f});
                         phase += phaseStep;
                     }
@@ -1151,7 +1153,7 @@ public:
         dbgassert(!fp_math::isNanOrInfd(out));
         double volEnvSmoothed = volEnvValue;
         if (voice.noteT.len > 0) {
-            const float noteProgress = voice.noteT.end() - tickPos;
+            const float noteProgress = float(voice.noteT.end() - tickPos);
             const float fFadeLen = 64.0f;
             float fFadeIn = math::smoothstep(math::clamp(noteProgress / fFadeLen, 0.0f, 1.0f));
             float fFadeOut = math::smoothstep(math::clamp((voice.noteT.len - noteProgress) / fFadeLen, 0.0f, 1.0f));
@@ -1301,7 +1303,7 @@ public:
             int idx = PARAM_ENABLE + 1 + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
-            regparam->setInitial(paramEntry->getAsDouble());
+            regparam->setInitial(float(paramEntry->getAsDouble()));
             regparam->name  = paramEntry->shortName;
             regparam->unit  = paramEntry->unit;
             switch (paramEntry->type) {
@@ -1365,7 +1367,7 @@ public:
                 continue;
             }
             auto param = getParam(idx + 1);
-            param->setAll(vecParams[idx]->getAsDouble());
+            param->setAll(float(vecParams[idx]->getAsDouble()));
         }
     }
     void getUiSnapshot(snapshot_t& snapshot);
@@ -1407,7 +1409,7 @@ public:
         SafeRef<guibase> refGui;
     public:
         explicit guictr_module_synth_shaper_context_menu(module_synth_shaper* _module, SafeRef<guibase> ref)
-            : guictxtmenu(), moduleInstance(_module), refGui(std::move(ref))
+            : guictxtmenu(), moduleInstance(_module), refGui(ref)
         {
             this->size.x   = 220;
             maxHeight = 0;

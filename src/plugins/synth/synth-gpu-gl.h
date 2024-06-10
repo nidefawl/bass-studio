@@ -22,12 +22,13 @@ struct gpu_program_definitions_t {
 };
 
 struct gpu_program_desc_t {
-    int32_t programNr;
-    String name;
-    String def;
+    int32_t programNr = 0;
+    String name = "";
+    String def = "";
 };
-#define MAX_PROGRAMS 1024
+
 struct gpu_program : public gpu_program_definitions_t {
+    static constexpr size_t MAX_PROGRAMS = 1024;
     std::array<gpu_program_desc_t, MAX_PROGRAMS> programDescs{};
     std::array<GLuint, MAX_PROGRAMS> programs{};
     std::array<GLuint, MAX_PROGRAMS> programsWaveform{};
@@ -47,7 +48,7 @@ struct gpu_program : public gpu_program_definitions_t {
 };
 
 inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& src, const gpu_program_definitions_t& defs) {
-    auto compileProgram = [](const auto& src, int32_t programNr, bool isWaveformSampler) ->  std::variant<GLuint, String> {
+    auto compileProgram = [](const auto& src, size_t programNr, bool isWaveformSampler) ->  std::variant<GLuint, String> {
         String sourceCopy = src;
         GLuint shader1 = glCreateShader(GL_COMPUTE_SHADER);
         dbgassert(shader1);
@@ -80,17 +81,17 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
     auto& glslSourceCode = src.source;
     // find #define PROGRAM_NAME_.* ".*"\n using string find, not regex
     size_t pos = 0;
-    int32_t programNr = 0;
+    size_t programNr = 0;
     size_t posLastProcessedDefine = 0;
     while ((pos = glslSourceCode.find("#define PROGRAM_NAME_", pos)) != String::npos) {
         size_t start = pos + 21;
-        size_t lineEnd = glslSourceCode.find("\n", start);
-        size_t beginName = glslSourceCode.find("\"", start);
+        size_t lineEnd = glslSourceCode.find('\n', start);
+        size_t beginName = glslSourceCode.find('\"', start);
         if (beginName+1 > lineEnd || beginName == String::npos) {
             break;
         }
         beginName++;
-        size_t endName = glslSourceCode.find("\"", beginName);
+        size_t endName = glslSourceCode.find('\"', beginName);
         if (endName > lineEnd || endName == String::npos) {
             break;
         }
@@ -99,13 +100,13 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
         String defName = glslSourceCode.substr(start, beginName - start - 1);
         String name = glslSourceCode.substr(beginName, endName - beginName);
         gpu_program_desc_t desc;
-        desc.programNr = programNr;
+        desc.programNr = int32_t(programNr);
         desc.name = name;
         desc.def = defName;
-        log_lf(Log::L_DEBUG, "Found program %d %s %s\n", programNr, StringAsCStr(name), StringAsCStr(defName));
+        log_lf(Log::L_DEBUG, "Found program %zu %s %s\n", programNr, StringAsCStr(name), StringAsCStr(defName));
         result.programDescs[programNr] = desc;
         programNr++;
-        if (programNr >= MAX_PROGRAMS) {
+        if (programNr >= gpu_program::MAX_PROGRAMS) {
             break;
         }
     }
@@ -114,7 +115,7 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
     }
     /* place a #define PROGRAM_<NAME> <NR> in the source code */
     String defBlock = "";
-    for (int32_t i = 0; i < programNr; i++) {
+    for (size_t i = 0; i < programNr; i++) {
         defBlock += "#define PROGRAM_" + result.programDescs[i].def + " " + std::to_string(i) + "\n";
     }
     defBlock += "#define N_PROGRAMS " + std::to_string(programNr) + "\n";
@@ -125,7 +126,7 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
     }
     auto processedSrc = glslSourceCode.substr(0, posLastProcessedDefine) + defBlock + glslSourceCode.substr(posLastProcessedDefine);
     // log_lf(Log::L_DEBUG, "Processed source code:\n%s\n", StringAsCStr(processedSrc));
-    for (int32_t i = 0; i < programNr; i++) {
+    for (size_t i = 0; i < programNr; i++) {
         auto programSynth = compileProgram(processedSrc, i, false);
         if (std::holds_alternative<String>(programSynth)) {
             return std::get<String>(programSynth);
@@ -137,7 +138,7 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
         result.programs[i] = std::get<GLuint>(programSynth);
         result.programsWaveform[i] = std::get<GLuint>(programWaveform);
     }
-    result.numPrograms = programNr;
+    result.numPrograms = int32_t(programNr);
     result.blocksize = defs.blocksize;
     result.channels = defs.channels;
     result.polyVoices = defs.polyVoices;
@@ -385,26 +386,26 @@ public:
         if (!glad_glDispatchCompute) {
             return false;
         }
-        int work_grp_cnt[3];
 
+        int work_grp_cnt[3]{};
         glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0]);
         glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1]);
         glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2]);
-
         log_lf(Log::L_INFO, "max global (total) work group counts x:%i y:%i z:%i\n",
         work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2]);
-        int work_grp_size[3];
 
+        int work_grp_size[3]{};
         glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0]);
         glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1]);
         glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2]);
-
         log_lf(Log::L_INFO, "max local (in one shader) work group sizes x:%i y:%i z:%i\n",
         work_grp_size[0], work_grp_size[1], work_grp_size[2]);
-        int work_grp_inv;
+
+        int work_grp_inv = 0;
         glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
         log_lf(Log::L_INFO, "max local work group invocations %i\n", work_grp_inv);
         glGenBuffers(1, &ubo);
+
         glBindBuffer(GL_UNIFORM_BUFFER, ubo);
         checkGLError("glBindBuffer");
         glBufferData(GL_UNIFORM_BUFFER, sizeof(gpu_compute_context_t), nullptr, GL_STREAM_DRAW);

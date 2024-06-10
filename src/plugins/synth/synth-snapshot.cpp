@@ -1,6 +1,5 @@
 #include "file/shapefile.h"
 #include "str_util.h"
-#include "logging.h"
 #include "synth-plugin.h"
 #include "synth-snapshot.h"
 #include "byte-buffer.h"

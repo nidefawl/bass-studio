@@ -74,7 +74,7 @@ public:
         auto vecOpts = std::vector<String>();
         vecOpts.emplace_back("None");
         const auto& paramsDest = synth->getDestinations();
-        for (auto param : paramsDest) {
+        for (auto& param : paramsDest) {
             vecOpts.push_back(param.name);
         }
         dropdown.setZOrder(-1);
@@ -675,8 +675,8 @@ public:
     }
 };
 class guiknob_synthparam_textfield final : public gui_slider_textfield {
-    ModulationController* synth;
-    int32_t param;
+    ModulationController* synth = nullptr;
+    int32_t param = -1;
 
 public:
     guiknob_synthparam_textfield() = default;

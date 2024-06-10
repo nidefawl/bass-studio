@@ -212,15 +212,15 @@ struct Envelope {
         switch (stage) {
             case EnvelopeStages::Attack:
             case EnvelopeStages::Triggered:
-                return 1.0 / clampDuration(a);
+                return float(1.0 / clampDuration(a));
             case EnvelopeStages::Hold:
-                return 1.0 / clampDuration(h);
+                return float(1.0 / clampDuration(h));
             case EnvelopeStages::Decay:
-                return 1.0 / clampDuration(d);
+                return float(1.0 / clampDuration(d));
             case EnvelopeStages::Sustain:
                 return 0.0;
             case EnvelopeStages::Release:
-                return 1.0 / clampDuration(r);
+                return float(1.0 / clampDuration(r));
             default:
                 break;
         }
