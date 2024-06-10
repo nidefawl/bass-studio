@@ -1,49 +1,30 @@
 #include "TestBase.hpp"
 #include "appsettings.h"
-#include "fileio.h"
-#include "gl/gl_shader.h"
 #include "gl/gl_util.h"
-#include "host/audiobuffer/audiobuffer.h"
-#include "host/audiohost/audio_host.h"
 #include "logging.h"
-#include "math/mat.h"
 #include "math/seq_math.h"
 #include "platform.h"
-#include "rand.h"
 #include "samplerate.h"
 #include "str_util.h"
 #include "thread.h"
 #include "buildinfo.h"
 #include "types.h"
-#include "appconfig.h"
-#include "assert_dbg.h"
-#include "event.h"
 #include "glheaders.h"
 #include "hires_timer.h"
-#include "host/plugin/modules.h"
-#include "platform/linux/windowsize.h"
 #include "tls.h"
-#include "util/profiling.h"
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
-#include <utility>
 #include <glm/gtc/type_ptr.hpp>
 #include "types.h"
 #include "plugins/synth/synth-gpu-gl.h"
+#include "plugins/synth/synth-gpu-parameters.h"
+#include "host/audiobuffer/audiobuffer.h"
 
 
 namespace DAW::GPU {
-static constexpr uint16_t NUM_AUDIO_CHANNELS = 2;
-static constexpr uint16_t NUM_POLY_VOICES   = 32;
-static constexpr uint16_t MAX_UNISON_VOICES   = 32;
-
-/* keep in sync with shader defines */
-static constexpr size_t NUM_VOICE_INPUT_PARAMETERS = 3;
-static constexpr size_t NUM_SYNTH_INPUT_PARAMETERS = 2;
-
+using namespace PluginSynth::GPU;
 class gpu_compute_test : public GPUAudioProcessor {
 public:
     sampleformat_t sampleFormat;
@@ -60,13 +41,13 @@ public:
         gpuProgram.blocksize = 0;
         
     }
-    void setBlocksize(blocksize_t blockSize) {
+    void setBlocksize(samplecount_t blockSize) {
         sampleFormat.blockSize = blockSize;
         if (gpuProgram.blocksize != blockSize) {
             reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
         }
-        ssboInputSynthState.buffer.resize(blockSize * NUM_SYNTH_INPUT_PARAMETERS);
-        ssboInputVoiceStates.buffer.resize(blockSize * NUM_POLY_VOICES * NUM_VOICE_INPUT_PARAMETERS);
+        ssboInputSynthState.buffer.resize(blockSize * size_t(NUM_SYNTH_INPUT_PARAMETERS));
+        ssboInputVoiceStates.buffer.resize(blockSize * size_t(NUM_POLY_VOICES) * size_t(NUM_VOICE_INPUT_PARAMETERS));
         ssboOutput.buffer.resize(blockSize * gpuProgram.channels);
         ssboOutputWaveform.buffer.resize(blockSize);
         GPUAudioProcessor::reallocateSSBOs();
@@ -94,18 +75,15 @@ public:
         }
 
         audioblock->clear();
-
         const int nOversample = 1;
         // const auto bpm100 = host->prjGlobals.tempo100;
-
-        const int32_t programId = currentProgramId % gpuProgram.programs.size();
+        const int32_t programMax = math::max(1, CtrSize(gpuProgram.programs));
+        const int32_t programId = currentProgramId % programMax;
         const auto sampleRate = sampleFormat.sampleRate;
 
         gpuContext.one_over_samplerate = 1.0 / sampleRate;
-        // gpuContext.time_samples = hostInfo->m_vstTimeInfo.samplePos;
-        // gpuContext.time_seconds = hostInfo->m_vstTimeInfo.samplePos * gpuContext.one_over_samplerate;
-        // gpuContext.time_beats = hostInfo->m_vstTimeInfo.ppqPos;
-        gpuContext.osc1_unison_voice_count = 32;
+        gpuContext.osc1_gain = 0.75f;
+        gpuContext.osc1_unison_voice_count = 16;
         gpuContext.osc1_unison_detune = 0.3f;
         gpuContext.osc1_filter = 0.8f;
         gpuContext.osc1_stereo = 0.5f;
@@ -116,7 +94,6 @@ public:
         gpuContext.osc1_detune_keytrack = 0.5f;
         gpuContext.osc1_width_keytrack = 0.5f;
 
-
         auto& inputBufferSynthState = ssboInputSynthState.buffer;
         auto& inputBufferVoiceStates = ssboInputVoiceStates.buffer;
         ssboInputSynthState.clearBuffer();
@@ -124,30 +101,42 @@ public:
         double osc1_filter = 0.7;
         double osc1_filter_keytrack = 0.0;
         double osc1_stereo = 0.0;
+        int32_t minVoiceIdx = -1;
+        int32_t maxVoiceIdx = -1;
         for (int s = 0; s < gpuProgram.blocksize; s++) {
             auto absTime = gpuContext.time_samples + s;
-            inputBufferSynthState[s + gpuProgram.blocksize * 0] = osc1_filter_keytrack;
-            inputBufferSynthState[s + gpuProgram.blocksize * 1] = osc1_stereo;
+            inputBufferSynthState[s + gpuProgram.blocksize * 0] = float(osc1_filter_keytrack);
+            inputBufferSynthState[s + gpuProgram.blocksize * 1] = float(osc1_stereo);
             for (size_t i = 0; i < NUM_POLY_VOICES; i++) {
                 const auto idx_base = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize);
                 const auto idx_velocity = idx_base + s;
                 float velocity = -1.0;
                 auto note_base = 60;
-                auto tmSecs = (absTime * gpuContext.one_over_samplerate) + i * 0.3;
-                tmSecs = fmod(tmSecs, 6.0);
-                bool bIsNoteActive = tmSecs < 2.0;
+                auto tmSecs = (absTime * gpuContext.one_over_samplerate) + i * 1.789;
+                tmSecs = fmod(tmSecs, 5.5);
+                bool bIsNoteActive = tmSecs < 0.6;
                 if (bIsNoteActive) {
+                    if (minVoiceIdx < 0 || i < minVoiceIdx) {
+                        minVoiceIdx = i;
+                    }
+                    if (maxVoiceIdx < 0 || i > maxVoiceIdx) {
+                        maxVoiceIdx = i;
+                    }
                     velocity = 0.5;
                     const double osc1Frequency = 440.0 * pow(2.0, (note_base - 69) / 12.0);
-                    const auto idx_pitch    = idx_base + gpuProgram.blocksize * 1 + s;
-                    const auto idx_filter   = idx_base + gpuProgram.blocksize * 2 + s;
-                    inputBufferVoiceStates[idx_pitch]    = osc1Frequency;
-                    inputBufferVoiceStates[idx_filter]   = 1.0-osc1_filter;
+                    const auto idx_pitch     = idx_base + gpuProgram.blocksize * 1 + s;
+                    const auto idx_filter    = idx_base + gpuProgram.blocksize * 2 + s;
+                    const auto idx_detune    = idx_base + gpuProgram.blocksize * 3 + s;
+                    const auto idx_detune_keytrack = idx_base + gpuProgram.blocksize * 4 + s;
+                    inputBufferVoiceStates[idx_pitch]    = float(osc1Frequency);
+                    inputBufferVoiceStates[idx_filter]   = float(1.0 - osc1_filter);
+                    // inputBufferVoiceStates[idx_detune]   = 1.0;
+                    // inputBufferVoiceStates[idx_detune_keytrack]   = 0.5;
                 }
                 inputBufferVoiceStates[idx_velocity] = velocity;
             }
         }
-
+        int32_t numActiveVoicesBlock = minVoiceIdx == -1 ? 0 : maxVoiceIdx - minVoiceIdx + 1;
         perfTimer.reset();
         ssboInputSynthState.uploadBuffer();
         ssboInputVoiceStates.uploadBuffer();
@@ -219,7 +208,7 @@ public:
                 if (tmNow_ms - timePerfLog > 1500)
                     timeComputeAvg = tmTotal_ms;
             } else {
-                log_lf(Log::L_WARN, "gpu_compute_test: %f ms (avg: %f ms)\n", tmTotal_ms, timeComputeAvg);
+                log_lf(Log::L_WARN, "gpu_compute_test: %f ms (avg: %f ms) (active voices: %d)\n", tmTotal_ms, timeComputeAvg, numActiveVoicesBlock);
                 // print sample 0
                 auto sample0 = outputBuffer[0];
                 log_lf(Log::L_WARN, "sample 0: %f\n", sample0);
@@ -249,7 +238,7 @@ int main(int, char*[]) {
         glfwInitHint(GLFW_COCOA_MENUBAR, GLFW_FALSE);
 
         if (!glfwInit())
-            exit(EXIT_FAILURE);
+            return 1;
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -298,7 +287,7 @@ int main(int, char*[]) {
         return 1;
     }
     glfwTerminate();
-    exit(EXIT_SUCCESS);
+    return 0;
 }
 
 
