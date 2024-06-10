@@ -198,6 +198,8 @@ private:
     double timeComputeAvg = -2.0;
     hires_timer_t perfTimer;
     VoiceSynth tmpVoice;
+    size_t numActiveVoicesBlock = 0;
+    size_t numActiveVoicesMax = 0;
 
 private:
     void initImpl();

@@ -416,6 +416,7 @@ bool SynthImplGPU::setSnapshot(const snapshot_t& snapshot) {
 }
 
 void SynthImplGPU::setBlocksize(samplecount_t blocksize) {
+    numActiveVoicesMax = 0;
     SynthImpl::setBlocksize(blocksize);
     GlfwContextSwitch ctxSwitch(window);
     if (!gpuProgram.is_valid() || gpuProgram.blocksize != blocksize) {
@@ -519,6 +520,7 @@ void SynthImplGPU::OnParamChange(Parameters parameter) {
             currentProgramId = int32_t(value);
             break;
         case Parameters::VoiceMode:
+            numActiveVoicesMax = 0;
             switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
                 case VoiceModes::Mono:
                 case VoiceModes::Legato:
@@ -683,12 +685,11 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
     std::fill(modValuesActive->begin(), modValuesActive->end(), 0.0f);
     int64_t minVoiceIdx = -1;
     int64_t maxVoiceIdx = -1;
+    size_t numActiveVoicesMax = 0;
     for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
-        static int64_t maxPolyCountSeen = 0;
-        int64_t polyCount               = std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; });
-        if (polyCount > maxPolyCountSeen) {
-            log_lf(Log::L_WARN, "Max poly count seen: %zd\n", polyCount);
-            maxPolyCountSeen = polyCount;
+        auto polyCount = size_t(std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; }));
+        if (polyCount > numActiveVoicesMax) {
+            numActiveVoicesMax = polyCount;
         }
         if (!polyCount) {
             gpuContext.time_sample_phase_reset = samplePos + s;
@@ -783,7 +784,11 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
             inputBufferVoiceStates[idx_velocity] = float(velocity);
         }
     }
-    size_t numActiveVoicesBlock = minVoiceIdx == -1 ? 0 : maxVoiceIdx - minVoiceIdx + 1;
+    if (numActiveVoicesMax > this->numActiveVoicesMax) {
+        this->numActiveVoicesMax = numActiveVoicesMax;
+        log_lf(Log::L_WARN, "Max poly count seen: %zu\n", numActiveVoicesMax);
+    }
+    this->numActiveVoicesBlock = numActiveVoicesMax;
 
     auto& modVals                      = *modValuesActive;
     gpuContext.osc1_gain               = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Gain]);
@@ -874,7 +879,7 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
             if (tmNow_ms - timePerfLog > 1500)
                 timeComputeAvg = tmTotal_ms;
         } else {
-            log_lf(Log::L_WARN, "gpu_compute_test: %f ms (avg: %f ms)\n", tmTotal_ms, timeComputeAvg);
+            log_lf(Log::L_WARN, "gpu_compute_test: %f ms avg: %f ms - voices: %zu max %zu [IDX %zd - %zd]\n", tmTotal_ms, timeComputeAvg, numActiveVoicesBlock, numActiveVoicesMax, minVoiceIdx, maxVoiceIdx);
             // print sample 0
             auto sample0 = outputBuffer[0];
             log_lf(Log::L_WARN, "sample 0: %f\n", sample0);
