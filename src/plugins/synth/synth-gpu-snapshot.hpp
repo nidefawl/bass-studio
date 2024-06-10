@@ -1,9 +1,8 @@
 #pragma once
 #include "file/shapefile.h"
 #include "str_util.h"
-#include "synth-plugin.h"
-#include "synth-snapshot.h"
 #include "byte-buffer.h"
+#include "synth-snapshot.h"
 #include <array>
 #include <cstdint>
 #include <utility>
@@ -24,7 +23,7 @@ struct adsr_snapshot_t {
 struct snapshot_t {
     int32_t version = 0;
     std::vector<PluginSynth::param_float_snapshot_t> params;
-    std::vector<modulation_snapshot_t> modulations;
+    std::vector<PluginSynth::modulation_snapshot_t> modulations;
     std::vector<adsr_snapshot_t> adsrs;
     std::vector<lfo_snapshot_t> lfos;
     std::vector<ui_layout_t> uiLayout;

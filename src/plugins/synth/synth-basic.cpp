@@ -12,7 +12,6 @@
 #include "renderresources.h"
 #include "saferef.h"
 #include "seq_time.h"
-#include "synth-plugin.h"
 #include "synth-snapshot.h"
 #include "synth-template.hpp"
 #include "synth-types.hpp"
