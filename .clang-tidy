@@ -274,7 +274,6 @@ Checks: >
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*\.(h)$'
-AnalyzeTemporaryDtors: false
 FormatStyle:     'file'
 UseColor:        true
 CheckOptions:
