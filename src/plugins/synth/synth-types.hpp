@@ -2,6 +2,7 @@
 #include "host/shape/shape.h"
 #include "math/seq_math.h"
 #include "math/simd_math.h"
+#include "plugins/lfo/lfo-types.hpp"
 #include "types.h"
 #include <array>
 
@@ -748,3 +749,147 @@ inline void ShapeLogLikeSIMD(const FPType valsIn[LEN_SIMD], FPType valsOut[LEN_S
 }
 
 } // namespace PluginSynth
+
+namespace DAW::LFO {
+
+struct LFOParameters  : public ::DAW::LFO::LFOSyncParameters {
+    double freq = 1.0;
+    double freqHz = 1.0;
+    double phaseOffset = 0.0;
+    double rampDuration = 0.0;
+    enum LFOTriggerMode {
+        Note,
+        OneShot,
+        SongPosition,
+    } trigger = Note;
+    double bpm = 120.0;
+
+    // state that has to be serialized
+    int32_t randomModeId = 0;
+    bool modeIsShape = true;
+    DAW::Shape::shape_t shape{};
+
+    double paramToFreqHz(double d) const {
+        if (!syncFlags || syncRatios.empty()) {
+            return math::max(pow(2.0, d * 21.0) * 0.01, 0.001);
+        } else {
+            auto index = math::clamp<int32_t>(math::floordS32(d * CtrSize(syncRatios)), 0, CtrSize(syncRatios) - 1);
+            return double(syncRatios[index].denominator * bpm) / double(syncRatios[index].numerator * 60.0 * 4.0);
+        }
+    }
+};
+class LFO final : public DAW::LFO::LFORateMinMaxAutomation {
+    double phase          = 0.0;
+    DAW::LFO::lfo_automation_src_synced_t srcSync;
+    std::shared_ptr<DAW::LFO::lfo_automation_src_random_t> srcRand;
+    LFOParameters* params{};
+    PluginSynth::Envelope envRamp;
+    uint64_t customSeed = 0;
+public:
+    LFO() {
+        this->srcSync.rateMinMax = this;
+        envRamp.a = 1.0 / 0.050;
+        envRamp.h = 0.0;
+        envRamp.d = 1.0 / 0.050;
+        envRamp.s = 1.0;
+        envRamp.r = 1.0 / 0.050;
+        envRamp.shapes = {0.5, 0.5, 0.5};
+    }
+    LFOParameters& getParameters() { return *params; }
+    const LFOParameters& getParameters() const { return *params; }
+    void setPhase(double d) {
+        this->phase = d;
+    }
+    void resetRamp() {
+        envRamp.Reset();
+        envRamp.Start();
+    }
+    const DAW::LFO::lfo_automation_src_random_t* getSourceRand() const {
+        return srcRand.get();
+    }
+    const DAW::LFO::lfo_automation_src_synced_t* getSourceSync() const {
+        return &srcSync;
+    }
+    void setRandomMode(int32_t mode) {
+        if (mode != -1 && srcRand && srcRand->getModeId() == mode) {
+            return;
+        }
+        using namespace DAW::LFO;
+        switch (mode) {
+            case -1:
+                if (srcRand) {
+                    break;
+                }
+                [[fallthrough]];
+            default:
+            case 0:
+                srcRand = std::make_shared<lfo_automation_src_random_smooth_t>();
+                break;
+            case 1:
+                srcRand = std::make_shared<lfo_automation_src_random_linear_t>();
+                break;
+            case 2:
+                srcRand = std::make_shared<lfo_automation_src_random_exp_t>();
+                break;
+            case 3:
+                srcRand = std::make_shared<lfo_automation_src_random_sample_and_hold_t>();
+                break;
+        }
+        srcRand->setSeed(customSeed);
+        this->srcRand->rateMinMax = this;
+        this->srcRand->sync = this->params;
+    }
+    void setParameters(LFOParameters* params, uint64_t customSeed) {
+        this->params = params;
+        this->customSeed = customSeed;
+        this->srcSync.sync = this->params;
+        this->srcSync.shape = &this->params->shape;
+        if (!srcRand) {
+            setRandomMode(params->randomModeId);
+        } else {
+            srcRand->setSeed(customSeed);
+        }
+    }
+    void Update(double dt) {
+        double p = fp_math::silenceNanInfd(this->phase + params->freqHz * dt);
+        this->phase = p;
+        envRamp.a = PluginSynth::Envelope::GetTimeBaseFromParam(params->rampDuration);
+        envRamp.Update(dt);
+    }
+    double GetRamp() const {
+        if (params->rampDuration > 0.0) {
+            return envRamp.value;
+        }
+        return 1.0;
+    }
+    double GetLfo() const {
+        double p = this->phase;
+        if (!params->modeIsShape) {
+            return getSourceRand()->sampleCurve(p);
+        }
+        if (params->trigger == LFOParameters::OneShot) {
+            p = math::min(1.0, p);
+        } else {
+            double _unused = 0.0;
+            p = std::modf(p, &_unused); 
+        }
+        return params->shape.sampleCurve(float(p), false);
+    }
+    double GetRampedLfo() const {
+        double lfo = GetLfo();
+        if (params->rampDuration > 0.0) {
+            lfo *= envRamp.value;
+        }
+        return lfo;
+    }
+    std::pair<float, float> getMinMax(double dTick) const override {
+        return { 0, 1 }; 
+    }
+    std::tuple<float, float, float> getRatePhase(double dTick) const override {
+        return { params->freq, params->phaseOffset, 0 };
+    }
+    float getScaledRate(DAW::LFO::LFOSyncParameters* sync, float rate) override { 
+        return float(1.0 / params->paramToFreqHz(rate));
+    };
+};
+}

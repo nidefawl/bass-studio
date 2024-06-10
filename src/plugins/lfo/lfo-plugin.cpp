@@ -43,6 +43,7 @@
 #include <vector>
 
 namespace PluginLFO {
+    using namespace DAW::LFO;
     constexpr int32_t NUM_CHANNELS = 1;
     constexpr int32_t BINARY_SNAPSHOT_VERSION = 4;
     constexpr int32_t PARAM_LFO_RATE = 16;

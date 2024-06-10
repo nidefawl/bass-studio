@@ -12,9 +12,9 @@ public:
     ctxtmenu_lfo_sync(ModuleType* _module, int32_t _channel, String _title, int32_t _id)
         : ctxtmenu_enum_option_select_base(_id, _title), moduleInstance(_module), channel(_channel)
     {
-        entries.push_back({ int32_t(PluginLFO::NoteRatio::STRAIGHT), "Straight" });
-        entries.push_back({ int32_t(PluginLFO::NoteRatio::TRIPLET), "Triplet" });
-        entries.push_back({ int32_t(PluginLFO::NoteRatio::DOTTED), "Dotted" });
+        entries.push_back({ int32_t(DAW::LFO::NoteRatio::STRAIGHT), "Straight" });
+        entries.push_back({ int32_t(DAW::LFO::NoteRatio::TRIPLET), "Triplet" });
+        entries.push_back({ int32_t(DAW::LFO::NoteRatio::DOTTED), "Dotted" });
         entries.push_back({ 0, "Off" });
         perRowEntries = 3;
     }

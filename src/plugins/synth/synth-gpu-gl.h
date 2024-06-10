@@ -1,5 +1,4 @@
 #pragma once
-
 #include "fileio.h"
 #include "gl/gl_context.hpp"
 #include "gl/gl_shader.h"

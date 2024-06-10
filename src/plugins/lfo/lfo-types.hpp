@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace PluginLFO {
+namespace DAW::LFO {
     enum NoteRatio : uint8_t {
         STRAIGHT = 1,
         DOTTED = 2,
@@ -422,4 +422,4 @@ namespace PluginLFO {
             return 3;
         }
     };
-}
+} // namespace DAW::LFO
