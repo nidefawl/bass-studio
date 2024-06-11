@@ -185,24 +185,24 @@ void SynthImplGPU::initImpl() {
 
 
     const int envBase[2]          = { int32_t(Parameters::ADSR_1_A_Duration), int32_t(Parameters::ADSR_2_A_Duration) };
-    const String parNames[2]      = { "Volume", "Filter" };
-    const String parNamesShort[2] = { "EnvV", "EnvF" };
+    const String parNames[2]      = { "Volume", "Mod" };
+    const String parNamesShort[2] = { "EnvV", "EnvM" };
     for (size_t i = 0; i < 2; i++) {
-        String parName   = i == 0 ? "Volume" : "Filter";
+        String parName   = i == 0 ? "Volume" : "Mod";
         String nameBase  = parNames[i] + " " + "Envelope";
         String nameShort = parNamesShort[i];
         auto parAtt      = addFloatParam(envBase[i]);
         parAtt->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(2.0)));
-        setParamName(parAtt, nameBase + " Attack", nameShort + " Attack", "Att", "s");
+        setParamName(parAtt, nameBase + " Attack", nameShort + " Attack", "Attack", "s");
         auto parHold = addFloatParam(envBase[i] + 1);
         parHold->setInitialValue(0.0);
         setParamName(parHold, nameBase + " Hold", nameShort + " Hold", "Hold", "s");
         auto parDec = addFloatParam(envBase[i] + 2);
         parDec->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(333.0)));
-        setParamName(parDec, nameBase + " Decay", nameShort + " Decay", "Dec", "s");
+        setParamName(parDec, nameBase + " Decay", nameShort + " Decay", "Decay", "s");
         auto parSus = addFloatParam(envBase[i] + 3);
         parSus->setRange(0.0, 100.0)->setInitialValue(80.0);
-        setParamName(parSus, nameBase + " Sustain", nameShort + " Sustain", "Sus", "%");
+        setParamName(parSus, nameBase + " Sustain", nameShort + " Sustain", "Sustain", "%");
         auto parRel = addFloatParam(envBase[i] + 4);
         parRel->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(123.0)));
         setParamName(parRel, nameBase + " Release", nameShort + " Release", "Release", "s");
