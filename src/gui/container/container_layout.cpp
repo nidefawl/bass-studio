@@ -27,9 +27,11 @@ struct guictr_tabbed::tabbed_entry {
         tabButton.setText(title);
     }
 };
+
 int32_t guictr_tabbed::getNumEntries() {
     return CtrSize(entries);
 }
+
 void guictr_tabbed::setActiveEntry(int32_t idx) {
     if (idx >= 0 && idx < CtrSize(entries)) {
         guictr_tabbed::tabbed_entry* entry = entries[idx];
@@ -45,6 +47,7 @@ void guictr_tabbed::setActiveEntry(int32_t idx) {
         }
     }
 }
+
 void guictr_tabbed::buttonClicked(guibase* button) {
     auto it = std::find_if(entries.begin(), entries.end(), [button](const guictr_tabbed::tabbed_entry* entry) {
         return &entry->tabButton == button;
@@ -57,6 +60,7 @@ void guictr_tabbed::buttonClicked(guibase* button) {
         parent->buttonClicked(button);
     }
 }
+
 guictr_tabbed::~guictr_tabbed() {
     for (tabbed_entry* entry : entries) {
         remove(&entry->tabButton);
@@ -67,6 +71,7 @@ guictr_tabbed::~guictr_tabbed() {
     dbgassert(guis.size() <= 1);
     removeGuis();
 }
+
 void guictr_tabbed::addEntry(guibase* ctr, String title) {
     guictr_tabbed::tabbed_entry* entry = new guictr_tabbed::tabbed_entry{ ctr, title };
     guictr_base::add(&entry->tabButton);
@@ -76,15 +81,18 @@ void guictr_tabbed::addEntry(guibase* ctr, String title) {
 void guictr_tabbed::handleDraggedBegin(MouseEvent& evt) {
     hasDragged = false;
 }
+
 void guictr_tabbed::handleDraggedMove(MouseEvent& evt) {
     if (!hasDragged && (evt.dragDistance->x != 0 || evt.dragDistance->y != 0)) {
         parentCtrl->setDragged(this);
         hasDragged = true;
     }
 }
+
 void guictr_tabbed::render(NVGcontext* vg) {
     guictr_base::render(vg);
 }
+
 void guictr_tabbed::layout() {
     ivec2 csize  = getSizeContent();
     int nEntries = entries.size();
@@ -131,9 +139,11 @@ struct guictr_stacked::stacked_entry {
         btnHideEntry.pos     = ivec2(INSET_CTR_SPACING, INSET_CTR_SPACING);
     }
 };
+
 int32_t guictr_stacked::getNumEntries() {
     return CtrSize(entries);
 }
+
 void guictr_stacked::toggleEntry(int32_t idx, int flags) {
     if (idx >= 0 && idx < CtrSize(entries)) {
         guictr_stacked::stacked_entry* entry = entries[idx];
@@ -153,6 +163,7 @@ void guictr_stacked::toggleEntry(int32_t idx, int flags) {
         }
     }
 }
+
 void guictr_stacked::buttonClicked(guibase* button) {
     auto it = std::find_if(entries.begin(), entries.end(), [button](const guictr_stacked::stacked_entry* entry) {
         return (&entry->btnHideEntry == button) || (button->parent == entry->tabCtr);
@@ -166,7 +177,8 @@ void guictr_stacked::buttonClicked(guibase* button) {
        parent->buttonClicked(button);
     }
 }
-guictr_stacked::~guictr_stacked() {
+
+void guictr_stacked::removeGuis() {
     for (stacked_entry* entry : entries) {
         remove(entry->tabCtr);
         remove(&entry->splitter);
@@ -175,8 +187,13 @@ guictr_stacked::~guictr_stacked() {
     }
     entries.clear();
     dbgassert(guis.size() <= 1);
+    guictr_base::removeGuis();
+}
+
+guictr_stacked::~guictr_stacked() {
     removeGuis();
 }
+
 void guictr_stacked::addEntry(guibase* ctr) {
     auto const entry = new guictr_stacked::stacked_entry{ ctr, ctr->getLabel() };
     // ctr->add(&entry->btnHideEntry);
@@ -187,6 +204,7 @@ void guictr_stacked::addEntry(guibase* ctr) {
     this->entries.push_back(entry);
     updateSplitterPositions();
 }
+
 void guictr_stacked::setSplitters(const std::vector<float>& splitterPos) {
     dbgassert(splitterPos.size() <= entries.size());
     for (size_t i = 0; i < splitterPos.size(); ++i) {
@@ -194,12 +212,14 @@ void guictr_stacked::setSplitters(const std::vector<float>& splitterPos) {
     }
     updateSplitterPositions();
 }
+
 void guictr_stacked::getSplitterPositions(std::vector<float>& splitterPos) {
     splitterPos.clear();
     for (auto* entry : entries) {
         splitterPos.push_back(entry->splitter.getScale());
     }
 }
+
 void guictr_stacked::updateSplitterPositions() {
     for (size_t i = 0; i < entries.size(); ++i) {
         auto min = i == 0 ? 0 : entries[i - 1]->splitter.getScale();
@@ -212,6 +232,7 @@ void guictr_stacked::updateSplitterPositions() {
         entries.back()->splitter.setScale(1.0f);
     }
 }
+
 void guictr_stacked::removeEntries() {
     for (auto* entry : entries) {
         remove(entry->tabCtr);
@@ -221,15 +242,13 @@ void guictr_stacked::removeEntries() {
     }
     entries.clear();
 }
+
 void guictr_stacked::renderBackground(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
     // dbgassert(isBackgroundRendered());
     // bool focused = parentCtrl->isCtrOrChildFocused(this);
-    float h = titleHeight;
-    titleHeight = 0;
     drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, isBackgroundRenderedInset());
-    titleHeight = h;
     renderContainerLabel(vg);
     /* render debug background if gui flag 1<<16 is set */
     if ((this->id & (1 << 16)) && size.x > 0 && size.y > 0) {
@@ -239,40 +258,46 @@ void guictr_stacked::renderBackground(NVGcontext* vg) {
         nvgFill(vg);
     }
 }
+
 void guictr_stacked::render(NVGcontext* vg) {
     guictr_base::render(vg);
 }
+
 void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
     updateSplitterPositions();
     this->layout();
 }
+
 ivec2 guictr_stacked::getContainerPos() {
     return toScreenSpace({getTitleHeight(), 0});
 }
+
 ivec2 guictr_stacked::getContainerSize() {
     return {size.x, size.y - getTitleHeight()};
 }
+
 int32_t guictr_stacked::getCollapsedCtrHeight(guictr_base* ctr) {
     return (ctr?ctr->getPadding().y:0) + HEIGHT_DEFAULT_INPUT + INSET_CTR_SPACING * 2;
 }
+
 void guictr_stacked::layout() {
-    ivec2 csize = getSizeContent();
-    ivec2 posOffset(0);
-    auto totalS = csize;
-    int len     = entries.size();
+    auto titleHeight = getTitleHeight();
+    const ivec2 csize = getSizeContent() - ivec2(0, titleHeight);
+    const int32_t len = CtrSize(entries);
     int32_t prevS = 0;
-    for (int i = 0; i < len; i++) {
+    ivec2 posOffset(0, titleHeight);
+    for (int32_t i = 0; i < len; i++) {
         auto* entry = entries[i];
-        int32_t s;
+        int32_t s = 0;
         if (entry->active) {
-            s = entry->splitter.leftOrTop(totalS[bVerticalLayout]);
+            s = entry->splitter.leftOrTop(csize[bVerticalLayout]);
             if (i == len - 1) {
-                s = totalS[bVerticalLayout];
+                s = csize[bVerticalLayout];
             }
         } else {
             s = getCollapsedCtrHeight(entry->tabCtr2);
             if (i == len - 1) {
-                s = math::min(s, totalS[bVerticalLayout]);
+                s = math::min(s, csize[bVerticalLayout]);
             }
         }
         entry->tabCtr->pos   = posOffset;

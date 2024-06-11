@@ -20,7 +20,7 @@ class guictr_stacked : public guictr_base, public splitter_cb {
     struct stacked_entry;
     std::vector<stacked_entry*> entries;
     bool bVerticalLayout = true;
-    float titleHeight = 10.0f;
+    float titleHeight = 80.0f;
 public:
     static constexpr int32_t STACK_ENTRY_BTN_SIZE = 24;
     guictr_stacked() : guictr_base() {
@@ -31,6 +31,7 @@ public:
         setFlag(FLG_RENDER_LABEL, true);
     }
     ~guictr_stacked();
+    void removeGuis() override;
     void setVerticalLayout(bool bVertical) {
         this->bVerticalLayout = bVertical;
     }
@@ -50,15 +51,15 @@ public:
     void setSplitters(const std::vector<float>& splitterPos);
     void getSplitterPositions(std::vector<float>& splitterPos);
     void renderContainerLabel(NVGcontext* vg) override {
-        const auto h = getTitleHeight();
+        const auto h = titleHeight;
         if (isFlag(FLG_RENDER_LABEL) && label.length() && h > 0) {
             const auto bgColor = getInnerBackgroundColorFromState(getStateFlags());
             renderTextLabel(vg,
-                            vec2(getPosContent()) + vec2(padding + 2, h / 2.0) - vec2(0, h),
+                            vec2(getPosContent()) + vec2(padding + 2, h / 2.0),
                             vec2(getSizeContent()) - vec2(INSET_TITLE + 2, 0),
                             label,
                             theme,
-                            titleHeight,
+                            h,
                             theme->getContrastColor(bgColor),
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }
@@ -66,12 +67,8 @@ public:
     void setTitleHeight(float height) {
         titleHeight = height;
     }
-    float getTitleHeight() const {
-        return label.empty() ? 0 : titleHeight;
-    }
-
-    ivec2 paddingTL(int _padding) const override {
-        return ivec2(_padding - margin * snapSides.x, _padding - margin * snapSides.y + getTitleHeight());
+    virtual float getTitleHeight() const {
+        return !bVerticalLayout ? 0.0f : (label.empty() ? 0.0f : titleHeight);
     }
 };
 class guictr_tabbed : public guictr_base {
