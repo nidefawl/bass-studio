@@ -1823,7 +1823,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #endif
     try {
         for (size_t i = 0; i < args.size(); ++i) {
-            if (args[i] == "--center" && i + 1 < args.size()) {
+            if (args[i] == "--screen" && i + 1 < args.size()) {
                 centerScreenIdx = atoi(StringAsCStr(args[i + 1]));
                 i++; 
                 continue;
