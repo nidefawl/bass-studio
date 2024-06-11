@@ -85,6 +85,7 @@ public:
     String sProductName;
     String sVendorName;
     stats_processing_timings_t procStats;
+    stats_processing_timings_t procStatsAvg;
     std::map<int32_t, plugin_ui_snapshot_t> uiSnapshots;
     std::map<int32_t, std::shared_ptr<guiplugin>> uiInstances;
     SafeRef<effectbase> safeRef;

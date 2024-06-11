@@ -2187,6 +2187,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                 curTimeProcess += timePassed / NUM_BINS_STATS;
                 plugStats.timeTrackProcessPlugins = curTimeProcess;
                 plugStats.timeTrackProcessPluginsRaw = timePassed;
+                stats_processing_timings_t::MixStats(effect->procStatsAvg, effect->procStats, 0.1);
             } else {
                 timePassed = timer.getTime();
             }

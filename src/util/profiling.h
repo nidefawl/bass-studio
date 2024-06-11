@@ -1,4 +1,5 @@
 #pragma once
+#include "math/seq_math.h"
 #include "types.h"
 #include <map>
 #include "str_util.h"
@@ -30,6 +31,27 @@ struct stats_processing_timings_t {
     int32_t statsProcStep              = 0;
     int64_t statsWriteOffset           = 0;
     int64_t numBlocksProcessed         = 0;
+    static inline constexpr void MixStats(stats_processing_timings_t& lhs, const stats_processing_timings_t& rhs, double f) {
+        // can't use memcpy because of constexpr
+        // std::memcpy(lhs.statsProcSamples, rhs.statsProcSamples, sizeof(lhs.statsProcSamples));
+        for (int i = 0; i < STATS_PROCESSING_MAX_SAMPLES; i++) {
+            lhs.statsProcSamples[i] = rhs.statsProcSamples[i];
+        }
+    #define PROF_LERP_FIELD(fieldname) lhs.fieldname = math::rounddS64(double(lhs.fieldname) * (1.0 - f) + double(rhs.fieldname) * f)
+        PROF_LERP_FIELD(timeTrackProcessPluginsRaw);
+        PROF_LERP_FIELD(timeTrackProcessPlugins);
+        PROF_LERP_FIELD(timeTrackApplyAutomation);
+        PROF_LERP_FIELD(timeTrackProcessMidi);
+        PROF_LERP_FIELD(timeTrackMixInputs);
+        PROF_LERP_FIELD(timeTrackRecordPre);
+        PROF_LERP_FIELD(timeTrackFillAudioClips);
+        PROF_LERP_FIELD(timeTrackProcessAudio);
+        PROF_LERP_FIELD(timeTrackRecordPost);
+        PROF_LERP_FIELD(numBlocksProcessed);
+        PROF_LERP_FIELD(statsProcStep);
+        PROF_LERP_FIELD(statsWriteOffset);
+    #undef PROF_LERP_FIELD
+    }
 };
 
 #define NUM_BINS_STATS 16

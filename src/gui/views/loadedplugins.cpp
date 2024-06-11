@@ -90,12 +90,12 @@ class gui_test final : public guictxtmenu_base {
         void updateGraph() {
             auto* _entry = safeRefGet(ref);
             if (_entry) {
-                stats_processing_timings_t procStatsCopy = _entry->procStats;
+                stats_processing_timings_t procStatsCopy = _entry->procStatsAvg;
                 auto& vecOut                             = graph.getData();
                 vecOut.resize(STATS_PROCESSING_MAX_SAMPLES);
                 vec2 scale = { 1.0f / (float) STATS_PROCESSING_MAX_SAMPLES, 1.0f / 21333.33f };
-//                std::transform(_entry->procStats.statsProcSamples,
-//                    _entry->procStats.statsProcSamples+STATS_PROCESSING_MAX_SAMPLES,
+//                std::transform(_entry->procStatsAvg.statsProcSamples,
+//                    _entry->procStatsAvg.statsProcSamples+STATS_PROCESSING_MAX_SAMPLES,
 //                    std::back_inserter(vecOut), [&posX, scale](int64_t sample){
 //                        return vec2{posX++, sample} * scale;
 //                    });
@@ -207,12 +207,12 @@ public:
             host_stats_reducted_t stats{};
             auto host = dawCtrl->getDaw()->getHost();
             host->getShortStats(stats);
-            float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStats.timeTrackProcessPlugins * 100.0f / stats.timePerBlock_usec;
+            float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStatsAvg.timeTrackProcessPlugins * 100.0f / stats.timePerBlock_usec;
             String str = StringFormat("%.2f%%", fPercentLoad);
             float x2 = size.x - spacing;
             xText = x2 - renderText(vg, vec2(x2, rowHeight / 2), vec2(size.x*0.8, size.y), str, 0, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             if (size.x > rowHeight*10) {
-                str = StringFormat("%zdµs", _entry->procStats.timeTrackProcessPlugins);
+                str = StringFormat("%zdµs", _entry->procStatsAvg.timeTrackProcessPlugins);
                 x2 = size.x - percWidth - spacing;
                  xText = x2 - renderText(vg, vec2(x2, rowHeight / 2), vec2(size.x*0.3, size.y), str, 0, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             }
@@ -258,7 +258,7 @@ public:
             if (!ptrEffB)
                 return false;
 
-            return ptrEffA->procStats.timeTrackProcessPlugins > ptrEffB->procStats.timeTrackProcessPlugins;
+            return ptrEffA->procStatsAvg.timeTrackProcessPlugins > ptrEffB->procStatsAvg.timeTrackProcessPlugins;
         });
     }
     void layout() override {
