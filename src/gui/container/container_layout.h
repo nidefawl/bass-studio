@@ -36,7 +36,7 @@ public:
     }
     int32_t getNumEntries();
     void toggleEntry(int32_t idx, int flags);
-    void addEntry(guictr_base* ctr);
+    void addEntry(guibase* ctr);
     void removeEntries();
     void buttonClicked(guibase* button) override;
     void layout() override;

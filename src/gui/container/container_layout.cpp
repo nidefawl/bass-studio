@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "gui/container/container.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "guiglobals.h"
@@ -111,13 +112,15 @@ void guictr_tabbed::layout() {
 struct guictr_stacked::stacked_entry {
     Splitter splitter;
     guibuttontoggle btnHideEntry;
-    guictr_base* tabCtr;
+    guibase* tabCtr;
+    guictr_base* tabCtr2;
     bool active = true;
     float splitterScale;
-    stacked_entry(guictr_base* _ctr, String title)
+    stacked_entry(guibase* _ctr, String title)
         : splitter(0, 0.5),
         btnHideEntry(),
-        tabCtr(_ctr)
+        tabCtr(_ctr),
+        tabCtr2(dynamic_cast<guictr_base*>(_ctr))
     {
         splitterScale = splitter.getScale();
         btnHideEntry.setText(title);
@@ -174,7 +177,7 @@ guictr_stacked::~guictr_stacked() {
     dbgassert(guis.size() <= 1);
     removeGuis();
 }
-void guictr_stacked::addEntry(guictr_base* ctr) {
+void guictr_stacked::addEntry(guibase* ctr) {
     auto const entry = new guictr_stacked::stacked_entry{ ctr, ctr->getLabel() };
     // ctr->add(&entry->btnHideEntry);
     entry->splitter.setSplitterType(bVerticalLayout ? 0 : 1);
@@ -247,11 +250,10 @@ ivec2 guictr_stacked::getContainerPos() {
     return toScreenSpace({getTitleHeight(), 0});
 }
 ivec2 guictr_stacked::getContainerSize() {
-    return ivec2(size.x, size.y - getTitleHeight());
+    return {size.x, size.y - getTitleHeight()};
 }
 int32_t guictr_stacked::getCollapsedCtrHeight(guictr_base* ctr) {
-    ivec2 ctrPadding = ctr->getPadding();
-    return ctrPadding.y + HEIGHT_DEFAULT_INPUT + INSET_CTR_SPACING * 2;
+    return (ctr?ctr->getPadding().y:0) + HEIGHT_DEFAULT_INPUT + INSET_CTR_SPACING * 2;
 }
 void guictr_stacked::layout() {
     ivec2 csize = getSizeContent();
@@ -268,7 +270,7 @@ void guictr_stacked::layout() {
                 s = totalS[bVerticalLayout];
             }
         } else {
-            s = getCollapsedCtrHeight(entry->tabCtr);
+            s = getCollapsedCtrHeight(entry->tabCtr2);
             if (i == len - 1) {
                 s = math::min(s, totalS[bVerticalLayout]);
             }
