@@ -1016,7 +1016,7 @@ void gui_slider_textfield::setAutomationRef(automatable_t* _paramAutomatable, in
         if (param) {
             setTooltipText(param->extensiveName.empty() ? param->name : param->extensiveName);
             setFlag(FLG_RENDER_LABEL, true);
-            label = param->name;
+            label = param->shortLabel.empty() ? param->name : param->shortLabel;
         }
     } else {
         label = "";
