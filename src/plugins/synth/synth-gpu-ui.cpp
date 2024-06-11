@@ -996,6 +996,9 @@ public:
     void onPresetLoaded() override {
         ctr_main.onPresetLoaded();
     }
+    bool hasMeter() const override {
+        return true;
+    }
 };
 
 std::shared_ptr<PluginViewContainer> SynthImplGPU::createViewCtrImpl() {

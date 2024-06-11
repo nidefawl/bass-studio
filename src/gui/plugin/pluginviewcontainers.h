@@ -41,6 +41,9 @@ public:
     virtual bool isViewSupported(int32_t id) const {
         return true;
     }
+    virtual bool hasMeter() const {
+        return false;
+    }
 };
 template<typename PluginGUI, typename Plugin>
 class PluginViewContainerBasic final : public PluginViewContainer {

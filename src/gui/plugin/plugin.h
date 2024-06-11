@@ -37,11 +37,12 @@ public:
     float titlePosX        = 0;
     bool hasDragged        = false;
     bool isHorizontalTitle = true;
+    bool bShowMeter = true;
     int layoutMode         = 0;
 
     std::vector<guibuttontoggle*> guiButtonsTitlebar;
     std::vector<guibuttontoggle*> guiButtonsSidebar;
-    guiplugin(effectbase* _effect);
+    explicit guiplugin(effectbase* _effect);
     ~guiplugin() override;
     void addGuiBtnTitlebar(guibuttontoggle* btn);
     void render(NVGcontext* vg) override;
@@ -93,7 +94,10 @@ public:
     guibase* getFocusedContainer() override {
         return parent;
     }
-    
+    void setMeterVisible(bool bVisible) {
+        bShowMeter = bVisible;
+        guiMeter.setVisible(bVisible);
+    }
 };
 
 class guidropdown_select_program final : public guictxtmenu {
@@ -149,6 +153,9 @@ public:
     void onTick(AppCtrl* ctrl) override;
     void makeSnapshot(plugin_ui_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_ui_snapshot_t& puis) override;
+    virtual bool hasOwnMeter() const {
+        return true;
+    }
 };
 class guivstplugin final : public guipluginview {
 public:
@@ -178,4 +185,5 @@ public:
     guiinternalpluginview(internalplugin* _effect);
     ~guiinternalpluginview() override;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+    bool hasOwnMeter() const override;
 };

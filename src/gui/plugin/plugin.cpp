@@ -178,6 +178,7 @@ guiplugin::guiplugin(effectbase* _effect)
     : guictr_base(gui_type::CTR_TYPE_PLUGIN),
       effect(_effect),
       guiMeter(&_effect->meter) {
+    guiMeter.setVisible(bShowMeter);
     isHorizontalTitle = false;
     padding = 0;
     margin  = 0;
@@ -252,8 +253,10 @@ void guiplugin::layout() {
         buttonDelete.pos = { inset1, size.y - buttonDelete.size.y - inset1 };
     }
 
-
-    int32_t meterW = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * heightTitle / 32.0));
+    int32_t meterW = 0;
+    if (bShowMeter) {
+        meterW = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * heightTitle / 32.0));
+    }
     auto contentP  = ivec2(wpt, hpt);
     auto contentS  = ivec2(size.x - wpt - meterW, size.y - hpt);
     if (isHorizontalTitle) {
@@ -262,7 +265,9 @@ void guiplugin::layout() {
         titlePosX = buttonDelete.top();
     }
     guiMeter.pos  = ivec2(size.x - meterW, hpt);
-    guiMeter.size = ivec2(meterW, size.y - hpt);
+    if (bShowMeter) {
+        guiMeter.size = ivec2(meterW, size.y - hpt);
+    }
     layoutModule(contentP, contentS, inset1);
     for (auto btn : guis) {
         btn->layout();
@@ -708,7 +713,10 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
         return;
     }
     const int32_t hpt = parent->theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-    int32_t meterW    = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
+    int32_t meterW = 0;
+    if (bShowMeter) {
+        meterW = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
+    }
 
     auto contentSizeY = size.y - (isHorizontalTitle ? hpt : 0);
     int rowHeight     = 48;
@@ -1009,6 +1017,7 @@ guiinternalpluginview::guiinternalpluginview(internalplugin* _effect) : guiplugi
     (void) plugin;
     viewCtr = _effect->openViewCtr(UID_VIEW_CTR_PLUGIN_CTR);
     if (viewCtr) {
+        setMeterVisible(!viewCtr->hasMeter());
         viewCtr->addTo(viewCtrs);
     }
 }
@@ -1052,7 +1061,7 @@ void guipluginview::setLayoutMode(int32_t layoutMode) {
 
 void guiplugin::setLayoutMode(int32_t layoutMode) {
     this->layoutMode = layoutMode;
-    guiMeter.setVisible(layoutMode == 0);
+    guiMeter.setVisible(layoutMode == 0 && bShowMeter);
     // isHorizontalTitle = layoutMode == 0;
     buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
 }
@@ -1080,4 +1089,7 @@ void guipluginview::loadSnapshot(const plugin_ui_snapshot_t& puis) {
     guiplugin::loadSnapshot(puis);
     params.setVisible(puis.parameterListVisible);
     bParamListVisible = params.isVisible();
+}
+bool guiinternalpluginview::hasOwnMeter() const {
+    return viewCtr && viewCtr->hasMeter();
 }
