@@ -950,3 +950,42 @@ void printLeaked(int64_t allocCount, const std::vector<guibase*>& allocList, con
 }
 }
 #endif
+
+
+float textlabel_dynamic_t::getScale() const {
+    return math::clamp<float>(fontSize * dynamicFontScale, math::clamp(fontSize, 1.0f, 8.0f), math::max(2.0f, (size.y - 2.0f) * 0.9f));
+}
+
+void textlabel_dynamic_t::adjustWidth() {
+    float delta = size.x - lastRenderWidthLabel;
+    if (math::abs(delta) > lastRenderWidthLabel * 0.1f) {
+        const float FONT_SCALE_MAX = 10.0f;
+        if (delta > 0.0f) {
+            dynamicFontScale = math::min(FONT_SCALE_MAX, dynamicFontScale + 0.025f);
+        } else {
+            dynamicFontScale = math::max(1.0f / FONT_SCALE_MAX, dynamicFontScale - 0.025f);
+        }
+    }
+}
+
+void textlabel_dynamic_t::render(NVGcontext* vg, guitheme_t* theme, const String& label, const NVGcolor& fontColor) {
+    if (size.x > 0 && size.y > 0) {
+        float fontSize = getScale();
+        if (fontSize >= 1.0) {
+            auto offsetPos = pos;
+            if (alignment & NVG_ALIGN_CENTER) {
+                offsetPos.x += size.x * 0.5f;
+            }
+            if (alignment & NVG_ALIGN_RIGHT) {
+                offsetPos.x += size.x * 1.0f;
+            }
+            if (alignment & NVG_ALIGN_MIDDLE) {
+                offsetPos.y += size.y * 0.5f;
+            }
+            if (alignment & NVG_ALIGN_BOTTOM) {
+                offsetPos.y += size.y * 1.0f;
+            }
+            lastRenderWidthLabel = renderTextLabel(vg, offsetPos, size, label, theme, fontSize, fontColor, alignment);
+        }
+    }
+}

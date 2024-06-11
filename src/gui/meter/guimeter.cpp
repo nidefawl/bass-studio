@@ -6,8 +6,113 @@
 #include "dsp_util.h"
 #include "host/meter/meter.h"
 #include "color_util.h"
+#include <nanovg.h>
 
-void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, DAW::rmsmeter* meter) {
+constexpr float scaledZero = dsp_util::scaledRange(0.0f, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+constexpr float FOLDED_METER_CHANNEL_WIDTH_PX = 2.5f;
+
+void renderMeterTextLevel(NVGcontext* vg, guitheme_t* theme, textlabel_dynamic_t* label, vec2 gainPos, vec2 gainSize, const String& strLevel, NVGcolor fontColor) {
+    if (label && gainSize.x > 4 && gainSize.y > 4) {
+        label->alignment = NVG_ALIGN_MIDDLE | NVG_ALIGN_CENTER;
+        label->fontSize = gainSize.y * 1.1f;
+        label->pos = gainPos + vec2(0);
+        label->size = gainSize - vec2(0);
+        label->adjustWidth();
+        label->render(vg, theme, strLevel, fontColor);
+    }
+}
+
+void renderMeterChannelHorizontal(NVGcontext* vg, guitheme_t* theme, ivec2 mtrPos, const ivec2& mtrSize, float channelH, float levels[3], NVGcolor colGainLvl[6]) {
+    nvgBeginPath(vg);
+    nvgRect(vg, mtrPos.x, mtrPos.y, mtrSize.x, channelH);
+    nvgFillColor(vg, theme->getFrameColorOutline());
+    nvgFill(vg);
+    const auto wZero = (1.0f - scaledZero) * mtrSize.x;
+    const auto xZero = mtrPos.x + mtrSize.x - wZero;
+    for (int j = 0; j < 3; j++) {
+        auto fLvl = levels[j];
+        if (fLvl < math::F_MIN) {
+            continue;
+        }
+        auto scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+        auto hVal = (1.0f - scale) * mtrSize.x;
+        auto x = mtrPos.x;
+        auto y = mtrPos.y;
+        if (j == 2) {
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, x + hVal, y);
+            nvgLineTo(vg, x + hVal, y + channelH);
+            //int32_t col = fLvl >= 1.0f ? 1 : 0;
+            int32_t col = x < xZero ? 1 : 0;
+            nvgStrokeColor(vg, colGainLvl[j * 2 + col]);
+            nvgStrokeWidth(vg, 1.5f);
+            nvgStroke(vg);
+            continue;
+        }
+        if (hVal > 0.5) {
+            auto hOvershoot = math::max(0.0f, hVal - wZero);
+            nvgBeginPath(vg);
+            nvgRect(vg, x, y, math::min(hVal, wZero), channelH);
+            nvgFillColor(vg, colGainLvl[j * 2 + 0]);
+            nvgFillCustomPar(vg, -3);
+            nvgFill(vg);
+            if (hOvershoot > 0) {
+                nvgBeginPath(vg);
+                nvgRect(vg, wZero, y, hOvershoot, channelH);
+                nvgFillCustomPar(vg, -3);
+                nvgFillColor(vg, colGainLvl[j * 2 + 1]);
+                nvgFill(vg);
+            }
+        }
+    }
+}
+
+void renderMeterChannelVertical(NVGcontext* vg, guitheme_t* theme, ivec2 mtrPos, const ivec2& mtrSize, float channelW, float levels[3], NVGcolor colGainLvl[6]) {
+    nvgBeginPath(vg);
+    nvgRect(vg, mtrPos.x, mtrPos.y, channelW, mtrSize.y);
+    nvgFillColor(vg, theme->getFrameColorOutline());
+    nvgFill(vg);
+    const float hZero = (1.0f - scaledZero) * mtrSize.y;
+    const float yZero = mtrPos.y + mtrSize.y - hZero;
+    for (int j = 0; j < 3; j++) {
+        float fLvl = levels[j];
+        if (fLvl < math::F_MIN) {
+            continue;
+        }
+        double scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+        float hVal   = (1.0f - scale) * mtrSize.y;
+        float x = mtrPos.x;
+        float y = mtrPos.y + mtrSize.y - hVal;
+        if (j == 2) {
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, x, y);
+            nvgLineTo(vg, x + channelW, y);
+            //            int32_t col = fLvl >= 1.0f ? 1 : 0;
+            int32_t col = y < yZero ? 1 : 0;
+            nvgStrokeColor(vg, colGainLvl[j * 2 + col]);
+            nvgStrokeWidth(vg, 1.5f);
+            nvgStroke(vg);
+            continue;
+        }
+        if (hVal > 0.5) {
+            float hOvershoot = math::max(0.0f, hVal - hZero);
+            nvgBeginPath(vg);
+            nvgRect(vg, x, math::max(y, yZero), channelW, math::min(hVal, hZero));
+            nvgFillColor(vg, colGainLvl[j * 2 + 0]);
+            nvgFillCustomPar(vg, -3);
+            nvgFill(vg);
+            if (hOvershoot > 0) {
+                nvgBeginPath(vg);
+                nvgRect(vg, x, y, channelW, hOvershoot);
+                nvgFillCustomPar(vg, -3);
+                nvgFillColor(vg, colGainLvl[j * 2 + 1]);
+                nvgFill(vg);
+            }
+        }
+    }
+}
+
+void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, DAW::rmsmeter* meter, textlabel_dynamic_t* label) {
     const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const auto NCHANNELS = meter->getNumChannels();
@@ -33,25 +138,19 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     nvgFillColor(vg, theme->getBgColor(0));
     //  nvgFillColor(vg, G_GREEN);
     nvgFill(vg);
-    const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
 
-    const float hZero = (1.0f - scaledZero) * mtrSize.y;
-    const float yZero = mtrPos.y + mtrSize.y - hZero;
     float x           = mtrPos.x;
     float channelW    = (mtrSize.x - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
 
     float mixedlevels[3]    = { 0, 0, 0 };
-    /*if (mtrSize.y > 4) {
-        nvgBeginPath(vg);
-        nvgRect(vg, mtrPos.x, mtrPos.y, mtrSize.x, mtrSize.y);
-        nvgFillColor(vg, THEMECOL_TEXT);
-        nvgFill(vg);
-        nvgBeginPath(vg);
-        nvgRect(vg, mtrPos.x + 1, mtrPos.y + 1, mtrSize.x - 2, mtrSize.y - 2);
-        nvgFillColor(vg, G_GREEN_DRK);
-        nvgFill(vg);
-        nvgFillColor(vg, THEMECOL_WHITE);
-    }*/
+    NVGcolor colGainLvl[6] = {
+        G_GREEN_DRK,
+        G_YELLOW_DRK,
+        G_GREEN,
+        G_YELLOW,
+        G_GREEN_DRKER,
+        G_YELLOW_DRKER,
+    };
     for (channelnum_t i = 0; i < NCHANNELS; i++) {
         auto chLvl      = meter->getChannelLvls(i);
         float fMax      = chLvl.fMax;
@@ -63,53 +162,13 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         float levels[3] = { fMax, fRms, fPeak };
         //    float levels[3] = {fMax, fRms, fPeak};
         if (mtrSize.y > 4 && channelW >= 1.0f) {
-            nvgBeginPath(vg);
-            nvgRect(vg, x, mtrPos.y, channelW, mtrSize.y);
-            nvgFillColor(vg, theme->getFrameColorOutline());
-            nvgFill(vg);
-            NVGcolor colGainLvl[6] = {
-                G_GREEN_DRK,
-                G_YELLOW_DRK,
-                G_GREEN,
-                G_YELLOW,
-                G_GREEN_DRKER,
-                G_YELLOW_DRKER,
-            };
-            for (int j = 0; j < 3; j++) {
-                float fLvl = levels[j];
-                if (fLvl < math::F_MIN) {
-                    continue;
-                }
-                double scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
-                float hVal   = (1.0f - scale) * mtrSize.y;
-                float y      = mtrPos.y + mtrSize.y - hVal;
-                if (j == 2) {
-                    nvgBeginPath(vg);
-                    nvgMoveTo(vg, x, y);
-                    nvgLineTo(vg, x + channelW, y);
-                    //            int32_t col = fLvl >= 1.0f ? 1 : 0;
-                    int32_t col = y < yZero ? 1 : 0;
-                    nvgStrokeColor(vg, colGainLvl[j * 2 + col]);
-                    nvgStrokeWidth(vg, 1.5f);
-                    nvgStroke(vg);
-                    continue;
-                }
-                if (hVal > 0.5) {
-                    float hOvershoot = math::max(0.0f, hVal - hZero);
-                    nvgBeginPath(vg);
-                    nvgRect(vg, x, math::max(y, yZero), channelW, math::min(hVal, hZero));
-                    nvgFillColor(vg, colGainLvl[j * 2 + 0]);
-                    nvgFillCustomPar(vg, -3);
-                    nvgFill(vg);
-                    if (hOvershoot > 0) {
-                        nvgBeginPath(vg);
-                        nvgRect(vg, x, y, channelW, hOvershoot);
-                        nvgFillCustomPar(vg, -3);
-                        nvgFillColor(vg, colGainLvl[j * 2 + 1]);
-                        nvgFill(vg);
-                    }
-                }
-            }
+            renderMeterChannelVertical(vg, theme, {x, mtrPos.y}, mtrSize, channelW, levels, colGainLvl);
+        } else  if (mtrSize.x > 20) {
+            // render 2 pixel high channel near text label
+            auto mtrPos2 = gainPos + vec2(0, gainSize.y - (NCHANNELS - i) * FOLDED_METER_CHANNEL_WIDTH_PX);
+            auto mtrSize2 = vec2(gainSize.x, FOLDED_METER_CHANNEL_WIDTH_PX);
+            renderMeterChannelHorizontal(vg, theme, mtrPos2, mtrSize2, FOLDED_METER_CHANNEL_WIDTH_PX, levels, colGainLvl);
+            gainSize.y -= FOLDED_METER_CHANNEL_WIDTH_PX;
         }
 
 
@@ -118,6 +177,8 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     }
 
     if (hasLegend && size.y > TRACK_HEIGHT_STEP * 1.5) {
+        const float hZero = (1.0f - scaledZero) * mtrSize.y;
+        const float yZero = mtrPos.y + mtrSize.y - hZero;
         float x2           = pos.x + size.x - lW;
         const int steps    = 8;
         float stops[steps] = {
@@ -161,35 +222,30 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
             nvgText(vg, x2 + lW * 7.8f / 8.0f, y, StringAsCStr(strLevel), NULL);
         }
     }
-                    
-    mixedlevels[1] /= (float) NCHANNELS;
-    float fMaxAll = mixedlevels[2];
-    float lvl     = dsp_util::dBFS(fMaxAll);
-    nvgSave(vg);
-    getContrastFontColor(nvgToRGBA(theme->getBgColor(0)));
-    nvgIntersectScissor(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
-    nvgFontSize(vg, gainSize.y * 0.7);
-    nvgFillColor(vg, THEMECOL_TEXT);
-    nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
 
-    String strLevel = ".";
-    if (lvl > -96.0f) {
-        strLevel = StringFormat("%.1f", lvl);
-    } else {
-        strLevel = StringFormat("%.0f", lvl);
+    if (label && gainSize.x > 4 && gainSize.y > 4) {
+        mixedlevels[1] /= (float) NCHANNELS;
+        float fMaxAll = mixedlevels[2];
+        float lvl     = dsp_util::dBFS(fMaxAll);
+        nvgSave(vg);
+        nvgIntersectScissor(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
+        auto fontColor = THEMECOL_TEXT;
+        String strLevel = ".";
+        if (lvl > -96.0f) {
+            strLevel = StringFormat("%.1f", lvl);
+        } else {
+            strLevel = StringFormat("%.0f", lvl);
+        }
+        renderMeterTextLevel(vg, theme, label, gainPos, gainSize, strLevel, fontColor);
+        nvgRestore(vg);
     }
-    nvgText(vg, gainPos.x + gainSize.x - 0.5f, gainPos.y + gainSize.y * 0.5f + 0.5f, StringAsCStr(strLevel), nullptr);
-    nvgRestore(vg);
 }
-
-void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, const vec2 &size, DAW::rmsmeter *meter) {
+void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, const vec2 &size, DAW::rmsmeter *meter, textlabel_dynamic_t* label) {
     const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const auto NCHANNELS = meter->getNumChannels();
     UIFont::font_instance instance    = theme->getFont(UIFont::FONT_DECIMAL);
     UIFont::bindFont(vg, instance);
-    //  int32_t spacing = CONST_LAYOUT_MARGIN;
-    //  ivec2 inset(spacing);
     auto widthGain = size.x * 0.20f;
     vec2 mtrPos  = pos;
     vec2 mtrSize = {size.x - widthGain - CONST_PADDING_TRACK_CONTROLS, size.y};
@@ -198,24 +254,24 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
 
     bool hasLegend = false;
     float lW       = mtrSize.y * 0.15f;
-    // hasLegend      = lW > 10;
-    // if (hasLegend) {
-    //     mtrSize.x -= lW;
-    // }
 
     nvgBeginPath(vg);
     nvgRect(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
     nvgFillColor(vg, theme->getBgColor(0));
-    //  nvgFillColor(vg, G_GREEN);
     nvgFill(vg);
-    const auto scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
 
-    const auto hZero = (1.0f - scaledZero) * mtrSize.x;
-    const auto xZero = mtrPos.x + mtrSize.x - hZero;
     auto y           = mtrPos.y;
     auto channelH    = (mtrSize.y - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
 
     float mixedlevels[3]    = { 0, 0, 0 };
+    NVGcolor colGainLvl[6] = {
+        G_GREEN_DRK,
+        G_YELLOW_DRK,
+        G_GREEN,
+        G_YELLOW,
+        G_GREEN_DRKER,
+        G_YELLOW_DRKER,
+    };
     for (channelnum_t i = 0; i < NCHANNELS; i++) {
         auto chLvl      = meter->getChannelLvls(i);
         float fMax      = chLvl.fMax;
@@ -227,53 +283,13 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
         float levels[3] = { fMax, fRms, fPeak };
         //    float levels[3] = {fMax, fRms, fPeak};
         if (mtrSize.x > 4 && channelH >= 1.0f) {
-            nvgBeginPath(vg);
-            nvgRect(vg, mtrPos.x, y, mtrSize.x, channelH);
-            nvgFillColor(vg, theme->getFrameColorOutline());
-            nvgFill(vg);
-            NVGcolor colGainLvl[6] = {
-                G_GREEN_DRK,
-                G_YELLOW_DRK,
-                G_GREEN,
-                G_YELLOW,
-                G_GREEN_DRKER,
-                G_YELLOW_DRKER,
-            };
-            for (int j = 0; j < 3; j++) {
-                auto fLvl = levels[j];
-                if (fLvl < math::F_MIN) {
-                    continue;
-                }
-                auto scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
-                auto hVal = (1.0f - scale) * mtrSize.x;
-                auto x = mtrPos.x;
-                if (j == 2) {
-                    nvgBeginPath(vg);
-                    nvgMoveTo(vg, x + hVal, y);
-                    nvgLineTo(vg, x + hVal, y + channelH);
-                    //int32_t col = fLvl >= 1.0f ? 1 : 0;
-                    int32_t col = x < xZero ? 1 : 0;
-                    nvgStrokeColor(vg, colGainLvl[j * 2 + col]);
-                    nvgStrokeWidth(vg, 1.5f);
-                    nvgStroke(vg);
-                    continue;
-                }
-                if (hVal > 0.5) {
-                    auto hOvershoot = math::max(0.0f, hVal - hZero);
-                    nvgBeginPath(vg);
-                    nvgRect(vg, x, y, math::min(hVal, hZero), channelH);
-                    nvgFillColor(vg, colGainLvl[j * 2 + 0]);
-                    nvgFillCustomPar(vg, -3);
-                    nvgFill(vg);
-                    if (hOvershoot > 0) {
-                        nvgBeginPath(vg);
-                        nvgRect(vg, hZero, y, hOvershoot, channelH);
-                        nvgFillCustomPar(vg, -3);
-                        nvgFillColor(vg, colGainLvl[j * 2 + 1]);
-                        nvgFill(vg);
-                    }
-                }
-            }
+            renderMeterChannelHorizontal(vg, theme, {mtrPos.x, y}, mtrSize, channelH, levels, colGainLvl);
+        } else  if (mtrSize.y > 20) {
+            // render 2 pixel high channel near text label
+            auto mtrPos2 = gainPos + vec2(gainSize.x - (NCHANNELS - i) * FOLDED_METER_CHANNEL_WIDTH_PX, 0);
+            auto mtrSize2 = vec2(FOLDED_METER_CHANNEL_WIDTH_PX, gainSize.y);
+            renderMeterChannelVertical(vg, theme, mtrPos2, mtrSize2, FOLDED_METER_CHANNEL_WIDTH_PX, levels, colGainLvl);
+            gainSize.x -= FOLDED_METER_CHANNEL_WIDTH_PX;
         }
 
 
@@ -282,6 +298,8 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
     }
 
     if (hasLegend && size.x > TRACK_HEIGHT_STEP * 1.5) {
+        const auto wZero = (1.0f - scaledZero) * mtrSize.x;
+        const auto xZero = mtrPos.x + mtrSize.x - wZero;
         float y2 = pos.y + size.y - lW;
         const int steps    = 8;
         float stops[steps] = {
@@ -321,32 +339,30 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
         }
     }
                     
-    mixedlevels[1] /= (float) NCHANNELS;
-    float fMaxAll = mixedlevels[2];
-    float lvl     = dsp_util::dBFS(fMaxAll);
-    nvgSave(vg);
-    getContrastFontColor(nvgToRGBA(theme->getBgColor(0)));
-    nvgIntersectScissor(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
-    nvgFontSize(vg, gainSize.y * 0.7f);
-    nvgFillColor(vg, THEMECOL_TEXT);
-    nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-
-    String text = ".";
-    if (lvl > -96.0f) {
-        text = StringFormat("%.1f", lvl);
-    } else {
-        text = StringFormat("%.0f", lvl);
+    if (label && gainSize.x > 4 && gainSize.y > 4) {
+        mixedlevels[1] /= (float) NCHANNELS;
+        float fMaxAll = mixedlevels[2];
+        float lvl     = dsp_util::dBFS(fMaxAll);
+        nvgSave(vg);
+        nvgIntersectScissor(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
+        auto fontColor = getContrastFontColor(nvgToRGBA(theme->getBgColor(0)));
+        String strLevel = ".";
+        if (lvl > -96.0f) {
+            strLevel = StringFormat("%.1f", lvl);
+        } else {
+            strLevel = StringFormat("%.0f", lvl);
+        }
+        renderMeterTextLevel(vg, theme, label, gainPos, gainSize, strLevel, fontColor);
+        nvgRestore(vg);
     }
-    nvgText(vg, gainPos.x + gainSize.x - 0.5f, gainPos.y + gainSize.y * 0.5f + 0.5f, text.c_str(), &text.back() + 1);
-    nvgRestore(vg);
 }
 
 void gui_trackmeter::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
     if (bRenderHorizontal) {
-        renderMeterHorizontal(vg, theme, pos, size, meter);
+        renderMeterHorizontal(vg, theme, pos, size, meter, &label);
     } else {
-        renderMeterAt(vg, theme, pos, size, meter);
+        renderMeterAt(vg, theme, pos, size, meter, &label);
     }
 }

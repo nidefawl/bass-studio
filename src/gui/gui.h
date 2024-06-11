@@ -612,32 +612,8 @@ struct textlabel_dynamic_t {
     float fontSize = 0.0f;
     float lastRenderWidthLabel = -1.0f;
     float dynamicFontScale = 1.0f;
-    void adjustWidth() {
-        float delta = size.x - lastRenderWidthLabel;
-        if (math::abs(delta) > lastRenderWidthLabel * 0.1f) {
-            const float FONT_SCALE_MAX = 10.0f;
-            if (delta > 0.0f) {
-                dynamicFontScale = math::min(FONT_SCALE_MAX, dynamicFontScale + 0.025f);
-            } else {
-                dynamicFontScale = math::max(1.0f/FONT_SCALE_MAX, dynamicFontScale - 0.025f);
-            }
-        }
-    }
-    float getScale() const {
-        return math::clamp<float>(fontSize * dynamicFontScale, math::clamp(fontSize, 1.0f, 8.0f), math::max(2.0f, (size.y - 2.0f) * 0.9f));
-    }
-    void setSize(vec2 _size) {
-        size = _size;
-    }
-    void setDefaultFontSize(float _fontSize) {
-        fontSize = _fontSize;
-    }
-    void render(NVGcontext* vg, guitheme_t* theme, const String& label, const NVGcolor& fontColor) {
-        if (size.x > 0 && size.y > 0) {
-            float fontSize = getScale();
-            if (fontSize >= 1.0) {
-                lastRenderWidthLabel = renderTextLabel(vg, vec2(pos) + vec2(size) * 0.5f, size, label, theme, fontSize, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            }
-        }
-    }
+    int32_t alignment = NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE;
+    void adjustWidth();
+    float getScale() const;
+    void render(NVGcontext* vg, guitheme_t* theme, const String& label, const NVGcolor& fontColor);
 };
