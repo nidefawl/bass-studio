@@ -3,6 +3,7 @@
 #include "basectrl.h"
 #include "event.h"
 #include "gui/controls/textfield.h"
+#include "guiglobals.h"
 #include "knoblabeled.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
@@ -756,8 +757,8 @@ void gui_slider_textfield::render(NVGcontext* vg) {
     }
     if (!isRenderableSizeAndContext(vg))
         return;
-    vec2 insetP        = vec2(pos + 1);
-    vec2 insetS        = vec2(size - 2);
+    const vec2 insetP        = vec2(pos + 1);
+    const vec2 insetS        = vec2(size - 2);
     if (insetS.x < 2 || insetS.y < 2)
         return;
     renderWidgetBorder(vg, getStateFlags());
@@ -860,29 +861,34 @@ void gui_slider_textfield::render(NVGcontext* vg) {
                     break;
             }
             const String strLvl = getValueAsString(fTextValue);
-            textWidth           = renderTextLabel(vg,
-                                                  insetP + insetS * 0.5f,
-                                                  insetS,
-                                                  strLvl,
-                                                  theme,
-                                                  fontSize(),
-                                                  theme->getColor(getLabelColor()),
-                                                  alignment | NVG_ALIGN_MIDDLE);
+            m_textLabelParamValue.alignment = alignment | NVG_ALIGN_MIDDLE;
+            m_textLabelParamValue.render(vg, theme, strLvl, theme->getColor(GuiColor::COL_TEXT));
         }
         if (isFlag(FLG_RENDER_LABEL) && this->label.length()) {
-            renderTextLabel(vg,
-                            insetP + vec2(3.0f, insetS.y * 0.5f),
-                            vec2(insetS.x - textWidth - 6.0f, insetS.y),
-                            label,
-                            theme,
-                            fontSize() * FONT_AUTOSCALE,
-                            theme->getColor(GuiColor::COL_LABEL_INACTIVE),
-                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            m_textLabelParamName.alignment = NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE;
+            m_textLabelParamName.render(vg, theme, label, theme->getColor(GuiColor::COL_LABEL_INACTIVE));
         }
     }
     if (!isTextCommitted()) {
         gui_textfield::render(vg);
     }
+}
+
+void gui_slider_textfield::onTick(AppCtrl* appctrl) {
+    gui_textfield::onTick(appctrl);
+    m_textLabelParamName.adjustWidth();
+    m_textLabelParamValue.adjustWidth();
+}
+
+void gui_slider_textfield::layout() {
+    gui_textfield::layout();
+    setFontSize(size.y * m_fontScale);
+    m_textLabelParamValue.pos     = vec2(pos.x + 3, pos.y + 1);
+    m_textLabelParamValue.size    = vec2(size.x - 6, size.y - 2);
+    m_textLabelParamValue.fontSize = fontSize() * 1.2f;
+    m_textLabelParamName.pos      = vec2(pos.x + 3, pos.y + 2);
+    m_textLabelParamName.size     = vec2(size.x - 6, size.y - 4);
+    m_textLabelParamName.fontSize = fontSize() * FONT_AUTOSCALE;
 }
 
 bool gui_slider_textfield::handleCharInput(uint32_t codepoint) {
@@ -975,6 +981,19 @@ void gui_slider_textfield::handleDraggedMove(MouseEvent& evt) {
             updateAutomatableParam(disty * 0.1f, true, false);
         }
     }
+}
+
+bool gui_slider_textfield::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    float value = paramAutomatable->getParam(paramIdx)->getValue();
+    float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
+    float q = getQuantizationStep();
+    if (q > 0.0f) {
+        value += q * (yoffset > 0 ? 1 : -1);
+    } else {
+        value += yoffset / scale;
+    }
+    paramAutomatable->setParamEdit(paramIdx, value, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+    return true;
 }
 
 void gui_slider_textfield::handleDraggedRelease(MouseEvent& evt) {

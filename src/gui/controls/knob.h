@@ -55,6 +55,12 @@ public:
         return knobType;
     }
     virtual float getQuantizationStep() const {
+        if (paramAutomatable) {
+            auto p = paramAutomatable->getParam(paramIdx);
+            if (assert_expr(p)) {
+                return p->quantizationSteps ? 1.0f / p->quantizationSteps : 0.0f;
+            }
+        }
         return 0.0f;
     }
     void setIsBipolar(bool bIsBipolar) {
@@ -173,6 +179,8 @@ protected:
     int32_t paramIdx  = -1;
     float fBeginValue = 0.0f;
     float m_fontScale = 1.0f;
+    textlabel_dynamic_t m_textLabelParamName;
+    textlabel_dynamic_t m_textLabelParamValue;
 public:
     gui_slider_textfield() : gui_textfield() {
         setGuiType(gui_type::GUI_TYPE_SLIDER_TEXTFIELD);
@@ -205,10 +213,7 @@ public:
     virtual bool isModulated();
 
     void render(NVGcontext* vg) override;
-    void layout() override {
-        gui_textfield::layout();
-        setFontSize(size.y * m_fontScale);
-    }
+    void layout() override;
     bool focusEvent(MouseHitEvt& evt, bool focused) override {
         if (!focused) {
             gui_textfield::focusEvent(evt, focused);
@@ -222,11 +227,22 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     void updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal);
+    void onTick(AppCtrl* appctrl) override;
     virtual std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges();
     virtual std::optional<std::pair<float,float>> getModulationMinMax() const {
         return std::nullopt;
     }
     void renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float fRenderValue, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges);
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+    virtual float getQuantizationStep() const {
+        if (paramAutomatable) {
+            auto p = paramAutomatable->getParam(paramIdx);
+            if (assert_expr(p)) {
+                return p->quantizationSteps ? 1.0f / p->quantizationSteps : 0.0f;
+            }
+        }
+        return 0.0f;
+    }
 };
 
 class guictr_select_enum final : public guictr_base, public DAW::UI::IModulateable {

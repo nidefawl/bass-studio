@@ -68,15 +68,6 @@ public:
 
     ~guiknob_pluginparam() override = default;
 
-    float getQuantizationStep() const override {
-        if (paramAutomatable) {
-            auto p = paramAutomatable->getParam(paramIdx);
-            if (assert_expr(p)) {
-                return p->quantizationSteps ? 1.0f / p->quantizationSteps : 0.0f;
-            }
-        }
-        return 0.0f;
-    }
     void setEffectInstance(effectbase* _hostSidePlugin) {
         hostSidePlugin   = _hostSidePlugin;
         paramAutomatable = _hostSidePlugin;
