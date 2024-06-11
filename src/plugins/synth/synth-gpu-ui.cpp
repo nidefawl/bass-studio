@@ -15,6 +15,7 @@
 #include "platform.h"
 #include "renderresources.h"
 #include "saferef.h"
+#include "synth-modulations-ui.hpp"
 #include "synth-types.hpp"
 #include <cstddef>
 #include <nanovg.h>
@@ -517,20 +518,20 @@ class guictr_3buttons : public guictr_base {
     }
 };
 class guictr_module_synth_lfo_container final : public guictr_stacked {
-    static constexpr auto N_TRIGGER_MODES = DAW::LFO::LFOTriggerMode::SongPosition+1;
+    static constexpr auto N_TRIGGER_MODES = DAW::LFO::LFOTriggerMode::Free+1;
     module_synth_gpu* const moduleInstance;
     int32_t lfoIdx;
     guictr_sampled_curve_shape sampledShaped;
     i_ctr_shape_editor* const shapeEditor;
     guictr_base* lfoShapeCtr;
-    guictr_synth_param_container ctrParams;
+    guictr_base ctrParams;
     guictr_select_enum ctrParamTriggerMode;
 public:
     explicit guictr_module_synth_lfo_container(module_synth_gpu* module, std::vector<_synth_gui_param_knob>& vecParamUI, int32_t _idx) 
         : moduleInstance(module), lfoIdx(_idx), sampledShaped(module),
         shapeEditor(makeShapeEditor()),
         lfoShapeCtr(shapeEditor->getGuiContainer()),
-        ctrParams(module->getSynth()),
+        ctrParams(),
         ctrParamTriggerMode(N_TRIGGER_MODES)
     {
         padding = 0;
@@ -538,10 +539,16 @@ public:
         setVerticalLayout(true);
         setBackgroundRendered(false);
         setCanMouseHit(false);
+        ctrParams.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        ctrParams.setBackgroundRendered(false);
+        ctrParams.padding = 4;
+        // ctrParams.setBackgroundRendered(true);
+        // ctrParams.setFlag(FLG_RENDER_LABEL, false);
+        ctrParams.setCanMouseHit(true);
+
         auto* const synth = module->getSynth();
         ctrParamTriggerMode.setBackgroundRendered(false);
         ctrParamTriggerMode.setTooltipText("LFO " + std::to_string(lfoIdx + 1));
-        ctrParams.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         ctrParamTriggerMode.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         ctrParamTriggerMode.padding = 2;
         auto paramTrigger = synth->getParam(ParametersSynthGPU(LFO_1_TriggerMode + size_t(lfoIdx * MAX_PARAMS_PER_LFO)));
@@ -573,17 +580,20 @@ public:
             LFO_1_RampDuration,
         }) {
             auto pOffset = static_cast<decltype(p)>(p + size_t(lfoIdx * MAX_PARAMS_PER_LFO));
-            auto knob = new guiknob_synthparam(PARAM_OFFSET_IMPL + pOffset, PARAM_OFFSET_IMPL + pOffset, synth, pOffset, guiknob::knobtype::KNOB_LABELED);
-            ctrParams.addParamKnob(knob);
-            vecParamUI.push_back({ pOffset, knob });
+            auto pKnob = new guiknob_synthparam_textfield();
+            pKnob->setSynthParam(moduleInstance->getSynth(), pOffset);
+            pKnob->setFontScale(0.75f);
+            pKnob->setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + pOffset);
+            ctrParams.add(pKnob);
         }
         addEntry(lfoShapeCtr);
         addEntry(&sampledShaped);
         addEntry(&ctrParams);
         add(&ctrParamTriggerMode);
-        setSplitters({ 0.5f, 0.75f });
+        setSplitters({ 0.45f, 0.9f });
     }
     ~guictr_module_synth_lfo_container() override {
+        ctrParams.destroyGuis();
         removeGuis();
         delete shapeEditor->getGuiContainer();
     }

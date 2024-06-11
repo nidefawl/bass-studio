@@ -105,7 +105,7 @@ public:
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
     void handleRightClick(MouseEvent& evt) override;
     void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float value);
-    void renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges);
+    void renderRangeIndicator(NVGcontext* vg, ivec2 center, ivec2 insetP, ivec2 insetS, float fRenderValue, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges);
     void render(NVGcontext* vg) override;
     float getValueInternal() {
         return value;
@@ -161,6 +161,9 @@ public:
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     virtual void setToDefaultValue();
     virtual std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges();
+    virtual std::optional<std::pair<float,float>> getModulationMinMax() const {
+        return std::nullopt;
+    }
     void storeEditModulationTransform(NVGcontext* vg);
 };
 
@@ -220,6 +223,10 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override;
     void updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal);
     virtual std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges();
+    virtual std::optional<std::pair<float,float>> getModulationMinMax() const {
+        return std::nullopt;
+    }
+    void renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float fRenderValue, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges);
 };
 
 class guictr_select_enum final : public guictr_base, public DAW::UI::IModulateable {

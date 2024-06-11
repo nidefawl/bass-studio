@@ -676,6 +676,8 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
     auto& inputBufferVoiceStates = ssboInputVoiceStates.buffer;
     ssboInputSynthState.clearBuffer();
     ssboInputVoiceStates.clearBuffer();
+    std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size()*sizeof(double));
+    std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size()*sizeof(double));
     const bool bHasAutomationOrModulation = true;// TODO: implement
     if (bDbgSkipBufferBuild) {
         midiQueue.Clear();
@@ -744,6 +746,10 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
                 updateVoiceModulations(modSrcData, v, tickPos);
                 updateEnvelopeParameters(v);
                 modValuesActive = &v.modValues;
+                for (size_t j = 0; j < modulationValuesMax.size() && j < modValuesActive->size(); j++) {
+                    modulationValuesMax[j] = math::max(modulationValuesMax[j], (*modValuesActive)[j]);
+                    modulationValuesMin[j] = math::min(modulationValuesMin[j], (*modValuesActive)[j]);
+                }
                 // bool bIsFirst = v.GetVolumeEnvelope().stage == EnvelopeStages::Triggered;
                 for (auto& env : v.envelopes) {
                     env.Update(oneOverSR);
@@ -807,6 +813,7 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
     // gpuContext.osc1_filter_keytrack    = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
     // gpuContext.osc1_detune_keytrack    = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
     gpuContext.osc1_width_keytrack     = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
+
 
     perfTimer.reset();
     if (!bDbgSkipGPUDispatch) {

@@ -141,54 +141,71 @@ bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset)
     return true;
 }
 
-void guiknob::renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges) {
-    float knobValue = math::clamp(getValue(), bIsBipolar ? -1.0f : 0.0f, 1.0f);
-    float cx      = insetP.x;
-    float cy      = insetP.y;
-    float width   = insetS.x;
-    float height  = insetS.y;
+void guiknob::renderRangeIndicator(NVGcontext* vg, ivec2 center, ivec2 insetP, ivec2 insetS, float fRenderValue, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges) {
     if (knobType == knobtype::SLIDER_LABELED) {
-        auto posModulation = height - height * knobValue;
-        auto heightModulation = height * (rangeValueMax - rangeValueMin);
-        posModulation -= height * rangeValueMax;
         vec4 r = {
             0,
-            posModulation,
+            ((1.0f - fRenderValue) - rangeValueMax) * insetS.y,
             static_cast<float>(insetS.x),
-            heightModulation
+            (rangeValueMax - rangeValueMin) * insetS.y,
         };
-        // clip rect to 0, 0, width, height
-        if (r.w < 0) {
-            r.y += r.w;
-            r.w = -r.w;
-        }
         if (r.y < 0) {
             r.w += r.y;
             r.y = 0;
         }
-        if (r.x < 0) {
-            r.z += r.x;
-            r.x = 0;
+        if (r.y + r.w > insetS.y) {
+            r.w = insetS.y - r.y;
         }
-        if (r.y + r.w > height) {
-            r.w = height - r.y;
-        }
-        if (r.x + r.z > width) {
-            r.z = width - r.x;
-        }
-        if (r.z > 0.5f && r.w > 0.5f) {
-            float wIndicator = math::max(2.0f, r.z/numRanges);
-            float xSlot = r.x + r.z - wIndicator;
-            float wSlot = wIndicator;
+        if (r.z > 2.0f && r.w > 2.0f) {
+            const float wIndicator = math::max(2.0f, r.z/numRanges);
+            const float xSlot = r.x + r.z - (r.z/numRanges) * idx;
             nvgBeginPath(vg);
-            nvgRect(vg, cx + xSlot, cy + r.y, wSlot, r.w);
-            dbgassert(r.x >= 0 && r.y >= 0 && r.z <= insetS.x && r.w <= insetS.y);
+            nvgRect(vg, insetP.x + xSlot, insetP.y + r.y, wIndicator, r.w);
             nvgFillColor(vg, color);
             nvgFill(vg);
         }
-    } else {
-        // float radius             = (minSize * 0.8f) / 2.0f;
-        // float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
+    } else if (knobType == knobtype::KNOB_LABELED || knobType == knobtype::KNOB_UNLABELED) {
+        float minSize = math::min(insetS.x, insetS.y);
+        float lineThickness = math::max(1.0f, roundf(minSize / 6.0f));
+        float radius        = (minSize * 0.8f) / 2.0f;
+        const int numMods = 1;
+        float perModWidth = (lineThickness + 0.0f) / float(numMods);
+        float radiusMin = radius - 0.5f * lineThickness;
+        for (int32_t i = 0; i < numMods; i++) {
+            // auto& param = modRanges[i];
+            auto posModMin = float(fRenderValue + rangeValueMin);
+            auto posModMax = float(fRenderValue + rangeValueMax);
+            if (fabs(posModMax - posModMin) > 1E-8F) {
+                float rangeScaled = bIsBipolar ? range * 0.5f : range;
+                float startOffset = bIsBipolar ? start + rangeScaled : start;
+                float startArc = startOffset + posModMin * rangeScaled;
+                float endArc = startOffset + posModMax * rangeScaled;
+                if (endArc < startArc) {
+                    std::swap(startArc, endArc);
+                }
+                nvgBeginPath(vg);
+                nvgArc(vg, center.x, center.y, radiusMin+perModWidth*0.5, startArc, endArc, NVG_CW);
+                NVGcolor colorCopy = color;
+                float f = 0.25f;
+                colorCopy.r *= f;
+                colorCopy.g *= f;
+                colorCopy.b *= f;
+
+                nvgStrokeColor(vg, colorCopy);
+                nvgStrokeWidth(vg, math::max(2.0f, perModWidth*0.8f));
+                nvgStrokeCustomPar(vg, -3);
+                nvgStroke(vg);
+                if (perModWidth >= 2.5f) {
+                    nvgBeginPath(vg);
+                    nvgArc(vg, center.x, center.y, radiusMin+perModWidth*0.5, startArc, endArc, NVG_CW);
+                    nvgStrokeColor(vg, color);
+                    nvgStrokeWidth(vg, perModWidth - 2.5f);
+                    nvgStrokeCustomPar(vg, -3);
+                    nvgStroke(vg);
+                }
+            }
+            radiusMin += perModWidth;
+        }
     }
 }
 static void renderSlider2(NVGcontext* vg, guitheme_t* theme, const vec2& posKn, const vec2& sizeKn, int sliderAxisDir, float fRenderValue, bool bIsBipolar, const NVGcolor& color) {
@@ -523,6 +540,14 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgStroke(vg);
         nvgLineCap(vg, NVGlineCap::NVG_BUTT);
     }
+    auto minMax = getModulationMinMax();
+    if (minMax) {
+        auto valueMin = minMax->first;
+        auto valueMax = minMax->second;
+        auto col = dbgcolorsArray[0];
+        col.a = 0.5;
+        renderRangeIndicator(vg, {cx, cy}, insetP, insetS, fScaled, valueMin, valueMax, col, 9, 10);
+    }
 }
 
 void guiknob::setToDefaultValue() {
@@ -807,6 +832,14 @@ void gui_slider_textfield::render(NVGcontext* vg) {
                 }
             }
         }
+        auto minMax = getModulationMinMax();
+        if (minMax && insetS.y >= 10) {
+            auto valueMin = minMax->first;
+            auto valueMax = minMax->second;
+            auto col = dbgcolorsArray[0];
+            col.a = 0.5;
+            renderRangeIndicator(vg, insetP, insetS, fRenderValue, valueMin, valueMax, col, 9, 10);
+        }
 
         float textWidth = 0;
         if (isTextCommitted()) {
@@ -1026,6 +1059,29 @@ void gui_slider_textfield::setAutomationRef(automatable_t* _paramAutomatable, in
 }
 std::optional<std::vector<param_modulation_range_t>*> gui_slider_textfield::getKnobModulationRanges() {
     return std::nullopt;
+}
+void gui_slider_textfield::renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float fRenderValue, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges) {
+    vec4 r = {
+        (fRenderValue + rangeValueMin) * insetS.x,
+        0,
+        (rangeValueMax - rangeValueMin) * insetS.x,
+        static_cast<float>(insetS.y)
+    };
+    if (r.x < 0) {
+        r.z += r.x;
+        r.x = 0;
+    }
+    if (r.x + r.z > insetS.x) {
+        r.z = insetS.x - r.x;
+    }
+    if (r.z > 2.0f && r.w > 2.0f) {
+        const float hIndicator = math::max(2.0f, r.w/numRanges);
+        const float ySlot = r.y + r.w - (r.w/numRanges) * idx;
+        nvgBeginPath(vg);
+        nvgRect(vg, insetP.x + r.x, insetP.y + ySlot, r.z, hIndicator);
+        nvgFillColor(vg, color);
+        nvgFill(vg);
+    }
 }
 
 void guictr_select_enum::rightClicked(MouseEvent& evt, guibase* button) {

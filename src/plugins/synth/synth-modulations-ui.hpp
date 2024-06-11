@@ -670,6 +670,15 @@ public:
         }
         return std::nullopt;
     }
+    std::optional<std::pair<float,float>> getModulationMinMax() const override {
+        if (synth && synth->isShowModulationRanges()) {
+            auto modIdx = synth->getModulationIdx(param);
+            if (modIdx >= 0) {
+                return synth->getModulationAmountMinMax(modIdx);
+            }
+        }
+        return std::nullopt;
+    }
     int32_t getParam() const {
         return param;
     }
@@ -699,6 +708,15 @@ public:
         }
         return std::nullopt;
     }
+    std::optional<std::pair<float,float>> getModulationMinMax() const override {
+        if (synth && synth->isShowModulationRanges()) {
+            auto modIdx = synth->getModulationIdx(param);
+            if (modIdx >= 0) {
+                return synth->getModulationAmountMinMax(modIdx);
+            }
+        }
+        return std::nullopt;
+    }
 };
 
 class guictr_synth_param_container : public guictr_synth_title {
@@ -722,50 +740,6 @@ public:
     void addParamKnob(guiknob_synthparam* knob) {
         knobs.push_back(knob);
         add(knob);
-    }
-
-    void render(NVGcontext* vg) override {
-        if (!isVisible()) {
-            log_printf("warning, skip rendering container with state !isVisible()\n");
-            return;
-        }
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        for (auto c : guis) {
-            if (!c->isVisible()) {
-                //log_printf("warning, skip rendering child container with state !isVisible()\n");
-                continue;
-            }
-            if (c->size.x <= 5 || c->size.y <= 5) {
-                continue;
-            }
-            {
-                nvgSave(vg);
-                c->render(vg);
-                nvgRestore(vg);
-            }
-        }
-        if (synth && synth->isShowModulationRanges()) {
-            for (auto k : knobs) {
-                auto modIdx = synth->getModulationIdx(k->getParam());
-                if (modIdx < 0)
-                    continue;
-                auto valueMin = static_cast<float>(this->synth->getModulationAmountMin(modIdx));
-                auto valueMax = static_cast<float>(this->synth->getModulationAmountMax(modIdx));
-                auto layout = k->getLayout();
-                auto col = dbgcolorsArray[0];
-                col.a = 0.5;
-                k->renderRangeIndicator(vg, layout.pKnob, layout.sKnob, valueMin, valueMax, col, 9, 10);
-            }
-        }
-    }
-
-    void buttonClicked(guibase* button) override {
-        parent->buttonClicked(button);
     }
 
     void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) override {

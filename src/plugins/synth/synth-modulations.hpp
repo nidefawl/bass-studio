@@ -165,6 +165,11 @@ public:
         return modulationValuesMax[modIdx];
     }
 
+    std::pair<float,float> getModulationAmountMinMax(int32_t modIdx) const {
+        dbgassert(modIdx >= 0 && modIdx < CtrSize(modulationValuesMax));
+        return { modulationValuesMin[modIdx], modulationValuesMax[modIdx] };
+    }
+
     const std::vector<ModDestDesc>& getDestinations() const {
         return modDestDescs;
     }
