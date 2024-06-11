@@ -144,18 +144,13 @@ int32_t guictr_stacked::getNumEntries() {
     return CtrSize(entries);
 }
 
-void guictr_stacked::toggleEntry(int32_t idx, int flags) {
+void guictr_stacked::toggleEntry(int32_t idx) {
     if (idx >= 0 && idx < CtrSize(entries)) {
         guictr_stacked::stacked_entry* entry = entries[idx];
-        if ((flags & 2) && entry->active) {
-            return;
-        }
-        if (flags & 1) {
-            if (entry->active) {
-                entry->splitterScale = entry->splitter.getScale();
-            } else {
-                entry->splitter.setScale(entry->splitterScale);
-            }
+        if (entry->active) {
+            entry->splitterScale = entry->splitter.getScale();
+        } else {
+            entry->splitter.setScale(entry->splitterScale);
         }
         entry->active = !entry->active;
         if (this->parentCtrl) {
@@ -166,12 +161,14 @@ void guictr_stacked::toggleEntry(int32_t idx, int flags) {
 
 void guictr_stacked::buttonClicked(guibase* button) {
     auto it = std::find_if(entries.begin(), entries.end(), [button](const guictr_stacked::stacked_entry* entry) {
-        return (&entry->btnHideEntry == button) || (button->parent == entry->tabCtr);
+        return entry->btnHideEntry.parent && (&entry->btnHideEntry == button);
     });
     if (it != entries.end()) {
-        size_t pos = it - entries.begin();
-        toggleEntry((int32_t) pos, (&(*it)->btnHideEntry == button ? 1 : (2 | 1)));
-        return;
+        auto idx = int32_t(it - entries.begin());
+        if (idx >= 0 && idx < CtrSize(entries)) {
+            toggleEntry(idx);
+            return;
+        }
     }
     if (parent) {
        parent->buttonClicked(button);

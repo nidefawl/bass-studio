@@ -36,7 +36,7 @@ public:
         this->bVerticalLayout = bVertical;
     }
     int32_t getNumEntries();
-    void toggleEntry(int32_t idx, int flags);
+    void toggleEntry(int32_t idx);
     void addEntry(guibase* ctr);
     void removeEntries();
     void buttonClicked(guibase* button) override;
