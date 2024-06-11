@@ -10,7 +10,7 @@
 #include "math/seq_math.h"
 
 namespace DAW::Shape {
-
+    constexpr float SHAPE_LERP_MIN_DIST = 1.0f / 1024.0f;
     int shape_t::getMinDistEdge(vec2 pos, vec2 scale, float* fDist) const {
         if (pts.empty()) {
             return -1;
@@ -95,6 +95,8 @@ namespace DAW::Shape {
             if (pX < 0.0f) {
                 pX += 1.0f;
             }
+        } else {
+            // log_lf(Log::L_WARN, "Using sampleCurve with non-cyclic shape\n");
         }
         size_t idx = 0;
         for (size_t i = 0; i < pts.size(); i++) {
@@ -108,8 +110,14 @@ namespace DAW::Shape {
                 break;
             }
         }
-        auto pt0 = idx == 0 ? pts.back() : pts[idx - 1];
+        if (idx == 0 && !(flags & SHAPE_CYCLIC)) {
+            return pts[0].pos.y;
+        }
+        if (!(flags & SHAPE_CYCLIC) && posX > pts[idx].pos.x) {
+            return pts[idx].pos.y;
+        }
         auto pt1 = pts[idx];
+        auto pt0 = idx == 0 ? pts.back() : pts[idx - 1];
         if (pt0.pos.x >= pt1.pos.x) {
             pt1.pos.x += 1;
         }
@@ -117,7 +125,7 @@ namespace DAW::Shape {
             pX += 1;
         }
         float diffX = math::abs(pt1.pos.x - pt0.pos.x);
-        if (diffX < 0.00001f) {
+        if (diffX < SHAPE_LERP_MIN_DIST) {
             return pt1.pos.y;
         }
         float t = (pX - pt0.pos.x) / (pt1.pos.x - pt0.pos.x);
@@ -156,7 +164,7 @@ namespace DAW::Shape {
         //     pX += 1;
         // }
         float diffX = math::abs(pt1.pos.x - pt0.pos.x);
-        if (diffX < 0.00001f) {
+        if (diffX < SHAPE_LERP_MIN_DIST) {
             return pt1.pos.y;
         }
         float t = (pX - pt0.pos.x) / (pt1.pos.x - pt0.pos.x);
@@ -166,40 +174,42 @@ namespace DAW::Shape {
         return y;
     }
     float shape_t::sampleCurveOneShot(float posX) const {
-        dbgassert(!pts.empty());
         if (pts.empty())
             return 0.0f;
-        if (pts.size() == 1) {
+        if (pts.size() == 1 || posX <= 0.0f) {
             return pts[0].pos.y;
         }
-        float pX = posX;
-        if (pX < 0.0f) {
-            return pts[0].pos.y;
-        }
-        if (pX > 1.0f) {
+        if (posX >= 1.0f) {
             return pts[pts.size() - 1].pos.y;
         }
+        constexpr bool sampleLeftRight = false;
         size_t idx = 0;
         for (size_t i = 0; i < pts.size(); i++) {
             float px = pts[i].pos.x;
-            if (px >= pX) {
-                idx = i;
+            idx = i;
+            if (!sampleLeftRight && px >= posX) {
+                break;
+            }
+            if (sampleLeftRight && px > posX) {
                 break;
             }
         }
-        auto pt0 = idx == 0 ? pts.back() : pts[idx - 1];
-        auto pt1 = pts[idx];
-        if (pt0.pos.x >= pt1.pos.x) {
-            pt1.pos.x += 1;
+        if (idx < 1) {
+            return pts[0].pos.y;
         }
-        float diffX = math::abs(pt1.pos.x - pt0.pos.x);
-        if (diffX < 0.00001f) {
+        const auto& pt1 = pts[idx];
+        if (posX > pt1.pos.x) {
             return pt1.pos.y;
         }
-        float t = (pX - pt0.pos.x) / (pt1.pos.x - pt0.pos.x);
-        t       = shapeSegment(t, pt0.shape);
-        float y = pt0.pos.y + (pt1.pos.y - pt0.pos.y) * t;
-
+        const auto& pt0 = pts[idx - 1];
+        dbgassert(pt0.pos.x <= pt1.pos.x);
+        const auto diffX = math::abs(pt1.pos.x - pt0.pos.x);
+        if (diffX < SHAPE_LERP_MIN_DIST) {
+            return pt1.pos.y;
+        }
+        auto t = (posX - pt0.pos.x) / (pt1.pos.x - pt0.pos.x);
+        t = shapeSegment(t, pt0.shape);
+        auto y = pt0.pos.y + (pt1.pos.y - pt0.pos.y) * t;
         return y;
     }
 
@@ -300,7 +310,10 @@ namespace DAW::Shape {
         float minDist     = 0.0f;
         auto minPtIdx     = getMinPt(localPos, scale, &minDist);
         float minDistEdge = 0.0f;
-        auto minEdgeIdx   = getMinDistEdge(localPos, scale, &minDistEdge);
+        auto minEdgeIdx   = int(-1);
+        if (!(flags & ShapeFlags::SHAPE_SHOW_ONLY_CONTROL_POINTS)) {
+            minEdgeIdx = getMinDistEdge(localPos, scale, &minDistEdge);
+        }
         if (minPtIdx >= 0) {
             result.type = hittype::HIT_NODE;
             result.idx  = minPtIdx;
