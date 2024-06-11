@@ -547,8 +547,53 @@ public:
         }
     }
 };
+class guictr_synth_main_master_gain final : public guictr_stacked {
+    friend class guictr_synth_main_section;
+    module_synth_gpu* const moduleInstance;
+    guiknob_synthparam knobMasterVolume;
+    gui_trackmeter  guiMeter;
+public:
+    explicit guictr_synth_main_master_gain(module_synth_gpu* module) 
+        : moduleInstance(module),
+        knobMasterVolume(PARAM_OFFSET_IMPL + MasterVolume, PARAM_OFFSET_IMPL + MasterVolume, module->getSynth(), MasterVolume, guiknob::knobtype::SLIDER_LABELED),
+        guiMeter(&moduleInstance->meter)
+    {
+        setVerticalLayout(false);
+        addEntry(&knobMasterVolume);
+        addEntry(&guiMeter);
+        setSplitters({ 0.5f });
+    }
+};
+struct _synth_gui_param_knob {
+    ParametersSynthGPU param = ParametersSynthGPU::MasterVolume;
+    guiknob_pluginparam* knob = nullptr;
+};
+class guictr_synth_main_section final : public guictr_stacked {
+    module_synth_gpu* const moduleInstance;
+    guictr_synth_main_master_gain ctrMasterGain;
+    guiknob_synthparam knobVoiceMode;
+public:
+
+    explicit guictr_synth_main_section(module_synth_gpu* module, std::vector<_synth_gui_param_knob>& vecParamUI) 
+        : moduleInstance(module),
+        ctrMasterGain(module),
+        knobVoiceMode(PARAM_OFFSET_IMPL + VoiceMode, PARAM_OFFSET_IMPL + VoiceMode, module->getSynth(), VoiceMode, guiknob::knobtype::KNOB_LABELED)
+    {
+        setVerticalLayout(true);
+        (void) moduleInstance;
+        addEntry(&ctrMasterGain);
+        addEntry(&knobVoiceMode);
+        setSplitters({ 0.8f });
+        vecParamUI.push_back({ VoiceMode, &knobVoiceMode });
+        vecParamUI.push_back({ MasterVolume, &ctrMasterGain.knobMasterVolume });
+    }
+    ~guictr_synth_main_section() override {
+        removeGuis();
+    }
+};
 class guicontainer_plugin_synth_gpu final : public guictr_base {
     module_synth_gpu* const moduleInstance;
+    std::vector<_synth_gui_param_knob> vecParamUI;
     guictr_sampled_curve_shape shapeOscWaveform;
     guictr_module_synth_lfo_container ctrLfo1Shape;
     guictr_module_synth_lfo_container ctrLfo2Shape;
@@ -562,16 +607,11 @@ class guicontainer_plugin_synth_gpu final : public guictr_base {
     guictr_stacked ctrStackedLFO1;
     guictr_stacked ctrStackedLFO2;
     guictr_stacked ctrStackedBothLFOs;
-    guictr_synth_param_container ctrAmpParams;
+    guictr_synth_main_section ctrMainSection;
     guictr_synth_param_container ctrOscParams;
     guictr_synth_param_container ctrLfo1Params;
     guictr_synth_param_container ctrLfo2Params;
-    struct _synth_gui_param_knob {
-        ParametersSynthGPU param;
-        guiknob_pluginparam* knob;
-    };
     gui_textfield editfield;
-    std::vector<_synth_gui_param_knob> vecParamUI;
     std::vector<guictr_synth_title*> containers;
     seq_rand synthRandUI;
     bool bGuiNeedsRefresh = true;
@@ -585,7 +625,7 @@ public:
         adsr2(module, 1),
         otherParams(module),
         ctrModulation(dynamic_cast<PluginLockable*>(module->getSynth()), module->getSynth()),
-        ctrAmpParams(module->getSynth()),
+        ctrMainSection(module, vecParamUI),
         ctrOscParams(module->getSynth()),
         ctrLfo1Params(module->getSynth()),
         ctrLfo2Params(module->getSynth())
@@ -621,15 +661,6 @@ public:
             vecParamUI.push_back({ p, knob });
         }
         for (auto p : {
-            MasterVolume, 
-            VoiceMode,
-        }) {
-            auto knobType = p == MasterVolume ? guiknob::knobtype::SLIDER_LABELED : guiknob::knobtype::KNOB_LABELED;
-            auto knob = makeParamKnob(p, knobType);
-            ctrAmpParams.addParamKnob(knob);
-            vecParamUI.push_back({ p, knob });
-        }
-        for (auto p : {
             Osc1Gain,
             Osc1Waveform,
             Osc1UnisonVoiceCount,
@@ -649,14 +680,13 @@ public:
             ctrOscParams.addParamKnob(knob);
             vecParamUI.push_back({ p, knob });
         }
-        ctrAmpParams.setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         ctrOscParams.setLayoutMode(autolayout_mode::LAYOUT_GRID);
         ctrLfo1Params.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         ctrLfo2Params.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         auto padding = 2;
         auto margin = 2;
-        ctrAmpParams.padding         = padding;
-        ctrAmpParams.margin          = margin;
+        ctrMainSection.padding         = padding;
+        ctrMainSection.margin          = margin;
         ctrOscParams.padding         = padding;
         ctrOscParams.margin          = margin;
         ctrLfo1Params.padding         = padding;
@@ -681,21 +711,23 @@ public:
         ctrModulation.margin   = margin;
         ctrStackedBothLFOs.padding  = 0;
         ctrStackedBothLFOs.margin   = 0;
-        ctrAmpParams.setLabel("Amp");
-        ctrAmpParams.setBackgroundRendered(true);
-        ctrHorizontal.addEntry(&ctrAmpParams);
+        bool bRenderBackgroundInset = false;
             ctrStackedOSC.addEntry(&shapeOscWaveform);
             ctrStackedOSC.addEntry(&ctrOscParams);
             ctrStackedOSC.setLabel("OSC 1");
             shapeOscWaveform.setBackgroundRendered(false);
             ctrOscParams.setBackgroundRendered(false);
             ctrStackedOSC.setBackgroundRendered(true);
+            ctrStackedOSC.setBackgroundRenderedInset(bRenderBackgroundInset);
         ctrHorizontal.addEntry(&ctrStackedOSC);
             adsr1.setLabel("ADSR 1");
             adsr2.setLabel("ADSR 2");
             adsr1.setBackgroundRendered(true);
+            adsr1.setBackgroundRenderedInset(bRenderBackgroundInset);
             adsr2.setBackgroundRendered(true);
+            adsr2.setBackgroundRenderedInset(bRenderBackgroundInset);
             otherParams.setBackgroundRendered(true);
+            otherParams.setBackgroundRenderedInset(bRenderBackgroundInset);
             ctrStackedADSR.addEntry(&adsr1);
             ctrStackedADSR.addEntry(&adsr2);
             ctrStackedADSR.addEntry(&otherParams);
@@ -707,6 +739,7 @@ public:
                 ctrStackedLFO1.addEntry(&ctrLfo1Params);
                 ctrStackedLFO1.setLabel("LFO 1");
                 ctrStackedLFO1.setBackgroundRendered(true);
+                ctrStackedLFO1.setBackgroundRenderedInset(bRenderBackgroundInset);
             ctrStackedBothLFOs.addEntry(&ctrStackedLFO1);
                 ctrLfo2Shape.setBackgroundRendered(false);
                 ctrStackedLFO2.setBackgroundRendered(false);
@@ -714,18 +747,22 @@ public:
                 ctrStackedLFO2.addEntry(&ctrLfo2Params);
                 ctrStackedLFO2.setLabel("LFO 2");
                 ctrStackedLFO2.setBackgroundRendered(true);
+                ctrStackedLFO2.setBackgroundRenderedInset(bRenderBackgroundInset);
             ctrStackedBothLFOs.addEntry(&ctrStackedLFO2);
         ctrHorizontal.addEntry(&ctrStackedBothLFOs);
             ctrModulation.setLabel("Modulation");
             ctrModulation.setBackgroundRendered(true);
+            ctrModulation.setBackgroundRenderedInset(bRenderBackgroundInset);
         ctrHorizontal.addEntry(&ctrModulation);
+            ctrMainSection.setLabel("");
+            ctrMainSection.setBackgroundRendered(true);
+            ctrMainSection.setBackgroundRenderedInset(bRenderBackgroundInset);
+        ctrHorizontal.addEntry(&ctrMainSection);
         setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         add(&ctrHorizontal);
-        std::vector<float> splitterPositions(5);
-        splitterPositions[0] = 0.05f;
-        for (size_t i = 1; i < splitterPositions.size(); ++i) {
-            splitterPositions[i] = (i) * 0.25f;
-        }
+        std::vector splitterPositions = {
+            0.25f, 0.5f, 0.75f, 0.92f
+        };
         ctrStackedOSC.setSplitters({ 0.25f });
         ctrHorizontal.setSplitters(splitterPositions);
         ctrStackedADSR.setSplitters({ 0.45f, 0.9f });
@@ -760,7 +797,7 @@ public:
                 knob.knob->setLabelsScale(0.2f, 0.2f);
             }
         }
-        ctrAmpParams.setTitleHeight(titleHeight);
+        ctrMainSection.setTitleHeight(titleHeight);
         ctrOscParams.setTitleHeight(titleHeight);
         ctrLfo1Params.setTitleHeight(titleHeight);
         ctrLfo2Params.setTitleHeight(titleHeight);
