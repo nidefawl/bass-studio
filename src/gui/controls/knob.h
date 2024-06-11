@@ -320,5 +320,5 @@ public:
     guibutton_select_enum& getButton(int32_t idx) {
         return buttons.at(idx);
     }
-    void handleRightClick(MouseEvent& evt) override;
+    void rightClicked(MouseEvent& evt, guibase* button) override;
 };

@@ -1028,7 +1028,7 @@ std::optional<std::vector<param_modulation_range_t>*> gui_slider_textfield::getK
     return std::nullopt;
 }
 
-void guictr_select_enum::handleRightClick(MouseEvent& evt) {
+void guictr_select_enum::rightClicked(MouseEvent& evt, guibase* button) {
 #if BUILD_DAW_HOST
     if (dawCtrl && paramAutomatable && paramIdx > -1) {
         if (parentCtrl) {
@@ -1038,5 +1038,7 @@ void guictr_select_enum::handleRightClick(MouseEvent& evt) {
         return;
     }
 #endif
-    guictr_base::handleRightClick(evt);
+    if (parent) {
+        parent->rightClicked(evt, button);
+    }
 }
