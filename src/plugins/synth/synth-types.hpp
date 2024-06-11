@@ -751,17 +751,18 @@ inline void ShapeLogLikeSIMD(const FPType valsIn[LEN_SIMD], FPType valsOut[LEN_S
 } // namespace PluginSynth
 
 namespace DAW::LFO {
+enum LFOTriggerMode {
+    Note,
+    OneShot,
+    SongPosition,
+};
 
 struct LFOParameters  : public ::DAW::LFO::LFOSyncParameters {
     double freq = 1.0;
     double freqHz = 1.0;
     double phaseOffset = 0.0;
     double rampDuration = 0.0;
-    enum LFOTriggerMode {
-        Note,
-        OneShot,
-        SongPosition,
-    } trigger = Note;
+    LFOTriggerMode trigger = Note;
     double bpm = 120.0;
 
     // state that has to be serialized
@@ -867,7 +868,7 @@ public:
         if (!params->modeIsShape) {
             return getSourceRand()->sampleCurve(p);
         }
-        if (params->trigger == LFOParameters::OneShot) {
+        if (params->trigger == LFOTriggerMode::OneShot) {
             return params->shape.sampleCurveOneShot(float(p));
         }
 

@@ -1,3 +1,4 @@
+#include "math/seq_math.h"
 #include "synth-gpu-parameters.h"
 #include "synth-gpu-snapshot.hpp"
 #include "synth-gpu-impl.hpp"
@@ -14,6 +15,7 @@
 #include "platform.h"
 #include "renderresources.h"
 #include "saferef.h"
+#include "synth-types.hpp"
 #include <cstddef>
 #include <nanovg.h>
 
@@ -120,15 +122,25 @@ struct sampled_curved_t {
     }
 };
 class guictr_sampled_curve_shape final : public guictr_base, public DAW::Shape::RenderShape<sampled_curved_t> {
+    module_synth_gpu* const moduleInstance;
     sampled_curved_t curveInternal;
+    bool bIsNormalized = true;
+    std::pair<sampled_pt_t, sampled_pt_t> minmax;
 public:
-    guictr_sampled_curve_shape()
+    explicit guictr_sampled_curve_shape(module_synth_gpu* module) 
+        : moduleInstance(module)
     {
         curveInternal.pts.push_back({ { 0, 0 } });
         padding = 4;
         margin = 4;
         setBackgroundRendered(true);
         setCanMouseHit(true);
+    }
+    void setIsNormalized(bool b) {
+        bIsNormalized = b;
+    }
+    void setMinMax(const sampled_pt_t& min, const sampled_pt_t& max) {
+        minmax = {min, max};
     }
     GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
         return GuiColor::COL_BG_DRKER2;
@@ -141,8 +153,37 @@ public:
             return;
         }
         const auto cs = getSizeContent();
-        DAW::Shape::DrawGrid(vg, theme, {}, cs, 4, 2);
-        renderShapeView(vg, theme, &curveInternal, {}, cs);
+        if (!bIsNormalized){
+            auto* hostInfo = moduleInstance->getHostCallback();
+            // auto timeSeconds = hostInfo->m_vstTimeInfo.samplePos / hostInfo->m_vstTimeInfo.sampleRate;
+            double barDurationInSeconds = toSecondsDD(TICKS_BAR, 1.0 / (hostInfo->m_vstTimeInfo.tempo * 100.0));
+
+            // shape pts are not normalized, find min/max
+            auto secondsMin = minmax.first.pos.x;
+            auto secondsMax = minmax.second.pos.x;
+
+            // figure out duration in bars and round up
+            auto durationBars = math::ceildS32((secondsMax - secondsMin) / barDurationInSeconds);
+            durationBars = math::max(1, durationBars);
+            DAW::Shape::DrawGrid(vg, theme, {}, cs, durationBars, 2);
+            renderShapeView(vg, theme, &curveInternal, {}, cs);
+        } else {
+            if (curveInternal.pts.empty()) {
+                return;
+            }
+            if (minmax.first.pos.x < 0.0f || minmax.second.pos.x > 1.0f) {
+                // only draw grid in 0.0 - 1.0 range
+                float range = minmax.second.pos.x - minmax.first.pos.x;
+                float zeroNormalized = (0.0f - minmax.first.pos.x) / range;
+                float oneNormalized = (1.0f - minmax.first.pos.x) / range;
+                auto posGrid = vec2(cs.x * zeroNormalized, 0);
+                auto sizeGrid = vec2(cs.x * (oneNormalized - zeroNormalized), cs.y);
+                DAW::Shape::DrawGrid(vg, theme, posGrid, sizeGrid, 4, 2);
+                renderShapeView(vg, theme, &curveInternal, {}, cs);
+            } else {
+                renderShapeView(vg, theme, &curveInternal, {}, cs);
+            }
+        }
     }
     sampled_curved_t& getShape() {
         return curveInternal;
@@ -161,6 +202,7 @@ class guicontainer_plugin_synth_adsr_shape final : public guictr_base {
 public:
     explicit guicontainer_plugin_synth_adsr_shape(module_synth_gpu* module, int32_t idx) 
         : moduleInstance(module), idx(idx),
+        shapeAdsr(module),
         shapeAdsrControls(DAW::Shape::makeShapeCurveView())
     {
         setLayoutMode(autolayout_mode::LAYOUT_STACK);
@@ -477,7 +519,7 @@ class guictr_3buttons : public guictr_base {
     }
 };
 class guictr_module_synth_lfo_container final : public guictr_stacked {
-    static constexpr auto N_TRIGGER_MODES = DAW::LFO::LFOParameters::LFOTriggerMode::SongPosition+1;
+    static constexpr auto N_TRIGGER_MODES = DAW::LFO::LFOTriggerMode::SongPosition+1;
     module_synth_gpu* const moduleInstance;
     int32_t lfoIdx;
     guictr_sampled_curve_shape sampledShaped;
@@ -487,7 +529,7 @@ class guictr_module_synth_lfo_container final : public guictr_stacked {
     guictr_select_enum ctrParamTriggerMode;
 public:
     explicit guictr_module_synth_lfo_container(module_synth_gpu* module, std::vector<_synth_gui_param_knob>& vecParamUI, int32_t _idx) 
-        : moduleInstance(module), lfoIdx(_idx),
+        : moduleInstance(module), lfoIdx(_idx), sampledShaped(module),
         shapeEditor(makeShapeEditor()),
         lfoShapeCtr(shapeEditor->getGuiContainer()),
         ctrParams(module->getSynth()),
@@ -503,12 +545,13 @@ public:
         ctrParamTriggerMode.setTooltipText("LFO " + std::to_string(lfoIdx + 1));
         ctrParams.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         ctrParamTriggerMode.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        ctrParamTriggerMode.padding = 2;
         auto paramTrigger = synth->getParam(ParametersSynthGPU(LFO_1_TriggerMode + size_t(lfoIdx * MAX_PARAMS_PER_LFO)));
         dbgassert(paramTrigger);
         for (size_t i = 0; i < N_TRIGGER_MODES; ++i) {
             auto& btn = ctrParamTriggerMode.getButton(i);
             auto name = paramTrigger->getValueDisplay(double(i) / double(N_TRIGGER_MODES - 1));
-            btn.setTooltipText(String("Select ") + name);
+            btn.setTooltipText(String("LFO " + std::to_string(lfoIdx) + " Trigger Mode: ") + name);
             btn.setText(name);
             btn.setButtonColor(GuiColor::COL_KNOB);
         }
@@ -540,7 +583,7 @@ public:
         addEntry(&sampledShaped);
         addEntry(&ctrParams);
         add(&ctrParamTriggerMode);
-        setSplitters({ 0.6f, 0.85f });
+        setSplitters({ 0.5f, 0.75f });
     }
     ~guictr_module_synth_lfo_container() override {
         removeGuis();
@@ -583,19 +626,22 @@ public:
             double barDurationInSeconds = toSecondsDD(TICKS_BAR, 1.0 / (hostInfo->m_vstTimeInfo.tempo * 100.0));
             double freq = params.freqHz;
             switch (params.trigger) {
-                case DAW::LFO::LFOParameters::SongPosition: {
+                case DAW::LFO::LFOTriggerMode::SongPosition: {
                     begin = timeSeconds - range;
                     range = barDurationInSeconds * 4.0;
+                    sampledShaped.setIsNormalized(false);
                     break;
                 }
-                case DAW::LFO::LFOParameters::OneShot:
+                case DAW::LFO::LFOTriggerMode::OneShot:
                     begin = -0.2;
                     range = 1.4;
                     freq = 1.0;
+                    sampledShaped.setIsNormalized(true);
                     break;
-                case DAW::LFO::LFOParameters::Note:
+                case DAW::LFO::LFOTriggerMode::Note:
                     range = barDurationInSeconds * 1.0;
                     begin = timeSeconds - range;
+                    sampledShaped.setIsNormalized(false);
                     break;
             }
             auto numPoints = samplecount_t(math::clamp(size.x, 16, 1024));
@@ -603,13 +649,24 @@ public:
             shape.flags |= DAW::Shape::ShapeFlags::SHAPE_LOCK_POINTS;
             for (samplecount_t j = 0; j < samplecount_t(numPoints); ++j) {
                 auto t = begin + double(j * range) / (numPoints - 1);
-                auto normalizedT = float((t - begin) / range);
+                // auto normalizedT = float((t - begin) / range);
                 lfoCopy.setPhase(t * freq);
                 const auto v = lfoCopy.GetLfo();
                 auto& pt = shape.pts[j];
-                pt.pos.x = normalizedT;
+                pt.pos.x = float(t);
                 pt.pos.y = float(v);
             }
+            auto minmax = DAW::Shape::getMinMax<sampled_pt_t>(shape.pts);
+            sampledShaped.setMinMax(minmax.first, minmax.second);
+            // normalize x axis to 1.0
+            auto min = minmax.first.pos.x;
+            auto rangeX = minmax.second.pos.x - min;
+            if (rangeX > 0.0) {
+                for (auto& pt : shape.pts) {
+                    pt.pos.x = (pt.pos.x - min) / rangeX;
+                }
+            }
+
         }
     }
 };
@@ -679,6 +736,7 @@ public:
 
     explicit guicontainer_plugin_synth_gpu(module_synth_gpu* module) 
         : moduleInstance(module),
+        shapeOscWaveform(module),
         ctrLfo1(module, vecParamUI, 0),
         ctrLfo2(module, vecParamUI, 1),
         adsr1(module, 0),

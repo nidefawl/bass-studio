@@ -119,6 +119,20 @@ shape_t GetShapeSaw(int32_t flags = SHAPE_CYCLIC);
 shape_t GetShapeSawInverse(int32_t flags = SHAPE_CYCLIC);
 shape_t GetShapeTriangle(int32_t flags = SHAPE_CYCLIC);
 std::vector<shape_pt_t> GetShape(ShapeWaveform waveform);
+
+template<typename PtType, typename PtList>
+inline std::pair<PtType, PtType> getMinMax(const PtList& pts) {
+    PtType minPt = pts[0];
+    PtType maxPt = pts[0];
+    for (const auto& pt : pts) {
+        minPt.pos.x = math::min(minPt.pos.x, pt.pos.x);
+        minPt.pos.y = math::min(minPt.pos.y, pt.pos.y);
+        maxPt.pos.x = math::max(maxPt.pos.x, pt.pos.x);
+        maxPt.pos.y = math::max(maxPt.pos.y, pt.pos.y);   
+    }
+    return {minPt, maxPt};
+}
+
 } // namespace DAW::Shape
 
 

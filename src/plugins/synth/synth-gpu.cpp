@@ -583,9 +583,9 @@ void SynthImplGPU::updateLFOParameters(DAW::LFO::LFOParameters& p, size_t lfoIdx
     p.freqHz       = p.paramToFreqHz(lfoFreq);
     p.phaseOffset  = vecParams[P::LFO_1_Phase + lfoIdx * MAX_PARAMS_PER_LFO]->getAsDoubleModulated();
     p.rampDuration = vecParams[P::LFO_1_RampDuration + lfoIdx * MAX_PARAMS_PER_LFO]->getAsDoubleModulated();
-    p.trigger      = GetParamEnum(Parameters(P::LFO_1_TriggerMode + lfoIdx * MAX_PARAMS_PER_LFO))->getEnumValue<DAW::LFO::LFOParameters::LFOTriggerMode>();
+    p.trigger      = GetParamEnum(Parameters(P::LFO_1_TriggerMode + lfoIdx * MAX_PARAMS_PER_LFO))->getEnumValue<DAW::LFO::LFOTriggerMode>();
     p.shape.flags  = DAW::Shape::ShapeFlags::SHAPE_SHAPED;
-    if (p.trigger != DAW::LFO::LFOParameters::OneShot) {
+    if (p.trigger != DAW::LFO::LFOTriggerMode::OneShot) {
         p.shape.flags |= DAW::Shape::ShapeFlags::SHAPE_CYCLIC;
     }
 }
