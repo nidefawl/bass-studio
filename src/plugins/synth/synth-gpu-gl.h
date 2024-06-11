@@ -305,16 +305,16 @@ struct gpu_compute_context_t {
     double time_seconds;
     double time_samples;
     double time_beats;
-    double osc1_gain;
+    // double osc1_gain;
     double osc1_unison_voice_count;
-    double osc1_unison_detune;
+    // double osc1_unison_detune;
     double osc1_filter;
-    double osc1_stereo;
+    // double osc1_stereo;
     double osc1_pw;
     double osc1_pw_mod_rate;
     double osc1_pw_mod_depth;
-    double osc1_filter_keytrack;
-    double osc1_detune_keytrack;
+    // double osc1_filter_keytrack;
+    // double osc1_detune_keytrack;
     double osc1_width_keytrack;
 };
 
@@ -322,7 +322,7 @@ struct gpu_compute_context_t {
 class GPUAudioProcessor {
 protected:
     struct host_buffer_t {
-        ssbo_ringbuffer_t<16> ssbo{};
+        ssbo_ringbuffer_t<2> ssbo{};
         std::vector<float> buffer;
         void downloadBuffer() {
             ssbo.downloadBufferDelayed(buffer.data(), buffer.size() * sizeof(float));

@@ -80,16 +80,11 @@ public:
         const auto sampleRate = sampleFormat.sampleRate;
 
         gpuContext.one_over_samplerate = 1.0 / sampleRate;
-        gpuContext.osc1_gain = 0.75f;
         gpuContext.osc1_unison_voice_count = 16;
-        gpuContext.osc1_unison_detune = 0.3f;
         gpuContext.osc1_filter = 0.8f;
-        gpuContext.osc1_stereo = 0.5f;
         gpuContext.osc1_pw = 0.5f;
         gpuContext.osc1_pw_mod_rate = 0.002f;
         gpuContext.osc1_pw_mod_depth = 0.002f;
-        gpuContext.osc1_filter_keytrack = 0.5f;
-        gpuContext.osc1_detune_keytrack = 0.5f;
         gpuContext.osc1_width_keytrack = 0.5f;
 
         auto& inputBufferSynthState = ssboInputSynthState.buffer;
@@ -206,7 +201,7 @@ public:
                 if (tmNow_ms - timePerfLog > 1500)
                     timeComputeAvg = tmTotal_ms;
             } else {
-                log_lf(Log::L_WARN, "gpu_compute_test: %f ms (avg: %f ms) (active voices: %d)\n", tmTotal_ms, timeComputeAvg, numActiveVoicesBlock);
+                log_lf(Log::L_WARN, "gpu_compute_test: %f ms (avg: %f ms) (active voices: %zu)\n", tmTotal_ms, timeComputeAvg, numActiveVoicesBlock);
                 // print sample 0
                 auto sample0 = outputBuffer[0];
                 log_lf(Log::L_WARN, "sample 0: %f\n", sample0);

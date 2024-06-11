@@ -70,16 +70,16 @@ layout(binding = 0) uniform context {
     double time_seconds;
     double time_samples;
     double time_beats;
-    double osc1_gain;
+    // double osc1_gain;
     double osc1_unison_voice_count;
-    double osc1_unison_detune;
+    // double osc1_unison_detune;
     double osc1_filter;
-    double osc1_stereo;
+    // double osc1_stereo;
     double osc1_pw;
     double osc1_pw_mod_rate;
     double osc1_pw_mod_depth;
-    double osc1_filter_keytrack;
-    double osc1_detune_keytrack;
+    // double osc1_filter_keytrack;
+    // double osc1_detune_keytrack;
     double osc1_width_keytrack;
 } ctx; 
 
@@ -277,7 +277,7 @@ void processSynthUnison()
     float seed = 2.0;
     for (int j = 0; j < N_POLY_VOICES; j++)
     {
-        if (state_in.voices[j].velocity[i] >= 0.0)
+        if (state_in.voices[j].velocity[i] > 0.0)
         {
             const float a = state_in.voices[j].velocity[i];
             const float f = state_in.voices[j].pitch[i]; // hz

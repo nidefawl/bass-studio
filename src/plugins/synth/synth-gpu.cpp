@@ -791,16 +791,16 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
     this->numActiveVoicesBlock = numActiveVoicesMax;
 
     auto& modVals                      = *modValuesActive;
-    gpuContext.osc1_gain               = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Gain]);
+    // gpuContext.osc1_gain               = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Gain]);
     gpuContext.osc1_unison_voice_count = GetParamInt(Parameters::Osc1UnisonVoiceCount)->Value();
-    gpuContext.osc1_unison_detune      = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
+    // gpuContext.osc1_unison_detune      = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
     gpuContext.osc1_filter             = GetParamFloat(Parameters::Osc1Filter)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Filter]);
-    gpuContext.osc1_stereo             = GetParamFloat(Parameters::Osc1Stereo)->getAsDoubleModulated();
+    // gpuContext.osc1_stereo             = GetParamFloat(Parameters::Osc1Stereo)->getAsDoubleModulated();
     gpuContext.osc1_pw                 = GetParamFloat(Parameters::Osc1PulseWidth)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1PulseWidth]);
     gpuContext.osc1_pw_mod_rate        = GetParamFloat(Parameters::Osc1PulseWidthModRate)->getAsDoubleModulated();
     gpuContext.osc1_pw_mod_depth       = GetParamFloat(Parameters::Osc1PulseWidthModDepth)->getAsDoubleModulated();
-    gpuContext.osc1_filter_keytrack    = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
-    gpuContext.osc1_detune_keytrack    = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
+    // gpuContext.osc1_filter_keytrack    = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
+    // gpuContext.osc1_detune_keytrack    = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
     gpuContext.osc1_width_keytrack     = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
 
     perfTimer.reset();
