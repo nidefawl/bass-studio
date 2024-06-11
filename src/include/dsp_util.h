@@ -21,15 +21,20 @@ namespace dsp_util {
     float dBFSClampInf6(float f);
     float fromdBFSClampInf6(float f);
     float fromdBFS(float f);
-    const float DBFS_FLOOR    = -80.0f;
-    const float DBFS_MUTE_POS = -81.0f;
-    const float DBFS_INF_POS  = -100.0f;
-    const float MTR_FLOOR     = -60.0f;
-    const float MTR_CEIL      = 6.0f;
+    constexpr float DBFS_FLOOR    = -80.0f;
+    constexpr float DBFS_MUTE_POS = -81.0f;
+    constexpr float DBFS_INF_POS  = -100.0f;
+    constexpr float MTR_FLOOR     = -60.0f;
+    constexpr float MTR_CEIL      = 6.0f;
     extern const float GAIN_DB6;
     extern const float GAIN_DBFLOOR;
     extern const float GAIN_DBINF;
-    float scaledRange(float db, float lvlFloor, float lvlCeil);
+    constexpr float scaledRange(float db, float lvlFloor, float lvlCeil) {
+        if (db < dsp_util::DBFS_FLOOR)
+            return 1.0f;
+        float lvlRange = lvlFloor - lvlCeil;
+        return (math::max(lvlFloor, math::min(db, lvlCeil)) - lvlCeil) / lvlRange;
+    }
     float gainToLinScale(float f);
     float linScaleToGain(float f);
 

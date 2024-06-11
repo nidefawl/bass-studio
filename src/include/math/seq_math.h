@@ -57,42 +57,42 @@ namespace math {
     }
 
     template<typename T>
-    inline T min(T a, T b) {
+    inline constexpr T min(T a, T b) {
         return a < b ? a : b;
     }
 
     template<typename T>
-    inline T max(T a, T b) {
+    inline constexpr T max(T a, T b) {
         return a > b ? a : b;
     }
 
     /* abs(NotInt) */
     template<typename T>
-    inline std::enable_if_t<!std::is_integral<T>::value, T>
+    inline constexpr std::enable_if_t<!std::is_integral<T>::value, T>
     abs(T a) {
         return a < 0 ? -a : a;
     }
     /* abs(SignedInt) */
     template<typename T>
-    inline std::enable_if_t<std::is_integral<T>::value && !std::is_unsigned<T>::value, T>
+    inline constexpr std::enable_if_t<std::is_integral<T>::value && !std::is_unsigned<T>::value, T>
     abs(T a) {
         /* this will overflow for numeric_limits<T>::min() values */
         return a < 0 ? -a : a;
     }
     /* abs(UnsignedInt) */
     template<typename T>
-    inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, T>
+    inline constexpr std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, T>
     abs(T a) {
         return a;
     }
 
     template<typename T>
-    inline T absMax(T a, T b) {
+    inline constexpr T absMax(T a, T b) {
         return abs<T>(a) > abs<T>(b) ? a : b;
     }
 
     template<typename T>
-    inline T absMin(T a, T b) {
+    inline constexpr T absMin(T a, T b) {
         return abs<T>(a) < abs<T>(b) ? a : b;
     }
 
@@ -540,7 +540,7 @@ namespace math {
         return static_cast<uint32_t>(val_s64);
     }
 
-    inline float powf(float a, float b) {
+    inline constexpr float powf(float a, float b) {
         return std::pow(a, b);
     }
 
