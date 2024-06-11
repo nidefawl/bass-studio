@@ -222,7 +222,6 @@ public:
     virtual std::optional<std::vector<param_modulation_range_t>*> getKnobModulationRanges();
 };
 
-template<int N>
 class guictr_select_enum final : public guictr_base, public DAW::UI::IModulateable {
     class guibutton_select_enum : public guibutton {
     public:
@@ -230,20 +229,21 @@ class guictr_select_enum final : public guictr_base, public DAW::UI::IModulateab
         void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) override {
             nvgSave(vg);
             if (setScissorTransform(vg)) {
-                static_cast<guictr_select_enum<N>*>(parent)->renderButtonLabel(this, vg, stateFlags);
+                static_cast<guictr_select_enum*>(parent)->renderButtonLabel(this, vg, stateFlags);
             }
             nvgRestore(vg);
         }
         bool getState() const override {
-            return static_cast<guictr_select_enum<N>*>(parent)->getButtonStateState(this);
+            return static_cast<guictr_select_enum*>(parent)->getButtonStateState(this);
         }
     };
-    std::array<guibutton_select_enum, N> buttons;
+    const int N;
+    std::vector<guibutton_select_enum> buttons;
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
 public:
     std::function<void(guibutton*, int32_t, NVGcontext*, int32_t, ivec2)> fnRenderButtonLabel;
-    guictr_select_enum() {
+    explicit guictr_select_enum(size_t N) : guictr_base(), N(N), buttons(N) {
         padding = 0;
         setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         for (size_t i = 0; i < N; ++i) {
@@ -257,6 +257,7 @@ public:
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
+        setCanMouseHit(this->paramAutomatable != nullptr);
     }
     void getAutomationRef(automatable_t*& at, int32_t& paramIdx) const override {
         paramIdx = this->paramIdx;
@@ -319,4 +320,5 @@ public:
     guibutton_select_enum& getButton(int32_t idx) {
         return buttons.at(idx);
     }
+    void handleRightClick(MouseEvent& evt) override;
 };

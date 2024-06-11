@@ -581,14 +581,18 @@ static constexpr auto N_VOICEMODES = size_t(2);
 
 class guicontainer_plugin_synth_mono final : public guictr_base {
     module_synth_mono* const moduleInstance;
-    guictr_select_enum<N_WAVEFORMS> ctr_waveform;
-    guictr_select_enum<N_VOICEMODES> ctr_voicemode;
-    guictr_select_enum<2> ctr_phasresetmode;
+    guictr_select_enum ctr_waveform;
+    guictr_select_enum ctr_voicemode;
+    guictr_select_enum ctr_phasresetmode;
     seq_rand synthRandUI;
     const int buttonScale = 10;
 public:
 
-    explicit guicontainer_plugin_synth_mono(module_synth_mono* module) : moduleInstance(module)
+    explicit guicontainer_plugin_synth_mono(module_synth_mono* module)
+        : moduleInstance(module),
+        ctr_waveform(N_WAVEFORMS),
+        ctr_voicemode(N_VOICEMODES),
+        ctr_phasresetmode(2)
     {
         padding = 0;
         margin  = 0;

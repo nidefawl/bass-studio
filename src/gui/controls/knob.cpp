@@ -1027,3 +1027,16 @@ void gui_slider_textfield::setAutomationRef(automatable_t* _paramAutomatable, in
 std::optional<std::vector<param_modulation_range_t>*> gui_slider_textfield::getKnobModulationRanges() {
     return std::nullopt;
 }
+
+void guictr_select_enum::handleRightClick(MouseEvent& evt) {
+#if BUILD_DAW_HOST
+    if (dawCtrl && paramAutomatable && paramIdx > -1) {
+        if (parentCtrl) {
+            dbgassert(paramAutomatable->getParam(paramIdx));
+            parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, paramAutomatable, paramIdx), evt.mousepos);
+        }
+        return;
+    }
+#endif
+    guictr_base::handleRightClick(evt);
+}

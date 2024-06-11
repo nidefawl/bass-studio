@@ -868,11 +868,11 @@ public:
             return getSourceRand()->sampleCurve(p);
         }
         if (params->trigger == LFOParameters::OneShot) {
-            p = math::min(1.0, p);
-        } else {
-            double _unused = 0.0;
-            p = std::modf(p, &_unused); 
+            return params->shape.sampleCurveOneShot(float(p));
         }
+
+        double _unused = 0.0;
+        p = std::modf(p, &_unused); 
         return params->shape.sampleCurve(float(p), false);
     }
     double GetRampedLfo() const {

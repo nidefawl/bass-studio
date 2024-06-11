@@ -14,6 +14,7 @@
 #include "platform.h"
 #include "renderresources.h"
 #include "saferef.h"
+#include <cstddef>
 #include <nanovg.h>
 
 namespace PluginSynth::GPU {
@@ -450,25 +451,68 @@ public:
         return true;
     }
 };
+struct _synth_gui_param_knob {
+    ParametersSynthGPU param = ParametersSynthGPU::MasterVolume;
+    guiknob_pluginparam* knob = nullptr;
+};
 
-class guictr_module_synth_lfo_container final : public guictr_base {
+class guictr_3buttons : public guictr_base {
+    public:
+    std::array<guibutton, 3> btnPos;
+    guictr_3buttons() : guictr_base() {
+        padding = 4;
+        margin = 2;
+        for (int i = 0; i < 3; i++) {
+            btnPos[i].setLabel("O" + std::to_string(i));
+            btnPos[i].setText(btnPos[i].getLabel());
+            add(&btnPos[i]);
+        }
+        setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+    }
+    ~guictr_3buttons() override {
+        removeGuis();
+    }
+    void buttonClicked(guibase* button) override {
+        parent->buttonClicked(button);
+    }
+};
+class guictr_module_synth_lfo_container final : public guictr_stacked {
+    static constexpr auto N_TRIGGER_MODES = DAW::LFO::LFOParameters::LFOTriggerMode::SongPosition+1;
     module_synth_gpu* const moduleInstance;
     int32_t lfoIdx;
     guictr_sampled_curve_shape sampledShaped;
     i_ctr_shape_editor* const shapeEditor;
     guictr_base* lfoShapeCtr;
+    guictr_synth_param_container ctrParams;
+    guictr_select_enum ctrParamTriggerMode;
 public:
-    explicit guictr_module_synth_lfo_container(module_synth_gpu* module, int32_t _idx) 
+    explicit guictr_module_synth_lfo_container(module_synth_gpu* module, std::vector<_synth_gui_param_knob>& vecParamUI, int32_t _idx) 
         : moduleInstance(module), lfoIdx(_idx),
-        shapeEditor(makeShapeEditor())
+        shapeEditor(makeShapeEditor()),
+        lfoShapeCtr(shapeEditor->getGuiContainer()),
+        ctrParams(module->getSynth()),
+        ctrParamTriggerMode(N_TRIGGER_MODES)
     {
         padding = 0;
         margin = 0;
-        setLayoutMode(autolayout_mode::LAYOUT_STACK);
+        setVerticalLayout(true);
         setBackgroundRendered(false);
-        setBackgroundRenderedInset(false);
         setCanMouseHit(false);
-        auto synth = moduleInstance->getSynth();
+        auto* const synth = module->getSynth();
+        ctrParamTriggerMode.setBackgroundRendered(false);
+        ctrParamTriggerMode.setTooltipText("LFO " + std::to_string(lfoIdx + 1));
+        ctrParams.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        ctrParamTriggerMode.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        auto paramTrigger = synth->getParam(ParametersSynthGPU(LFO_1_TriggerMode + size_t(lfoIdx * MAX_PARAMS_PER_LFO)));
+        dbgassert(paramTrigger);
+        for (size_t i = 0; i < N_TRIGGER_MODES; ++i) {
+            auto& btn = ctrParamTriggerMode.getButton(i);
+            auto name = paramTrigger->getValueDisplay(double(i) / double(N_TRIGGER_MODES - 1));
+            btn.setTooltipText(String("Select ") + name);
+            btn.setText(name);
+            btn.setButtonColor(GuiColor::COL_KNOB);
+        }
+        ctrParamTriggerMode.setAutomationRef(module, PARAM_OFFSET_IMPL + paramTrigger->enumParam);
         shapeEditor->setShapeEditorShapeRef(&synth->getLFOParams(lfoIdx).shape);
         shapeEditor->setShapeEditorCallback([synth, _idx](const DAW::Shape::shape_t& shape, bool bIsDragMove) -> void {
             auto lock = synth->lock();
@@ -476,16 +520,39 @@ public:
             synthShape.pts = shape.pts;
             synthShape.eraseDuplicates();
         });
-        lfoShapeCtr = shapeEditor->getGuiContainer();
         lfoShapeCtr->setBackgroundRendered(false);
         lfoShapeCtr->setBackgroundRenderedInset(false);
-        lfoShapeCtr->setCanMouseHit(false);
-        add(lfoShapeCtr);
-        add(&sampledShaped);
+        sampledShaped.setBackgroundRendered(false);
+        sampledShaped.setBackgroundRenderedInset(false);
+        sampledShaped.setCanMouseHit(false);
+        lfoShapeCtr->zOrder = 1;
+        for (auto p : {
+            LFO_1_Frequency, 
+            LFO_1_Phase,
+            LFO_1_RampDuration,
+        }) {
+            auto pOffset = static_cast<decltype(p)>(p + size_t(lfoIdx * MAX_PARAMS_PER_LFO));
+            auto knob = new guiknob_synthparam(PARAM_OFFSET_IMPL + pOffset, PARAM_OFFSET_IMPL + pOffset, synth, pOffset, guiknob::knobtype::KNOB_LABELED);
+            ctrParams.addParamKnob(knob);
+            vecParamUI.push_back({ pOffset, knob });
+        }
+        addEntry(lfoShapeCtr);
+        addEntry(&sampledShaped);
+        addEntry(&ctrParams);
+        add(&ctrParamTriggerMode);
+        setSplitters({ 0.6f, 0.85f });
     }
     ~guictr_module_synth_lfo_container() override {
         removeGuis();
         delete shapeEditor->getGuiContainer();
+    }
+    void layout() override {
+        guictr_stacked::layout();
+        ivec2 csize = getSizeContent();
+        auto titleHeight = getTitleHeight();
+        ctrParamTriggerMode.size = { math::min(csize.x/2, 340), titleHeight };
+        ctrParamTriggerMode.pos = { csize.x - ctrParamTriggerMode.size.x, 0 };
+        ctrParamTriggerMode.layout();
     }
     double getPlayingTick() {
         double t = 0;
@@ -502,47 +569,46 @@ public:
 
         return t;
     }
-    void layout() override {
-        lfoShapeCtr->setVisible(true);
-        sampledShaped.setVisible(true);
-        guictr_base::layout();
-        setVisibleCtr(moduleInstance->getSynth()->getLFOParams(lfoIdx).modeIsShape);
-    }
-    void setVisibleCtr(bool bIsEditor) {
-        lfoShapeCtr->setVisible(bIsEditor);
-        sampledShaped.setVisible(!bIsEditor);
-    }
     void prerender(NVGcontext* vg) override {
-        guictr_base::prerender(vg);
-        auto synth = moduleInstance->getSynth();
-        auto& params = synth->getLFOParams(lfoIdx);
-        bool bIsShowingEditor = lfoShapeCtr->isVisible();
-        if (params.modeIsShape != bIsShowingEditor) {
-            setVisibleCtr(params.modeIsShape);
-        }
-        if (!params.modeIsShape) {
+        guictr_stacked::prerender(vg);
+        if (sampledShaped.isVisible()) {
+            auto synth = moduleInstance->getSynth();
+            auto& params = synth->getLFOParams(lfoIdx);
             auto& shape = sampledShaped.getShape();
-            auto& lfo = synth->getGlobalLFO(lfoIdx);
-            auto* srcRand = lfo.getSourceRand();
-            if (!srcRand) {
-                shape.pts.clear();
-                return;
+            DAW::LFO::LFO lfoCopy = synth->getGlobalLFO(lfoIdx);
+            double begin = 0.0;
+            double range = 1.0;
+            auto* hostInfo = moduleInstance->getHostCallback();
+            auto timeSeconds = hostInfo->m_vstTimeInfo.samplePos / hostInfo->m_vstTimeInfo.sampleRate;
+            double barDurationInSeconds = toSecondsDD(TICKS_BAR, 1.0 / (hostInfo->m_vstTimeInfo.tempo * 100.0));
+            double freq = params.freqHz;
+            switch (params.trigger) {
+                case DAW::LFO::LFOParameters::SongPosition: {
+                    begin = timeSeconds - range;
+                    range = barDurationInSeconds * 4.0;
+                    break;
+                }
+                case DAW::LFO::LFOParameters::OneShot:
+                    begin = -0.2;
+                    range = 1.4;
+                    freq = 1.0;
+                    break;
+                case DAW::LFO::LFOParameters::Note:
+                    range = barDurationInSeconds * 1.0;
+                    begin = timeSeconds - range;
+                    break;
             }
             auto numPoints = samplecount_t(math::clamp(size.x, 16, 1024));
             shape.pts.resize(numPoints);
             shape.flags |= DAW::Shape::ShapeFlags::SHAPE_LOCK_POINTS;
-            auto* hostInfo = moduleInstance->getHostCallback();
-            auto timeSeconds = hostInfo->m_vstTimeInfo.samplePos / hostInfo->m_vstTimeInfo.sampleRate;
-            double barDurationInSeconds = toSecondsDD(TICKS_BAR, 1.0 / (hostInfo->m_vstTimeInfo.tempo * 100.0));
-            double range = barDurationInSeconds * 4.0;
-            double begin = timeSeconds - range;
             for (samplecount_t j = 0; j < samplecount_t(numPoints); ++j) {
-                auto t = begin + double(j * range) / numPoints;
-                auto v = lfo.getSourceRand()->sampleCurve(t);
+                auto t = begin + double(j * range) / (numPoints - 1);
                 auto normalizedT = float((t - begin) / range);
+                lfoCopy.setPhase(t * freq);
+                const auto v = lfoCopy.GetLfo();
                 auto& pt = shape.pts[j];
                 pt.pos.x = normalizedT;
-                pt.pos.y = v;
+                pt.pos.y = float(v);
             }
         }
     }
@@ -564,10 +630,7 @@ public:
         setSplitters({ 0.5f });
     }
 };
-struct _synth_gui_param_knob {
-    ParametersSynthGPU param = ParametersSynthGPU::MasterVolume;
-    guiknob_pluginparam* knob = nullptr;
-};
+
 class guictr_synth_main_section final : public guictr_stacked {
     module_synth_gpu* const moduleInstance;
     guictr_synth_main_master_gain ctrMasterGain;
@@ -591,12 +654,13 @@ public:
         removeGuis();
     }
 };
+
 class guicontainer_plugin_synth_gpu final : public guictr_base {
     module_synth_gpu* const moduleInstance;
     std::vector<_synth_gui_param_knob> vecParamUI;
     guictr_sampled_curve_shape shapeOscWaveform;
-    guictr_module_synth_lfo_container ctrLfo1Shape;
-    guictr_module_synth_lfo_container ctrLfo2Shape;
+    guictr_module_synth_lfo_container ctrLfo1;
+    guictr_module_synth_lfo_container ctrLfo2;
     guicontainer_plugin_synth_adsr adsr1;
     guicontainer_plugin_synth_adsr adsr2;
     guicontainer_plugin_synth_other_parameters otherParams;
@@ -604,13 +668,9 @@ class guicontainer_plugin_synth_gpu final : public guictr_base {
     guictr_stacked ctrHorizontal;
     guictr_stacked ctrStackedOSC;
     guictr_stacked ctrStackedADSR;
-    guictr_stacked ctrStackedLFO1;
-    guictr_stacked ctrStackedLFO2;
     guictr_stacked ctrStackedBothLFOs;
     guictr_synth_main_section ctrMainSection;
     guictr_synth_param_container ctrOscParams;
-    guictr_synth_param_container ctrLfo1Params;
-    guictr_synth_param_container ctrLfo2Params;
     gui_textfield editfield;
     std::vector<guictr_synth_title*> containers;
     seq_rand synthRandUI;
@@ -619,47 +679,23 @@ public:
 
     explicit guicontainer_plugin_synth_gpu(module_synth_gpu* module) 
         : moduleInstance(module),
-        ctrLfo1Shape(module, 0),
-        ctrLfo2Shape(module, 1),
+        ctrLfo1(module, vecParamUI, 0),
+        ctrLfo2(module, vecParamUI, 1),
         adsr1(module, 0),
         adsr2(module, 1),
         otherParams(module),
         ctrModulation(dynamic_cast<PluginLockable*>(module->getSynth()), module->getSynth()),
         ctrMainSection(module, vecParamUI),
-        ctrOscParams(module->getSynth()),
-        ctrLfo1Params(module->getSynth()),
-        ctrLfo2Params(module->getSynth())
+        ctrOscParams(module->getSynth())
     {
         padding = 0;
         ctrStackedADSR.setVerticalLayout(true);
-        ctrStackedLFO1.setVerticalLayout(true);
-        ctrStackedLFO2.setVerticalLayout(true);
         ctrStackedOSC.setVerticalLayout(true);
         ctrStackedBothLFOs.setVerticalLayout(true);
         auto const synth = module->getSynth();
         auto makeParamKnob = [synth](auto p, auto knobType) {
             return new guiknob_synthparam(PARAM_OFFSET_IMPL + p, PARAM_OFFSET_IMPL + p, synth, p, knobType);
         };
-        for (auto p : {
-            LFO_1_Frequency, 
-            LFO_1_TriggerMode,
-            LFO_1_Phase,
-            LFO_1_RampDuration,
-        }) {
-            auto knob = makeParamKnob(p, guiknob::knobtype::KNOB_LABELED);
-            ctrLfo1Params.addParamKnob(knob);
-            vecParamUI.push_back({ p, knob });
-        }
-        for (auto p : {
-            LFO_2_Frequency, 
-            LFO_2_TriggerMode,
-            LFO_2_Phase,
-            LFO_2_RampDuration,
-        }) {
-            auto knob = makeParamKnob(p, guiknob::knobtype::KNOB_LABELED);
-            ctrLfo2Params.addParamKnob(knob);
-            vecParamUI.push_back({ p, knob });
-        }
         for (auto p : {
             Osc1Gain,
             Osc1Waveform,
@@ -681,37 +717,31 @@ public:
             vecParamUI.push_back({ p, knob });
         }
         ctrOscParams.setLayoutMode(autolayout_mode::LAYOUT_GRID);
-        ctrLfo1Params.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
-        ctrLfo2Params.setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         auto padding = 2;
         auto margin = 2;
-        ctrMainSection.padding         = padding;
-        ctrMainSection.margin          = margin;
-        ctrOscParams.padding         = padding;
-        ctrOscParams.margin          = margin;
-        ctrLfo1Params.padding         = padding;
-        ctrLfo1Params.margin          = margin;
-        ctrLfo2Params.padding         = padding;
-        ctrLfo2Params.margin          = margin;
-        ctrHorizontal.padding  = padding;
-        ctrHorizontal.margin   = margin;
-        ctrStackedOSC.padding  = padding;
-        ctrStackedOSC.margin   = margin;
-        ctrStackedADSR.padding = 0;
-        ctrStackedADSR.margin  = 0;
-        adsr2.padding     = padding;
-        adsr2.margin      = margin;
-        adsr1.padding     = padding;
-        adsr1.margin      = margin;
-        ctrStackedLFO1.padding  = padding;
-        ctrStackedLFO1.margin   = margin;
-        ctrStackedLFO2.padding  = padding;
-        ctrStackedLFO2.margin   = margin;
-        ctrModulation.padding  = padding;
-        ctrModulation.margin   = margin;
+        ctrMainSection.padding      = padding;
+        ctrMainSection.margin       = margin;
+        ctrOscParams.padding        = padding;
+        ctrOscParams.margin         = margin;
+        ctrLfo1.padding             = padding;
+        ctrLfo1.margin              = margin;
+        ctrLfo2.padding             = padding;
+        ctrLfo2.margin              = margin;
+        ctrHorizontal.padding       = padding;
+        ctrHorizontal.margin        = margin;
+        ctrStackedOSC.padding       = padding;
+        ctrStackedOSC.margin        = margin;
+        ctrStackedADSR.padding      = 0;
+        ctrStackedADSR.margin       = 0;
+        adsr2.padding               = padding;
+        adsr2.margin                = margin;
+        adsr1.padding               = padding;
+        adsr1.margin                = margin;
+        ctrModulation.padding       = padding;
+        ctrModulation.margin        = margin;
         ctrStackedBothLFOs.padding  = 0;
         ctrStackedBothLFOs.margin   = 0;
-        bool bRenderBackgroundInset = false;
+        bool bRenderBackgroundInset = true;
             ctrStackedOSC.addEntry(&shapeOscWaveform);
             ctrStackedOSC.addEntry(&ctrOscParams);
             ctrStackedOSC.setLabel("OSC 1");
@@ -733,22 +763,14 @@ public:
             ctrStackedADSR.addEntry(&otherParams);
             ctrStackedADSR.setBackgroundRendered(false);
         ctrHorizontal.addEntry(&ctrStackedADSR);
-                ctrLfo1Shape.setBackgroundRendered(false);
-                ctrStackedLFO1.setBackgroundRendered(false);
-                ctrStackedLFO1.addEntry(&ctrLfo1Shape);
-                ctrStackedLFO1.addEntry(&ctrLfo1Params);
-                ctrStackedLFO1.setLabel("LFO 1");
-                ctrStackedLFO1.setBackgroundRendered(true);
-                ctrStackedLFO1.setBackgroundRenderedInset(bRenderBackgroundInset);
-            ctrStackedBothLFOs.addEntry(&ctrStackedLFO1);
-                ctrLfo2Shape.setBackgroundRendered(false);
-                ctrStackedLFO2.setBackgroundRendered(false);
-                ctrStackedLFO2.addEntry(&ctrLfo2Shape);
-                ctrStackedLFO2.addEntry(&ctrLfo2Params);
-                ctrStackedLFO2.setLabel("LFO 2");
-                ctrStackedLFO2.setBackgroundRendered(true);
-                ctrStackedLFO2.setBackgroundRenderedInset(bRenderBackgroundInset);
-            ctrStackedBothLFOs.addEntry(&ctrStackedLFO2);
+                ctrLfo1.setLabel("LFO 1");
+                ctrLfo1.setBackgroundRendered(true);
+                ctrLfo1.setBackgroundRenderedInset(bRenderBackgroundInset);
+            ctrStackedBothLFOs.addEntry(&ctrLfo1);
+                ctrLfo2.setLabel("LFO 2");
+                ctrLfo2.setBackgroundRendered(true);
+                ctrLfo2.setBackgroundRenderedInset(bRenderBackgroundInset);
+            ctrStackedBothLFOs.addEntry(&ctrLfo2);
         ctrHorizontal.addEntry(&ctrStackedBothLFOs);
             ctrModulation.setLabel("Modulation");
             ctrModulation.setBackgroundRendered(true);
@@ -766,8 +788,6 @@ public:
         ctrStackedOSC.setSplitters({ 0.25f });
         ctrHorizontal.setSplitters(splitterPositions);
         ctrStackedADSR.setSplitters({ 0.45f, 0.9f });
-        ctrStackedLFO1.setSplitters({ 0.6f });
-        ctrStackedLFO2.setSplitters({ 0.6f });
         ctrStackedBothLFOs.setSplitters({ 0.5f });
         editfield.setFlag(FLG_NO_LAYOUT, true);
         editfield.setVisible(false);
@@ -780,8 +800,6 @@ public:
         ctrHorizontal.removeEntries();
         ctrStackedOSC.removeEntries();
         ctrStackedADSR.removeEntries();
-        ctrStackedLFO1.removeEntries();
-        ctrStackedLFO2.removeEntries();
     }
 
     void layout() override {
@@ -799,15 +817,13 @@ public:
         }
         ctrMainSection.setTitleHeight(titleHeight);
         ctrOscParams.setTitleHeight(titleHeight);
-        ctrLfo1Params.setTitleHeight(titleHeight);
-        ctrLfo2Params.setTitleHeight(titleHeight);
+        ctrLfo1.setTitleHeight(titleHeight);
+        ctrLfo2.setTitleHeight(titleHeight);
         ctrModulation.setTitleHeight(titleHeight);
         ctrHorizontal.setTitleHeight(titleHeight);
         ctrStackedOSC.setTitleHeight(titleHeight);
         adsr1.setTitleHeight(titleHeight);
         adsr2.setTitleHeight(titleHeight);
-        ctrStackedLFO1.setTitleHeight(titleHeight);
-        ctrStackedLFO2.setTitleHeight(titleHeight);
         guictr_base::layout();
     }
 
@@ -907,9 +923,9 @@ public:
     void rightClicked(MouseEvent& evt, guibase* what) override {
         while (what) {
             int32_t lfoIdx = -1;
-            if (what == &this->ctrStackedLFO1) {
+            if (what == &this->ctrLfo1) {
                 lfoIdx = 0;
-            } else if (what == &this->ctrStackedLFO2) {
+            } else if (what == &this->ctrLfo2) {
                 lfoIdx = 1;
             }
 
