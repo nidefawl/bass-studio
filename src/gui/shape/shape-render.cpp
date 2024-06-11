@@ -6,7 +6,7 @@
 
 namespace DAW::Shape {
 
-void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int gridStepsH, int gridStepsV) {
+void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int gridStepsH, int gridStepsV, bool bIncludeBegin, bool bIncludeEnd) {
     dbgassert(gridStepsH && gridStepsV);
     auto gridStep = vec2(size) / vec2(gridStepsH, gridStepsV);
 
@@ -17,13 +17,17 @@ void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int 
 
     nvgGlobalAlpha(vg, 0.5f);
     nvgBeginPath(vg);
-    nvgRect(vg, -2, 0, size.x + 2, size.y);
+    nvgRect(vg, pos.x - 2.0f, pos.y, size.x + 2.0f, size.y);
     nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
     nvgFill(vg);
     /* draw dark grid areas */
     int32_t nRendered = 0;
     float x = pos.x;
-    for (int32_t i = 0; i < steps_bg; i += 2) {
+    for (int32_t i = 0; i <= steps_bg; i += 2) {
+        if (i == 0 && !bIncludeBegin)
+            continue;
+        if (i == steps_bg && !bIncludeEnd)
+
         nvgBatchedRect(vg, x, pos.y, gridStep.x, size.y);
         nRendered++;
         x += gridStep.x * 2.0f;
@@ -49,7 +53,11 @@ void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int 
         int32_t start = pass == 2 ? 1 : pass == 1 ? stepBeat : 0;
         int32_t step = pass < 2 ? stepBeat*2 : stepNth;
         nRendered = 0;
-        for (int32_t i = start; i < gridStepsH; i += step) {
+        for (int32_t i = start; i <= gridStepsH; i += step) {
+            if (i == 0 && !bIncludeBegin)
+                continue;
+            if (i == gridStepsH && !bIncludeEnd)
+                continue;
             float lineThickness = 4.0f;
             nvgBatchedRect(vg, pos.x + gridStep.x * i - lineThickness * 0.5f, pos.y, lineThickness, size.y);
             paint.feather = 2.5f - pass * 0.75f;
@@ -77,7 +85,11 @@ void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int 
         int32_t start = 0;
         int32_t step = 1;
         nRendered = 0;
-        for (int32_t i = start; i < gridStepsV; i += step) {
+        for (int32_t i = start; i <= gridStepsV; i += step) {
+            if (i == 0 && !bIncludeBegin)
+                continue;
+            if (i == gridStepsV && !bIncludeEnd)
+                continue;
             float lineThickness = 4.0f;
             nvgBatchedRect(vg, pos.x, pos.y+gridStep.y * i - lineThickness * 0.5f, size.x, lineThickness);
             paint.feather = 2.5f - pass * 0.75f;

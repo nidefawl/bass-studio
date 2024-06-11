@@ -157,15 +157,13 @@ public:
             auto* hostInfo = moduleInstance->getHostCallback();
             // auto timeSeconds = hostInfo->m_vstTimeInfo.samplePos / hostInfo->m_vstTimeInfo.sampleRate;
             double barDurationInSeconds = toSecondsDD(TICKS_BAR, 1.0 / (hostInfo->m_vstTimeInfo.tempo * 100.0));
-
-            // shape pts are not normalized, find min/max
             auto secondsMin = minmax.first.pos.x;
             auto secondsMax = minmax.second.pos.x;
-
-            // figure out duration in bars and round up
-            auto durationBars = math::ceildS32((secondsMax - secondsMin) / barDurationInSeconds);
-            durationBars = math::max(1, durationBars);
-            DAW::Shape::DrawGrid(vg, theme, {}, cs, durationBars, 2);
+            auto secondsDura = secondsMax - secondsMin;
+            auto barsDura = secondsDura / barDurationInSeconds;
+            auto barDuraInt = math::rounddS32(barsDura);
+            barDuraInt = math::max(1, barDuraInt);
+            DAW::Shape::DrawGrid(vg, theme, {}, cs, barDuraInt, 2, false, false);
             renderShapeView(vg, theme, &curveInternal, {}, cs);
         } else {
             if (curveInternal.pts.empty()) {
@@ -178,7 +176,7 @@ public:
                 float oneNormalized = (1.0f - minmax.first.pos.x) / range;
                 auto posGrid = vec2(cs.x * zeroNormalized, 0);
                 auto sizeGrid = vec2(cs.x * (oneNormalized - zeroNormalized), cs.y);
-                DAW::Shape::DrawGrid(vg, theme, posGrid, sizeGrid, 4, 2);
+                DAW::Shape::DrawGrid(vg, theme, posGrid, sizeGrid, 8, 2, true, true);
                 renderShapeView(vg, theme, &curveInternal, {}, cs);
             } else {
                 renderShapeView(vg, theme, &curveInternal, {}, cs);

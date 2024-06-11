@@ -490,7 +490,7 @@ void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, 
     if (bDrawGrid) {
         int32_t gridStepsH = math::clamp<int32_t>(this->gridStepsH, 1, 128);
         int32_t gridStepsV = math::clamp<int32_t>(this->gridStepsV, 1, 128);
-        DrawGrid(vg, theme, pos, editorScale, gridStepsH, gridStepsV);
+        DrawGrid(vg, theme, pos, editorScale, gridStepsH, gridStepsV, false, false);
     }
     const auto mouseLocal = toNormalizedSpace(relMousepos);
     auto higlightHit = shape_t::hit_result();

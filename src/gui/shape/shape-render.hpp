@@ -7,7 +7,7 @@
 
 namespace DAW::Shape {
 
-void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int gridStepsH, int gridStepsV);
+void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int gridStepsH, int gridStepsV, bool bIncludeBegin, bool bIncludeEnd);
 
 template<typename ShapeType>
 void DrawShapeOneShot(const ShapeType& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 sizeScaled, float xClipMin, float xClipMax, const shape_t::hit_result& hit) {
