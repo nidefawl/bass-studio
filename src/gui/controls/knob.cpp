@@ -616,8 +616,8 @@ void guiknob::setKnobInternalHandlers() {
 
 void guiknob_labeled_base::layout() {
     if (knobType != knobtype::KNOB_UNLABELED) {
-        m_layout.labelHeight = math::roundfS32(math::max(8.0f, size.y * m_layout.scaleLabel));
-        m_layout.valueHeight = math::roundfS32(math::max(8.0f, size.y * m_layout.scaleValue));
+        m_layout.labelHeight = math::roundfS32(math::max(8.0f, m_layout.scaleLabel > 1 ? m_layout.scaleLabel : size.y * m_layout.scaleLabel));
+        m_layout.valueHeight = math::roundfS32(math::max(8.0f, m_layout.scaleValue > 1 ? m_layout.scaleValue : size.y * m_layout.scaleValue));
         const int INS_BRD    = m_layout.inset;
         m_layout.pLabel      = pos + ivec2(INS_BRD);
         m_layout.pValue      = pos + ivec2(INS_BRD, size.y - (INS_BRD + m_layout.valueHeight));
@@ -847,6 +847,18 @@ void gui_slider_textfield::render(NVGcontext* vg) {
             if (parentCtrl->getGuiOverRef() == toRef()) {
                 fTextValue = fBaseValue;
             }
+            auto alignment = NVG_ALIGN_CENTER;
+            switch (gui_textfield::alignment()) {
+                case gui_textfield::Alignment::Left:
+                    alignment = NVG_ALIGN_LEFT;
+                    break;
+                case gui_textfield::Alignment::Center:
+                    alignment = NVG_ALIGN_CENTER;
+                    break;
+                case gui_textfield::Alignment::Right:
+                    alignment = NVG_ALIGN_RIGHT;
+                    break;
+            }
             const String strLvl = getValueAsString(fTextValue);
             textWidth           = renderTextLabel(vg,
                                                   insetP + insetS * 0.5f,
@@ -855,7 +867,7 @@ void gui_slider_textfield::render(NVGcontext* vg) {
                                                   theme,
                                                   fontSize(),
                                                   theme->getColor(getLabelColor()),
-                                                  NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+                                                  alignment | NVG_ALIGN_MIDDLE);
         }
         if (isFlag(FLG_RENDER_LABEL) && this->label.length()) {
             renderTextLabel(vg,
