@@ -624,7 +624,7 @@ public:
             double barDurationInSeconds = toSecondsDD(TICKS_BAR, 1.0 / (hostInfo->m_vstTimeInfo.tempo * 100.0));
             double freq = params.freqHz;
             switch (params.trigger) {
-                case DAW::LFO::LFOTriggerMode::SongPosition: {
+                case DAW::LFO::LFOTriggerMode::Free: {
                     begin = timeSeconds - range;
                     range = barDurationInSeconds * 4.0;
                     sampledShaped.setIsNormalized(false);
@@ -636,7 +636,7 @@ public:
                     freq = 1.0;
                     sampledShaped.setIsNormalized(true);
                     break;
-                case DAW::LFO::LFOTriggerMode::Note:
+                case DAW::LFO::LFOTriggerMode::NoteOn:
                     range = barDurationInSeconds * 1.0;
                     begin = timeSeconds - range;
                     sampledShaped.setIsNormalized(false);

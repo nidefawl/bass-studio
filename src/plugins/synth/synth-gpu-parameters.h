@@ -56,7 +56,7 @@ enum ParametersSynthGPU : size_t {
     ADSR_2_D_Shape,
     ADSR_2_R_Shape,
     LFO_1_Frequency = MAX_SYNTH_PARAMS + MAX_ADSR_LFO * MAX_PARAMS_PER_ADSR,
-    LFO_1_TriggerMode, // 0 = note resets phase, 1 = one shot (note resets phase), 2 = song position
+    LFO_1_TriggerMode, // 0 = note resets phase, 1 = one shot (note resets phase), 2 = free
     LFO_1_Phase,
     LFO_1_RampDuration,
     LFO_2_Frequency = MAX_SYNTH_PARAMS + MAX_ADSR_LFO * MAX_PARAMS_PER_ADSR + MAX_PARAMS_PER_LFO,

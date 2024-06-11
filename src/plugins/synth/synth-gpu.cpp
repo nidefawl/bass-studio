@@ -223,7 +223,7 @@ void SynthImplGPU::initImpl() {
         lfoFreq->setRange(0.0, 1.0)->setInitialValue(0.5);
         setParamName(lfoFreq, parName + " Frequency", parName + " Freq", "Freq", "Hz");
         auto lfoTriggerMode           = addEnumParam(Parameters::LFO_1_TriggerMode + i * MAX_PARAMS_PER_LFO);
-        std::array triggerModeStrings = { "Note", "One Shot", "Song Position" };
+        std::array triggerModeStrings = { "Note On", "One Shot", "Free" };
         lfoTriggerMode->setStrings(triggerModeStrings.cbegin(), triggerModeStrings.cend())->setInitialValue(0);
         setParamName(lfoTriggerMode, parName + " Trigger Mode", parName + " Trigger", "Trigger");
         auto lfoPhase = addFloatParam(Parameters::LFO_1_Phase + i * MAX_PARAMS_PER_LFO);

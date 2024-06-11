@@ -326,7 +326,7 @@ public:
 
     void updateVoiceModulations(ModulationSourceData& modSrcData, VoiceSynth& v, double tickPos);
     double getVoiceLfoValue(const VoiceSynth& v, int32_t lfoIdx) {
-        auto bIsSongSync = lfoParameters[lfoIdx].trigger == DAW::LFO::LFOTriggerMode::SongPosition;
+        auto bIsSongSync = lfoParameters[lfoIdx].trigger == DAW::LFO::LFOTriggerMode::Free;
         if (bIsSongSync) {
             return lfosSongPos[lfoIdx].GetLfo();
         }
