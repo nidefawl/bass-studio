@@ -117,12 +117,6 @@ namespace dsp_util {
     float fromdBFS(float f) {
         return pow(10.0f, f / 20.0f);
     }
-    float scaledRange(float db, float lvlFloor, float lvlCeil) {
-        if (db < dsp_util::DBFS_FLOOR)
-            return 1.0f;
-        float lvlRange = lvlFloor - lvlCeil;
-        return (math::max(lvlFloor, math::min(db, lvlCeil)) - lvlCeil) / lvlRange;
-    }
     void fillSine(float** buffer, samplecount_t samples) {
         static paTestData* data = NULL;
         if (data == NULL) {
