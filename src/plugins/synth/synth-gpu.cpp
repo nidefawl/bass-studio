@@ -183,7 +183,6 @@ void SynthImplGPU::initImpl() {
     addFloatParam(Parameters::Osc1PulseWidthModDepth)->setRange(0.0, 100.0)->setInitialValue(0.0);
     setParamName(getParam(Parameters::Osc1PulseWidthModDepth), "Oscillator 1 Pulse Width Mod Depth", "OSC1 PW Mod Depth", "PW Mod Depth", "%");
 
-
     const int envBase[2]          = { int32_t(Parameters::ADSR_1_A_Duration), int32_t(Parameters::ADSR_2_A_Duration) };
     const String parNames[2]      = { "Volume", "Mod" };
     const String parNamesShort[2] = { "EnvV", "EnvM" };
@@ -239,6 +238,15 @@ void SynthImplGPU::initImpl() {
         lfoRampDuration->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(5.0)));
         setParamName(lfoRampDuration, parName + " Ramp Duration", parName + " Ramp Dur", "Ramp Dur", "s");
     }
+
+    addFloatParam(Parameters::Macro_1)->setRange(0.0, 1.0)->setInitialValue(0.0);
+    setParamName(getParam(Parameters::Macro_1), "Macro 1", "Macro 1", "Macro 1", "");
+    addFloatParam(Parameters::Macro_2)->setRange(0.0, 1.0)->setInitialValue(0.0);
+    setParamName(getParam(Parameters::Macro_2), "Macro 2", "Macro 2", "Macro 2", "");
+    addFloatParam(Parameters::Macro_3)->setRange(0.0, 1.0)->setInitialValue(0.0);
+    setParamName(getParam(Parameters::Macro_3), "Macro 3", "Macro 3", "Macro 3", "");
+    addFloatParam(Parameters::Macro_4)->setRange(0.0, 1.0)->setInitialValue(0.0);
+    setParamName(getParam(Parameters::Macro_4), "Macro 4", "Macro 4", "Macro 4", "");
 
     for (size_t i = 0; i < stringsModSource.size(); ++i) {
         auto idx = -1 + i;
@@ -603,6 +611,7 @@ void SynthImplGPU::updateVoiceModulations(ModulationSourceData& modSrcData, Voic
     const auto fFadeOut               = math::smoothstep(math::clamp((noteStart + noteLen - tickPos) / fNoteFadeDurationTicks, 0.0, 1.0));
     const auto noteFade               = math::clamp(fFadeIn * fFadeOut, 0.0, 1.0);
 
+
     *itOut++               = 0.0;// input value
     *itOut++               = v.GetVolumeEnvelope().value;
     *itOut++               = v.GetFilterEnvelope().value;
@@ -618,6 +627,10 @@ void SynthImplGPU::updateVoiceModulations(ModulationSourceData& modSrcData, Voic
     *itOut++               = v.randoms[1];
     *itOut++               = notePhase;
     *itOut++               = noteFade;
+    *itOut++               = vecParams[Parameters::Macro_1]->getAsDoubleModulated();
+    *itOut++               = vecParams[Parameters::Macro_2]->getAsDoubleModulated();
+    *itOut++               = vecParams[Parameters::Macro_3]->getAsDoubleModulated();
+    *itOut++               = vecParams[Parameters::Macro_4]->getAsDoubleModulated();
     auto& voiceModulations = v.modValues;
     std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
     ProcessModulations(modSrcData, voiceModulations);
@@ -676,8 +689,8 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
     auto& inputBufferVoiceStates = ssboInputVoiceStates.buffer;
     ssboInputSynthState.clearBuffer();
     ssboInputVoiceStates.clearBuffer();
-    std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size()*sizeof(double));
-    std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size()*sizeof(double));
+    std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size() * sizeof(double));
+    std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size() * sizeof(double));
     const bool bHasAutomationOrModulation = true;// TODO: implement
     if (bDbgSkipBufferBuild) {
         midiQueue.Clear();
@@ -802,16 +815,11 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
     this->numActiveVoicesBlock = numActiveVoicesMax;
 
     auto& modVals                      = *modValuesActive;
-    // gpuContext.osc1_gain               = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Gain]);
     gpuContext.osc1_unison_voice_count = GetParamInt(Parameters::Osc1UnisonVoiceCount)->Value();
-    // gpuContext.osc1_unison_detune      = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
     gpuContext.osc1_filter             = GetParamFloat(Parameters::Osc1Filter)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Filter]);
-    // gpuContext.osc1_stereo             = GetParamFloat(Parameters::Osc1Stereo)->getAsDoubleModulated();
     gpuContext.osc1_pw                 = GetParamFloat(Parameters::Osc1PulseWidth)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1PulseWidth]);
     gpuContext.osc1_pw_mod_rate        = GetParamFloat(Parameters::Osc1PulseWidthModRate)->getAsDoubleModulated();
     gpuContext.osc1_pw_mod_depth       = GetParamFloat(Parameters::Osc1PulseWidthModDepth)->getAsDoubleModulated();
-    // gpuContext.osc1_filter_keytrack    = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
-    // gpuContext.osc1_detune_keytrack    = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
     gpuContext.osc1_width_keytrack     = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
 
 
@@ -830,7 +838,9 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboInputVoiceStates.ssbo.current());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboOutput.ssbo.current());
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboOutputWaveform.ssbo.current());
-        // glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+        if (bUseMemoryBarriers) {
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        }
         checkGLError("glBindBufferBase");
     }
 
@@ -847,8 +857,12 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
         glDispatchCompute(1, 1, 1);
     }
     if (!bDbgSkipGPUDispatch) {
-        // glFinish();
-        // glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT|GL_BUFFER_UPDATE_BARRIER_BIT);
+        if (bUseGlFinish) {
+            glFinish();
+        }
+        if (bUseMemoryBarriers) {
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT|GL_BUFFER_UPDATE_BARRIER_BIT);
+        }
     }
     if (gpuProgram.programs[programId] && !bDbgSkipGPUDispatch) {
         ssboOutput.downloadBuffer();

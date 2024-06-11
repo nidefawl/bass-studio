@@ -65,7 +65,7 @@ enum ModDestinations : int32_t {
 };
 
 
-constexpr std::array<const char*, 17> stringsModSource = {
+constexpr std::array<const char*, 21> stringsModSource = {
     "None",
     "Function",
     "Constant",
@@ -83,6 +83,10 @@ constexpr std::array<const char*, 17> stringsModSource = {
     "Note Random 2",
     "Note Phase (0-1)",
     "Note Held (Fade 0-1-0)",
+    "Macro 1",
+    "Macro 2",
+    "Macro 3",
+    "Macro 4",
 };
 
 constexpr std::array modSourceVarNames = {
@@ -97,7 +101,15 @@ constexpr std::array modSourceVarNames = {
     "l3",
     "r",
     "alt",
-    "f"
+    "f",
+    "rnd",
+    "rnd2",
+    "ph",
+    "held",
+    "m1",
+    "m2",
+    "m3",
+    "m4",
 };
 
 static constexpr size_t NUM_MODULATION_SOURCES = stringsModSource.size();

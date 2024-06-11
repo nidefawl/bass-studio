@@ -349,6 +349,10 @@ protected:
     std::array<host_buffer_t*, 4> hostBuffers{&ssboInputSynthState, &ssboInputVoiceStates, &ssboOutput, &ssboOutputWaveform};
     int64_t timeLastShaderError = 0;
 
+    //TODO: make these user runtime options
+    bool bUseGlFinish = false;
+    bool bUseMemoryBarriers = false;
+
     /* Set ssbo to size of host_buffer_t::buffer */
     void reallocateSSBOs() {
         for (auto* buffer : hostBuffers) {

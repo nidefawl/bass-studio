@@ -720,12 +720,10 @@ public:
 };
 
 class guictr_synth_param_container : public guictr_synth_title {
-    ModulationController* const synth;
     std::vector<guiknob_synthparam*> knobs;
     vec2 sliderSize{ 0.0f, 0.0f };
 public:
-    explicit guictr_synth_param_container(ModulationController* synth)
-        : synth(synth) {
+    explicit guictr_synth_param_container() : guictr_synth_title() {
         margin  = 4;
         padding = 4;
         setBackgroundRendered(true);

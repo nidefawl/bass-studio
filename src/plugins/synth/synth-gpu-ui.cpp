@@ -35,6 +35,7 @@ public:
         const int envBase[2] = {int32_t(SynthImplGPU::Parameters::ADSR_1_A_Duration), int32_t(SynthImplGPU::Parameters::ADSR_2_A_Duration)};
         for (size_t i = 0; i < knobs.size(); ++i) {
             auto& knob = knobs[i];
+            knob.setAlignment(gui_textfield::Alignment::Right);
             knob.setSynthParam(moduleInstance->getSynth(), envBase[idx] + i);
             knob.setFontScale(0.75f);
             knob.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + envBase[idx] + i);
@@ -729,13 +730,15 @@ class guicontainer_plugin_synth_gpu final : public guictr_base {
     guicontainer_plugin_synth_adsr adsr1;
     guicontainer_plugin_synth_adsr adsr2;
     guicontainer_plugin_synth_other_parameters otherParams;
+    guictr_base ctrMacros;
     guicontainer_modulation ctrModulation;
     guictr_stacked ctrHorizontal;
     guictr_stacked ctrStackedOSC;
     guictr_stacked ctrStackedADSR;
     guictr_stacked ctrStackedBothLFOs;
+    guictr_stacked ctrStackedBothMacrosAndModulation;
     guictr_synth_main_section ctrMainSection;
-    guictr_synth_param_container ctrOscParams;
+    guictr_base ctrOscParams;
     gui_textfield editfield;
     std::vector<guictr_synth_title*> containers;
     seq_rand synthRandUI;
@@ -751,13 +754,13 @@ public:
         adsr2(module, 1),
         otherParams(module),
         ctrModulation(dynamic_cast<PluginLockable*>(module->getSynth()), module->getSynth()),
-        ctrMainSection(module, vecParamUI),
-        ctrOscParams(module->getSynth())
+        ctrMainSection(module, vecParamUI)
     {
         padding = 0;
         ctrStackedADSR.setVerticalLayout(true);
         ctrStackedOSC.setVerticalLayout(true);
         ctrStackedBothLFOs.setVerticalLayout(true);
+        ctrStackedBothMacrosAndModulation.setVerticalLayout(true);
         auto const synth = module->getSynth();
         auto makeParamKnob = [synth](auto p, auto knobType) {
             return new guiknob_synthparam(PARAM_OFFSET_IMPL + p, PARAM_OFFSET_IMPL + p, synth, p, knobType);
@@ -779,16 +782,29 @@ public:
             Osc1PulseWidthModRate,
         }) {
             auto knob = makeParamKnob(p, guiknob::knobtype::KNOB_LABELED);
-            ctrOscParams.addParamKnob(knob);
+            ctrOscParams.add(knob);
+            vecParamUI.push_back({ p, knob });
+        }
+        for (auto p : {
+            Macro_1,
+            Macro_2,
+            Macro_3,
+            Macro_4,
+        }) {
+            auto knob = makeParamKnob(p, guiknob::knobtype::SLIDER_LABELED);
+            ctrMacros.add(knob);
             vecParamUI.push_back({ p, knob });
         }
         ctrOscParams.setLayoutMode(autolayout_mode::LAYOUT_GRID);
+        ctrMacros.setLayoutMode(autolayout_mode::LAYOUT_GRID);
         auto padding = 2;
         auto margin = 2;
         ctrMainSection.padding      = padding;
         ctrMainSection.margin       = margin;
         ctrOscParams.padding        = padding;
         ctrOscParams.margin         = margin;
+        ctrMacros.padding           = padding;
+        ctrMacros.margin            = margin;
         ctrLfo1.padding             = padding;
         ctrLfo1.margin              = margin;
         ctrLfo2.padding             = padding;
@@ -807,6 +823,8 @@ public:
         ctrModulation.margin        = margin;
         ctrStackedBothLFOs.padding  = 0;
         ctrStackedBothLFOs.margin   = 0;
+        ctrStackedBothMacrosAndModulation.padding  = 0;
+        ctrStackedBothMacrosAndModulation.margin   = 0;
         bool bRenderBackgroundInset = true;
             ctrStackedOSC.addEntry(&shapeOscWaveform);
             ctrStackedOSC.addEntry(&ctrOscParams);
@@ -838,10 +856,15 @@ public:
                 ctrLfo2.setBackgroundRenderedInset(bRenderBackgroundInset);
             ctrStackedBothLFOs.addEntry(&ctrLfo2);
         ctrHorizontal.addEntry(&ctrStackedBothLFOs);
-            ctrModulation.setLabel("Modulation");
-            ctrModulation.setBackgroundRendered(true);
-            ctrModulation.setBackgroundRenderedInset(bRenderBackgroundInset);
-        ctrHorizontal.addEntry(&ctrModulation);
+                ctrModulation.setLabel("Modulation");
+                ctrModulation.setBackgroundRendered(true);
+                ctrModulation.setBackgroundRenderedInset(bRenderBackgroundInset);
+            ctrStackedBothMacrosAndModulation.addEntry(&ctrModulation);
+                ctrMacros.setLabel("Macros");
+                ctrMacros.setBackgroundRendered(true);
+                ctrMacros.setBackgroundRenderedInset(bRenderBackgroundInset);
+            ctrStackedBothMacrosAndModulation.addEntry(&ctrMacros);
+        ctrHorizontal.addEntry(&ctrStackedBothMacrosAndModulation);
             ctrMainSection.setLabel("");
             ctrMainSection.setBackgroundRendered(true);
             ctrMainSection.setBackgroundRenderedInset(bRenderBackgroundInset);
@@ -855,6 +878,7 @@ public:
         ctrHorizontal.setSplitters(splitterPositions);
         ctrStackedADSR.setSplitters({ 0.45f, 0.9f });
         ctrStackedBothLFOs.setSplitters({ 0.5f });
+        ctrStackedBothMacrosAndModulation.setSplitters({ 0.5f });
         editfield.setFlag(FLG_NO_LAYOUT, true);
         editfield.setVisible(false);
         editfield.setAlignment(gui_textfield::Alignment::Center);
@@ -862,6 +886,8 @@ public:
         add(&editfield);
     }
     ~guicontainer_plugin_synth_gpu() override {
+        ctrOscParams.destroyGuis();
+        ctrMacros.destroyGuis();
         removeGuis();
         ctrHorizontal.removeEntries();
         ctrStackedOSC.removeEntries();
@@ -872,17 +898,10 @@ public:
         const auto cs = getSizeContent();
         const auto titleHeight = math::clamp(math::roundfS32(cs.y * 0.05f), 14, 32);
         for (auto& knob : vecParamUI) {
-            if (knob.knob->getKnobType() == guiknob::knobtype::KNOB_LABELED) {
-                knob.knob->setLabelsFontScale(1.2f, 1.2f);
-                knob.knob->setLabelsScale(0.2f, 0.2f);
-            }
-            if (knob.knob->getKnobType() == guiknob::knobtype::SLIDER_LABELED) {
-                knob.knob->setLabelsFontScale(1.2f, 1.2f);
-                knob.knob->setLabelsScale(0.2f, 0.2f);
-            }
+            knob.knob->setLabelsScale(titleHeight*0.75f, titleHeight*1.0f);
+            knob.knob->setLabelsFontScale(1.2f, 1.2f);
         }
         ctrMainSection.setTitleHeight(titleHeight);
-        ctrOscParams.setTitleHeight(titleHeight);
         ctrLfo1.setTitleHeight(titleHeight);
         ctrLfo2.setTitleHeight(titleHeight);
         ctrModulation.setTitleHeight(titleHeight);
