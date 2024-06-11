@@ -180,7 +180,6 @@ public:
     SafeRef<guibase> safeRef;
     String label;
     String tooltipText;
-    automatable_t* automatable = nullptr;
 public:
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     int64_t allocId = 0;
@@ -241,12 +240,6 @@ public:
     }
     virtual void setFlags(int32_t mask, int32_t flags) {
         this->flags = (this->flags & ~mask) | flags;
-    }
-    virtual automatable_t* getAutomatable() const {
-        return automatable;
-    }
-    virtual void setAutomatable(automatable_t* automatable) {
-        this->automatable = automatable;
     }
     virtual bool isBackgroundRendered() const {
         return (flags & FLG_RENDER_BACKGROUND) != 0;
