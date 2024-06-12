@@ -110,12 +110,17 @@ namespace DAW {
         Pow,
         Exp,
     };
-    constexpr double shapeCurveSegmentExp(double x, double shape) {
+#ifdef _MSC_VER
+#define SHAPE_CONSTEXPR inline
+#else
+#define SHAPE_CONSTEXPR constexpr
+#endif
+    SHAPE_CONSTEXPR double shapeCurveSegmentExp(double x, double shape) {
         double shapeBi = 1.0 - shape * 2.0;
         return exp((1.0 - x) * shapeBi) * x;
     }
     // does not sound clean enough (noticable in short attack phase)
-    constexpr double shapeCurveSegmentPow(double x, double shape) {
+    SHAPE_CONSTEXPR double shapeCurveSegmentPow(double x, double shape) {
         double shapeBi  = 1.0 - shape * 2.0;
         double shapeBiAbs = fabs(shapeBi);
         if (shapeBiAbs != 0.0) {
@@ -130,7 +135,7 @@ namespace DAW {
         }
         return x;
     }
-    constexpr double shapeCurveSegment(CurveShapingFunction shaping, double x, double shape) {
+    SHAPE_CONSTEXPR double shapeCurveSegment(CurveShapingFunction shaping, double x, double shape) {
         switch (shaping) {
             case CurveShapingFunction::Exp:
                 return shapeCurveSegmentExp(x, shape);
@@ -141,4 +146,5 @@ namespace DAW {
                 return x;
         }
     }
+#undef SHAPE_CONSTEXPR
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "compiler.h"
 #include "math/seq_math.h"
 #include "types.h"
 #include <map>
@@ -31,7 +32,7 @@ struct stats_processing_timings_t {
     int32_t statsProcStep              = 0;
     int64_t statsWriteOffset           = 0;
     int64_t numBlocksProcessed         = 0;
-    static inline constexpr void MixStats(stats_processing_timings_t& lhs, const stats_processing_timings_t& rhs, double f) {
+    static MAYBE_INLINE_CONSTEXPR void MixStats(stats_processing_timings_t& lhs, const stats_processing_timings_t& rhs, double f) {
         // can't use memcpy because of constexpr
         // std::memcpy(lhs.statsProcSamples, rhs.statsProcSamples, sizeof(lhs.statsProcSamples));
         for (int i = 0; i < STATS_PROCESSING_MAX_SAMPLES; i++) {

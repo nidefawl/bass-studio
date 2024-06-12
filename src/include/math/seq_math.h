@@ -1,5 +1,5 @@
 #pragma once
-
+#include "compiler.h"
 #include "vec.h"
 #include "assert_dbg.h"
 #include <algorithm>
@@ -540,7 +540,7 @@ namespace math {
         return static_cast<uint32_t>(val_s64);
     }
 
-    inline constexpr float powf(float a, float b) {
+    MAYBE_INLINE_CONSTEXPR float powf(float a, float b) {
         return std::pow(a, b);
     }
 
@@ -550,7 +550,7 @@ namespace math {
     }
 
     template<typename T>
-    inline T clamp(T a, T tmin, T tmax) {
+    MAYBE_INLINE_CONSTEXPR T clamp(T a, T tmin, T tmax) {
         return a < tmin ? tmin : a > tmax ? tmax : a;
     }
     inline ivec2 maxvec2(const ivec2& a, const ivec2& b) {
@@ -599,11 +599,11 @@ namespace math {
     }
 
 
-    inline float smoothstep(float t) {
+    MAYBE_INLINE_CONSTEXPR float smoothstep(float t) {
         return t * t * (3.0f - 2.0f * t);
     }
 
-    inline double smoothstep(double t) {
+    MAYBE_INLINE_CONSTEXPR double smoothstep(double t) {
         return t * t * (3.0 - 2.0 * t);
     }
 }// namespace math

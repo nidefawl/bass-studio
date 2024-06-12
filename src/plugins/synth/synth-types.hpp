@@ -128,13 +128,13 @@ struct Envelope {
         float maxTimeMillis = MAX_SECONDS * 1000.0;
     };
 
-    static constexpr double GetSecondsFromParam(double p, EnvelopeTimeRange range) {
+    static MAYBE_INLINE_CONSTEXPR double GetSecondsFromParam(double p, EnvelopeTimeRange range) {
         return (p * (range.maxTimeMillis - range.minTimeMillis) + range.minTimeMillis) / 1000.0;
     }
-    static constexpr double GetTimeBaseFromParam(double p, EnvelopeTimeRange range) {
+    static MAYBE_INLINE_CONSTEXPR double GetTimeBaseFromParam(double p, EnvelopeTimeRange range) {
         return 1.0 / GetSecondsFromParam(p, range);
     }
-    static constexpr double GetParamFromTimeMillis(double t, EnvelopeTimeRange range) {
+    static MAYBE_INLINE_CONSTEXPR double GetParamFromTimeMillis(double t, EnvelopeTimeRange range) {
         return math::clamp((t - range.minTimeMillis) / (range.maxTimeMillis - range.minTimeMillis), 0.0, 1.0);
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 #if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+#define MAYBE_INLINE_CONSTEXPR inline
 #define DAW_CXX_CONSTINIT
 #define hint_likely(expr) (expr)
 #define hint_unlikely(expr) (expr)
@@ -7,6 +8,7 @@
 #define FUNC_NOINLINE __declspec(noinline)
 #define PARAM_RESTRICT __restrict
 #elif defined(__GNUC__)
+#define MAYBE_INLINE_CONSTEXPR inline constexpr
 #define DAW_CXX_CONSTINIT constinit
 [[noreturn]] inline __attribute__((always_inline)) void unreachable() {__builtin_unreachable();}
 #define hint_likely(expr) __builtin_expect((expr), 1)
