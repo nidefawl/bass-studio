@@ -309,15 +309,14 @@ void clip_notes_t::copy(const clip_notes_t& obj) {
 }
 
 note_t* clip_notes_t::get(tick_t time, int32_t pitch) {
-    auto it = m_list.rbegin();
-    while (it != m_list.rend()) {
-        note_t& note = *it;
+    /* This was reverse before. A forward search is beneficial for the cache. 
+    The impact on editing/selection/hitchecks/zorder is not yet clear. */
+    for (note_t& note : m_list) {
         if (pitch == note.pitch && time >= note.start() && time < note.end()) {
             return &note;
         }
-        it++;
     }
-    return NULL;
+    return nullptr;
 }
 
 int clip_notes_t::getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, int32_t velH, int32_t tickDist, std::vector<note_t*>& list) {
