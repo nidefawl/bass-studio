@@ -417,7 +417,8 @@ void clip_t::applyNoteQuantizationGroove(const groove_data_t& grooveData, note_t
 
 /* HOT CODEPATH */
 void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, NoteSampleOptions options) const {
-    notesView.m_list.clear();
+    auto& noteListOut = notesView.m_list;
+    noteListOut.clear();
     if (!enabled) {
         notesView.updateBounds();
         return;
@@ -451,6 +452,8 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
     } else {
         listLoop.clear();
     }
+    if (noteListOut.capacity() < 16 && !notes.m_list.empty())
+        noteListOut.reserve(16);
     
     const auto loopLen = this->loopLen;
     const auto loopStart = this->loopStart;
@@ -488,8 +491,9 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                     nnote.cutRight(localEndMin);
                 }
             }
-            if (nnote.len > 0)
-                notesView.m_list.push_back(nnote);
+            if (nnote.len > 0) {
+                noteListOut.push_back(nnote);
+            }
         }
     }
     if (fillLoop && loopLen > 0 && listLoop.size()) {
@@ -499,8 +503,8 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
         const int32_t firstLoop        = math::max(0, (localStart - preLoopLen) / loopLenProcessing);
         const int32_t lastLoop         = (localEnd - preLoopLen) / loopLenProcessing;
         const tick_t numLoops          = lastLoop - firstLoop + 1;
-        if (notesView.m_list.capacity() < numLoops * listLoop.size())
-            notesView.m_list.reserve(numLoops * listLoop.size());
+        if (noteListOut.capacity() < numLoops * listLoop.size())
+            noteListOut.reserve(numLoops * listLoop.size());
         for (auto i = firstLoop; i < firstLoop + numLoops; i++) {
             auto itNote = listLoop.cbegin();
             itNoteEnd   = listLoop.cend();
@@ -547,7 +551,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
                         note.cutRight(cutEnd);
                     }
                     if (note.len > 0)
-                        notesView.m_list.push_back(note);
+                        noteListOut.push_back(note);
                 }
             }
         }
@@ -593,10 +597,12 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
     }
     return posNew - posOld;
 #endif
+    list.reserve(list.size() + notesView.m_list.size());
     if (options.bRelative) {
         for (auto& note : notesView.m_list) {
-            auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
-                return n.time > note.time;
+            // we can do a binary search here
+            auto it = std::lower_bound(list.begin(), list.end(), note, [](const note_t& a, const note_t& b) {
+                return a.time < b.time;
             });
             list.insert(it, note);
         }
@@ -605,11 +611,14 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
             note.time += clipStart;
             if (options.bCutNotes)
                 note.len = math::min(note.end(), clipEnd) - note.time;
-            if (cutIntersectingNotesFindDupe(list, note) == -1) {
-                continue;
+            if (options.bEliminateDupes) {
+                if (cutIntersectingNotesFindDupe(list, note) == -1) {
+                    continue;
+                }
             }
-            auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
-                return n.time > note.time;
+            // we can do a binary search here
+            auto it = std::lower_bound(list.begin(), list.end(), note, [](const note_t& a, const note_t& b) {
+                return a.time < b.time;
             });
             list.insert(it, note);
         }
@@ -1381,6 +1390,7 @@ noteview_render_t& clip_t::getNoteViewSelection() const {
             .bCutNotes = false,
             .bCutMutedNotes = false,
             .bApplyGroove = false,
+            .bEliminateDupes = false,
         });
         std::vector<note_t> sel;
         for (note_t* pnote: notes.selection) {

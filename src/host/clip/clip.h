@@ -223,6 +223,7 @@ class clip_t {
         bool bCutMutedNotes = false;
         bool bApplyGroove = false;
         bool bRelative = false;
+        bool bEliminateDupes = false;
     };
 public:
     clip_notes_t notes;
