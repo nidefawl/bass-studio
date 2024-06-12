@@ -71,7 +71,7 @@ namespace DAW {
      *
      */
     struct track_graph_t {
-        DAW::SegmentedVector<track_node_t, 1024> memPoolTrackNodes;
+        DAW::SegmentedVector<track_node_t, 32> memPoolTrackNodes;
         std::vector<track_node_t*> roots;// output nodes (Master, )
         std::vector<track_node_ptr> nodes;
         std::vector<track_source_t> externalOutputRouting;
@@ -83,7 +83,7 @@ namespace DAW {
         track_graph_t& operator=(const track_graph_t& graph) = delete;
     };
     struct processing_graph_t {
-        DAW::SegmentedVector<processing_track_node_t, 1024> memPoolProcNodes;
+        DAW::SegmentedVector<processing_track_node_t, 32> memPoolProcNodes;
         std::vector<processing_track_node_t*> nodesFlatOrdered;
         std::vector<processing_track_node_t*> roots;  // nodes that have no parents
         std::vector<processing_track_node_ptr> nodes;
