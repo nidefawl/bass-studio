@@ -11,7 +11,6 @@ public:
     constexpr SegmentIdx segmentIdx(size_t index) const {
         return index / SEGMENT_SIZE;
     }
-    SegmentedVector()  = default;
     SegmentedVector(const SegmentedVector& graph) = delete;
     SegmentedVector& operator=(const SegmentedVector& graph) = delete;
     SegmentedVector(SegmentedVector&& graph) = delete;
@@ -20,6 +19,10 @@ public:
         for (auto* segment : m_segments) {
             delete segment;
         }
+    }
+    SegmentedVector() {
+        m_segments.reserve(4);
+        m_segments.push_back(new Segment());
     }
 
     std::vector<Segment*> m_segments;
