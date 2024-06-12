@@ -87,6 +87,7 @@ static constexpr size_t NUM_UNISON_VOICES = 16;
 constexpr bool USE_THREADING = false;
 constexpr size_t AUDIOPROCESSING_THREADS = USE_THREADING ? 32 : 0;
 constexpr size_t AUDIOPROCESSING_TASKS = (USE_THREADING) ? NUM_POLY_VOICES * NUM_UNISON_VOICES : 0;
+static constexpr Envelope::EnvelopeTimeRange range = {0.0f, 10000.0f};
 
 
 enum ModulationSourceType {
@@ -1444,7 +1445,7 @@ private:
             std::memcpy(voice.envelopeValuesCached.data(), envParamVals, sizeof(envParamVals));
             ShapeLogLikeSIMD<FPType, 8>(envParamVals, envParamValsScaled);
             for (int i = 0; i < LEN_USED; i++) {
-                *envParamValsPtr[i] = Envelope::GetTimeBaseFromParam(envParamValsScaled[i]);
+                *envParamValsPtr[i] = Envelope::GetTimeBaseFromParam(envParamValsScaled[i], range);
             }
         }
         voice.volEnv.s = GetModulatedParamVoice(voice, Parameters::VolEnvS);

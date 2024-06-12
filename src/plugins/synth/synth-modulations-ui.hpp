@@ -540,10 +540,10 @@ public:
     void setRowHeight(float height) {
         setTitleHeight(height);
         for (auto& src : sources) {
-            src->setRowHeight(height*1.5f);
+            src->setRowHeight(height);
         }
         for (auto& dst : destinations) {
-            dst->setRowHeight(height*1.5f);
+            dst->setRowHeight(height);
         }
     }
 
@@ -601,7 +601,7 @@ public:
     }
 
     void setTitleHeight(float height) {
-        guictr_synth_title::setTitleHeight(isFlag(FLG_RENDER_LABEL) ? height*1.5f : 0);
+        guictr_synth_title::setTitleHeight(isFlag(FLG_RENDER_LABEL) ? height : 0);
         for (auto& slot : slots) {
             slot->setRowHeight(height);
         }

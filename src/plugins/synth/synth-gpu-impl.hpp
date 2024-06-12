@@ -189,8 +189,6 @@ struct VoiceSynth {
     }
 };
 
-
-
 class SynthImplGPU final : public SynthImpl<SynthImplGPU, ParametersSynthGPU>, public ModulationController, public DAW::GPU::GPUAudioProcessor {
 private:
     friend class guicontainer_plugin_synth_gpu;
@@ -201,6 +199,12 @@ private:
     std::array<PluginSynth::GPU::VoiceSynth, NUM_POLY_VOICES> voices;
     std::array<DAW::LFO::LFO, NUM_LFO> lfosSongPos;
     std::array<DAW::LFO::LFOParameters, NUM_LFO> lfoParameters;
+    std::array<Envelope::EnvelopeTimeRange, 4> envTimeRanges = {
+        Envelope::EnvelopeTimeRange{ 0.0f, 1000.0f }, // attack
+        Envelope::EnvelopeTimeRange{ 0.0f, 500.0f }, // hold
+        Envelope::EnvelopeTimeRange{ 0.0f, 10000.0f }, // decay
+        Envelope::EnvelopeTimeRange{ 0.0f, 10000.0f }, // release
+    };
     std::array<double, 1> otherParams{0.0f};
     seq_rand synthRand;
     std::vector<std::shared_ptr<PluginViewContainer>> views;
@@ -240,6 +244,10 @@ public:
     void setBlocksize(samplecount_t blocksize) override;
 
     void init() override;
+
+    const std::array<Envelope::EnvelopeTimeRange, 4>& getEnvTimeRanges() const {
+        return envTimeRanges;
+    }
 
     std::array<double, 1>& getOtherParams() {
         return otherParams;

@@ -9,7 +9,9 @@
 #include "hires_timer.h"
 #include "math/simd_math.h"
 #include "platform.h"
+#include "synth-types.hpp"
 #include <algorithm>
+#include <cstdint>
 
 namespace PluginSynth::GPU {
 
@@ -191,19 +193,19 @@ void SynthImplGPU::initImpl() {
         String nameBase  = parNames[i] + " " + "Envelope";
         String nameShort = parNamesShort[i];
         auto parAtt      = addFloatParam(envBase[i]);
-        parAtt->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(2.0)));
+        parAtt->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(2.0, envTimeRanges[0])));
         setParamName(parAtt, nameBase + " Attack", nameShort + " Attack", "Attack", "s");
         auto parHold = addFloatParam(envBase[i] + 1);
         parHold->setInitialValue(0.0);
         setParamName(parHold, nameBase + " Hold", nameShort + " Hold", "Hold", "s");
         auto parDec = addFloatParam(envBase[i] + 2);
-        parDec->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(333.0)));
+        parDec->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(333.0, envTimeRanges[1])));
         setParamName(parDec, nameBase + " Decay", nameShort + " Decay", "Decay", "s");
         auto parSus = addFloatParam(envBase[i] + 3);
         parSus->setRange(0.0, 100.0)->setInitialValue(80.0);
         setParamName(parSus, nameBase + " Sustain", nameShort + " Sustain", "Sustain", "%");
         auto parRel = addFloatParam(envBase[i] + 4);
-        parRel->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(123.0)));
+        parRel->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(123.0, envTimeRanges[2])));
         setParamName(parRel, nameBase + " Release", nameShort + " Release", "Release", "s");
         auto parAttShape = addFloatParam(envBase[i] + 5);
         parAttShape->setRange(-100.0, 100.0)->setInitialValue(0.0);
@@ -235,7 +237,7 @@ void SynthImplGPU::initImpl() {
         // lfoRampAmount->setRange(0.0, 1.0)->setInitialValue(0.0);
         // setParamName(lfoRampAmount, parName + " Ramp Amount", parName + " Ramp", "Ramp", "");
         auto lfoRampDuration = addFloatParam(Parameters::LFO_1_RampDuration + i * MAX_PARAMS_PER_LFO);
-        lfoRampDuration->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(5.0)));
+        lfoRampDuration->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(5.0, getGlobalLFO(0).getRampRange())));
         setParamName(lfoRampDuration, parName + " Ramp Duration", parName + " Ramp Dur", "Ramp Dur", "s");
     }
 
@@ -558,7 +560,8 @@ void SynthImplGPU::updateEnvelopeParameters(VoiceSynth& v) {
     envParamVals[7] = GetParamFloat(Parameters::ADSR_2_R_Duration)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_ADSR_2_R_Duration]);
     ShapeLogLikeSIMD<float, 8>(envParamVals, envParamValsScaled);
     for (auto& f : envParamValsScaled) {
-        f = Envelope::GetTimeBaseFromParam(f);
+        auto idx = &f - &envParamValsScaled[0];
+        f = Envelope::GetTimeBaseFromParam(f, envTimeRanges[idx % 4]);
     }
     float envSusShape[8]{};
     envSusShape[0] = GetParamFloat(Parameters::ADSR_1_S_Amount)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_ADSR_1_S_Amount]);
@@ -980,15 +983,16 @@ param_unit_t module_synth_gpu::convertParamValueToDisplay(int32_t idx, float val
                 ADSR_2_H_Duration,
                 ADSR_2_D_Duration,
                 ADSR_2_R_Duration,
-                LFO_1_RampDuration,
-                LFO_2_RampDuration
             };
-            if (std::find(enumDurList.begin(), enumDurList.end(), param->enumParam) != enumDurList.end()) {
+            auto it = std::find(enumDurList.begin(), enumDurList.end(), param->enumParam);
+            if (it != enumDurList.end()) {
+                auto idx = int32_t(it - enumDurList.begin());
                 alignas(64) float envParamVals[4]{};
                 alignas(64) float envParamValsScaled[4]{};
                 envParamVals[0] = value;
                 ShapeLogLikeSIMD<float, 4>(envParamVals, envParamValsScaled);
-                auto ms  = Envelope::GetSecondsFromParam(envParamValsScaled[0]) * 1000.0;
+                auto& envTimeRanges = impl->getEnvTimeRanges();
+                auto ms  = Envelope::GetSecondsFromParam(envParamValsScaled[0], envTimeRanges[idx%4]) * 1000.0;
                 auto fmt = ms < 10.0 ? "%.3f" : (ms < 100.0 ? "%.2f" : "%.1f");
                 auto v   = StringFormat(fmt, ms);
                 return { v, "ms" };

@@ -123,28 +123,23 @@ enum class EnvelopeShaping : int32_t {
     Pow,
     Exp,
 };
-
 struct Envelope {
-    static constexpr double OFF_STATE = 0.02;
     static constexpr double MIN_SECONDS = 0.0001;
     static constexpr double MAX_SECONDS = 1.0;
-    static constexpr double GetTimeBaseFromParam(double p, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
-        if (p <= OFF_STATE)
-            return 0.0;
-        p = (p - OFF_STATE) / (1.0 - OFF_STATE);
-        return 1.0 / (p * (dmax - dmin) + dmin);
+
+    struct EnvelopeTimeRange {
+        float minTimeMillis = MIN_SECONDS * 1000.0;
+        float maxTimeMillis = MAX_SECONDS * 1000.0;
+    };
+
+    static constexpr double GetSecondsFromParam(double p, EnvelopeTimeRange range) {
+        return (p * (range.maxTimeMillis - range.minTimeMillis) + range.minTimeMillis) / 1000.0;
     }
-    static constexpr double GetSecondsFromParam(double p, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
-        if (p <= OFF_STATE)
-            return 0.0;
-        p = (p - OFF_STATE) / (1.0 - OFF_STATE);
-        return p * (dmax - dmin) + dmin;
+    static constexpr double GetTimeBaseFromParam(double p, EnvelopeTimeRange range) {
+        return 1.0 / GetSecondsFromParam(p, range);
     }
-    static constexpr double GetParamFromTimeMillis(double tMillis, double dmin = Envelope::MIN_SECONDS, double dmax = Envelope::MAX_SECONDS) {
-        if (tMillis <= 0.0)
-            return 0.0;
-        double t = tMillis / 1000.0;
-        return math::clamp((t - dmin) / (dmax - dmin), 0.0, 1.0) * (1.0 - OFF_STATE) + OFF_STATE;
+    static constexpr double GetParamFromTimeMillis(double t, EnvelopeTimeRange range) {
+        return math::clamp((t - range.minTimeMillis) / (range.maxTimeMillis - range.minTimeMillis), 0.0, 1.0);
     }
 
     double phase    = 0.0;
@@ -727,7 +722,7 @@ inline double noteToLinearScale(double note, double minNote = 69.0) {
 }
 
 template<typename FPType, size_t LEN_SIMD = 8>
-inline void ShapeLogLikeSIMD(const FPType valsIn[LEN_SIMD], FPType valsOut[LEN_SIMD], FPType exponent = 0.75f) {
+inline void ShapeLogLikeSIMD(const FPType valsIn[LEN_SIMD], FPType valsOut[LEN_SIMD], FPType exponent = 0.35f) {
     using Vec4D      = glm::vec<4, FPType, glm::aligned_highp>;
     auto sse8Float   = reinterpret_cast<const __m256*>(&valsIn[0]);
    __m256 sse8Float2 = math::simd::log_v8f(*sse8Float);
@@ -786,6 +781,7 @@ class LFO final : public DAW::LFO::LFORateMinMaxAutomation {
     LFOParameters* params{};
     PluginSynth::Envelope envRamp;
     uint64_t customSeed = 0;
+    PluginSynth::Envelope::EnvelopeTimeRange rampRange = {0.0, 10.0};
 public:
     LFO() {
         this->srcSync.rateMinMax = this;
@@ -804,6 +800,12 @@ public:
     void resetRamp() {
         envRamp.Reset();
         envRamp.Start();
+    }
+    PluginSynth::Envelope::EnvelopeTimeRange& getRampRange() {
+        return rampRange;
+    }
+    const PluginSynth::Envelope::EnvelopeTimeRange& getRampRange() const {
+        return rampRange;
     }
     const DAW::LFO::lfo_automation_src_random_t* getSourceRand() const {
         return srcRand.get();
@@ -854,7 +856,7 @@ public:
     void Update(double dt) {
         double p = fp_math::silenceNanInfd(this->phase + params->freqHz * dt);
         this->phase = p;
-        envRamp.a = PluginSynth::Envelope::GetTimeBaseFromParam(params->rampDuration);
+        envRamp.a = PluginSynth::Envelope::GetTimeBaseFromParam(params->rampDuration, rampRange);
         envRamp.Update(dt);
     }
     double GetRamp() const {
