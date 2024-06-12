@@ -114,6 +114,7 @@ struct alignas(64) prof_stats_window_t {
     int64_t timeSwapBuffers         = 0;
     int64_t timePrerender           = 0;
     int64_t timeAppTick             = 0;
+    int64_t fps = 0;
 };
 struct vst_opcode_stats_t {
     int32_t tmMillis      = 0;

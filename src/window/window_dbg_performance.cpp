@@ -1,5 +1,6 @@
 #include "assert_dbg.h"
 #include "glheaders.h"
+#include <algorithm>
 #include <nanovg.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -51,6 +52,7 @@ struct ProfilingDataRenderInstance {
     std::vector<std::shared_ptr<ProfilingDataChannelBase>> channels;
     GLuint texActive = 0;
     GLuint texUpload = 0;
+    int64_t timeUpdatedMicros = 0;
     int64_t dataFrameNum = -1;
     vec2 instancePos{};
     String name;
@@ -171,22 +173,22 @@ class window_impl final : public window_abstract_t {
     seq_rand rnd;
     int nCall = 0;
 
-    std::vector<ProfilingDataRenderInstance> profDataInstances;
+    std::vector<ProfilingDataRenderInstance> renderInstances;
     std::shared_ptr<gl_shader_perfgraph> pipePerfShader;
 
     template<typename T>
-    ProfilingDataRenderInstance* getOrInitProfInstance(
+    ProfilingDataRenderInstance* getOrInitProfilingDataRenderer(
         const ProfilingImpl::profiling_channel_descs* const channelDesc, 
         const ProfilingImpl::profiling_entry_t<T>& instance)
     {
-        for (ProfilingDataRenderInstance& prevChannel : profDataInstances) {
+        for (ProfilingDataRenderInstance& prevChannel : renderInstances) {
             if (prevChannel.instancePtr == instance.instancePtr) {
                 return &prevChannel;
             }
         }
         dbgassert(channelDesc->size() <= TEXTURE_HEIGHT);
-        profDataInstances.push_back(ProfilingDataRenderInstance{instance.instancePtr});
-        ProfilingDataRenderInstance* windowInstance = &profDataInstances.back();
+        renderInstances.push_back(ProfilingDataRenderInstance{instance.instancePtr});
+        ProfilingDataRenderInstance* windowInstance = &renderInstances.back();
         std::array<GLuint, 2> textures{};
         glGenTextures(textures.size(), textures.data());
         glActiveTexture(GL_TEXTURE0);
@@ -232,22 +234,23 @@ class window_impl final : public window_abstract_t {
         dbgassert(profData.instanceList);
         int32_t numUpdated = 0;
         for (auto& profDataInstance : *profData.instanceList) {
-            auto const windowInstance = this->getOrInitProfInstance(profData.channelDesc, profDataInstance);
-            if (windowInstance->dataFrameNum == profDataInstance.frameNum)
+            auto const renderProfData = this->getOrInitProfilingDataRenderer(profData.channelDesc, profDataInstance);
+            if (renderProfData->dataFrameNum == profDataInstance.frameNum)
                 continue;
-            windowInstance->dataFrameNum = profDataInstance.frameNum;
-            std::swap(windowInstance->texActive, windowInstance->texUpload);
+            renderProfData->timeUpdatedMicros = getTimeMicros();
+            renderProfData->dataFrameNum = profDataInstance.frameNum;
+            std::swap(renderProfData->texActive, renderProfData->texUpload);
 
             static constexpr size_t STRIDE = sizeof(T) >> 3;
             const auto basePtr  = reinterpret_cast<int64_t*>(profDataInstance.stats.data());
             const auto readIdx  = profDataInstance.writeIdx ? profDataInstance.writeIdx - 1 : PROFILING_MAX_LEN - 1;
-            auto& channels      = windowInstance->channels;
+            auto& channels      = renderProfData->channels;
             for (auto& channel : channels) {
                 setSamples<STRIDE, PROFILING_MAX_LEN>(channel.get(), basePtr, readIdx, channel->offsetStMember);
                 normalizeData(channel.get());
                 memcpy(&texData[channel->texChannel * TEXTURE_WIDTH], channel->valuesNormalized.data(), sizeof(float) * TEXTURE_WIDTH);
             }
-            glBindTexture(GL_TEXTURE_2D, windowInstance->texUpload);
+            glBindTexture(GL_TEXTURE_2D, renderProfData->texUpload);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RED, GL_FLOAT, texData.data());
             numUpdated++;
         }
@@ -260,7 +263,7 @@ public:
     ~window_impl() {
     }
 
-    int init(NVGcontext*) {
+    int init(NVGcontext*) override {
         tmLastReload = getTimeMillis();
         pipePerfShader = std::make_shared<gl_shader_perfgraph>();
         checkGLError("pipePerfShader reset");
@@ -294,7 +297,7 @@ public:
         numUpdated += updateProfilingData(profDataWindow);
         return numUpdated;
     }
-    int render(NVGcontext* vg, int winW, int winH, float pxratio) {
+    int render(NVGcontext* vg, int winW, int winH, float pxratio) override {
         float zoom = 1.0f;
         float fbWidth = winW * zoom;
         float fbHeight = winH * zoom;
@@ -357,7 +360,22 @@ public:
         vec2 graphPos = vec2(WND_PADDING);
         int colFill = 0;
         int prevEntryNumRows = 1;
-        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+        static thread_local std::vector<ProfilingDataRenderInstance*> renderInstancesSorted;
+        auto& vec = renderInstancesSorted;
+        vec.clear();
+        vec.reserve(renderInstances.size());
+        for (auto& renderInstance : renderInstances) {
+            auto it = std::lower_bound(vec.begin(), vec.end(), &renderInstance, [](const ProfilingDataRenderInstance* a, const ProfilingDataRenderInstance* b) {
+                if (a->timeUpdatedMicros == b->timeUpdatedMicros) {
+                    return a->texActive < b->texActive;
+                }
+                return a->timeUpdatedMicros > b->timeUpdatedMicros;
+            });
+            vec.insert(it, &renderInstance);
+        }
+
+        for (ProfilingDataRenderInstance* pRenderInstance : renderInstancesSorted) {
+            ProfilingDataRenderInstance& renderInstance = *pRenderInstance;
             const auto channelsSize = renderInstance.channels.size();
             if (prevEntryNumRows > 1 || (colFill > 0 && colFill + channelsSize > cols)) {
                 graphPos.y += graphSize.y;
@@ -406,7 +424,7 @@ public:
         nvgSave(vg);
         // nvgShapeAntiAlias(vg, 1);
 
-        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+        for (ProfilingDataRenderInstance& renderInstance : renderInstances) {
             for (const auto& channel : renderInstance.channels) {
                 auto legendPos = channel->graphPos + vec2(0, channel->graphSize.y - legendSize.y);
                 nvgBatchedRect(vg, legendPos.x, legendPos.y, legendSize.x, legendSize.y);
@@ -420,13 +438,13 @@ public:
         nvgFillColor(vg, rgbaToNvg(0xFFFFFFFF));
         nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
         nvgFontSize(vg, FONTSIZE_TITLE);
-        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+        for (ProfilingDataRenderInstance& renderInstance : renderInstances) {
             auto titlePos = renderInstance.instancePos + vec2(0, FONTSIZE_TITLE) * 0.5f + grphInset;
             nvgText(vg, titlePos.x, titlePos.y, StringAsCStr(renderInstance.name), nullptr);
         }
         nvgFillColor(vg, rgbaToNvg(0xFFCCCCCC));
         nvgFontSize(vg, FONTSIZE_GRAPH);
-        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+        for (ProfilingDataRenderInstance& renderInstance : renderInstances) {
             for (const auto& channel : renderInstance.channels) {
                 auto subTitlePos = channel->graphPos + vec2(0, FONTSIZE_GRAPH) * 0.5f;
                 nvgText(vg, subTitlePos.x, subTitlePos.y, StringAsCStr(channel->name), nullptr);
@@ -434,7 +452,7 @@ public:
         }
         nvgFillColor(vg, rgbaToNvg(0xFF00FF7F));
         nvgFontSize(vg, FONTSIZE_LEGEND);
-        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+        for (ProfilingDataRenderInstance& renderInstance : renderInstances) {
             for (const auto& channel : renderInstance.channels) {
                 auto legendPos = channel->graphPos + vec2(0, channel->graphSize.y - legendSize.y);
                 vec2 textPos = legendPos + grphInset * 0.5f + vec2(0,  FONTSIZE_LEGEND * 0.5);
@@ -470,7 +488,7 @@ public:
         // }
         return 1;
     }
-    int destroy(NVGcontext*) {
+    int destroy(NVGcontext*) override {
         return 0;
     }
 };

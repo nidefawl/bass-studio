@@ -228,8 +228,6 @@ protected:
     int frameNumber          = 0;
     int frameCountFPS        = 0;
     int64_t tmLastFps        = 0;
-    int64_t tmLastDrawMicros = 0;
-    // int skipFrames           = 0;
 
     vec2 mousepos{ -10000, -10000 };
     int cursorIcon = CURSOR_DEFAULT;
@@ -238,7 +236,7 @@ protected:
 
     char nameDbg[128]{ 0 };
     char name[128]{ 0 };
-    String fpsStats;
+    float fpsStats;
     prof_stats_window_t renderStatsWindow{};
     hires_timer_t timerProfileWindow;
 
@@ -405,6 +403,7 @@ public:
                 // log_printf("render %012zx %s\n", (uint64_t)this, nameDbg);
                 updateStats();
             }
+            renderStatsWindow.fps = math::roundfS64(fpsStats);
         }
     }
 
@@ -433,14 +432,11 @@ public:
     void updateStats() {
         auto tmNowMicros = getTimeMicros();
         auto tmNow = tmNowMicros / 1000LL;
-        if (frameCountFPS > 0 && tmNow - tmLastFps >= 1000) {
-            float fps = frameCountFPS*1000.0f / static_cast<float>(tmNow - tmLastFps);
-            fpsStats = StringFormat("%.2f fps, %f", fps, static_cast<double>(tmLastDrawMicros)/1.0e6);
-            // glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
+        if (frameCountFPS > 0 && tmNow - tmLastFps >= 200 && frameCountFPS > 5) {
+            fpsStats = frameCountFPS*1000.0f / static_cast<float>(tmNow - tmLastFps);
             tmLastFps    = tmNow;
             frameCountFPS = 0;
         }
-        tmLastDrawMicros = tmNowMicros;
         redrawFlagged   = false;
         frameCountFPS++;
         frameNumber++;
@@ -480,7 +476,7 @@ public:
         mousepos.x   = (float) x;
         mousepos.y   = (float) y;
         vec2 delta   = mousepos - lastmousepos;
-        ivec2 idelta = ivec2((int) delta.x, (int) delta.y);
+        ivec2 idelta = ivec2((int) delta.x, (int) delta.y); 
         onMouseMoved(idelta);
     }
 
@@ -2598,14 +2594,7 @@ public:
             throw appexception("Couldn't start application");
         }
     }
-    hires_timer_t t;
-    int nCalls = 0;
     void onIdle() override {
-        if (nCalls++ > 100) {
-            double d = t.getTimeDoubleReset();
-            log_printf("FPS: %f\n", 100.0 / d);
-            nCalls = 0;
-        }
         if (isInitialized) {
             flagNeedsRedraw();
 #ifndef _WIN32

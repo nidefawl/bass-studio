@@ -50,7 +50,8 @@ namespace ProfilingImpl {
             { "ctrl->prerender", "us", offsetof(prof_stats_window_t, timePrerender) },
             { "ctrl->render", "us", offsetof(prof_stats_window_t, timeRender) },
             { "ctrl->appTick", "us", offsetof(prof_stats_window_t, timeAppTick) },
-            { "glSwapBuffer", "us", offsetof(prof_stats_window_t, timeSwapBuffers) }
+            { "glSwapBuffer", "us", offsetof(prof_stats_window_t, timeSwapBuffers) },
+            { "fps", "fps", offsetof(prof_stats_window_t, fps) }
         } };
         out->instanceList = &windowStats.regWindowProfStats;
         out->channelDesc = &channels;
