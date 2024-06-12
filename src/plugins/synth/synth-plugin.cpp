@@ -1413,7 +1413,6 @@ private:
 
     void UpdateVoiceEnvelopeModulations(VoiceUnison& vu, Voice& voice) {
         static constexpr auto LEN_USED = 6;
-        static constexpr auto LEN_SIMD = 8;
 
         static const Parameters envParms[LEN_USED] = {
             Parameters::VolEnvA,
