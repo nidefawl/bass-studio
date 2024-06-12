@@ -261,18 +261,18 @@ public:
         return lfosSongPos[lfoIdx];
     }
 
-    EnvelopeShaping getAdsrShapeMode(int32_t chIdx) const {
+    DAW::CurveShapingFunction getAdsrShapeMode(int32_t chIdx) const {
         if (chIdx >= 0 && chIdx < CtrSize(tmpVoice.envelopes)) {
             return tmpVoice.envelopes[chIdx].shaping;
         }
-        return EnvelopeShaping::Pow;
+        return DAW::CurveShapingFunction::Pow;
     }
 
     VoiceSynth& getTempVoiceUI() {
         return tmpVoice;
     }
 
-    void setAdsrShapeMode(int32_t chIdx, EnvelopeShaping mode) {
+    void setAdsrShapeMode(int32_t chIdx, DAW::CurveShapingFunction mode) {
         for (auto& voice : voices) {
             if (chIdx >= 0 && chIdx < CtrSize(voice.envelopes)) {
                 voice.envelopes[chIdx].shaping = mode;

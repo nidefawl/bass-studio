@@ -209,13 +209,13 @@ void SynthImplGPU::initImpl() {
         setParamName(parRel, nameBase + " Release", nameShort + " Release", "Release", "s");
         auto parAttShape = addFloatParam(envBase[i] + 5);
         parAttShape->setRange(-100.0, 100.0)->setInitialValue(0.0);
-        setParamName(parAttShape, nameBase + " Attack Shape", nameShort + " A Shape", "Shape", "%");
+        setParamName(parAttShape, nameBase + " Attack Shape", nameShort + " A Shape", "Shape", "%", "%.0f");
         auto parDecShape = addFloatParam(envBase[i] + 6);
         parDecShape->setRange(-100.0, 100.0)->setInitialValue(0.0);
-        setParamName(parDecShape, nameBase + " Decay Shape", nameShort + " D Shape", "Shape", "%");
+        setParamName(parDecShape, nameBase + " Decay Shape", nameShort + " D Shape", "Shape", "%", "%.0f");
         auto parRelShape = addFloatParam(envBase[i] + 7);
         parRelShape->setRange(-100.0, 100.0)->setInitialValue(0.0);
-        setParamName(parRelShape, nameBase + " Release Shape", nameShort + " R Shape", "Shape", "%");
+        setParamName(parRelShape, nameBase + " Release Shape", nameShort + " R Shape", "Shape", "%", "%.0f");
     }
 
     for (size_t i = 0; i < NUM_LFO; i++) {
@@ -409,7 +409,7 @@ bool SynthImplGPU::setSnapshot(const snapshot_t& snapshot) {
 
     for (size_t i = 0; i < this->tmpVoice.envelopes.size() && i < snapshot.adsrs.size(); i++) {
         auto& adsr   = this->tmpVoice.envelopes[i];
-        adsr.shaping = EnvelopeShaping(snapshot.adsrs[i].shapingMode);
+        adsr.shaping = DAW::CurveShapingFunction(snapshot.adsrs[i].shapingMode);
         for (auto& v : voices) {
             v.envelopes[i].shaping = adsr.shaping;
         }
@@ -474,7 +474,7 @@ double SynthImplGPU::UnshapeEnvTimeBaseParam(double d) {
     auto maxIt        = 25;
     double closestVal = 1e9;
     while (maxIt--) {
-        ShapeLogLikeSIMD<float, 8>(envParamVals, envParamValsScaled);
+        ShapeLogLikeSIMD<float>(envParamVals, envParamValsScaled);
         double closestDiff = 1e9;
         int closestIdx     = -1;
         for (int i = 0; i < 8; i++) {
@@ -558,7 +558,7 @@ void SynthImplGPU::updateEnvelopeParameters(VoiceSynth& v) {
     envParamVals[5] = GetParamFloat(Parameters::ADSR_2_H_Duration)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_ADSR_2_H_Duration]);
     envParamVals[6] = GetParamFloat(Parameters::ADSR_2_D_Duration)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_ADSR_2_D_Duration]);
     envParamVals[7] = GetParamFloat(Parameters::ADSR_2_R_Duration)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_ADSR_2_R_Duration]);
-    ShapeLogLikeSIMD<float, 8>(envParamVals, envParamValsScaled);
+    ShapeLogLikeSIMD<float>(envParamVals, envParamValsScaled);
     for (auto& f : envParamValsScaled) {
         auto idx = &f - &envParamValsScaled[0];
         f = Envelope::GetTimeBaseFromParam(f, envTimeRanges[idx % 4]);
@@ -987,10 +987,10 @@ param_unit_t module_synth_gpu::convertParamValueToDisplay(int32_t idx, float val
             auto it = std::find(enumDurList.begin(), enumDurList.end(), param->enumParam);
             if (it != enumDurList.end()) {
                 auto idx = int32_t(it - enumDurList.begin());
-                alignas(64) float envParamVals[4]{};
-                alignas(64) float envParamValsScaled[4]{};
+                alignas(64) float envParamVals[8]{};
+                alignas(64) float envParamValsScaled[8]{};
                 envParamVals[0] = value;
-                ShapeLogLikeSIMD<float, 4>(envParamVals, envParamValsScaled);
+                ShapeLogLikeSIMD<float>(envParamVals, envParamValsScaled);
                 auto& envTimeRanges = impl->getEnvTimeRanges();
                 auto ms  = Envelope::GetSecondsFromParam(envParamValsScaled[0], envTimeRanges[idx%4]) * 1000.0;
                 auto fmt = ms < 10.0 ? "%.3f" : (ms < 100.0 ? "%.2f" : "%.1f");

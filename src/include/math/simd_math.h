@@ -251,6 +251,30 @@ void cos_test(
         result[i] = p;
     }
 }
+template<typename Type, int Simd>
+inline
+void clamp_zero_one(
+    const Type * const PARAM_RESTRICT data,
+    Type * const PARAM_RESTRICT result) noexcept
+{
+    #pragma omp simd
+    for(int i=0;i<Simd;i++)
+    {
+        result[i] = data[i] < 0 ? 0 : data[i] > 1 ? 1 : data[i];
+    }
+}
+template<typename Type, int Simd>
+inline
+void clamp_neg_one_one(
+    const Type * const PARAM_RESTRICT data,
+    Type * const PARAM_RESTRICT result) noexcept
+{
+    #pragma omp simd
+    for(int i=0;i<Simd;i++)
+    {
+        result[i] = data[i] < -1 ? -1 : data[i] > 1 ? 1 : data[i];
+    }
+}
 
 inline __m128 exp_v4f(__m128 x) {
     const __m128 a  = _mm_set1_ps((1 << 22) / XM_LN2);// to get exp(x/2)
@@ -288,5 +312,15 @@ inline __m256 log_v8f(__m256 a) {
     r = mm256_fmaf(i, _mm256_set1_ps(0.693147182f), r);// 0x1.62e430p-1 // log(2)
     return r;
 }
+inline __m256 one_minus(__m256 a) {
+    return _mm256_sub_ps(_mm256_set1_ps(1.0f), a);
+}
+inline __m256 clamp_one_zero(__m256 a) {
+    return _mm256_min_ps(_mm256_max_ps(a, _mm256_set1_ps(0.0f)), _mm256_set1_ps(1.0f));
+}
+inline __m256 clamp_neg_one_one(__m256 a) {
+    return _mm256_min_ps(_mm256_max_ps(a, _mm256_set1_ps(-1.0f)), _mm256_set1_ps(1.0f));
+}
+
 
 } // namespace math

@@ -1443,7 +1443,7 @@ private:
         bool bAllEqual = std::memcmp(voice.envelopeValuesCached.data(), envParamVals, sizeofarr) == 0;
         if (!bAllEqual) {
             std::memcpy(voice.envelopeValuesCached.data(), envParamVals, sizeof(envParamVals));
-            ShapeLogLikeSIMD<FPType, 8>(envParamVals, envParamValsScaled);
+            ShapeLogLikeSIMD<FPType>(envParamVals, envParamValsScaled);
             for (int i = 0; i < LEN_USED; i++) {
                 *envParamValsPtr[i] = Envelope::GetTimeBaseFromParam(envParamValsScaled[i], range);
             }

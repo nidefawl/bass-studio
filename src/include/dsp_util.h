@@ -103,3 +103,42 @@ namespace DAW::Panning {
     template<typename FPTypeSrc, typename FPTypeDst>
     void MultiplyConstant(AudioBlockBase<FPTypeSrc>* src, AudioBlockBase<FPTypeDst>* dst, float gain, float pan);
 }
+
+namespace DAW {
+    enum class CurveShapingFunction : int32_t {
+        Linear = 0,
+        Pow,
+        Exp,
+    };
+    constexpr double shapeCurveSegmentExp(double x, double shape) {
+        double shapeBi = 1.0 - shape * 2.0;
+        return exp((1.0 - x) * shapeBi) * x;
+    }
+    // does not sound clean enough (noticable in short attack phase)
+    constexpr double shapeCurveSegmentPow(double x, double shape) {
+        double shapeBi  = 1.0 - shape * 2.0;
+        double shapeBiAbs = fabs(shapeBi);
+        if (shapeBiAbs != 0.0) {
+            double shapeExp = 0.0;
+            double scale2   = 0.2 + x * 0.8;
+            if (shapeBi < 0.0) {
+                shapeExp = 1.0 + scale2 * shapeBiAbs * 16.0;
+            } else {
+                shapeExp = 1.0 / (1.0 + scale2 * shapeBiAbs * 16.0);
+            }
+            return pow(x, shapeExp);
+        }
+        return x;
+    }
+    constexpr double shapeCurveSegment(CurveShapingFunction shaping, double x, double shape) {
+        switch (shaping) {
+            case CurveShapingFunction::Exp:
+                return shapeCurveSegmentExp(x, shape);
+            case CurveShapingFunction::Pow:
+                return shapeCurveSegmentPow(x, shape);
+            case CurveShapingFunction::Linear:
+            default:
+                return x;
+        }
+    }
+}

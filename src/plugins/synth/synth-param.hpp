@@ -98,7 +98,7 @@ struct SynthParam_Float final : public SynthParamBase {
         valModulated = fModulated;
     }
     String getValueDisplay(double value) const noexcept override {
-        return StringFormat(StringAsCStr(format), math::clamp((value) * (fmax - fmin) + fmin, fmin, fmax));
+        return StringFormat(StringAsCStr(format), math::clamp((value) * (fmax - fmin) + fmin, math::min(fmin, fmax), math::max(fmin, fmax)));
     }
     param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
         auto val  = atof(StringAsCStr(displayValue.value));

@@ -181,12 +181,21 @@ protected:
     float m_fontScale = 1.0f;
     textlabel_dynamic_t m_textLabelParamName;
     textlabel_dynamic_t m_textLabelParamValue;
+    bool bRenderAsShaper = false;
+    ivec2 flipAxis{0, 0};
 public:
     gui_slider_textfield() : gui_textfield() {
         setGuiType(gui_type::GUI_TYPE_SLIDER_TEXTFIELD);
         setCanMouseHit(true);
         setAlignment(gui_textfield::Alignment::Center);
         setReturnCommits(true);
+    }
+    void setRenderAsShaper(bool b, ivec2 flipAxis) {
+        bRenderAsShaper = b;
+        this->flipAxis = flipAxis;
+    }
+    bool isRenderAsShaper() const {
+        return bRenderAsShaper;
     }
     void setFontScale(float f) {
         m_fontScale = f;

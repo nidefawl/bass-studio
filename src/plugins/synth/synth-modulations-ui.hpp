@@ -69,7 +69,7 @@ public:
         padding      = 1;
         sortChildren = true;
         setCanMouseHit(true);
-        setLabel(StringFormat("Mod %d Dst %d", _slotIndex, _destSlotIndex));
+        setLabel("Destination");
         knob.setIsBipolar(true);
         auto vecOpts = std::vector<String>();
         vecOpts.emplace_back("None");
@@ -79,7 +79,8 @@ public:
         }
         dropdown.setZOrder(-1);
         dropdown.setOptions(vecOpts);
-        dropdown.setLabel(StringFormat("Mod %d Dst %d", _slotIndex, _destSlotIndex));
+        dropdown.setTooltipText(StringFormat("Modulation Slot %d Destination %d", _slotIndex + 1, _destSlotIndex + 1));
+        dropdown.setLabel(label);
         dropdown.setCallback([this](int idx, String& value) -> String {
             if (idx >= 0) {
                 {
@@ -179,7 +180,7 @@ public:
         padding      = 1;
         sortChildren = true;
         setCanMouseHit(true);
-        setLabel(StringFormat("Mod %d Input %d", _slotIndex, _srcSlotIndex));
+        setLabel("Source");
         {
             auto vecOpts = std::vector<String>();
             for (size_t i = 0; i < ModulationOperator::NumModulationOperators; ++i) {
@@ -187,7 +188,7 @@ public:
             }
             // place it right after the source dropdown
             dropdownOperator.setOptions(vecOpts);
-            // dropdownOperator.setLabel(StringFormat("Mod %d Op %d", slotIndex, srcSlotIndex));
+            dropdownOperator.setTooltipText(StringFormat("Modulation Slot %d Operator", _slotIndex + 1));
             dropdownOperator.setCallback([this](int idx, String& value) -> String {
                 {
                     ThreadLock lock = moduleInstance->lock();
@@ -207,7 +208,8 @@ public:
             }
             dropdownSource.setZOrder(1);
             dropdownSource.setOptions(vecOpts);
-            dropdownSource.setLabel(StringFormat("Mod %d Src %d", slotIndex, srcSlotIndex));
+            dropdownSource.setLabel("Source " + std::to_string(srcSlotIndex + 1));
+            dropdownSource.setTooltipText(StringFormat("Modulation Slot %d Source %d", slotIndex + 1, srcSlotIndex + 1));
             dropdownSource.setCallback([this](int idx, String& value) -> String {
                 if (idx >= 0) {
                     {
@@ -229,7 +231,8 @@ public:
             });
         }
         {
-            inputConstant.setLabel(StringFormat("Mod %d Constant %d", slotIndex, srcSlotIndex));
+            inputConstant.setLabel("Constant " + std::to_string(srcSlotIndex + 1));
+            inputConstant.setTooltipText(StringFormat("Modulation Slot %d Constant %d", slotIndex + 1, srcSlotIndex + 1));
             inputConstant.fnValueEditChanged = [this](gui_numberinput_field_base*, double value) {
                 {
                     ThreadLock lock = moduleInstance->lock();
@@ -247,7 +250,8 @@ public:
             buttonInputRange.setLabel("Bipolar");
         }
         {
-            textfieldFunction.setLabel(StringFormat("Mod %d Function %d", slotIndex, srcSlotIndex));
+            textfieldFunction.setLabel("Function " + std::to_string(srcSlotIndex + 1));
+            textfieldFunction.setTooltipText(StringFormat("Modulation Slot %d Function %d", slotIndex + 1, srcSlotIndex + 1));
             // textfieldFunction.setTextfieldColor(GuiColor::COL_TEXTBOX_TEXT);
             textfieldFunction.setInputActivates(true);
             textfieldFunction.setReturnCommits(true);

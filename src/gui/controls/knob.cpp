@@ -1,9 +1,13 @@
 #include "knob.h"
 #include "assert_dbg.h"
 #include "basectrl.h"
+#include "dsp_util.h"
 #include "event.h"
 #include "gui/controls/textfield.h"
+#include "gui/shape/shape-render.hpp"
+#include "gui/shape/shape-sampled.hpp"
 #include "guiglobals.h"
+#include "host/shape/shape.h"
 #include "knoblabeled.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
@@ -747,7 +751,29 @@ static void renderSlider(NVGcontext* vg, const vec2& insetP, const vec2& insetS,
         nvgFill(vg);
     }
 }
-
+static void renderShaper(NVGcontext* vg, guitheme_t* const theme, const vec2& insetP, const vec2& insetS, float fRenderValue, bool bIsBipolar, GuiColor::constant_t col, ivec2 flipAxis) {
+    struct static_pt_t {
+        vec2 pos;
+    };
+    struct static_curve_t {
+        DAW::CurveShapingFunction shapingFunc = DAW::CurveShapingFunction::Pow;
+        float shapingValue = 0.5f;
+        std::array<static_pt_t, 2> pts{};
+        int32_t flags = DAW::Shape::SHAPE_LOCK_POINTS | DAW::Shape::SHAPE_SHAPED;
+        inline float shapeSegmentPt(float t, const static_pt_t& pt) const {
+            return DAW::shapeCurveSegment(shapingFunc, t, shapingValue);
+        }
+    };
+    if (flipAxis.x) {
+        fRenderValue = 1.0f - fRenderValue;
+    }
+    DAW::Shape::RenderShape<static_curve_t> renderShape;
+    static_curve_t staticCurve;
+    staticCurve.pts = std::array{static_pt_t{{0, flipAxis.y}}, static_pt_t{{1.0f, 1.0f - flipAxis.y}}};
+    staticCurve.shapingValue = fRenderValue;
+    renderShape.col = col;
+    renderShape.renderShapeView(vg, theme, &staticCurve, insetP, insetS);
+}
 void gui_slider_textfield::render(NVGcontext* vg) {
     if (dawCtrl && dawCtrl->getIsContainerRenderPass() && DAW::UI::Modulation::IsEditModulation(this, paramAutomatable, paramIdx)) {
         DawCtrl::ui_modulation_targets_t t;
@@ -771,11 +797,19 @@ void gui_slider_textfield::render(NVGcontext* vg) {
         float fBaseValue = param->getValue();
         float fRenderValue = fBaseValue;
         float fParam = math::clamp(fRenderValue, 0.0f, 1.0f);
-        renderSlider(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_KNOB));
+        if (bRenderAsShaper) {
+            renderShaper(vg, theme, insetP, insetS, fParam, param->isBiPolar, GuiColor::COL_KNOB, flipAxis);
+        } else {
+            renderSlider(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_KNOB));
+        }
         if (autLane && autLane->isActive()) {
             fRenderValue = param->getValueAutomated();
             fParam = math::clamp(fRenderValue, 0.0f, 1.0f);
-            renderSlider(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_AUTOMATED));
+            if (bRenderAsShaper) {
+                renderShaper(vg, theme, insetP, insetS, fParam, param->isBiPolar, GuiColor::COL_AUTOMATED, flipAxis);
+            } else {
+                renderSlider(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_AUTOMATED));
+            }
         }
         if (param->isModulated() && !paramAutomatable->isBypassModulation()) {
             fRenderValue = param->getValueModulated();
@@ -794,10 +828,14 @@ void gui_slider_textfield::render(NVGcontext* vg) {
                     }
                 }
             }
-            renderSlider(vg, insetP, insetS, fScaled, param->isBiPolar, theme->getColor(GuiColor::COL_KNOB_MODULATED));
+            if (bRenderAsShaper) {
+                renderShaper(vg, theme, insetP, insetS, fScaled, param->isBiPolar, GuiColor::COL_KNOB_MODULATED, flipAxis);
+            } else {
+                renderSlider(vg, insetP, insetS, fScaled, param->isBiPolar, theme->getColor(GuiColor::COL_KNOB_MODULATED));
+            }
         }
         auto modRangesOptional = getKnobModulationRanges();
-        if (modRangesOptional && !modRangesOptional.value()->empty() && insetS.y >= 10) {
+        if (!bRenderAsShaper && modRangesOptional && !modRangesOptional.value()->empty() && insetS.y >= 10) {
             const auto& modRanges = *modRangesOptional.value();
             const auto numMods = CtrSize(modRanges);
             dbgassert(numMods);
@@ -842,7 +880,6 @@ void gui_slider_textfield::render(NVGcontext* vg) {
             renderRangeIndicator(vg, insetP, insetS, fRenderValue, valueMin, valueMax, col, 9, 10);
         }
 
-        float textWidth = 0;
         if (isTextCommitted()) {
             float fTextValue = fRenderValue;
             if (parentCtrl->getGuiOverRef() == toRef()) {

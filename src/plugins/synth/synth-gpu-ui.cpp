@@ -1,3 +1,4 @@
+#include "gui/gui.h"
 #include "math/seq_math.h"
 #include "synth-gpu-parameters.h"
 #include "synth-gpu-snapshot.hpp"
@@ -9,6 +10,7 @@
 #include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
 #include "gui/shape/shape-render.hpp"
+#include "gui/shape/shape-sampled.hpp"
 #include "gui/shape/shapeeditor.h"
 #include "math/simd_math.h"
 #include "host/shape/shape.h"
@@ -35,10 +37,17 @@ public:
         const int envBase[2] = {int32_t(SynthImplGPU::Parameters::ADSR_1_A_Duration), int32_t(SynthImplGPU::Parameters::ADSR_2_A_Duration)};
         for (size_t i = 0; i < knobs.size(); ++i) {
             auto& knob = knobs[i];
-            knob.setAlignment(gui_textfield::Alignment::Right);
+            knob.setAlignment(gui_textfield::Alignment::Center);
             knob.setSynthParam(moduleInstance->getSynth(), envBase[idx] + i);
             knob.setFontScale(0.75f);
             knob.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + envBase[idx] + i);
+            bool bIsAttackShape = i == 5;
+            bool bIsDecayShape = i == 6;
+            bool bIsReleaseShape = i == 7;
+            knob.setRenderAsShaper(bIsAttackShape || bIsDecayShape || bIsReleaseShape, ivec2(bIsAttackShape, bIsDecayShape || bIsReleaseShape));
+            if (knob.isRenderAsShaper()){
+                knob.setFlag(FLG_RENDER_LABEL, false);
+            }
             add(&knob);
         }
     }
@@ -49,28 +58,29 @@ public:
         auto cs = getSizeContent();
         const int32_t numRows = 5;
         auto btnH = (cs.y-padding*(numRows-1)) / numRows;
-        auto shapeW = cs.x / 4;
+        auto shapeW = btnH;
 
         knobs[0].pos = {0, 0};
-        knobs[0].size = {cs.x - shapeW, btnH};
-        knobs[5].pos = {cs.x - shapeW + padding, 0};
-        knobs[5].size = {cs.x - knobs[5].pos.x, btnH};
+        knobs[0].size = {cs.x - shapeW - padding, btnH};
+        knobs[5].pos = {cs.x - shapeW, 0};
+        knobs[5].size = {shapeW, shapeW};
     
         knobs[1].pos = {0, knobs[0].bottom()+padding};
-        knobs[1].size = {cs.x, btnH};
+        knobs[1].size = {cs.x - shapeW, btnH};
     
+
         knobs[2].pos = {0, knobs[1].bottom()+padding};
-        knobs[2].size = {cs.x - shapeW, btnH};
-        knobs[6].pos = {cs.x - shapeW + padding, knobs[2].top()};
-        knobs[6].size = {cs.x - knobs[6].pos.x, btnH};
+        knobs[2].size = {cs.x - shapeW - padding, btnH};
+        knobs[6].pos = {cs.x - shapeW, knobs[2].top()};
+        knobs[6].size = {shapeW, shapeW};
 
         knobs[3].pos = {0, knobs[2].bottom()+padding};
-        knobs[3].size = {cs.x, btnH};
+        knobs[3].size = {cs.x - shapeW, btnH};
 
         knobs[4].pos = {0, knobs[3].bottom()+padding};
-        knobs[4].size = {cs.x - shapeW, btnH};
-        knobs[7].pos = {cs.x - shapeW + padding, knobs[4].top()};
-        knobs[7].size = {cs.x - knobs[7].pos.x, btnH};
+        knobs[4].size = {cs.x - shapeW - padding, btnH};
+        knobs[7].pos = {cs.x - shapeW, knobs[4].top()};
+        knobs[7].size = {shapeW, shapeW};
         guictr_base::layout();
     }
 };
@@ -113,21 +123,12 @@ public:
     }
 };
 
-struct sampled_pt_t {
-    vec2 pos;
-};
-struct sampled_curved_t {
-    std::vector<sampled_pt_t> pts;
-    int32_t flags = DAW::Shape::SHAPE_FLAGS_NONE;
-    inline float shapeSegmentPt(float t, const sampled_pt_t& pt) const {
-        return t;
-    }
-};
-class guictr_sampled_curve_shape final : public guictr_base, public DAW::Shape::RenderShape<sampled_curved_t> {
+
+class guictr_sampled_curve_shape final : public guictr_base, public DAW::Shape::RenderShape<DAW::Shape::sampled_curved_t> {
     module_synth_gpu* const moduleInstance;
-    sampled_curved_t curveInternal;
+    DAW::Shape::sampled_curved_t curveInternal;
     bool bIsNormalized = true;
-    std::pair<sampled_pt_t, sampled_pt_t> minmax;
+    std::pair<DAW::Shape::sampled_pt_t, DAW::Shape::sampled_pt_t> minmax;
 public:
     explicit guictr_sampled_curve_shape(module_synth_gpu* module) 
         : moduleInstance(module)
@@ -141,7 +142,7 @@ public:
     void setIsNormalized(bool b) {
         bIsNormalized = b;
     }
-    void setMinMax(const sampled_pt_t& min, const sampled_pt_t& max) {
+    void setMinMax(const DAW::Shape::sampled_pt_t& min, const DAW::Shape::sampled_pt_t& max) {
         minmax = {min, max};
     }
     GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
@@ -185,10 +186,10 @@ public:
             }
         }
     }
-    sampled_curved_t& getShape() {
+    DAW::Shape::sampled_curved_t& getShape() {
         return curveInternal;
     }
-    const sampled_curved_t& getShape() const {
+    const DAW::Shape::sampled_curved_t& getShape() const {
         return curveInternal;
     }
 };
@@ -244,25 +245,6 @@ public:
     }
     void flagNeedsShapeSet() {
         bNeedsShapeSet = true;
-    }
-    void setShapeFromLogFunction() {
-        auto& shapeAdsrSampled = this->shapeAdsr.getShape();
-        auto& shapeAdsrControls = this->shapeAdsrControls->getShape();
-        shapeAdsrControls.pts.clear();
-        shapeAdsrSampled.pts.clear();
-        
-        samplecount_t numSamples = 1024;
-        shapeAdsrSampled.pts.reserve(numSamples);
-        for (samplecount_t s = 0; s < numSamples; s++) {
-            alignas(64) float envParamVals[8]{};
-            alignas(64) float envParamValsScaled[8]{};
-            float stepPos = s / float(numSamples);
-            std::fill(std::begin(envParamVals), std::end(envParamVals), stepPos);
-            ShapeLogLikeSIMD<float, 8>(envParamVals, envParamValsScaled);
-            shapeAdsrSampled.pts.push_back({{ stepPos, envParamValsScaled[0] }});
-        }
-        shapeAdsrSampled.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_LOCK_POINTS;
-        shapeAdsrControls.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_SHOW_ONLY_CONTROL_POINTS;
     }
     void setShapeFromAdsr() {
         // convert synth impls outputBufferWaveform to shape
@@ -347,6 +329,25 @@ public:
         shapeAdsrSampled.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_LOCK_POINTS;
         shapeAdsrControls.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_SHOW_ONLY_CONTROL_POINTS;
     }
+    void setShapeFromLogFunction() {
+        auto& shapeAdsrSampled = this->shapeAdsr.getShape();
+        auto& shapeAdsrControls = this->shapeAdsrControls->getShape();
+        shapeAdsrControls.pts.clear();
+        shapeAdsrSampled.pts.clear();
+        
+        samplecount_t numSamples = 1024;
+        shapeAdsrSampled.pts.reserve(numSamples);
+        for (samplecount_t s = 0; s < numSamples; s++) {
+            alignas(64) float envParamVals[8]{};
+            alignas(64) float envParamValsScaled[8]{};
+            float stepPos = s / float(numSamples);
+            std::fill(std::begin(envParamVals), std::end(envParamVals), stepPos);
+            ShapeLogLikeSIMD<float>(envParamVals, envParamValsScaled);
+            shapeAdsrSampled.pts.push_back({{ stepPos, envParamValsScaled[0] }});
+        }
+        shapeAdsrSampled.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_LOCK_POINTS;
+        shapeAdsrControls.flags = DAW::Shape::SHAPE_UNCLAMPPED | DAW::Shape::SHAPE_SHOW_ONLY_CONTROL_POINTS;
+    }
 };
 class guicontainer_plugin_synth_adsr final : public guictr_stacked {
     module_synth_gpu* const moduleInstance;
@@ -392,10 +393,10 @@ public:
     ctxtmenu_entry_adsr_shape_function_select(module_synth_gpu* _module, int32_t _channel, String _title, int32_t _id)
         : ctxtmenu_enum_option_select_base(_id, std::move(_title)), moduleInstance(_module), channel(_channel) 
     {
-        using E = PluginSynth::EnvelopeShaping;
-        entries.push_back({ int32_t(E::Linear), "Linear" });
-        entries.push_back({ int32_t(E::Pow), "Pow" });
-        entries.push_back({ int32_t(E::Exp), "Exp" });
+        using F = DAW::CurveShapingFunction;
+        entries.push_back({ int32_t(F::Linear), "Linear" });
+        entries.push_back({ int32_t(F::Pow), "Pow" });
+        entries.push_back({ int32_t(F::Exp), "Exp" });
     }
     bool isEntrySelected(ctxmenu_enum_select_entry& e) const override {
         auto const synth = moduleInstance->getSynth();
@@ -421,8 +422,8 @@ public:
         if (_id >= 100) {
             auto lock = synth->lock();
             int clicked = _id - 100;
-            if (clicked >= 0 && clicked <= int32_t(EnvelopeShaping::Exp)) {
-                synth->setAdsrShapeMode(channel, EnvelopeShaping(clicked));
+            if (clicked >= 0 && clicked <= int32_t(DAW::CurveShapingFunction::Exp)) {
+                synth->setAdsrShapeMode(channel, DAW::CurveShapingFunction(clicked));
                 moduleInstance->onPresetLoaded(); // meh
             }
             return true;
@@ -665,7 +666,7 @@ public:
                 pt.pos.x = float(t);
                 pt.pos.y = float(v);
             }
-            auto minmax = DAW::Shape::getMinMax<sampled_pt_t>(shape.pts);
+            auto minmax = DAW::Shape::getMinMax<DAW::Shape::sampled_pt_t>(shape.pts);
             sampledShaped.setMinMax(minmax.first, minmax.second);
             // normalize x axis to 1.0
             auto min = minmax.first.pos.x;

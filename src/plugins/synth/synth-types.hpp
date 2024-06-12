@@ -118,11 +118,7 @@ enum class EnvelopeStages : int32_t {
     Release,
     Idle,
 };
-enum class EnvelopeShaping : int32_t {
-    Linear = 0,
-    Pow,
-    Exp,
-};
+
 struct Envelope {
     static constexpr double MIN_SECONDS = 0.0001;
     static constexpr double MAX_SECONDS = 1.0;
@@ -152,7 +148,7 @@ struct Envelope {
     double r = 0.5;
     std::array<double, 3> shapes = {0.75, 0.35, 0.25};
     EnvelopeStages stage = EnvelopeStages::Idle;
-    EnvelopeShaping shaping = EnvelopeShaping::Pow;
+    DAW::CurveShapingFunction shaping = DAW::CurveShapingFunction::Pow;
 
     bool IsReleased() const { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
 
@@ -170,37 +166,6 @@ struct Envelope {
     }
     bool IsIdle() const { return stage == EnvelopeStages::Idle; }
 
-    double shapeSegmentExp(double x, double shape) {
-        double shapeBi = 1.0 - shape * 2.0;
-        return exp((1.0 - x) * shapeBi) * x;
-    }
-    // does not sound clean enough (noticable in short attack phase)
-    double shapeSegmentPow(double x, double shape) {
-        double shapeBi  = 1.0 - shape * 2.0;
-        double shapeBiAbs = fabs(shapeBi);
-        if (shapeBiAbs != 0.0) {
-            double shapeExp = 0.0;
-            double scale2   = 0.2 + x * 0.8;
-            if (shapeBi < 0.0) {
-                shapeExp = 1.0 + scale2 * shapeBiAbs * 16.0;
-            } else {
-                shapeExp = 1.0 / (1.0 + scale2 * shapeBiAbs * 16.0);
-            }
-            return pow(x, shapeExp);
-        }
-        return x;
-    }
-    double shapeSegment(double x, double shape) {
-        switch (shaping) {
-            case EnvelopeShaping::Exp:
-                return shapeSegmentExp(x, shape);
-            case EnvelopeShaping::Pow:
-                return shapeSegmentPow(x, shape);
-            case EnvelopeShaping::Linear:
-            default:
-                return x;
-        }
-    }
     double clampDuration(double f) {
         return math::clamp(f, 1.0 / 100.0, 1.0 / MIN_SECONDS);
     }
@@ -235,7 +200,7 @@ struct Envelope {
                     phase = 0.0;
                     stage = EnvelopeStages::Hold;
                 } else {
-                    value = shapeSegment(phase, shapes[0]);
+                    value = DAW::shapeCurveSegment(shaping, phase, 1.0 - shapes[0]);
                     phase += clampDuration(a) * dt;
                 }
                 break;
@@ -257,7 +222,7 @@ struct Envelope {
                     phase = 0.0;
                     stage = EnvelopeStages::Sustain;
                 } else {
-                    value = 1.0 - shapeSegment(phase, shapes[1]) * (1.0 - s);
+                    value = 1.0 - DAW::shapeCurveSegment(shaping, phase, shapes[1]) * (1.0 - s);
                     phase += clampDuration(d) * dt;
                 }
                 break;
@@ -271,7 +236,7 @@ struct Envelope {
                     phase = 0.0;
                     stage = EnvelopeStages::Idle;
                 } else {
-                    value = shapeSegment(1.0 - phase, 1.0 - shapes[2]) * relValue;
+                    value = DAW::shapeCurveSegment(shaping, 1.0 - phase, 1.0 - shapes[2]) * relValue;
                     phase += clampDuration(r) * dt;
                 }
                 break;
@@ -720,12 +685,13 @@ inline double noteToLinearScale(double note, double minNote = 69.0) {
     return exp(0.69314718055994530942 * ((note - minNote) / 12.0));
     // return pow(2.0, (note - minNote) / 12.0);
 }
-
-template<typename FPType, size_t LEN_SIMD = 8>
+static constexpr size_t LEN_SIMD = 8;
+template<typename FPType>
 inline void ShapeLogLikeSIMD(const FPType valsIn[LEN_SIMD], FPType valsOut[LEN_SIMD], FPType exponent = 0.35f) {
     using Vec4D      = glm::vec<4, FPType, glm::aligned_highp>;
     auto sse8Float   = reinterpret_cast<const __m256*>(&valsIn[0]);
-   __m256 sse8Float2 = math::simd::log_v8f(*sse8Float);
+    auto sse8OneMin = math::simd::one_minus(*sse8Float);
+   __m256 sse8Float2 = math::simd::log_v8f(sse8OneMin);
     auto pIn         = reinterpret_cast<FPType*>(&sse8Float2);
     FPType* pDataOut = &valsOut[0];
     for (size_t j = 0; j < LEN_SIMD; j += 4) {
@@ -734,13 +700,20 @@ inline void ShapeLogLikeSIMD(const FPType valsIn[LEN_SIMD], FPType valsOut[LEN_S
         auto sse4Float = reinterpret_cast<__m128*>(&vals);
         *sse4Float     = math::simd::exp_v4f(*sse4Float);
         auto floatPtr  = reinterpret_cast<FPType*>(&vals[0]);
-        math::simd::cos_test<FPType, 4>(floatPtr, pDataOut);
+        math::simd::cos_test<FPType,4>(floatPtr, pDataOut);
+        math::simd::clamp_neg_one_one<FPType,4>(pDataOut, floatPtr);
         for (size_t k = 0; k < 4; k++) {
-            pDataOut[k] = (.5f - .5f * pDataOut[k]);
+            pDataOut[k] = (.5f + .5f * floatPtr[k]);
         }
         pIn += 4;
         pDataOut += 4;
     }
+    // crashes for some reason
+    /* auto sse8Out = reinterpret_cast<__m256*>(&valsOut[0]);
+    *sse8Out = math::simd::clamp_neg_one_one(*sse8Out);
+    for (size_t j = 0; j < LEN_SIMD; j++) {
+        sse8Out[j] = (sse8Out[j] + 1.0) * 0.5;
+    } */
 }
 
 } // namespace PluginSynth

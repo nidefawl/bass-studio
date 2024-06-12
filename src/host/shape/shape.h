@@ -4,6 +4,7 @@
 #include <vector>
 #include "logging.h"
 #include "math/seq_math.h"
+#include "dsp_util.h"
 #include "math/vec.h"
 #include "seq_util.h"
 
