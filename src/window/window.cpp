@@ -1496,6 +1496,16 @@ window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h, 
 
 /* Wire up glfw C style callbacks to cpp class instance */
 static void glfw_cb_mousepos(GLFWwindow* w, double x, double y) {
+    // ~ 600 calls per second on my machine
+    /* static size_t numCb = 0;
+    static double timeLast = getTimeSecondsD();
+    numCb++;
+    if (numCb > 100) {
+        double timeNow = getTimeSecondsD();
+        log_printf("mousepos cb %f\n", numCb / (timeNow - timeLast));
+        timeLast = timeNow;
+        numCb = 0;
+    } */
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
         if (wu && wu->isValid() && wu->isVisible())
