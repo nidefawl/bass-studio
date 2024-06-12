@@ -15,6 +15,7 @@ namespace ProfilingImpl {
         int64_t frameNum = -1;
         size_t loopCount = 0;
         String name;
+        int32_t displayIdx = 0;
     };
     struct profiledata_channel_desc_t {
         String name;

@@ -1113,7 +1113,7 @@ void MainCtrl::startApp() {
     statusbarLogger = std::make_shared<MainCtrlErrorStatusBarLogger>(&view->statusbar);
     statusbarLogger->setLevel(Log::L_WARN);
     getMultiLogger().addLogger(statusbarLogger.get());
-    Profiling::profilingRegisterEntry<prof_stats_render_t>(this, "Main Render Stats");
+    Profiling::profilingRegisterEntry<prof_stats_render_t>(this, {"Main Render Stats", -10});
     daw_tls::getTls().runtime->systeminfo = appsysteminfo{
         String((char*)glGetString(GL_RENDERER)),
         String((char*)glGetString(GL_VENDOR)),

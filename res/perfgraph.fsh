@@ -23,16 +23,20 @@ float getGraphSample(vec2 tc) {
     ivec2 texelPos = ivec2(TEXTURE_WIDTH - 1 - floor(pixX), int(CHANNEL));
     return texelFetch(tex0, texelPos, 0).r;
 }
+
 void main(void) {
         float sampleVal = getGraphSample(pass_texcoord);
-        // sampleVal = float(sampleVal > 0.0);
-        // float sampleValB = getGraphSample(pass_texcoord + vec2(1.0/TEXTURE_WIDTH, 0.0));
-        float sampleHeight = max(0.0, sampleVal - pass_texcoord.y);
-        sampleHeight = smoothstep(0.0, 2.0/HEIGHT_GRAPH, sampleHeight);
-        sampleHeight = aastep(0.5, sampleHeight);
-        float colorIntens = 0.9 + 0.3 * pow(max(0.0, sampleVal - 0.5), .125);
-
-        vec4 result = vec4(u_renderColor.rgb * colorIntens * sampleHeight, 1.0);
-        // outColor = vec4(vec3(1), float(result.r!=0))
-        outColor = vec4(result.rgb + u_renderColor.bgr*(1.0-pass_texcoord.y)*0.2, 1.0);
+        float peakHeight = 1.5 + sampleVal * 1.0;
+        float minValToSeeLineAtBottomOfScreen = 3.0/HEIGHT_GRAPH;
+        sampleVal = minValToSeeLineAtBottomOfScreen + sampleVal * (1.0 - minValToSeeLineAtBottomOfScreen);
+        float sampleOnPos = max(0.0, sampleVal - pass_texcoord.y + peakHeight/HEIGHT_GRAPH * 0.5);
+        float sampleOffPos = max(0.0, sampleVal - pass_texcoord.y - peakHeight/HEIGHT_GRAPH * 0.5);
+        float s = smoothstep(0.0, 2.0/HEIGHT_GRAPH, sampleOnPos);
+        float s2 = smoothstep(2.0/HEIGHT_GRAPH, 0.0, sampleOffPos);
+        float yAtPeak = s * s2;
+        vec3 peakColor = vec3(1.0);
+        vec3 areaColor = u_renderColor.rgb;
+        vec3 col = mix(areaColor, peakColor, yAtPeak);
+        float alpha = s;
+        outColor = vec4(col, alpha);
 }

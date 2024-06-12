@@ -3,7 +3,6 @@
 #include "profiling_impl.h"
 
 namespace ProfilingImpl {
-
     template<typename T>
     struct profiling_impl_t {
         profiled_instances<T> regWindowProfStats;
@@ -23,13 +22,14 @@ namespace ProfilingImpl {
                 }
             }
         }
-        void registerInstance(void* ptr, const String& name) {
+        void registerInstance(void* ptr, const Profiling::profiling_register_params_t& params) {
             regWindowProfStats.resize(regWindowProfStats.size() + 1);
             profiling_entry_t<T>& last = regWindowProfStats.back();
             // memsetting a POD is still UB
             // memset(last.stats.data(), 0, sizeof(T) * last.stats.size());
             last.stats.fill({});
-            last.name        = name;
+            last.name        = params.name;
+            last.displayIdx  = params.displayIndex;
             last.instancePtr = ptr;
 
             // enforce template instantiation
@@ -89,24 +89,24 @@ namespace ProfilingImpl {
 }// namespace ProfilingImpl
 namespace Profiling {
     template<>
-    void profilingRegisterEntry<prof_stats_render_t>(void* instance, const String& name) {
-        ProfilingImpl::renderStats.registerInstance(instance, name);
+    void profilingRegisterEntry<prof_stats_render_t>(void* instance, const profiling_register_params_t& params) {
+        ProfilingImpl::renderStats.registerInstance(instance, params);
     }
     template<>
     void profilingCommitStats(void* instance, int frameNumber, prof_stats_render_t& stats) {
         ProfilingImpl::renderStats.commit(instance, frameNumber, stats);
     }
     template<>
-    void profilingRegisterEntry<prof_stats_applicaton_t>(void* instance, const String& name) {
-        ProfilingImpl::appStats.registerInstance(instance, name);
+    void profilingRegisterEntry<prof_stats_applicaton_t>(void* instance, const profiling_register_params_t& params) {
+        ProfilingImpl::appStats.registerInstance(instance, params);
     }
     template<>
     void profilingCommitStats(void* instance, int frameNumber, prof_stats_applicaton_t& stats) {
         ProfilingImpl::appStats.commit(instance, frameNumber, stats);
     }
     template<>
-    void profilingRegisterEntry<prof_stats_window_t>(void* instance, const String& name) {
-        ProfilingImpl::windowStats.registerInstance(instance, name);
+    void profilingRegisterEntry<prof_stats_window_t>(void* instance, const profiling_register_params_t& params) {
+        ProfilingImpl::windowStats.registerInstance(instance, params);
     }
     template<>
     void profilingCommitStats(void* instance, int frameNumber, prof_stats_window_t& stats) {

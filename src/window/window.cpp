@@ -729,7 +729,7 @@ public:
         bEnableWindowProfiling = true;
         if (bEnableWindowProfiling) {
             window_base* ptr = this;
-            Profiling::profilingRegisterEntry<prof_stats_window_t>(ptr, nameDbg);
+            Profiling::profilingRegisterEntry<prof_stats_window_t>(ptr, {nameDbg, _parent?1:0});
         }
     }
 
@@ -1938,7 +1938,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             mainWindow->centerOnScreen(centerScreenIdx);
         }
 
-        Profiling::profilingRegisterEntry<prof_stats_applicaton_t>(&appInstance, "Application Stats");
+        Profiling::profilingRegisterEntry<prof_stats_applicaton_t>(&appInstance, {"Application Stats", -100});
 
 #ifndef NDEBUG
         enableGlDebugCallback();

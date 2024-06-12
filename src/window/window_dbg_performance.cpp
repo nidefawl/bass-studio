@@ -52,11 +52,12 @@ struct ProfilingDataRenderInstance {
     std::vector<std::shared_ptr<ProfilingDataChannelBase>> channels;
     GLuint texActive = 0;
     GLuint texUpload = 0;
-    int64_t timeUpdatedMicros = 0;
     int64_t dataFrameNum = -1;
     vec2 instancePos{};
     String name;
     int32_t nextFreeChannelIdx = 0;
+    int64_t timeUpdatedMicros = 0;
+    int32_t displayIdx = 0;
     explicit ProfilingDataRenderInstance(const void* instancePtr) : instancePtr(instancePtr) {
         
     };
@@ -137,7 +138,13 @@ struct gl_shader_perfgraph final : gl_shader_pipeline {
     template<typename T>
     int load(T* srcParser) {
         storeGlContext();
+#if 1
+        const char* fnameVsh = "textured.vsh";
+        const char* fnameFsh = "perfgraph.fsh";
+        int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
+#else
         int newprogram       = compileBuiltinShader(srcParser, TEXTURED_GLSL_VERT, PERFGRAPH_GLSL_FRAG);
+#endif
         if (newprogram < 0) {
             dbgassert(newprogram != -2);
             return -1;
@@ -206,8 +213,9 @@ class window_impl final : public window_abstract_t {
 
         windowInstance->texActive = textures[0];
         windowInstance->texUpload = textures[1];
-        windowInstance->name        = instance.name;
-        auto& chs                   = windowInstance->channels;
+        windowInstance->name = instance.name;
+        windowInstance->displayIdx = instance.displayIdx;
+        auto& chs = windowInstance->channels;
         chs.reserve(channelDesc->size());
         int32_t texChannel = 0;
         for (auto& entry : *channelDesc) {
@@ -302,16 +310,16 @@ public:
         float fbWidth = winW * zoom;
         float fbHeight = winH * zoom;
         auto tmMillis = getTimeMicros() / 1000UL;
+        if (tmMillis - tmLastReload >= 1600) {
+            if (0 != init(nullptr)) {
+               return 0;
+            }
+        }
         nCall++;
         int32_t numUpdated = updateProfilingData();
         if (!numUpdated) {
             return 0;
         }
-        // if (tmMillis - tmLastReload >= 1600) {
-        //     if (init()) {
-        //        return 0;
-        //     }
-        // }
         auto const pipeline = pipePerfShader.get();
         if (!pipeline->isValid)
             return 0;
@@ -366,10 +374,13 @@ public:
         vec.reserve(renderInstances.size());
         for (auto& renderInstance : renderInstances) {
             auto it = std::lower_bound(vec.begin(), vec.end(), &renderInstance, [](const ProfilingDataRenderInstance* a, const ProfilingDataRenderInstance* b) {
-                if (a->timeUpdatedMicros == b->timeUpdatedMicros) {
-                    return a->texActive < b->texActive;
+                if (a->displayIdx == b->displayIdx) {
+                    if (a->timeUpdatedMicros == b->timeUpdatedMicros) {
+                        return a->texActive < b->texActive;
+                    }
+                    return a->timeUpdatedMicros > b->timeUpdatedMicros;
                 }
-                return a->timeUpdatedMicros > b->timeUpdatedMicros;
+                return a->displayIdx < b->displayIdx;
             });
             vec.insert(it, &renderInstance);
         }

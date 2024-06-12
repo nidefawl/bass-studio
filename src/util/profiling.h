@@ -121,8 +121,12 @@ struct vst_opcode_stats_t {
     int32_t numDispatches = 0;
 };
 namespace Profiling {
+    struct profiling_register_params_t {
+        String name;
+        int32_t displayIndex = 0;
+    };
     template<typename T>
-    void profilingRegisterEntry(void* instance, const String& name);
+    void profilingRegisterEntry(void* instance, const profiling_register_params_t& params);
     template<typename T>
     void profilingCommitStats(void* instance, int frameNumber, T& stats);
 }// namespace Profiling
