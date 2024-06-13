@@ -88,6 +88,7 @@ void guiplugin::render(NVGcontext* vg) {
 void guiplugin::prerender(NVGcontext* vg) {
     guictr_base::prerender(vg);
     int32_t automationFlags = FLG_IS_AUTOMATABLE;
+    // getting a rare crash here. After unloading a project effect is dangling, something keeps guiplugin alive and renders it.
     if (effect->getParamUnchecked(PARAM_ENABLE)) {
         auto at = effect->getRegisteredAutomation(PARAM_ENABLE);
         if (at && at->isAutomated()) {

@@ -80,7 +80,8 @@ namespace DAW::Shape {
     float shape_t::sampleCurve(float posX, bool sampleLeftRight) const {
         if (pts.empty())
             return 0.0f;
-        if (pts.size() == 1) {
+        const auto numPoints = pts.size();
+        if (numPoints == 1) {
             return pts[0].pos.y;
         }
         float pX = posX;
@@ -99,7 +100,7 @@ namespace DAW::Shape {
             // log_lf(Log::L_WARN, "Using sampleCurve with non-cyclic shape\n");
         }
         size_t idx = 0;
-        for (size_t i = 0; i < pts.size(); i++) {
+        for (size_t i = 0; i < numPoints; ++i) {
             float px = pts[i].pos.x;
             if (!sampleLeftRight && px >= pX) {
                 idx = i;
