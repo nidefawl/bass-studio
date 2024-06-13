@@ -283,7 +283,7 @@ void processSynthUnison()
             const float f = state_in.voices[j].pitch[i]; // hz
             const double pitchLogScale = double(log2(f / 440.0)) + 2.0;
             double osc1_det_keytrack_bipolar = state_in.voices[j].param_detune_keytrack[i] * 2.0 - 1.0;
-            double osc1_detune = state_in.voices[j].param_detune[i] * (1.0 + clamp((pitchLogScale + 2.0)*0.66, -1.0, 1.0) * osc1_det_keytrack_bipolar);
+            double osc1_detune = state_in.voices[j].param_detune[i] * (1.0 + clamp((pitchLogScale)*0.25 * osc1_det_keytrack_bipolar, -1.0, 1.0));
             // double osc1_det_keytrack_bipolar = ctx.osc1_detune_keytrack * 2.0 - 1.0;
             // double osc1_detune = ctx.osc1_unison_detune * (1.0 + clamp((pitchLogScale + 2.0)*0.66, -1.0, 1.0) * osc1_det_keytrack_bipolar);
             double osc1_flt_keytrack_bipolar = state_in_synth.synth.param_filter_keytrack[i] * 2.0 - 1.0;
