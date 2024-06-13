@@ -125,6 +125,7 @@ protected:
     std::vector<ModSrcDesc> modSourceDescs;
     std::vector<ModDestDesc> modDestDescs;
     std::array<const char*, MAX_MODULATION_INPUT_PARAMS> varNames;
+    std::array<bool, MAX_MODULATION_INPUT_PARAMS> isModulationInputInUse{};
 
     /* for visualization */
     std::array<double, 64> modulationValuesMin{};
@@ -133,6 +134,19 @@ public:
     virtual ~ModulationController() = default;
     const std::array<const char*, MAX_MODULATION_INPUT_PARAMS>& getVarNames() const {
         return varNames;
+    }
+
+    void onModulationsChanged() {
+        std::fill(isModulationInputInUse.begin(), isModulationInputInUse.end(), false);
+        for (auto& modulation : modulations) {
+            for (auto& input : modulation.inputs) {
+                if (input.type == ModulationType::ModulationSource) {
+                    auto idx = input.src + 1;
+                    if (idx >= 0 && idx < int32_t(MAX_MODULATION_INPUT_PARAMS))
+                        isModulationInputInUse[idx] = true;
+                }
+            }
+        }
     }
 
     bool IsBipolarModulation(const Modulation& modulation) const {
@@ -225,6 +239,7 @@ public:
             if (srcSlotIndex >= 0 && srcSlotIndex < numInputs) {
                 // erase entry
                 modulation.inputs.erase(modulation.inputs.begin() + srcSlotIndex);
+                onModulationsChanged();
                 return true;
             }
             return false;
@@ -241,11 +256,13 @@ public:
                 ModulationRange::Unipolar,
             };
             modulation.inputs.emplace_back(std::move(input));
+            onModulationsChanged();
             return true;
         } else if (srcSlotIndex < numInputs) {
             auto& mod = modulation.inputs[srcSlotIndex];
             mod.type  = modType;
             mod.src   = modSrcType;
+            onModulationsChanged();
             return true;
         }
         return false;
@@ -256,6 +273,7 @@ public:
         if (modOperatorIndex >= 0 && modOperatorIndex < ModulationOperator::NumModulationOperators && idx < numInputs) {
             auto& mod = modulation.inputs[idx];
             mod.op    = static_cast<ModulationOperator>(modOperatorIndex);
+            onModulationsChanged();
             return true;
         }
         return false;
@@ -266,6 +284,7 @@ public:
         if (idx < numInputs) {
             auto& mod = modulation.inputs[idx];
             mod.value = constant;
+            onModulationsChanged();
             return true;
         }
         return false;
@@ -276,6 +295,7 @@ public:
         if (idx < numInputs) {
             auto& mod    = modulation.inputs[idx];
             mod.function = std::move(function);
+            onModulationsChanged();
             return true;
         }
         return false;
@@ -296,6 +316,7 @@ public:
         if (idx < numInputs) {
             auto& mod = modulation.inputs[idx];
             mod.range = range;
+            onModulationsChanged();
             return true;
         }
         return false;
@@ -307,12 +328,15 @@ public:
         if (paramIdx < 0 && destIdx < numDestinations) {
             // erase entry
             modulation.destinations.erase(modulation.destinations.begin() + destIdx);
+            onModulationsChanged();
             return true;
         } else if (paramIdx >= 0 && paramIdx < MAX_MODULATION_OUTPUT_PARAMS && destIdx == numDestinations) {
             modulation.destinations.push_back({ paramIdx, range });
+            onModulationsChanged();
             return true;
         } else if (paramIdx >= 0 && paramIdx < MAX_MODULATION_OUTPUT_PARAMS && destIdx < numDestinations) {
             modulation.destinations[destIdx] = { paramIdx, range };
+            onModulationsChanged();
             return true;
         }
         return false;
@@ -322,6 +346,7 @@ public:
         auto numDestinations = CtrSize(modulation.destinations);
         if (destIdx < numDestinations) {
             modulation.destinations[destIdx].range = range;
+            onModulationsChanged();
             return true;
         }
         return false;

@@ -1355,6 +1355,7 @@ public:
             }
             modulations[msSlotIndex] = std::move(newModulation);
         }
+        onModulationsChanged();
 
         for (auto& setting : snapshot.settings) {
             if (setting.paramIdx >= 0 && setting.paramIdx < CtrSize(settings)) {
@@ -1865,7 +1866,7 @@ public:
                 this->moduleInstance->updateAutomatedParameters(host, math::floordS32(tickPos), state);
             }
             if (s % nOversample == 0) {
-                ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos);
+                ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos, this->polyVoiceCount);
             }
             UpdateParameters(dt);
             UpdateDrift(dt);

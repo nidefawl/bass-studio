@@ -89,6 +89,8 @@ class guicontainer_plugin_synth_other_parameters final : public guictr_base {
     module_synth_gpu* const moduleInstance;
     std::array<gui_numberinput_double, 1> knobs;
     gui_numberinput_u32 debugFlags;
+    gui_numberinput_i32 maxPolyVoices;
+    gui_numberinput_i32 maxUnisonVoices;
 public:
     explicit guicontainer_plugin_synth_other_parameters(module_synth_gpu* module) 
         : moduleInstance(module)
@@ -116,7 +118,25 @@ public:
         }
         debugFlags.setLabel("Debug Flags");
         debugFlags.setRef(&gDebugBenchmarkFlags);
+        maxPolyVoices.setLabel("Max Poly Voices");
+        maxPolyVoices.setRef(&synth->getRefPolyVoiceCount());
+        maxPolyVoices.fnClamp = [](int32_t value) -> int32_t {
+            return math::clamp<int32_t>(value, 1, MAX_POLY_VOICES);
+        };
+        // maxPolyVoices.fnValueEditChanged = [synth](gui_numberinput_field_base* gui, uint32_t newVal) {
+        //     synth->updateVoiceLimit();
+        // };
+        maxUnisonVoices.setRef(&synth->getRefUnisonVoiceCount());
+        maxUnisonVoices.setLabel("Max Unison Voices");
+        maxUnisonVoices.fnClamp = [](int32_t value) -> int32_t {
+            return math::clamp<int32_t>(value, 1, MAX_UNISON_VOICES);
+        };
+        // maxUnisonVoices.fnValueEditChanged = [synth](gui_numberinput_field_base* gui, uint32_t newVal) {
+        //     synth->updateVoiceLimit();
+        // };
         add(&debugFlags);
+        add(&maxPolyVoices);
+        add(&maxUnisonVoices);
     }
     ~guicontainer_plugin_synth_other_parameters() override {
         removeGuis();
@@ -277,7 +297,7 @@ public:
         auto lastSample = samplecount_t(0);
         // auto outIdx = samplecount_t(0);
         bool bFinished = false;
-        std::array<double, 4> durationPhaseSeconds{};
+        //std::array<double, 4> durationPhaseSeconds{};
         while (maxIterations-- > 0 && !bFinished) {
             lastSample = pos + stepsize;
             for (samplecount_t s = 0; s < stepsize && !bFinished; s++) {
@@ -286,22 +306,22 @@ public:
                 auto envStateNew = envelope.stage;
                 bool bAddPoint = s == 0;
                 if (envState != envStateNew && envState == EnvelopeStages::Attack) {
-                    durationPhaseSeconds[0] = (pos + s) * oneOverSr;
+                    //durationPhaseSeconds[0] = (pos + s) * oneOverSr;
                     shapeAdsrControls.pts[1].pos = { (pos + s), envelope.value };
                     bAddPoint = true;
                 }
                 if (envState != envStateNew && envState == EnvelopeStages::Hold) {
-                    durationPhaseSeconds[1] = (pos + s) * oneOverSr;
+                    //durationPhaseSeconds[1] = (pos + s) * oneOverSr;
                     shapeAdsrControls.pts[2].pos = { (pos + s), envelope.value };
                     bAddPoint = true;
                 }
                 if (envelope.IsSustain()) {
-                    durationPhaseSeconds[2] = (pos + s) * oneOverSr;
+                    //durationPhaseSeconds[2] = (pos + s) * oneOverSr;
                     shapeAdsrControls.pts[3].pos = { (pos + s), envelope.value };
                     envelope.Release();
                     bAddPoint = true;
                 } else if(envelope.IsIdle()) {
-                    durationPhaseSeconds[4] = (pos + s) * oneOverSr;
+                    //durationPhaseSeconds[4] = (pos + s) * oneOverSr;
                     shapeAdsrControls.pts[5].pos = { (pos + s), envelope.value };
                     bFinished = true;
                     bAddPoint = true;

@@ -51,11 +51,6 @@ void SynthImplGPU::init() {
     if (!assert_expr(initComputeContext())) {
         return;
     }
-    // auto blockSize = moduleSynthInstance->getSampleFormat().blockSize;
-    // if (blockSize == 0) {
-    //     blockSize = 512;
-    // }
-    // reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
 
     timeCheckShader = getTimeMillis();
     timePerfLog     = getTimeMillis();
@@ -152,7 +147,7 @@ void SynthImplGPU::initImpl() {
     setParamName(getParam(Parameters::Osc1Gain), "Oscillator 1 Gain", "OSC1 Gain", "Gain", "dB");
     addEnumParam(Parameters::Osc1Waveform)->setRange(0, 3)->setInitialValue(0);
     setParamName(getParam(Parameters::Osc1Waveform), "Oscillator 1 Waveform", "OSC1 Wave", "Wave");
-    addIntParam(Parameters::Osc1UnisonVoiceCount)->setRange(1, MAX_UNISON_VOICES)->setInitialValue(3);
+    addIntParam(Parameters::Osc1UnisonVoiceCount)->setRange(1, userLimitUnisonVoices)->setInitialValue(3);
     setParamName(getParam(Parameters::Osc1UnisonVoiceCount), "Oscillator 1 Unison Voices", "OSC1 Unison", "Unison", "Voices");
     addFloatParam(Parameters::Osc1UnisonDetune)->setRange(-6.0, 6.0)->setInitialValue(0.0);
     setParamName(getParam(Parameters::Osc1UnisonDetune), "Oscillator 1 Unison Detune", "OSC1 Detune", "Detune", "Semi");
@@ -296,6 +291,18 @@ void SynthImplGPU::initImpl() {
     }
 }
 
+void SynthImplGPU::updateVoiceLimit() {
+    if (gpuProgram.polyVoices != userLimitPolyVoices || gpuProgram.unisonVoices != userLimitUnisonVoices) {
+        GetParamInt(Parameters::Osc1UnisonVoiceCount)->setRange(1, userLimitUnisonVoices);
+        for (size_t i = userLimitPolyVoices; i < voices.size(); i++) {
+            voices[i].Release();
+        }
+        if (gpuProgram.blocksize) {
+            setBlocksize(gpuProgram.blocksize);
+        }
+    }
+}
+
 bool SynthImplGPU::getSnapshot(snapshot_t& snapshot) const {
     snapshot.version     = SYNTH_GPU_SNAPSHOT_VERSION;
     const auto numParams = CtrSize(vecParams);
@@ -395,6 +402,7 @@ bool SynthImplGPU::setSnapshot(const snapshot_t& snapshot) {
             modulations.push_back({});
         }
         modulations[msSlotIndex] = std::move(newModulation);
+        onModulationsChanged();
     }
 
     for (size_t i = 0; i < this->lfoParameters.size() && i < snapshot.lfos.size(); i++) {
@@ -429,11 +437,18 @@ void SynthImplGPU::setBlocksize(samplecount_t blocksize) {
     numActiveVoicesMax = 0;
     SynthImpl::setBlocksize(blocksize);
     GlfwContextSwitch ctxSwitch(window);
-    if (!gpuProgram.is_valid() || gpuProgram.blocksize != blocksize) {
-        reloadShader({ blocksize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES });
+    if (gpuProgram.blocksize != blocksize
+        || gpuProgram.polyVoices != userLimitPolyVoices
+        || gpuProgram.unisonVoices != userLimitUnisonVoices) {
+        gpuProgram.destroy();
     }
+    if (!gpuProgram.is_valid()) {
+        reloadShader({ blocksize, NUM_AUDIO_CHANNELS, userLimitPolyVoices, userLimitUnisonVoices });
+        timeCheckShader = getTimeMillis();
+    }
+    allocatedVoiceCount = userLimitPolyVoices;
     ssboInputSynthState.buffer.resize(blocksize * size_t(NUM_SYNTH_INPUT_PARAMETERS));
-    ssboInputVoiceStates.buffer.resize(blocksize * size_t(NUM_POLY_VOICES) * size_t(NUM_VOICE_INPUT_PARAMETERS));
+    ssboInputVoiceStates.buffer.resize(blocksize * size_t(userLimitPolyVoices) * size_t(NUM_VOICE_INPUT_PARAMETERS));
     ssboOutput.buffer.resize(blocksize * gpuProgram.channels);
     ssboOutputWaveform.buffer.resize(blocksize);
     GPUAudioProcessor::reallocateSSBOs();
@@ -534,8 +549,8 @@ void SynthImplGPU::OnParamChange(Parameters parameter) {
             switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
                 case VoiceModes::Mono:
                 case VoiceModes::Legato:
-                    for (int i = 1; i < NUM_POLY_VOICES; i++) {
-                        voices[i].Release();
+                    for (auto& voice : voices) {
+                        voice.Release();
                     }
                     break;
                 default:
@@ -605,35 +620,37 @@ void SynthImplGPU::updateVoiceModulations(ModulationSourceData& modSrcData, Voic
     //TODO: Only calculate used mod sources
     auto itOut = modSrcData.begin();
 
-    const auto noteStart              = double(v.noteT.start());
-    const auto noteLen                = double(math::max(1, v.noteT.len));
-    const auto notePhase              = math::clamp(double(tickPos - noteStart) / noteLen, 0.0, 1.0);
-    const auto noteProgress           = tickPos - noteStart;
+    const auto noteStart    = double(v.noteT.start());
+    const auto noteLen      = double(math::max(1, v.noteT.len));
+    const auto notePhase    = math::clamp(double(tickPos - noteStart) / noteLen, 0.0, 1.0);
+    const auto noteProgress = tickPos - noteStart;
+
     const auto fNoteFadeDurationTicks = 64.0;
-    const auto fFadeIn                = math::smoothstep(math::clamp(noteProgress / fNoteFadeDurationTicks, 0.0, 1.0));
-    const auto fFadeOut               = math::smoothstep(math::clamp((noteStart + noteLen - tickPos) / fNoteFadeDurationTicks, 0.0, 1.0));
-    const auto noteFade               = math::clamp(fFadeIn * fFadeOut, 0.0, 1.0);
+    const auto fFadeIn  = math::smoothstep(math::clamp(noteProgress / fNoteFadeDurationTicks, 0.0, 1.0));
+    const auto fFadeOut = math::smoothstep(math::clamp((noteStart + noteLen - tickPos) / fNoteFadeDurationTicks, 0.0, 1.0));
+    const auto noteFade = math::clamp(fFadeIn * fFadeOut, 0.0, 1.0);
 
-
-    *itOut++               = 0.0;// input value
-    *itOut++               = v.GetVolumeEnvelope().value;
-    *itOut++               = v.GetFilterEnvelope().value;
-    *itOut++               = v.velocity;
-    *itOut++               = noteToLinearScale(v.noteT.pitch);
-    *itOut++               = v.noteT.pitch / 127.0;
-    *itOut++               = getVoiceLfoValue(v, 0) * v.lfos[0].GetRamp();
-    *itOut++               = getVoiceLfoValue(v, 1) * v.lfos[1].GetRamp();
-    *itOut++               = getVoiceLfoValue(v, 2) * v.lfos[2].GetRamp();
-    *itOut++               = gpuContext.osc1_filter;
-    *itOut++               = v.seqNr % 2;
-    *itOut++               = v.randoms[0];
-    *itOut++               = v.randoms[1];
-    *itOut++               = notePhase;
-    *itOut++               = noteFade;
-    *itOut++               = vecParams[Parameters::Macro_1]->getAsDoubleModulated();
-    *itOut++               = vecParams[Parameters::Macro_2]->getAsDoubleModulated();
-    *itOut++               = vecParams[Parameters::Macro_3]->getAsDoubleModulated();
-    *itOut++               = vecParams[Parameters::Macro_4]->getAsDoubleModulated();
+    auto itIsInUse = this->isModulationInputInUse.begin();
+    itIsInUse++;
+    *itOut++ = 0.0;// input value
+    *itOut++ = !*itIsInUse++ ? 0.0 : v.GetVolumeEnvelope().value;
+    *itOut++ = !*itIsInUse++ ? 0.0 : v.GetFilterEnvelope().value;
+    *itOut++ = !*itIsInUse++ ? 0.0 : v.velocity;
+    *itOut++ = !*itIsInUse++ ? 0.0 : noteToLinearScale(v.noteT.pitch);
+    *itOut++ = !*itIsInUse++ ? 0.0 : v.noteT.pitch / 127.0;
+    *itOut++ = !*itIsInUse++ ? 0.0 : getVoiceLfoValue(v, 0) * v.lfos[0].GetRamp();
+    *itOut++ = !*itIsInUse++ ? 0.0 : getVoiceLfoValue(v, 1) * v.lfos[1].GetRamp();
+    *itOut++ = !*itIsInUse++ ? 0.0 : getVoiceLfoValue(v, 2) * v.lfos[2].GetRamp();
+    *itOut++ = !*itIsInUse++ ? 0.0 : gpuContext.osc1_filter;
+    *itOut++ = !*itIsInUse++ ? 0.0 : v.seqNr % 2;
+    *itOut++ = !*itIsInUse++ ? 0.0 : v.randoms[0];
+    *itOut++ = !*itIsInUse++ ? 0.0 : v.randoms[1];
+    *itOut++ = !*itIsInUse++ ? 0.0 : notePhase;
+    *itOut++ = !*itIsInUse++ ? 0.0 : noteFade;
+    *itOut++ = !*itIsInUse++ ? 0.0 : vecParams[Parameters::Macro_1]->getAsDoubleModulated();
+    *itOut++ = !*itIsInUse++ ? 0.0 : vecParams[Parameters::Macro_2]->getAsDoubleModulated();
+    *itOut++ = !*itIsInUse++ ? 0.0 : vecParams[Parameters::Macro_3]->getAsDoubleModulated();
+    *itOut++ = !*itIsInUse++ ? 0.0 : vecParams[Parameters::Macro_4]->getAsDoubleModulated();
     auto& voiceModulations = v.modValues;
     std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
     ProcessModulations(modSrcData, voiceModulations);
@@ -659,11 +676,12 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
         gpuProgram.destroy();
         gpuProgram = {};
     }
+    updateVoiceLimit();
     auto tmNow_ms = getTimeMillis();
     if (!bIsBenchmark && (!gpuProgram.is_valid() || tmNow_ms - timeCheckShader > 1000)) {
         if (tmNow_ms - timeLastShaderError > 2000) {
             timeCheckShader = tmNow_ms;
-            reloadShader({ blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES });
+            reloadShader({ blockSize, NUM_AUDIO_CHANNELS, userLimitPolyVoices, userLimitUnisonVoices });
         }
     }
 
@@ -720,7 +738,7 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
 
         const auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         if (s % nOversample == 0) {
-            ProcessMidiSample(*this, voices, voiceMode, s, tickPos);
+            ProcessMidiSample(*this, voices, voiceMode, s, tickPos, userLimitPolyVoices);
         }
         if (host && moduleSynthInstance && (s % framesPerAutomationUpdate) == 0) {
             ReadAutomation(host, tick, state, s, nFrames, nOversample);
@@ -742,7 +760,7 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
         for (size_t i = 0; i < lfosSongPos.size(); i++) {
             lfosSongPos[i].Update(oneOverSR);
         }
-        for (int64_t i = 0; i < NUM_POLY_VOICES; i++) {
+        for (int64_t i = 0; i < userLimitPolyVoices && i < allocatedVoiceCount; i++) {
             const auto idx_base     = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize);
             const auto idx_velocity = idx_base + s;
             auto& v                 = voices[i];

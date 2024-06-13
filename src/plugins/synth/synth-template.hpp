@@ -69,22 +69,22 @@ public:
     }
 
     inline SynthParam_Float* GetParamFloat(Parameters param) noexcept {
-        dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::FLOAT);
+        // dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::FLOAT);
         return static_cast<SynthParam_Float*>(this->vecParams[param]);
     }
 
     inline SynthParam_Int* GetParamInt(Parameters param) noexcept {
-        dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::INT);
+        // dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::INT);
         return static_cast<SynthParam_Int*>(this->vecParams[param]);
     }
 
     inline SynthParam_Enum* GetParamEnum(Parameters param) noexcept {
-        dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::ENUM);
+        // dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::ENUM);
         return static_cast<SynthParam_Enum*>(this->vecParams[param]);
     }
 
     const SynthParam_Enum* GetParamEnum(Parameters param) const noexcept {
-        dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::ENUM);
+        // dbgassert(getParam(param) && getParam(param)->type == SynthParam::ParamType::ENUM);
         return static_cast<SynthParam_Enum*>(this->vecParams[param]);
     }
 
@@ -136,7 +136,7 @@ public:
     }
 
     template<typename VoiceListType>
-    void ProcessMidiSample(T& meAsDerived, VoiceListType& voices, VoiceModes voiceMode, samplecount_t sampleInBlock, double tickPos) {
+    void ProcessMidiSample(T& meAsDerived, VoiceListType& voices, VoiceModes voiceMode, samplecount_t sampleInBlock, double tickPos, size_t polyVoiceLimit) {
         while (!midiQueue.Empty()) {
             auto message = midiQueue.Peek();
             if (message.mOffset > sampleInBlock) break;
@@ -232,7 +232,7 @@ public:
                     switch (voiceMode) {
                         case VoiceModes::Poly: {
                             // get the quietest voice, prioritizing voices that are released
-                            auto voiceEnd = std::end(voices);
+                            auto voiceEnd = std::begin(voices) + polyVoiceLimit;
                             auto voice    = std::min_element(
                                     std::begin(voices),
                                     voiceEnd,

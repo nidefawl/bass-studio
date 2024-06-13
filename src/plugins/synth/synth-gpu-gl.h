@@ -205,7 +205,7 @@ inline gpu_program_loadresult loadGPUProgram(gpu_program_definitions_t defs, gpu
     // check time of last modification
     using App::Platform::toResourcePath;
     int64_t timeDiskGpuSoundShader = FileTimeGetter(toResourcePath(filenameGpuSoundShader)).getWriteTimeI64();
-    if (previous.programs[0]) {
+    if (previous.is_valid()) {
         // if the file has not been modified, return the previous shader
         if (timeDiskGpuSoundShader == lastModTimeGpuSoundShader) {
             return {gpu_program_loadresult::Type::PROGRAM_LOAD_NO_CHANGE, "", previous};
@@ -341,6 +341,7 @@ protected:
     gpu_program gpuProgram{};
     gpu_compute_context_t gpuContext{};
     int32_t currentProgramId = 0;
+    int32_t allocatedVoiceCount = 0;
     host_buffer_t ssboInputSynthState{};
     host_buffer_t ssboInputVoiceStates{};
     host_buffer_t ssboOutput{};

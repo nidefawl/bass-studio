@@ -21,6 +21,7 @@
 #include "synth-gpu-snapshot.hpp"
 #include "synth-gpu-gl.h"
 
+#include <cstdint>
 #include <nanovg_min.h>
 #include <vector>
 
@@ -196,7 +197,7 @@ private:
 
 private:
     PluginSynth::module_synth_template<SynthImplGPU>* const moduleSynthInstance;
-    std::array<PluginSynth::GPU::VoiceSynth, NUM_POLY_VOICES> voices;
+    std::array<PluginSynth::GPU::VoiceSynth, MAX_POLY_VOICES> voices;
     std::array<DAW::LFO::LFO, NUM_LFO> lfosSongPos;
     std::array<DAW::LFO::LFOParameters, NUM_LFO> lfoParameters;
     std::array<Envelope::EnvelopeTimeRange, 4> envTimeRanges = {
@@ -216,6 +217,8 @@ private:
     VoiceSynth tmpVoice;
     size_t numActiveVoicesBlock = 0;
     size_t numActiveVoicesMax = 0;
+    int32_t userLimitPolyVoices = math::min<int32_t>(MAX_POLY_VOICES, 8);
+    int32_t userLimitUnisonVoices = math::min<int32_t>(MAX_POLY_VOICES, 8);
 
 private:
     void initImpl();
@@ -251,6 +254,14 @@ public:
 
     std::array<double, 1>& getOtherParams() {
         return otherParams;
+    }
+
+    int32_t& getRefPolyVoiceCount() {
+        return userLimitPolyVoices;
+    }
+
+    int32_t& getRefUnisonVoiceCount() {
+        return userLimitUnisonVoices;
     }
 
     DAW::LFO::LFOParameters& getLFOParams(int32_t lfoIdx) {
@@ -376,6 +387,7 @@ public:
             }
         }
     }
+    void updateVoiceLimit();
 };
 
 class module_synth_gpu final : public module_synth_template<SynthImplGPU> {

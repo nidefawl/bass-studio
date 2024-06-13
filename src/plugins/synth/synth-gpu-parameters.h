@@ -15,8 +15,8 @@ enum {
 
 enum {
     NUM_AUDIO_CHANNELS = 2,
-    NUM_POLY_VOICES    = 24,
-    MAX_UNISON_VOICES  = 16,
+    MAX_POLY_VOICES    = 32,
+    MAX_UNISON_VOICES  = 256,
 };
 
 /* keep in sync with shader defines */

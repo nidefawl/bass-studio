@@ -413,7 +413,7 @@ public:
             } */
 
             if (s % nOversample == 0) {
-                ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos);
+                ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos, voices.size());
             }
 
             for (auto& v : voices) {
@@ -1203,7 +1203,7 @@ public:
             } */
 
             if (s % nOversample == 0) {
-                ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos);
+                ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos, voices.size());
             }
 
             for (auto& v : voices) {

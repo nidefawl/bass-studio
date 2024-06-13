@@ -44,10 +44,10 @@ public:
     void setBlocksize(samplecount_t blockSize) {
         sampleFormat.blockSize = blockSize;
         if (gpuProgram.blocksize != blockSize) {
-            reloadShader({blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
+            reloadShader({blockSize, NUM_AUDIO_CHANNELS, MAX_POLY_VOICES, MAX_UNISON_VOICES});
         }
         ssboInputSynthState.buffer.resize(blockSize * size_t(NUM_SYNTH_INPUT_PARAMETERS));
-        ssboInputVoiceStates.buffer.resize(blockSize * size_t(NUM_POLY_VOICES) * size_t(NUM_VOICE_INPUT_PARAMETERS));
+        ssboInputVoiceStates.buffer.resize(blockSize * size_t(MAX_POLY_VOICES) * size_t(NUM_VOICE_INPUT_PARAMETERS));
         ssboOutput.buffer.resize(blockSize * gpuProgram.channels);
         ssboOutputWaveform.buffer.resize(blockSize);
         GPUAudioProcessor::reallocateSSBOs();
@@ -70,7 +70,7 @@ public:
         if (!gpuProgram.is_valid() || tmNow_ms - timeCheckShader > 1000) {
             if (tmNow_ms - timeLastShaderError > 2000) {
                 timeCheckShader = tmNow_ms;
-                reloadShader({sampleFormat.blockSize, NUM_AUDIO_CHANNELS, NUM_POLY_VOICES, MAX_UNISON_VOICES});
+                reloadShader({sampleFormat.blockSize, NUM_AUDIO_CHANNELS, MAX_POLY_VOICES, MAX_UNISON_VOICES});
             }
         }
 
@@ -100,7 +100,7 @@ public:
             auto absTime = gpuContext.time_samples + s;
             inputBufferSynthState[s + gpuProgram.blocksize * 0] = float(osc1_filter_keytrack);
             inputBufferSynthState[s + gpuProgram.blocksize * 1] = float(osc1_stereo);
-            for (ssize_t i = 0; i < NUM_POLY_VOICES; i++) {
+            for (ssize_t i = 0; i < MAX_POLY_VOICES; i++) {
                 const auto idx_base = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize);
                 const auto idx_velocity = idx_base + s;
                 float velocity = -1.0;
@@ -237,7 +237,7 @@ int main(int, char*[]) {
         // glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
         auto sampleFormat = sampleformat_t{
-            .sampleRate = 96000,
+            .sampleRate = 44100,
             .blockSize = 1024,
             .sampleformat = sampleformat_bits_t::FLOAT_32
         };
