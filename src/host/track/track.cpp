@@ -308,6 +308,7 @@ void trackdata_clips_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStar
             .bCutMutedNotes = true,
             .bApplyGroove = true,
             .bEliminateDupes = true,
+            .minimalNoteLength = 64,
         });
     }
 }
@@ -323,6 +324,7 @@ void trackdata_clips_t::getEventsInRange(tick_t start, tick_t end, tick_t cutSta
             .bCutMutedNotes = true,
             .bApplyGroove = true,
             .bEliminateDupes = true,
+            .minimalNoteLength = 64,
         });
         clip->controlData.getInTimeRange(clip, start, end, cutStart, cutEnd, ctrlEvents);
     }

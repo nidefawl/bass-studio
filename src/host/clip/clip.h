@@ -224,6 +224,7 @@ class clip_t {
         bool bApplyGroove = false;
         bool bRelative = false;
         bool bEliminateDupes = false;
+        tick_t minimalNoteLength = 0;
     };
 public:
     clip_notes_t notes;

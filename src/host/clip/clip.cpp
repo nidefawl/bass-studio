@@ -600,6 +600,9 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
     list.reserve(list.size() + notesView.m_list.size());
     if (options.bRelative) {
         for (auto& note : notesView.m_list) {
+            if (note.len < options.minimalNoteLength) {
+                continue;
+            }
             // we can do a binary search here
             auto it = std::lower_bound(list.begin(), list.end(), note, [](const note_t& a, const note_t& b) {
                 return a.time < b.time;
@@ -615,6 +618,9 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
                 if (cutIntersectingNotesFindDupe(list, note) == -1) {
                     continue;
                 }
+            }
+            if (note.len < options.minimalNoteLength) {
+                continue;
             }
             // we can do a binary search here
             auto it = std::lower_bound(list.begin(), list.end(), note, [](const note_t& a, const note_t& b) {
