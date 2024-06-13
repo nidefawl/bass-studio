@@ -182,8 +182,8 @@ void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
 }
 void loadAllInstances(DawCtrl* dawCtrl, String pluginName) {
     DawInstance* dawInstance = dawCtrl->getDaw();
-    auto lock = dawInstance->lockPlayThread();
     {
+        auto lock = dawInstance->lockPlayThread();
         bool bOnce = false;
         std::vector<effectbase*> effects;
         dawInstance->getPluginManager()->getDeferredEffects(effects);
@@ -196,9 +196,12 @@ void loadAllInstances(DawCtrl* dawCtrl, String pluginName) {
                         dawCtrl->getDaw()->getMainControl()->showPluginView();
                     }
                     dawInstance->getPluginManager()->activateDeferred(eff, 0);
+                    tr->getStage()->pluginsChanged();
                 }
             }
         }
+        dawInstance->getPluginManager()->onTrackLayoutChange();
+        dawInstance->onPluginsChanged();
     }
 }
 void showPluginView(DawCtrl* dawCtrl, String pluginName) {
@@ -328,10 +331,10 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
         };
 
     //    dawMainCtrl->setVisible(false);
-    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
+       dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
-    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
-    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_PREFERENCES, 2));
+       dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
+    // dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_PREFERENCES, 2));
     // generateDummyProject(dawMainCtrl);
     }
 }
