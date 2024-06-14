@@ -138,7 +138,7 @@ struct gl_shader_perfgraph final : gl_shader_pipeline {
     template<typename T>
     int load(T* srcParser) {
         storeGlContext();
-#if 1
+#if 0
         const char* fnameVsh = "textured.vsh";
         const char* fnameFsh = "perfgraph.fsh";
         int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
@@ -310,11 +310,11 @@ public:
         float fbWidth = winW * zoom;
         float fbHeight = winH * zoom;
         auto tmMillis = getTimeMicros() / 1000UL;
-        if (tmMillis - tmLastReload >= 1600) {
+        /* if (tmMillis - tmLastReload >= 1600) {
             if (0 != init(nullptr)) {
                return 0;
             }
-        }
+        } */
         nCall++;
         int32_t numUpdated = updateProfilingData();
         if (!numUpdated) {
