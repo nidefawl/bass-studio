@@ -738,7 +738,10 @@ void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSe
     const samplerate_t numSamples = sampleEnd - sampleBegin;
 
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
-        if (!bCancelled && (trackMaster->getStage()->flags & audiostageflags_t::RECORD_OUTPUT) != audiostageflags_t::NONE) {
+        if (!bCancelled
+            && trackMaster->getStage()->mixer.isEnabled()
+            && (trackMaster->getStage()->flags & audiostageflags_t::RECORD_OUTPUT) != audiostageflags_t::NONE)
+        {
             String exportPath;
             App::Platform::createUniqueFilename(exportPath, exportSettings.exportPath);
             writeTrackSamplesToDisk(exportPath, trackMaster->getStage(), sampleBegin, numSamples);
