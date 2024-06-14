@@ -617,19 +617,7 @@ void SynthImplGPU::updateLFOParameters(DAW::LFO::LFOParameters& p, size_t lfoIdx
 }
 
 void SynthImplGPU::updateVoiceModulations(ModulationSourceData& modSrcData, VoiceSynth& v, double tickPos) {
-    //TODO: Only calculate used mod sources
     auto itOut = modSrcData.begin();
-
-    const auto noteStart    = double(v.noteT.start());
-    const auto noteLen      = double(math::max(1, v.noteT.len));
-    const auto notePhase    = math::clamp(double(tickPos - noteStart) / noteLen, 0.0, 1.0);
-    const auto noteProgress = tickPos - noteStart;
-
-    const auto fNoteFadeDurationTicks = 64.0;
-    const auto fFadeIn  = math::smoothstep(math::clamp(noteProgress / fNoteFadeDurationTicks, 0.0, 1.0));
-    const auto fFadeOut = math::smoothstep(math::clamp((noteStart + noteLen - tickPos) / fNoteFadeDurationTicks, 0.0, 1.0));
-    const auto noteFade = math::clamp(fFadeIn * fFadeOut, 0.0, 1.0);
-
     auto itIsInUse = this->isModulationInputInUse.begin();
     itIsInUse++;
     *itOut++ = 0.0;// input value
@@ -645,8 +633,24 @@ void SynthImplGPU::updateVoiceModulations(ModulationSourceData& modSrcData, Voic
     *itOut++ = !*itIsInUse++ ? 0.0 : v.seqNr % 2;
     *itOut++ = !*itIsInUse++ ? 0.0 : v.randoms[0];
     *itOut++ = !*itIsInUse++ ? 0.0 : v.randoms[1];
-    *itOut++ = !*itIsInUse++ ? 0.0 : notePhase;
-    *itOut++ = !*itIsInUse++ ? 0.0 : noteFade;
+    bool bHasNotePhase = *itIsInUse++;
+    bool bHasNoteFade  = *itIsInUse++;
+    if (bHasNotePhase || bHasNoteFade){
+        const auto noteStart    = double(v.noteT.start());
+        const auto noteLen      = double(math::max(1, v.noteT.len));
+        const auto notePhase    = math::clamp(double(tickPos - noteStart) / noteLen, 0.0, 1.0);
+        const auto noteProgress = tickPos - noteStart;
+
+        const auto fNoteFadeDurationTicks = 64.0;
+        const auto fFadeIn  = math::smoothstep(math::clamp(noteProgress / fNoteFadeDurationTicks, 0.0, 1.0));
+        const auto fFadeOut = math::smoothstep(math::clamp((noteStart + noteLen - tickPos) / fNoteFadeDurationTicks, 0.0, 1.0));
+        const auto noteFade = math::clamp(fFadeIn * fFadeOut, 0.0, 1.0);
+        *itOut++ = notePhase;
+        *itOut++ = noteFade;
+    } else {
+        *itOut++ = 0.0;
+        *itOut++ = 0.0;
+    }
     *itOut++ = !*itIsInUse++ ? 0.0 : vecParams[Parameters::Macro_1]->getAsDoubleModulated();
     *itOut++ = !*itIsInUse++ ? 0.0 : vecParams[Parameters::Macro_2]->getAsDoubleModulated();
     *itOut++ = !*itIsInUse++ ? 0.0 : vecParams[Parameters::Macro_3]->getAsDoubleModulated();
