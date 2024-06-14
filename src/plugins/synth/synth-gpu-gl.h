@@ -67,11 +67,11 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
         GLuint program = glCreateProgram();
         glAttachShader(program, shader1);
         glLinkProgram(program);
+        glDeleteShader(shader1);
         String log2 = getLog(1, program);
         if (getStatus(program, GL_LINK_STATUS) != 1) {
             glGetError();
             glDeleteProgram(program);
-            glDeleteShader(shader1);
             return StringFormat("Link error: %s\n", StringAsCStr(log2));
         }
         return program;
@@ -201,7 +201,6 @@ struct gpu_program_loadresult {
 inline gpu_program_loadresult loadGPUProgram(gpu_program_definitions_t defs, gpu_program& previous) {
     static int64_t lastModTimeGpuSoundShader = 0;
     String filenameGpuSoundShader = "shaders/gpu_synth.glsl";
-    auto glSourceLoader = std::make_unique<glshader_srcloader>();
     // check time of last modification
     using App::Platform::toResourcePath;
     int64_t timeDiskGpuSoundShader = FileTimeGetter(toResourcePath(filenameGpuSoundShader)).getWriteTimeI64();
@@ -212,6 +211,7 @@ inline gpu_program_loadresult loadGPUProgram(gpu_program_definitions_t defs, gpu
         }
     }
     lastModTimeGpuSoundShader = timeDiskGpuSoundShader;
+    auto glSourceLoader = std::make_unique<glshader_srcloader>();
     if (!glSourceLoader->addStageSrc(GL_COMPUTE_SHADER, filenameGpuSoundShader.c_str(), 0) || glSourceLoader->sources.empty()) {
         auto errMessage = StringFormat("Failed to load compute shader source file %s", StringAsCStr(filenameGpuSoundShader));
         return {gpu_program_loadresult::Type::PROGRAM_LOAD_ERROR, errMessage, previous};
