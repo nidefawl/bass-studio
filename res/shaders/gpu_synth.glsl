@@ -70,16 +70,11 @@ layout(binding = 0) uniform context {
     double time_seconds;
     double time_samples;
     double time_beats;
-    // double osc1_gain;
     double osc1_unison_voice_count;
-    // double osc1_unison_detune;
     double osc1_filter;
-    // double osc1_stereo;
     double osc1_pw;
     double osc1_pw_mod_rate;
     double osc1_pw_mod_depth;
-    // double osc1_filter_keytrack;
-    // double osc1_detune_keytrack;
     double osc1_width_keytrack;
 } ctx; 
 
