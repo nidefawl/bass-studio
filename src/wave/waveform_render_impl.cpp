@@ -119,7 +119,7 @@ static void removeTaskFromQueue(std::vector<waveform_update_task_t>& vecQTasks, 
         }
         if (taskEntry.queuedRefCount <= 0) {
             //log_lf(Log::L_DEBUG, "Atlas QTask refcount <= 0. erasing.\n");
-            vecQTasks.erase(itTasks);
+            itTasks = vecQTasks.erase(itTasks);
         } else {
             ++itTasks;
         }
@@ -507,7 +507,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
         glEnable(GL_SCISSOR_TEST);
         size_t numRendered = 0;
         int64_t timeoutMikros = 60000;
-        auto it                    = _atlas.queuedTasks.begin();
+        auto it = _atlas.queuedTasks.begin();
         for (; it != _atlas.queuedTasks.end() && impl->renderTimings.tmPassed < timeoutMikros; ++it) {
             waveform_update_task_t& waveformQueueEntry = *it;
 
