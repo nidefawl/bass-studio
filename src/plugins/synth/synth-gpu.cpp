@@ -829,8 +829,8 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
                 //     double lastSample = velocity;
                 //     dbgassert(lastSample == 0.0);
                 // }
+                inputBufferVoiceStates[idx_velocity] = float(velocity);
             }
-            inputBufferVoiceStates[idx_velocity] = float(velocity);
         }
     }
     if (numActiveVoicesMax > this->numActiveVoicesMax) {
