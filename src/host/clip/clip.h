@@ -185,10 +185,10 @@ public:
     int getInRange(tick_t timeS, tick_t timeE, int32_t pitchL, int32_t pitchH, std::vector<note_t*>& list);
     int getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, int32_t velH, int32_t tickDist, std::vector<note_t*>& list);
 
-    void setTo(std::set<note_t*>& notePtrs, tick_t offset);
-    void addAll(std::vector<note_t>& list);
-    void removeAll(std::vector<note_t>& list);
-    void removeAllKeepDuplicates(std::vector<note_t>& list);
+    void setTo(const std::set<note_t*>& notePtrs, tick_t offset);
+    void addAll(const std::vector<note_t>& list);
+    void removeAll(const std::vector<note_t>& list);
+    void removeAllKeepDuplicates(const std::vector<note_t>& list);
     void selectIdxRange(size_t start, size_t end);
     void selectLastN(size_t num);
     void getNotePitches(std::vector<int32_t>& out);

@@ -117,40 +117,32 @@ void clip_notes_t::mute(note_t& t) {
     noteFound.toggleFlag(NoteFlags::ENABLED);
 }
 
-void clip_notes_t::addAll(std::vector<note_t>& list) {
+void clip_notes_t::addAll(const std::vector<note_t>& list) {
     dbgassert(selection.empty());
-    //TODO: maybe add reserve here?
+    m_list.reserve(m_list.size() + list.size());
     m_list.insert(std::end(m_list), std::begin(list), std::end(list));
 }
 
-void clip_notes_t::removeAllKeepDuplicates(std::vector<note_t>& a) {
+void clip_notes_t::removeAllKeepDuplicates(const std::vector<note_t>& notes) {
     dbgassert(selection.empty());
-    auto aBegin = a.begin();
-    auto aEnd   = a.end();
-    while (aBegin != aEnd) {
-        auto itRemove = std::find(m_list.begin(), m_list.end(), *aBegin);
-        //dbgassert(itRemove != m_list.end());
-        if (itRemove != m_list.end()) {
-
-            m_list.erase(itRemove);
-        }
-        aBegin++;
+    for (const auto& note : notes) {
+        m_list.erase(std::find(m_list.begin(), m_list.end(), note));
     }
 }
 
-void clip_notes_t::removeAll(std::vector<note_t>& a) {
+void clip_notes_t::removeAll(const std::vector<note_t>& notes) {
     dbgassert(selection.empty());
-    m_list.erase(std::remove_if(m_list.begin(), m_list.end(), [&a](const note_t& x) {
-                     return std::find(a.begin(), a.end(), x) != a.end();
+    m_list.erase(std::remove_if(m_list.begin(), m_list.end(), [&notes](const note_t& x) {
+                     return std::find(notes.begin(), notes.end(), x) != notes.end();
                  }),
                  m_list.end());
 }
 
-void clip_notes_t::setTo(std::set<note_t*>& notePtrs, tick_t offset) {
-    for (note_t* notePtr : notePtrs) {
-        note_t note = *notePtr;
-        note.time += offset;
-        m_list.push_back(note);
+void clip_notes_t::setTo(const std::set<note_t*>& notePtrs, tick_t offset) {
+    for (auto& pNote : notePtrs) {
+        note_t noteCpy = *pNote;
+        noteCpy.time += offset;
+        m_list.push_back(noteCpy);
     }
     updateBounds();
 }
