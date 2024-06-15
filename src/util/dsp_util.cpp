@@ -15,10 +15,6 @@
 #include <glm/geometric.hpp>
 
 namespace dsp_util {
-    const float GAIN_DB30    = math::powf(10.0f, 30.0f / 20.0f);// 2.0f
-    const float GAIN_DB6     = math::powf(10.0f, 6.0f / 20.0f); // 2.0f
-    const float GAIN_DBFLOOR = math::powf(10.0f, DBFS_FLOOR / 20.0f);
-    const float GAIN_DBINF   = math::powf(10.0f, DBFS_INF_POS / 20.0f);
 
 #define TABLE_SIZE (200)
     struct paTestData {
@@ -81,41 +77,6 @@ namespace dsp_util {
         } else {
             fillAllChannels(block.buf, block.channels, block.samples, f);
         }
-    }
-    float dBFS(float f) {
-        return 20.0f * std::log10(f);
-    }
-    float clampGain(float f) {
-        if (f > GAIN_DB6)
-            return GAIN_DB6;
-        if (f < GAIN_DBFLOOR)
-            return GAIN_DBINF;
-        return f;
-    }
-    float clampReadGain(float f) {
-        if (f > GAIN_DB30)
-            return GAIN_DB30;
-        if (f < GAIN_DBFLOOR)
-            return 0;
-        return f;
-    }
-    float dBFSClampInf6(float f) {
-        if (f <= GAIN_DBFLOOR)
-            return -std::numeric_limits<float>::infinity();
-        f = 20.0f * std::log10(f);
-        return f > 6.0f ? 6.0f : f;
-    }
-    float fromdBFSClampInf6(float f_dBfs) {
-        if (f_dBfs <= DBFS_FLOOR)
-            return 0.0f;
-        float f_gain = pow(10.0f, f_dBfs / 20.0f);
-        if (f_gain > GAIN_DB6) {
-            return GAIN_DB6;
-        }
-        return f_gain;
-    }
-    float fromdBFS(float f) {
-        return pow(10.0f, f / 20.0f);
     }
     void fillSine(float** buffer, samplecount_t samples) {
         static paTestData* data = NULL;
@@ -182,47 +143,6 @@ namespace dsp_util {
             *input1++ = one.f * gain;
             intOver += intIncr;
         }
-    }
-
-
-    const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
-    const float GAIN_SCALE_EXP   = 2.0f;
-    float gainToLinScale(float f) {
-        float db = dBFS(f);
-        float f2 = ((math::max(DBFS_MUTE_POS, math::min(db, MTR_CEIL)) - MTR_CEIL) / GAIN_SCALE_RANGE);
-        return 1.0f - math::powf(f2, 1.0f / GAIN_SCALE_EXP);
-    }
-    float linScaleToGain(float f) {
-        float f1 = (1.0f - f);
-        f1       = math::powf(f1, GAIN_SCALE_EXP);
-        float f2 = (f1 * GAIN_SCALE_RANGE) + MTR_CEIL;
-        return fromdBFS(f2);
-    }
-    float dbfsToLinScaleWithRange(float dbfs, float MTR_CEIL, float DBFS_MUTE_POS) {
-        const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
-        float f2 = ((math::max(DBFS_MUTE_POS, math::min(dbfs, MTR_CEIL)) - MTR_CEIL) / GAIN_SCALE_RANGE);
-        return 1.0f - math::powf(f2, 1.0f / GAIN_SCALE_EXP);
-    }
-    float gainToLinScaleWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS) {
-        return dbfsToLinScaleWithRange(dBFS(f), MTR_CEIL, DBFS_MUTE_POS);
-    }
-    float linScaleToGainWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS) {
-        const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
-        float f1 = (1.0f - f);
-        f1       = math::powf(f1, GAIN_SCALE_EXP);
-        float f2 = (f1 * GAIN_SCALE_RANGE) + MTR_CEIL;
-        return fromdBFS(f2);
-    }
-    bool getGainLvlWithRange(float fLinGain, float MTR_CEIL, float DBFS_MUTE_POS, float& fGainOut) {
-        const float DBFS_FLOOR = DBFS_MUTE_POS + 1.0f;
-        const float GAIN_DBFLOOR = math::powf(10.0f, DBFS_FLOOR / 20.0f);
-        float fGainRaw = dsp_util::linScaleToGainWithRange(fLinGain, MTR_CEIL, DBFS_MUTE_POS);
-        if (fGainRaw < GAIN_DBFLOOR) {
-            fGainOut = 0.0f;
-            return false;
-        }
-        fGainOut = math::clamp(fGainRaw, GAIN_DBFLOOR, dsp_util::GAIN_DB30);
-        return true;
     }
 }// namespace dsp_util
 
