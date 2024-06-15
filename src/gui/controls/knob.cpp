@@ -1021,15 +1021,24 @@ void gui_slider_textfield::handleDraggedMove(MouseEvent& evt) {
 }
 
 bool gui_slider_textfield::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-    float value = paramAutomatable->getParam(paramIdx)->getValue();
-    float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
+    // check if any of our parents is a scrollcontainer. If so, we should not handle the scroll event unless we are focused
+    auto p = parent;
+    while (p) {
+        if (dynamic_cast<gui_scrollcontainer*>(p)) {
+            if (!focused()) {
+                return false;
+            }
+            break;
+        }
+        p = p->parent;
+    }
     float q = getQuantizationStep();
     if (q > 0.0f) {
-        value += q * (yoffset > 0 ? 1 : -1);
+        updateAutomatableParam(q * (yoffset > 0 ? 1 : -1), true, false);
     } else {
-        value += yoffset / scale;
+        float scale = isCtrl(evt.kbmods) ? 20.0f : 2.0f;
+        updateAutomatableParam(-float(yoffset) / scale, true, true);
     }
-    paramAutomatable->setParamEdit(paramIdx, value, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     return true;
 }
 
