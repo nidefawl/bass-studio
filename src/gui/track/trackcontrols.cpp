@@ -205,8 +205,10 @@ public:
     }
 
     String getValueAsString(float param) override {
-        float gainDb = dsp_util::linScaleToGain(param);
-        return StringFormat("%.2f", dsp_util::dBFSClampInf6(gainDb));
+        float gain = dsp_util::linScaleToGain(param);
+        if (gain < dsp_util::GAIN_DBFLOOR) return "-inf";
+        float f = math::min(6.0f, 20.0f * std::log10(gain));
+        return StringFormat("%.2f", f);
     }
 };
 class gui_slider_pan final : public gui_slider_textfield {

@@ -61,12 +61,6 @@ namespace dsp_util {
             return 0;
         return f;
     }
-    MAYBE_INLINE_CONSTEXPR float dBFSClampInf6(float f) {
-        if (f <= GAIN_DBFLOOR)
-            return -std::numeric_limits<float>::infinity();
-        f = 20.0f * std::log10(f);
-        return f > 6.0f ? 6.0f : f;
-    }
     MAYBE_INLINE_CONSTEXPR float fromdBFSClampInf6(float f_dBfs) {
         if (f_dBfs <= DBFS_FLOOR)
             return 0.0f;
