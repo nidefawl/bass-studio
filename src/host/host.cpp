@@ -1252,7 +1252,6 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
 
     if (canProcess) {
         PluginManager::onBeforeBlock(ctrl->getGlobals(), sample, posDouble, state);
-        PluginManager::UpdateVstTime(getHostCallback()->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
         processMidiRealtimeInput(ctrl, posDouble, state);
         if (enableProfiling) {
             stats.timings["Block.MidiRealtimeInput"] = timerProfile.getTime();
@@ -1296,8 +1295,9 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
         const auto ticksLatencyOutput = sampleToTickConvert<double, roundmode::none>(samplesLatencyOutput, prjGlobals.tempo100, m_sampleFormatExternal.sampleRate);
         const auto ticksLatencyInput = sampleToTickConvert<double, roundmode::none>(processingGraph->trackGraph->maxLatencySamples, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
         for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
-            int32_t samplePosProcess = sample + sampleFormat.blockSize*i; //TODO: inspect precision
+            int32_t samplePosProcess = sample + int32_t(sampleFormat.blockSize * i);
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
+            PluginManager::UpdateVstTime(getHostCallback()->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), samplePosProcess, tickPosProcess, state);
             AudioBufferTimeInfo bufferTimeInfo{ };
             resamplerInput->pop(bufferTimeInfo, impl->blockInput);
             impl->meterInput->update(&impl->blockInput, 1.0f);
