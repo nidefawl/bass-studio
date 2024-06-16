@@ -797,7 +797,7 @@ int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, sam
     format.sampleRate = trImpl->sampleFormat.sampleRate;
     format.bitsPerSample = 32;
 
-    drwav wav;
+    drwav wav{};
     if (!drwav_init_file_write_sequential_pcm_frames(&wav, StringAsCStr(fOutWave), &format, numSamples, nullptr)) {
         log_lf(Log::L_WARN, "drwav_init_file_write_sequential_pcm_frames failed\n");
         return 0;

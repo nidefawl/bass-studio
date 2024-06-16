@@ -542,7 +542,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                         format.bitsPerSample = 32;
                         if (!fOutWave.empty()) {
                             String nameWaveFileTrack = fOutWave + "_" + std::to_string(trackIndex) + "_" + trackMaster->name + "_f32.wav";
-                            drwav wav;
+                            drwav wav{};
                             if (!drwav_init_file_write_sequential_pcm_frames(&wav, StringAsCStr(nameWaveFileTrack), &format, totalLen, nullptr)) {
                                 log_lf(Log::L_WARN, "drwav_init_file_write_sequential_pcm_frames failed\n");
                                 return 0;

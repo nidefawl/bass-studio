@@ -731,7 +731,7 @@ samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
     format.channels = sample->nChannels;
     format.sampleRate = sample->sampleRate;
     format.bitsPerSample = 32;
-    drwav wav;
+    drwav wav{};
     if (!drwav_init_file_write_sequential_pcm_frames(&wav, StringAsCStr(fOutWave), &format, sample->nSamples, nullptr)) {
         log_lf(Log::L_WARN, "drwav_init_file_write_sequential_pcm_frames failed\n");
         return 0;
