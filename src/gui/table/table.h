@@ -149,6 +149,7 @@ namespace Table {
 
     void drawTbl(const table_ctxt_t& ctxt, const SafeRef<guibase>& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblfloat& obj);
+    void drawTbl(const table_ctxt_t& ctxt, const char* pStr);
     void drawTbl(const table_ctxt_t& ctxt, const tblString& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblstr& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblint& obj);

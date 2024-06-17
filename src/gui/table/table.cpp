@@ -63,6 +63,12 @@ namespace Table {
         nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
         nvgText(ctxt.vg, pos.x + INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(obj), nullptr);
     }
+    void drawTbl(const table_ctxt_t& ctxt, const char* pStr) {
+        const vec2& pos  = ctxt.pos;
+        const vec2& size = ctxt.size;
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+        nvgText(ctxt.vg, pos.x + INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, pStr, nullptr);
+    }
 
     void drawTbl(const table_ctxt_t& ctxt, const tblfloat& obj) {
         const vec2& pos  = ctxt.pos;

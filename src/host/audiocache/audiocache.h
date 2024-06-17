@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <unordered_map>
 #include <atomic>
 #include <memory>
@@ -43,6 +44,34 @@ struct audiofile_t final : public samplesource_t {
         AUDIOFILE_FLAG_DERIVED = 1 << 5,
         AUDIOFILE_FLAG_LOADING = 1 << 6,
     };
+    static inline String getAudioFileStateAsString(uint8_t flags) {
+        String s = "";
+        if (flags & AUDIOFILE_FLAG_LOADED) {
+            s += "LOADED ";
+        }
+        if (flags & AUDIOFILE_FLAG_MODIFIED) {
+            s += "MODIFIED ";
+        }
+        if (flags & AUDIOFILE_FLAG_MISSING) {
+            s += "MISSING ";
+        }
+        if (flags & AUDIOFILE_FLAG_TEMPORARY) {
+            s += "TEMPORARY ";
+        }
+        if (flags & AUDIOFILE_FLAG_BUNDLED) {
+            s += "BUNDLED ";
+        }
+        if (flags & AUDIOFILE_FLAG_DERIVED) {
+            s += "DERIVED ";
+        }
+        if (flags & AUDIOFILE_FLAG_LOADING) {
+            s += "LOADING ";
+        }
+        if (s.empty()) {
+            s = "NONE";
+        }
+        return s;
+    }
     int32_t id = -1;
     int32_t derivedFromId = -1;
     String path;
@@ -53,6 +82,7 @@ struct audiofile_t final : public samplesource_t {
     String pathLoaded;
     std::unique_ptr<audiosample_t> sample;
     clip_audio_settings_t settings;
+    samplerate_t sourceSamplerate = 0;
     audiosample_t* getSample() override {
         return sample.get();
     }

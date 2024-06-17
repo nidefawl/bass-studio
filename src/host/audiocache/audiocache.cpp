@@ -189,6 +189,7 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     }
     this->nextIdx       = math::max(this->nextIdx.load(), _id + 1);
     auto spFile    = std::make_shared<audiofile_t>();
+    spFile->sourceSamplerate = sample->sampleRate;
     spFile->sample = std::move(sample);
     spFile->state = audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED | audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MODIFIED;
     if (ssr.isTemporarySample) {
@@ -401,7 +402,7 @@ bool audiocache::fileloader::preloadFile(struct archive* ar, struct archive_entr
     auto* sample = file->sample.get();
     sample->bitsPerSample = 32;
     sample->nChannels     = math::clamp<size_t>(sourceNumChannels, 0, 255);
-    sample->sampleRate    = sourceSamplerate;
+    file->sourceSamplerate = sourceSamplerate;
     sample->sampleRate    = targetSamplerate;
 
     auto numSamples = getExpectedNumSamples();

@@ -648,19 +648,45 @@ void guitooltip<gui_audio_clip>::setContent() {
     using tbl_rows = std::vector<table_entry_t>;
     {
         //TODO: fix dawCtrl in tooltips/popups
-        audiofile_t* c = audiocache::getInstance()->getDerivedSample(clipPtr->audio);
+        auto cache = dawCtrl->getDaw()->getAudioCache();
+        audiofile_t* c = cache->getDerivedSample(clipPtr->audio);
 
-        String path;
         if (c) {
-            path = StringFormat("%s.%s", StringAsCStr(c->name), StringAsCStr(c->ext));
+            // path = StringFormat("%s.%s", StringAsCStr(c->name), StringAsCStr(c->ext));
+            audiofile_path_t path = c->getPath();
+            audiofile_path_t pathLoaded = c->getPathLoaded();
+            auto strState = audiofile_t::getAudioFileStateAsString(c->state);
+            
+            table.rows.push_back({ { tblString{ StringFormat("Audio Clip (sample-id %d)", clipPtr->audio.id) }, tblString{ path.path, 1 } } });
+            table.rows.push_back({ { "State", tblString{ strState, 1 } } });
+            if (!pathLoaded.path.empty())
+                table.rows.push_back({ { "Loaded from", tblString{ pathLoaded.path, 1 } } });
+            table.rows.push_back({ { "Sample Rate (File)", tblint{ c->sourceSamplerate } } });
+            auto& cSettings = c->settings;
+            table.rows.push_back({ { "Pitch", tblfloat{ cSettings.pitch } } });
+            table.rows.push_back({ { "Stretch", tblfloat{ cSettings.stretch } } });
+            audiofile_t* cDerived = nullptr;
+            if (c->derivedFromId != 0) {
+                cDerived = cache->getSample(c->derivedFromId);
+            }
+            if (cDerived) {
+                path = cDerived->getPath();
+                pathLoaded = cDerived->getPathLoaded();
+                strState = audiofile_t::getAudioFileStateAsString(cDerived->state);
+                table.rows.push_back({ { StringFormat("Audio Clip (sample-id %d)", c->derivedFromId), tblString{ path.path, 1 } } });
+                if (!pathLoaded.path.empty())
+                    table.rows.push_back({ { "Loaded from", tblString{ pathLoaded.path, 1 } } });
+                table.rows.push_back({ { "Src State" , tblString{ strState, 1 } } });
+                table.rows.push_back({ { "Src Sample Sample Rate", tblint{ cDerived->sourceSamplerate } } });
+            }
         } else {
-            path = StringFormat("<MISSING SAMPLE %d>", clipPtr->audio.id);
+            String path = StringFormat("<MISSING SAMPLE %d>", clipPtr->audio.id);
+            tbl_rows vec{ tblString{ StringFormat("Audio Clip (sample-id %d)", clipPtr->audio.id) }, tblString{ path, 1 } };
+            table.rows.push_back({ vec });
         }
-        tbl_rows vec{ tblString{ StringFormat("Audio Clip (sample-id %d)", clipPtr->audio.id) }, tblString{ path } };
-        table.rows.push_back(tbl_row_t{ vec });
     }
     {
-        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "num samples" }, tblint{ clipPtr->getLenSamples() } } });
+        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "Number of Samples" }, tblint{ clipPtr->getLenSamples() } } });
     }
     {
         table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "ticks start" }, tblint{ clipPtr->start() } } });
