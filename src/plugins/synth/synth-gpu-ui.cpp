@@ -617,6 +617,7 @@ public:
         guictr_stacked::layout();
         ivec2 csize = getSizeContent();
         auto titleHeight = getTitleHeight();
+        shapeEditor->setInputHeight(math::floorfS32(titleHeight));
         ctrParamTriggerMode.size = { math::min(csize.x/2, 340), titleHeight };
         ctrParamTriggerMode.pos = { csize.x - ctrParamTriggerMode.size.x, 0 };
         ctrParamTriggerMode.layout();

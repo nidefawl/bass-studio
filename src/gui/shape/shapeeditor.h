@@ -15,6 +15,7 @@ public:
     virtual void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_t&, bool bIsDragMove)> callback) = 0;
     virtual void setShapeEditorShapeRef(DAW::Shape::shape_t* shape) = 0;
     virtual guictr_base* getGuiContainer() = 0;
+    virtual void setInputHeight(int32_t height) = 0;
 };
 
 i_ctr_shape_editor* makeShapeEditor();

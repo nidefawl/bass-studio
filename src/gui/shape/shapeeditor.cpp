@@ -162,6 +162,7 @@ class guictr_curve_editor final : public guictr_base, public i_ctr_shape_editor 
     guictr_curve_controls controls;
     PresetManager presetManager;
     int32_t inputHeight = HEIGHT_DEFAULT_INPUT;
+    bool bScaleInputHeight = true;
 public:
     guictr_curve_editor() : guictr_base(){
         setGuiType(gui_type::CTR_TYPE_SHAPE_EDITOR);
@@ -207,15 +208,19 @@ public:
     guictr_base* getGuiContainer() override {
         return this;
     }
-    void setInputHeight(int32_t height) {
+    void setInputHeight(int32_t height) override {
         inputHeight = height;
+        bScaleInputHeight = false;
     }
 
     void layout() override {
         auto cs = getSizeContent();
         shape.pos = controls.pos = {0,0};
         shape.size = controls.size = cs;
-        auto controlsHeight = math::clamp<int32_t>(size.y/8, 12, inputHeight);
+        auto controlsHeight = inputHeight;
+        if (bScaleInputHeight && inputHeight > 12) {
+            controlsHeight = math::clamp<int32_t>(size.y/8, 12, inputHeight);
+        };
         if (controlsHeight < inputHeight*2/3) {
             controls.size.y = 0;
             controls.setVisible(false);
