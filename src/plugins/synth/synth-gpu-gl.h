@@ -27,7 +27,7 @@ struct gpu_program_desc_t {
 };
 
 struct gpu_program : public gpu_program_definitions_t {
-    static constexpr size_t MAX_PROGRAMS = 1024;
+    static constexpr size_t MAX_PROGRAMS = 32;
     std::array<gpu_program_desc_t, MAX_PROGRAMS> programDescs{};
     std::array<GLuint, MAX_PROGRAMS> programs{};
     std::array<GLuint, MAX_PROGRAMS> programsWaveform{};
@@ -114,6 +114,13 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
             break;
         }
     }
+    for (;programNr < gpu_program::MAX_PROGRAMS; programNr++) {
+        gpu_program_desc_t desc;
+        desc.programNr = int32_t(programNr);
+        desc.name = "Reserved program";
+        desc.def = "RESERVED_" + std::to_string(programNr);
+        result.programDescs[programNr] = desc;
+    }
     if (posLastProcessedDefine == 0 || programNr == 0) {
         return String("No program names found in shader source");
     }
@@ -142,7 +149,7 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
         result.programs[i] = std::get<GLuint>(programSynth);
         result.programsWaveform[i] = std::get<GLuint>(programWaveform);
     }
-    result.numPrograms = int32_t(programNr);
+    result.numPrograms = gpu_program::MAX_PROGRAMS;
     result.blocksize1024Fixed = defs.blocksize1024Fixed;
     result.channels = defs.channels;
     result.polyVoices = defs.polyVoices;

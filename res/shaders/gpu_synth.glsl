@@ -353,7 +353,7 @@ void sampleWaveform()
     waveform_out.samples[i] = float(s);
 }
 
-#if N_PROGRAM != PROGRAM_EMPTY
+#if N_PROGRAM < PROGRAM_EMPTY
 void main() {
 #if IS_WAVEFORM_SAMPLER == 1
     sampleWaveform();
