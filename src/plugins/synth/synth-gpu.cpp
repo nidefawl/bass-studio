@@ -211,13 +211,13 @@ void SynthImplGPU::initImpl() {
         parRel->setInitialValue(UnshapeEnvTimeBaseParam(Envelope::GetParamFromTimeMillis(123.0, envTimeRanges[3])));
         setParamName(parRel, nameBase + " Release", nameShort + " Release", "Release", "s");
         auto parAttShape = addFloatParam(envBase[i] + 5);
-        parAttShape->setRange(-100.0, 100.0)->setInitialValue(0.0);
+        parAttShape->setRange(-100.0, 100.0)->setInitialValue(-10.0);
         setParamName(parAttShape, nameBase + " Attack Shape", nameShort + " A Shape", "Shape", "%", "%.0f");
         auto parDecShape = addFloatParam(envBase[i] + 6);
-        parDecShape->setRange(-100.0, 100.0)->setInitialValue(0.0);
+        parDecShape->setRange(-100.0, 100.0)->setInitialValue(-10.0);
         setParamName(parDecShape, nameBase + " Decay Shape", nameShort + " D Shape", "Shape", "%", "%.0f");
         auto parRelShape = addFloatParam(envBase[i] + 7);
-        parRelShape->setRange(-100.0, 100.0)->setInitialValue(0.0);
+        parRelShape->setRange(-100.0, 100.0)->setInitialValue(-10.0);
         setParamName(parRelShape, nameBase + " Release Shape", nameShort + " R Shape", "Shape", "%", "%.0f");
     }
 
