@@ -40,7 +40,6 @@ void SynthImplGPU::init() {
         params.shape.pts   = DAW::Shape::GetShape(DAW::Shape::ShapeWaveform::SHAPE_TRIANGLE);
         params.shape.flags = DAW::Shape::ShapeFlags::SHAPE_CYCLIC | DAW::Shape::ShapeFlags::SHAPE_SHAPED;
         params.syncFlags   = STRAIGHT | DOTTED | TRIPLET;
-        params.syncFlags   = 0;
         params.syncRatios  = GetSyncRatios(params.syncFlags);
         params.modeIsShape = true;
         updateLFOParameters(params, i);
