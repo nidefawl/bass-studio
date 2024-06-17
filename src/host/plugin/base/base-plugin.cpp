@@ -131,7 +131,7 @@ void effectbase::sendNotesOff() {
 
 void effectbase::processMidi(midi_data_processing_t& midiEvents) {
     const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
-    std::vector<IMidiMsg> messages;
+    std::vector<IMidiMsg> messages; // TODO: get rid of heap allocation
     messages.reserve(midiEvents.noteEvents->size());
     for (auto& evt : *midiEvents.noteEvents) {
         auto deltaFrames = math::floordS32(evt.tickOffsetInBlock * tickToSamples);

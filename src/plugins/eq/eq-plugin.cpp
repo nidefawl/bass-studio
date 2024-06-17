@@ -448,7 +448,7 @@ namespace PluginEQ {
         dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
     }
 
-    void ReadAutomation(const DAW::Host::Host* const host, module_eq* eq, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {
+    void ReadAutomation(const DAW::Host::Host* const host, module_eq* eq, double tick, playback_state state, samplecount_t samplePos, samplerate_t nOversample) {
         auto bpm100 = host->prjGlobals.tempo100;
         auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         eq->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
@@ -500,7 +500,7 @@ namespace PluginEQ {
         if (bUseSampleAccurateModulation) {
             auto stepSizeSamples = samplecount_t(state == playback_state::status_render ? 1 : 8);
             for (samplecount_t i = 0; i < numSamples; i += stepSizeSamples) {
-                ReadAutomation(host, this, tick, state, i, numSamples, bOversampling ? 2 : 1);
+                ReadAutomation(host, this, tick, state, i, bOversampling ? 2 : 1);
                 for (int32_t bandIdx = 0; bandIdx < int32_t(defaultBands.size()); ++bandIdx) {
                     if (!isBandEnabled(bandIdx)) {
                         continue;

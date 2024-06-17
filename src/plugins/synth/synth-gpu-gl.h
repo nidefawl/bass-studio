@@ -14,7 +14,7 @@
 namespace DAW::GPU {
 
 struct gpu_program_definitions_t {
-    samplecount_t blocksize = 512;
+    samplecount_t blocksize1024Fixed = 0;
     samplecount_t channels = 2;
     samplecount_t polyVoices = 16;
     samplecount_t unisonVoices = 4;
@@ -54,6 +54,9 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
         StrUtil::StringReplace(sourceCopy, "#define N_PROGRAM 0", "#define N_PROGRAM " + std::to_string(programNr));
         if (isWaveformSampler) {
             StrUtil::StringReplace(sourceCopy, "#define IS_WAVEFORM_SAMPLER 0", "#define IS_WAVEFORM_SAMPLER 1");
+        }
+        if (!isWaveformSampler) {
+            log_lf(Log::L_DEBUG, "compileGPUProgram %d:\n%s\n", int(programNr), StringAsCStr(sourceCopy));
         }
         std::array<GLchar*, 1> sources = {(GLchar*)sourceCopy.c_str()};
         glShaderSource(shader1, 1, sources.data(), NULL);
@@ -138,7 +141,7 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
         result.programsWaveform[i] = std::get<GLuint>(programWaveform);
     }
     result.numPrograms = int32_t(programNr);
-    result.blocksize = defs.blocksize;
+    result.blocksize1024Fixed = defs.blocksize1024Fixed;
     result.channels = defs.channels;
     result.polyVoices = defs.polyVoices;
     result.unisonVoices = defs.unisonVoices;
@@ -180,7 +183,7 @@ inline std::variant<gpu_program, String> loadshader(const gpu_program_definition
     auto& sourcefiles = glSourceLoader->sources;
     auto& file0Source = sourcefiles[0].source;
     StrUtil::StringReplace(file0Source, "#define N_CHANNELS 0", "#define N_CHANNELS " + std::to_string(defs.channels));
-    StrUtil::StringReplace(file0Source, "#define N_SAMPLES 0", "#define N_SAMPLES " + std::to_string(defs.blocksize));
+    StrUtil::StringReplace(file0Source, "#define N_SAMPLES 0", "#define N_SAMPLES " + std::to_string(defs.blocksize1024Fixed));
     sourcefiles[0].source += sourcefiles[1].source;
     log_lf(Log::L_DEBUG, "Source code:\n%s\n", StringAsCStr(sourcefiles[0].source));
     auto newShader = compileGPUProgram(sourcefiles[0], defs);
@@ -219,7 +222,7 @@ inline gpu_program_loadresult loadGPUProgram(gpu_program_definitions_t defs, gpu
     auto& sourcefiles = glSourceLoader->sources;
     auto& file0Source = sourcefiles[0].source;
     StrUtil::StringReplace(file0Source, "#define N_CHANNELS 0", "#define N_CHANNELS " + std::to_string(defs.channels));
-    StrUtil::StringReplace(file0Source, "#define N_SAMPLES 0", "#define N_SAMPLES " + std::to_string(defs.blocksize));
+    StrUtil::StringReplace(file0Source, "#define N_SAMPLES 0", "#define N_SAMPLES " + std::to_string(defs.blocksize1024Fixed));
     StrUtil::StringReplace(file0Source, "#define N_POLY_VOICES 0", "#define N_POLY_VOICES " + std::to_string(defs.polyVoices));
     StrUtil::StringReplace(file0Source, "#define N_UNISON_VOICES 0", "#define N_UNISON_VOICES " + std::to_string(defs.unisonVoices));
     auto res = compileGPUProgram(sourcefiles[0], defs);
@@ -346,8 +349,8 @@ protected:
     int64_t timeLastShaderError = 0;
 
     //TODO: make these user runtime options
-    bool bUseGlFinish = false;
-    bool bUseMemoryBarriers = false;
+    bool bUseGlFinish = true;
+    bool bUseMemoryBarriers = true;
 
     /* Set ssbo to size of host_buffer_t::buffer */
     void reallocateSSBOs() {
@@ -362,8 +365,8 @@ protected:
         checkGLError("allocateForBlockSize");
     }
 public:
-    GPUAudioProcessor() {
-    }
+    static constexpr size_t GPU_BLOCK_SIZE = 1024;
+    GPUAudioProcessor() = default;
     virtual ~GPUAudioProcessor()
     {
         GlfwContextSwitch ctxSwitch(window);

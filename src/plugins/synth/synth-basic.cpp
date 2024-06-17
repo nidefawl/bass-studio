@@ -386,17 +386,18 @@ public:
         v.volEnv.Reset();
     }
 
-    void ProcessSynth(AudioBlock* in, float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) override {
+    void ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) override {
         // lockProcessing only locks VST2 versions of the plugin
         auto lock = this->lockProcessing();
 
         const FilterModes filterMode = FilterModes::Off;//GetParamEnum(Parameters::FilterMode)->getEnumValue<FilterModes>();
         const bool bIsGlideEnabled   = true;
-        const auto dt                = oneOverSR;
-        float* synthOutputs[2]       = {};
-        synthOutputs[0]              = outputs[0];
-        synthOutputs[1]              = outputs[1];
-        int nOversample              = 1;
+
+        const auto dt = oneOverSR;
+        float* synthOutputs[2] = {};
+        synthOutputs[0] = out->buf[0];
+        synthOutputs[1] = out->buf[1];
+        samplerate_t nOversample = 1;
         auto bpm100 = host->prjGlobals.tempo100;
 
         /**
@@ -409,7 +410,7 @@ public:
         for (samplecount_t s = 0; s < nFrames; s++) {
             auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
             /* if (host && moduleSynthUnisonInstance && (s % framesPerAutomationUpdate) == 0) {
-                ReadAutomation(host, tick, state, s, nFrames, nOversample);
+                ReadAutomation(host, tick, state, s, nOversample);
             } */
 
             if (s % nOversample == 0) {
@@ -1176,7 +1177,7 @@ public:
         v.volEnv.Reset();
     }
 
-    void ProcessSynth(AudioBlock* in, float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) override {
+    void ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) override {
         // lockProcessing only locks VST2 versions of the plugin
         auto lock = this->lockProcessing();
 
@@ -1184,10 +1185,10 @@ public:
         const FilterModes filterMode = FilterModes::Off;//GetParamEnum(Parameters::FilterMode)->getEnumValue<FilterModes>();
         const bool bIsGlideEnabled   = voiceMode != VoiceModes::Poly;
         const auto dt                = oneOverSR;
-        float* synthOutputs[2]       = {};
-        synthOutputs[0]              = outputs[0];
-        synthOutputs[1]              = outputs[1];
-        int nOversample              = 1;
+        float* synthOutputs[2] = {};
+        synthOutputs[0] = out->buf[0];
+        synthOutputs[1] = out->buf[1];
+        int nOversample = 1;
         auto bpm100 = host->prjGlobals.tempo100;
 
         /**
@@ -1199,7 +1200,7 @@ public:
         for (samplecount_t s = 0; s < nFrames; s++) {
             auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
             /* if (host && moduleSynthUnisonInstance && (s % framesPerAutomationUpdate) == 0) {
-                ReadAutomation(host, tick, state, s, nFrames, nOversample);
+                ReadAutomation(host, tick, state, s, nOversample);
             } */
 
             if (s % nOversample == 0) {

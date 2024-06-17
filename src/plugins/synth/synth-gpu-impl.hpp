@@ -1,4 +1,5 @@
 #pragma once
+#include "host/audiobuffer/audioblock.h"
 #include "types.h"
 #include "config.h"
 #include "assert_dbg.h"
@@ -188,6 +189,12 @@ struct VoiceSynth {
             env.Start();
         }
     }
+
+    void Kill() {
+        bIsActive = false;
+        for (auto& env : envelopes)
+            env.Kill();
+    }
 };
 
 class SynthImplGPU final : public SynthImpl<SynthImplGPU, ParametersSynthGPU>, public ModulationController, public DAW::GPU::GPUAudioProcessor {
@@ -217,12 +224,16 @@ private:
     VoiceSynth tmpVoice;
     size_t numActiveVoicesBlock = 0;
     size_t numActiveVoicesMax = 0;
+    int64_t minVoiceIdx = -1;
+    int64_t maxVoiceIdx = -1;
     int32_t userLimitPolyVoices = math::min<int32_t>(MAX_POLY_VOICES, 8);
     int32_t userLimitUnisonVoices = math::min<int32_t>(MAX_POLY_VOICES, 8);
+    AudioBlock audioOutputBuffer;
+    samplecount_t sampleOffsetSubBlock = 0;
+    samplecount_t readOffsetSubBlock = 0;
 
 private:
     void initImpl();
-
     /**
     * UnshapeEnvTimeBaseParam
     * @param d: the shaped envelope parameter
@@ -245,6 +256,10 @@ public:
     void updateProgramList() override;
 
     void setBlocksize(samplecount_t blocksize) override;
+    void reloadProgram();
+    samplecount_t getProcessingSubBlockSampleMidiWriteOffset() const {
+        return sampleOffsetSubBlock;
+    }
 
     void init() override;
 
@@ -351,7 +366,7 @@ public:
     }
     void OnParamChange(Parameters parameter) override;
 
-    samplecount_t getLatency() override { return gpuProgram.blocksize * (ssboOutput.ssbo.size() - 1); }
+    samplecount_t getLatency() override { return gpuProgram.blocksize1024Fixed * (ssboOutput.ssbo.size() - 1); }
     void updateEnvelopeParameters(VoiceSynth& v);
     void updateLFOParameters(DAW::LFO::LFOParameters& p, size_t lfoIdx);
 
@@ -364,12 +379,9 @@ public:
         return v.lfos[lfoIdx].GetLfo();
     }
 
-    void processGpuSynth(float* const* outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state);
-
-    void ProcessSynth(AudioBlock* in, float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) override {
-        auto lock = this->lockProcessing();
-        processGpuSynth(outputs, nFrames, host, tick, state);
-    }
+    void processGpuSynthInput(const DAW::Host::Host* const host, double tick, double samplePos, samplecount_t sampleOffsetInt, samplecount_t sampleOffsetExt, samplecount_t numSamples, DAW::Host::ProcessingQuality quality, playback_state state);
+    void dispatchGpuSynth();
+    void ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) override;
 
     std::shared_ptr<PluginViewContainer> createViewCtrImpl() override;
 
@@ -387,7 +399,6 @@ public:
             }
         }
     }
-    void updateVoiceLimit();
 };
 
 class module_synth_gpu final : public module_synth_template<SynthImplGPU> {
@@ -397,6 +408,7 @@ public:
     ~module_synth_gpu() override {
         delete impl;
     }
+    void processMidi(midi_data_processing_t& midiEvents) override;
 
     PluginType getPluginType() override { return PLUGIN_TYPE_SYNTH_GPU; };
 

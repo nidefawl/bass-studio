@@ -1,4 +1,5 @@
 #pragma once
+#include "host/audiobuffer/audioblock.h"
 #include "host/host.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "synth-types.hpp"
@@ -16,6 +17,7 @@ class module_synth_mono;
 struct HostTempo {
     double barPos;
     double bpm;
+    int32_t bpm100;
     double ppqPos;
 };
 
@@ -47,7 +49,7 @@ public:
     std::vector<SynthParamBase*>& getParams() {
         return vecParams;
     }
-    virtual void ProcessSynth(AudioBlock* in, float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) = 0;
+    virtual void ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) = 0;
     virtual void init() = 0;
     virtual std::shared_ptr<PluginViewContainer> createViewCtrImpl() { return nullptr; };
     virtual void OnParamChange(Parameters parameter) {};
@@ -100,8 +102,9 @@ public:
         return heldNotes;
     }
 
-    void setTempo(double d) {
-        tempo.bpm = d;
+    void setTempo(int32_t bpm100) {
+        tempo.bpm100 = bpm100;
+        tempo.bpm = bpm100 / 100.0;
     }
 
     void setBarPos(double d) {
@@ -129,7 +132,7 @@ public:
     virtual void setBlocksize(samplecount_t bs) {
     }
 
-    void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount, int nOversample) {
+    void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplerate_t nOversample) {
         auto bpm100 = host->prjGlobals.tempo100;
         auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         this->moduleInstance->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
@@ -375,13 +378,13 @@ public:
         auto barStartPos = math::floord(tick / double(TICKS_BAR)) * 4;
         this->impl->setPPQPos(ppqPos);
         this->impl->setBarPos(barStartPos);
-        this->impl->setTempo(host->prjGlobals.tempo100 / 100.0); //TODO: use hostCallback or provide time info struct in process() parameter list
+        this->impl->setTempo(host->prjGlobals.tempo100); //TODO: use hostCallback or provide time info struct in process() parameter list
         // TODO: transport changes
         // if (timeinfo && timeinfo->flags & kVstTransportChanged) {
         //     this->impl->onTransportChanged(timeinfo->flags & kVstTransportPlaying);
         // }
         out->clear();
-        this->impl->ProcessSynth(in, out->buf, numSamples, host, tick, state);
+        this->impl->ProcessSynth(in, out, numSamples, host, tick, samplePos, state);
     }
     void notifyUiChanges() {
         for (auto& pviewctr : this->views) {

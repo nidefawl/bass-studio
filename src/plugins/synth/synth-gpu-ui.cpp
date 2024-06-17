@@ -123,17 +123,11 @@ public:
         maxPolyVoices.fnClamp = [](int32_t value) -> int32_t {
             return math::clamp<int32_t>(value, 1, MAX_POLY_VOICES);
         };
-        // maxPolyVoices.fnValueEditChanged = [synth](gui_numberinput_field_base* gui, uint32_t newVal) {
-        //     synth->updateVoiceLimit();
-        // };
         maxUnisonVoices.setRef(&synth->getRefUnisonVoiceCount());
         maxUnisonVoices.setLabel("Max Unison Voices");
         maxUnisonVoices.fnClamp = [](int32_t value) -> int32_t {
             return math::clamp<int32_t>(value, 1, MAX_UNISON_VOICES);
         };
-        // maxUnisonVoices.fnValueEditChanged = [synth](gui_numberinput_field_base* gui, uint32_t newVal) {
-        //     synth->updateVoiceLimit();
-        // };
         add(&debugFlags);
         add(&maxPolyVoices);
         add(&maxUnisonVoices);

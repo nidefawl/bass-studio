@@ -1822,7 +1822,7 @@ public:
         maxPolyVoiceIndex = math::max(maxPolyVoiceIndex, static_cast<int32_t>(&voice - &voices[0]) + 1);
     }
 
-    void ProcessSynth(AudioBlock* in, float * const * outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) override {
+    void ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) override {
         // lockProcessing only locks VST2 versions of the plugin
         auto lock = this->lockProcessing();
 
@@ -1840,9 +1840,9 @@ public:
         }
 
         float* synthOutputs[2] = {};
-        synthOutputs[0]        = outputs[0];
-        synthOutputs[1]        = outputs[1];
-        int nOversample        = 1;
+        synthOutputs[0] = out->buf[0];
+        synthOutputs[1] = out->buf[1];
+        int nOversample = 1;
         if (getSetting(Settings::Oversampling)) {
             nOversample = 2;
             if (in) {
@@ -1987,7 +1987,7 @@ public:
 
         if (getSetting(Settings::Oversampling)) {
             nFrames /= nOversample;
-            this->oversampler.down(outputs, nFrames);
+            this->oversampler.down(out->buf, nFrames);
         }
     }
 
@@ -2502,7 +2502,7 @@ void PluginVST2_Synth::processReplacing(float** inputs, float** outputs, VstInt3
     } else if (this->getAeffect()->numOutputs == 2) {
         VstTimeInfo* timeinfo = getTimeInfo(kVstBarsValid | kVstPpqPosValid | kVstTempoValid | kVstTransportChanged | kVstTimeSigValid);
         if (timeinfo && timeinfo->flags & kVstTempoValid) {
-            this->impl->setTempo(timeinfo->tempo);
+            this->impl->setTempo(math::rounddS32(timeinfo->tempo * 100.0));
         }
         if (timeinfo && timeinfo->flags & kVstPpqPosValid) {
             this->impl->setPPQPos(timeinfo->ppqPos);
@@ -2523,10 +2523,15 @@ void PluginVST2_Synth::processReplacing(float** inputs, float** outputs, VstInt3
         if (timeinfo && timeinfo->flags & kVstPpqPosValid) {
             tickPos = timeinfo->ppqPos * TICKS_QUARTER;
         }
+        double samplePos = 0.0;
+        if (timeinfo) {
+            samplePos = timeinfo->samplePos;
+        }
         if (inputs)
             dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
         dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
-        this->impl->ProcessSynth(nullptr, outputs, sampleFrames, nullptr, tickPos, state);
+        AudioBlock blockOutput(outputs, 2, sampleFrames);
+        this->impl->ProcessSynth(nullptr, &blockOutput, sampleFrames, nullptr, tickPos, samplePos, state);
     }
 }
 

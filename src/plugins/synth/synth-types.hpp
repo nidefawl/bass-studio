@@ -153,6 +153,7 @@ struct Envelope {
     bool IsReleased() const { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
 
     void Reset() { value = 0.0; }
+    void Kill() { stage = EnvelopeStages::Idle; value = 0.0; phase = 0.0; relValue = 0.0; }
     void Start() { stage = EnvelopeStages::Triggered; }
     void Release() { 
         if (stage >= EnvelopeStages::Release) return;

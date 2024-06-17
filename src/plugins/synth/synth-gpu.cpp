@@ -1,3 +1,7 @@
+#include "assert_dbg.h"
+#include "host/audiobuffer/audioblock.h"
+#include "host/host_pluginmanager.h"
+#include "seq_time.h"
 #include "synth-gpu-parameters.h"
 #include "synth-gpu-snapshot.hpp"
 #include "synth-gpu-impl.hpp"
@@ -10,8 +14,10 @@
 #include "math/simd_math.h"
 #include "platform.h"
 #include "synth-types.hpp"
+#include "types.h"
 #include <algorithm>
 #include <cstdint>
+#include "host/track/track_impl.h"
 
 namespace PluginSynth::GPU {
 
@@ -19,7 +25,8 @@ uint32_t gDebugBenchmarkFlags = 0;
 
 SynthImplGPU::SynthImplGPU(module_synth_template<SynthImplGPU>* module)
     : SynthImpl<SynthImplGPU, ParametersSynthGPU>(module),
-    moduleSynthInstance(module)
+    moduleSynthInstance(module),
+    audioOutputBuffer(NUM_AUDIO_CHANNELS, 0)
 {
     initImpl();
 }
@@ -52,21 +59,23 @@ void SynthImplGPU::init() {
         return;
     }
 
+    reloadProgram();
     timeCheckShader = getTimeMillis();
     timePerfLog     = getTimeMillis();
 
     auto sampleRate = moduleSynthInstance->getSampleFormat().sampleRate;
     if (!sampleRate) sampleRate = 44100;
+    auto blocksize1024Fixed = gpuProgram.blocksize1024Fixed;
     // print inputBuffer size in mega bytes
-    const auto inputSizePerSample = (ssboInputSynthState.buffer.size() + ssboInputVoiceStates.buffer.size()) / gpuProgram.blocksize;
-    log_lf(Log::L_INFO, "inputBuffer size: %f MB\n", inputSizePerSample * gpuProgram.blocksize * sizeof(float) / 1024.0 / 1024.0);
+    const auto inputSizePerSample = (ssboInputSynthState.buffer.size() + ssboInputVoiceStates.buffer.size()) / blocksize1024Fixed;
+    log_lf(Log::L_INFO, "inputBuffer size: %f MB\n", inputSizePerSample * blocksize1024Fixed * sizeof(float) / 1024.0 / 1024.0);
     const auto inputPerSec = inputSizePerSample * sampleRate * sizeof(float) / 1024.0 / 1024.0;
     // print required input bandwith
     log_lf(Log::L_INFO, "inputBuffer bandwidth: %f MB/s\n", inputPerSec);
 
     // also print output buffer size and bandwidth
     const auto outputSizePerSample = size_t(3);
-    log_lf(Log::L_INFO, "outputBuffer size: %f MB\n", outputSizePerSample * gpuProgram.blocksize * sizeof(float) / 1024.0 / 1024.0);
+    log_lf(Log::L_INFO, "outputBuffer size: %f MB\n", outputSizePerSample * blocksize1024Fixed * sizeof(float) / 1024.0 / 1024.0);
     const auto outputPerSec = outputSizePerSample * sampleRate * sizeof(float) / 1024.0 / 1024.0;
     log_lf(Log::L_INFO, "outputBuffer bandwidth: %f MB/s\n", outputPerSec);
 
@@ -291,18 +300,6 @@ void SynthImplGPU::initImpl() {
     }
 }
 
-void SynthImplGPU::updateVoiceLimit() {
-    if (gpuProgram.polyVoices != userLimitPolyVoices || gpuProgram.unisonVoices != userLimitUnisonVoices) {
-        GetParamInt(Parameters::Osc1UnisonVoiceCount)->setRange(1, userLimitUnisonVoices);
-        for (size_t i = userLimitPolyVoices; i < voices.size(); i++) {
-            voices[i].Release();
-        }
-        if (gpuProgram.blocksize) {
-            setBlocksize(gpuProgram.blocksize);
-        }
-    }
-}
-
 bool SynthImplGPU::getSnapshot(snapshot_t& snapshot) const {
     snapshot.version     = SYNTH_GPU_SNAPSHOT_VERSION;
     const auto numParams = CtrSize(vecParams);
@@ -434,23 +431,30 @@ bool SynthImplGPU::setSnapshot(const snapshot_t& snapshot) {
 }
 
 void SynthImplGPU::setBlocksize(samplecount_t blocksize) {
-    numActiveVoicesMax = 0;
-    SynthImpl::setBlocksize(blocksize);
-    GlfwContextSwitch ctxSwitch(window);
-    if (gpuProgram.blocksize != blocksize
-        || gpuProgram.polyVoices != userLimitPolyVoices
-        || gpuProgram.unisonVoices != userLimitUnisonVoices) {
-        gpuProgram.destroy();
+    tmpVoice.Kill();
+    for (auto& voice : voices) {
+        voice.Kill();
     }
+    SynthImpl::setBlocksize(blocksize);
+    audioOutputBuffer.clear();
+    sampleOffsetSubBlock = 0;
+    readOffsetSubBlock = 0;
+    midiQueue.Clear();
+    heldNotes.clear();
+}
+void SynthImplGPU::reloadProgram() {
+    numActiveVoicesMax = 0;
+    GlfwContextSwitch ctxSwitch(window);
     if (!gpuProgram.is_valid()) {
-        reloadShader({ blocksize, NUM_AUDIO_CHANNELS, userLimitPolyVoices, userLimitUnisonVoices });
+        reloadShader({ GPU_BLOCK_SIZE, NUM_AUDIO_CHANNELS, userLimitPolyVoices, userLimitUnisonVoices });
         timeCheckShader = getTimeMillis();
     }
     allocatedVoiceCount = userLimitPolyVoices;
-    ssboInputSynthState.buffer.resize(blocksize * size_t(NUM_SYNTH_INPUT_PARAMETERS));
-    ssboInputVoiceStates.buffer.resize(blocksize * size_t(userLimitPolyVoices) * size_t(NUM_VOICE_INPUT_PARAMETERS));
-    ssboOutput.buffer.resize(blocksize * gpuProgram.channels);
-    ssboOutputWaveform.buffer.resize(blocksize);
+    audioOutputBuffer.realloc(gpuProgram.blocksize1024Fixed);
+    ssboInputSynthState.buffer.resize(gpuProgram.blocksize1024Fixed * size_t(NUM_SYNTH_INPUT_PARAMETERS));
+    ssboInputVoiceStates.buffer.resize(gpuProgram.blocksize1024Fixed * size_t(userLimitPolyVoices) * size_t(NUM_VOICE_INPUT_PARAMETERS));
+    ssboOutput.buffer.resize(gpuProgram.blocksize1024Fixed * gpuProgram.channels);
+    ssboOutputWaveform.buffer.resize(gpuProgram.blocksize1024Fixed);
     GPUAudioProcessor::reallocateSSBOs();
 }
 
@@ -471,6 +475,7 @@ void SynthImplGPU::updateProgramList() {
 }
 
 void SynthImplGPU::StartVoice(VoiceSynth& voice, VoiceModes mode) {
+    std::fill(voice.modValues.begin(), voice.modValues.end(), 0.0);
     voice.Start(mode == VoiceModes::Mono);
     voice.unisonDetune         = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
     voice.unisonDetuneKeytrack = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
@@ -659,52 +664,140 @@ void SynthImplGPU::updateVoiceModulations(ModulationSourceData& modSrcData, Voic
     std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
     ProcessModulations(modSrcData, voiceModulations);
 }
+template<typename VoiceType, typename VoiceListType>
+VoiceType& getLatestVoice(VoiceListType& voices, size_t polyVoiceLimit) {
+    // get the quietest voice, prioritizing voices that are released
+    auto voiceEnd = std::begin(voices) + polyVoiceLimit;
+    auto voice    = std::min_element(
+            std::begin(voices),
+            voiceEnd,
+            [](auto& a, auto& b) {
+                return a.seqNr < b.seqNr;
+            });
+    if (voice != voiceEnd) return *voice;
+    return voices[0];
+}
 
-void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
-    const bool bIsBenchmark        = gDebugBenchmarkFlags & 1;
-    const bool bDbgSkipBufferBuild = gDebugBenchmarkFlags & 2;
-    const bool bDbgSkipGPUDispatch = gDebugBenchmarkFlags & 4;
-    const bool bDbgSkipAll         = gDebugBenchmarkFlags & 8;
-    if (bDbgSkipAll) {
-        return;
-    }
+void SynthImplGPU::ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) {
     if (!glad_glDispatchCompute) {
         return;
     }
-    const auto blockSize = moduleSynthInstance->getSampleFormat().blockSize;
-    if (nFrames != blockSize) {
+    const bool bIsBenchmark = gDebugBenchmarkFlags & 1;
+    const bool bDbgSkipBufferBuild = gDebugBenchmarkFlags & 2;
+    const bool bDbgSkipAll = gDebugBenchmarkFlags & 8;
+    if (bDbgSkipAll) {
         return;
     }
-    GlfwContextSwitch ctxSwitch(window);
-    if (!gpuProgram.is_valid()) {
-        gpuProgram.destroy();
-        gpuProgram = {};
+    const auto blockSizeExternal  = samplecount_t(moduleSynthInstance->format.blockSize);
+    const auto blockSizeInternal = samplecount_t(gpuProgram.blocksize1024Fixed);
+    const auto sampleRate = moduleSynthInstance->format.sampleRate;
+    if (blockSizeExternal != nFrames) {
+        //TODO: handle this case
+        return;
     }
-    updateVoiceLimit();
+    if (bDbgSkipBufferBuild) {
+        midiQueue.Clear();
+    }
+
+    // TODO: dispatch is not called if the external blocksize is smaller than the GPU blocksize. don't switch context unless we have to:
+    GlfwContextSwitch ctxSwitch(window);
     auto tmNow_ms = getTimeMillis();
-    if (!bIsBenchmark && (!gpuProgram.is_valid() || tmNow_ms - timeCheckShader > 1000)) {
-        if (tmNow_ms - timeLastShaderError > 2000) {
-            timeCheckShader = tmNow_ms;
-            reloadShader({ blockSize, NUM_AUDIO_CHANNELS, userLimitPolyVoices, userLimitUnisonVoices });
+    if (gpuProgram.polyVoices != userLimitPolyVoices
+        || gpuProgram.unisonVoices != userLimitUnisonVoices) {
+        GetParamInt(Parameters::Osc1UnisonVoiceCount)->setRange(1, userLimitUnisonVoices);
+        for (size_t i = userLimitPolyVoices; i < voices.size(); i++) {
+            voices[i].Release();
+        }
+        gpuProgram.destroy();
+        reloadProgram();
+    }
+    if (!bIsBenchmark && (!gpuProgram.is_valid() || tmNow_ms - timeCheckShader > 1000) && tmNow_ms - timeLastShaderError > 2000) {
+        timeCheckShader = tmNow_ms;
+        reloadShader({ GPU_BLOCK_SIZE, NUM_AUDIO_CHANNELS, userLimitPolyVoices, userLimitUnisonVoices });
+    }
+    samplecount_t numBlocksInternal = 1;
+    samplecount_t numBlocksExternal = 1;
+    if (blockSizeInternal != blockSizeExternal) {
+        if (blockSizeExternal > 1024) {
+            // we need to produce multiple internal blocks
+            dbgassert(blockSizeExternal % 1024 == 0);
+            numBlocksInternal = blockSizeExternal / 1024; 
+            numBlocksExternal = 1;
+        } else {
+            // we need to split a single internal block into multiple external blocks
+            // for each dispatchGpuSynth we need to wait numBlocksExternal invocations of ProcessSynth
+            numBlocksInternal = 1;
+            numBlocksExternal = blockSizeInternal / blockSizeExternal;
         }
     }
 
+    this->minVoiceIdx = -1;
+    this->maxVoiceIdx = -1;
+    out->clear();
+    for (samplecount_t block = 0; block < numBlocksInternal; block++) {
+        auto s = gpuProgram.blocksize1024Fixed * block;
+        double offsetSamplePos = samplePos + s;
+        double offsetTickPos   = tick      + sampleToTickConvert<double, roundmode::none>(s, tempo.bpm100, sampleRate);
+        auto latestVoice = getLatestVoice<VoiceSynth>(voices, userLimitPolyVoices);
+        auto& modVals = latestVoice.modValues;
+
+        gpuContext.bpm = tempo.bpm;
+        gpuContext.one_over_samplerate = 1.0 / sampleRate;
+        gpuContext.time_samples        = offsetSamplePos;
+        gpuContext.time_seconds        = offsetSamplePos * gpuContext.one_over_samplerate;
+        gpuContext.time_beats          = offsetTickPos / double(TICKS_QUARTER);
+
+        gpuContext.osc1_unison_voice_count = GetParamInt(Parameters::Osc1UnisonVoiceCount)->Value();
+        gpuContext.osc1_filter             = GetParamFloat(Parameters::Osc1Filter)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Filter]);
+        gpuContext.osc1_pw                 = GetParamFloat(Parameters::Osc1PulseWidth)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1PulseWidth]);
+        gpuContext.osc1_pw_mod_rate        = GetParamFloat(Parameters::Osc1PulseWidthModRate)->getAsDoubleModulated();
+        gpuContext.osc1_pw_mod_depth       = GetParamFloat(Parameters::Osc1PulseWidthModDepth)->getAsDoubleModulated();
+        gpuContext.osc1_width_keytrack     = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
+
+        auto q = state == playback_state::status_render ? DAW::Host::ProcessingQuality::Q_RENDER : DAW::Host::ProcessingQuality::Q_PLAYBACK;
+        dbgassert(1024 == gpuProgram.blocksize1024Fixed);
+        dbgassert(1024 == audioOutputBuffer.samples);
+        auto samplesExternal = math::min(blockSizeExternal, gpuProgram.blocksize1024Fixed);
+        if (sampleOffsetSubBlock == 0) {
+            ssboInputSynthState.clearBuffer();
+            ssboInputVoiceStates.clearBuffer();
+            std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size() * sizeof(double));
+            std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size() * sizeof(double));
+        }
+        processGpuSynthInput(host, offsetTickPos, offsetSamplePos, s, sampleOffsetSubBlock, samplesExternal, q, state);
+        sampleOffsetSubBlock += samplesExternal;
+        if (sampleOffsetSubBlock >= gpuProgram.blocksize1024Fixed) {
+            dispatchGpuSynth();
+            sampleOffsetSubBlock = 0;
+            readOffsetSubBlock = 0;
+        }
+        if (numBlocksExternal > 1) {
+            dbgassert(out->samples == blockSizeExternal);
+            dbgassert(readOffsetSubBlock + samplesExternal <= audioOutputBuffer.samples);
+            auto subBlockSrc = audioOutputBuffer.SubSamplesBlock(readOffsetSubBlock, samplesExternal);
+            // out->clear();
+            // out->fillNoise(synthRand, 0.2);
+            // out->addFromOp(&subBlockSrc, mix_op::ADD, 1.0);
+            out->copyFrom(&subBlockSrc);
+            readOffsetSubBlock += samplesExternal;
+            if (readOffsetSubBlock >= audioOutputBuffer.samples) {
+                readOffsetSubBlock = 0;
+            }
+        } else {
+            auto subBlock = out->SubSamplesBlock(block * audioOutputBuffer.samples, audioOutputBuffer.samples);
+            dbgassert(subBlock.samples > 0 && subBlock.samples >= samplesExternal);
+            subBlock.copyFrom(&audioOutputBuffer);
+        }
+    }
+}
+void SynthImplGPU::processGpuSynthInput(const DAW::Host::Host* const host, double tick, double samplePos, samplecount_t sampleOffsetInt, samplecount_t sampleOffsetExt, samplecount_t numSamples, DAW::Host::ProcessingQuality quality, playback_state state) {
+    const bool bIsBenchmark        = gDebugBenchmarkFlags & 1;
+    const bool bDbgSkipBufferBuild = gDebugBenchmarkFlags & 2;
+
     const int nOversample         = 1;
-    const auto bpm100             = host->prjGlobals.tempo100;
     int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
 
-    const int32_t programMax = math::max(1, CtrSize(gpuProgram.programs));
-    const int32_t programId  = currentProgramId % programMax;
-    const auto sampleRate    = moduleSynthInstance->format.sampleRate;
-
-    const auto hostInfo            = moduleSynthInstance->getHostCallback();
-    const auto samplePos           = hostInfo->m_vstTimeInfo.samplePos;
-    gpuContext.bpm                 = host->prjGlobals.tempo100 / 100.0;
-    gpuContext.one_over_samplerate = 1.0 / sampleRate;
-    gpuContext.time_samples        = samplePos;
-    gpuContext.time_seconds        = samplePos * gpuContext.one_over_samplerate;
-    gpuContext.time_beats          = hostInfo->m_vstTimeInfo.ppqPos;
-    const auto voiceMode           = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
+    const auto voiceMode     = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
 
     double osc1_filter          = 0.0;
     double osc1_filter_keytrack = 0.1;
@@ -712,26 +805,15 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
 
     auto& inputBufferSynthState  = ssboInputSynthState.buffer;
     auto& inputBufferVoiceStates = ssboInputVoiceStates.buffer;
-    ssboInputSynthState.clearBuffer();
-    ssboInputVoiceStates.clearBuffer();
-    std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size() * sizeof(double));
-    std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size() * sizeof(double));
     const bool bHasAutomationOrModulation = true;// TODO: implement
-    if (bDbgSkipBufferBuild) {
-        midiQueue.Clear();
-    }
     const double songPosSeconds = oneOverSR * samplePos;
     for (size_t i = 0; i < lfosSongPos.size(); i++) {
         auto& lfoSongPos = lfosSongPos[i];
         lfoSongPos.setPhase(lfoSongPos.getParameters().phaseOffset);
         lfoSongPos.Update(songPosSeconds);
     }
-    std::array<double, 64>* modValuesActive = &voices[0].modValues;
-    std::fill(modValuesActive->begin(), modValuesActive->end(), 0.0f);
-    int64_t minVoiceIdx = -1;
-    int64_t maxVoiceIdx = -1;
     size_t numActiveVoicesMax = 0;
-    for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < gpuProgram.blocksize; s++) {
+    for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < numSamples; s++) {
         auto polyCount = size_t(std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; }));
         if (polyCount > numActiveVoicesMax) {
             numActiveVoicesMax = polyCount;
@@ -740,12 +822,12 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
             gpuContext.time_sample_phase_reset = samplePos + s;
         }
 
-        const auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
+        const auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, tempo.bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
         if (s % nOversample == 0) {
-            ProcessMidiSample(*this, voices, voiceMode, s, tickPos, userLimitPolyVoices);
+            ProcessMidiSample(*this, voices, voiceMode, sampleOffsetExt + sampleOffsetInt + s, tickPos, userLimitPolyVoices);
         }
         if (host && moduleSynthInstance && (s % framesPerAutomationUpdate) == 0) {
-            ReadAutomation(host, tick, state, s, nFrames, nOversample);
+            this->moduleInstance->updateAutomatedParameters(host, tick, state);
         }
         for (size_t i = 0; i < lfoParameters.size(); i++) {
             updateLFOParameters(lfoParameters[i], i);
@@ -756,8 +838,8 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
             osc1_filter_keytrack = GetParamFloat(Parameters::Osc1KeytrackFilter)->getAsDoubleModulated();
         }
 
-        inputBufferSynthState[s + gpuProgram.blocksize * 0] = float(osc1_filter_keytrack);
-        inputBufferSynthState[s + gpuProgram.blocksize * 1] = float(osc1_stereo);
+        inputBufferSynthState[sampleOffsetExt + s + gpuProgram.blocksize1024Fixed * 0] = float(osc1_filter_keytrack);
+        inputBufferSynthState[sampleOffsetExt + s + gpuProgram.blocksize1024Fixed * 1] = float(osc1_stereo);
 
         const auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
         const auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
@@ -765,10 +847,7 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
             lfosSongPos[i].Update(oneOverSR);
         }
         for (int64_t i = 0; i < userLimitPolyVoices && i < allocatedVoiceCount; i++) {
-            const auto idx_base     = i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize);
-            const auto idx_velocity = idx_base + s;
-            auto& v                 = voices[i];
-            double velocity         = -1.0;
+            auto& v = voices[i];
             if (v.bIsActive) {
                 if (minVoiceIdx < 0 || i < minVoiceIdx) {
                     minVoiceIdx = i;
@@ -783,10 +862,10 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
                 ModulationSourceData modSrcData{};
                 updateVoiceModulations(modSrcData, v, tickPos);
                 updateEnvelopeParameters(v);
-                modValuesActive = &v.modValues;
-                for (size_t j = 0; j < modulationValuesMax.size() && j < modValuesActive->size(); j++) {
-                    modulationValuesMax[j] = math::max(modulationValuesMax[j], (*modValuesActive)[j]);
-                    modulationValuesMin[j] = math::min(modulationValuesMin[j], (*modValuesActive)[j]);
+                auto& modVals = v.modValues;
+                for (size_t j = 0; j < modulationValuesMax.size() && j < modVals.size(); j++) {
+                    modulationValuesMax[j] = math::max(modulationValuesMax[j], modVals[j]);
+                    modulationValuesMin[j] = math::min(modulationValuesMin[j], modVals[j]);
                 }
                 // bool bIsFirst = v.GetVolumeEnvelope().stage == EnvelopeStages::Triggered;
                 for (auto& env : v.envelopes) {
@@ -807,20 +886,23 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
                 const double osc1GainParam = GetParamFloat(Parameters::Osc1Gain)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_Osc1Gain]);
                 float osc1Gain = 0.0;
                 dsp_util::getGainLvl(float(osc1GainParam), osc1Gain);
-                velocity = (osc1Gain+v.modValues[ModDestinations::ModDest_Osc1Gain]);
+                auto velocity = (osc1Gain+v.modValues[ModDestinations::ModDest_Osc1Gain]);
                 velocity *= v.velocity;
                 velocity *= volEnv;
                 velocity *= masterGain;
 
-                const auto idx_pitch                        = idx_base + gpuProgram.blocksize * 1 + s;
-                const auto idx_filter                       = idx_base + gpuProgram.blocksize * 2 + s;
-                const auto idx_detune                       = idx_base + gpuProgram.blocksize * 3 + s;
-                const auto idx_detune_keytrack              = idx_base + gpuProgram.blocksize * 4 + s;
-                inputBufferVoiceStates[idx_pitch]           = float(osc1Frequency);
-                inputBufferVoiceStates[idx_filter]          = float(1.0 - osc1_filter);
-                inputBufferVoiceStates[idx_detune]          = float(v.unisonDetune);
+                const auto idx_base     = sampleOffsetExt + i * (NUM_VOICE_INPUT_PARAMETERS * gpuProgram.blocksize1024Fixed);
+                const auto idx_velocity = idx_base + s;
+                const auto idx_pitch    = idx_base + gpuProgram.blocksize1024Fixed * 1 + s;
+                const auto idx_filter   = idx_base + gpuProgram.blocksize1024Fixed * 2 + s;
+                const auto idx_detune   = idx_base + gpuProgram.blocksize1024Fixed * 3 + s;
+                const auto idx_detune_keytrack       = idx_base + gpuProgram.blocksize1024Fixed * 4 + s;
+                inputBufferVoiceStates[idx_velocity] = float(velocity);
+                inputBufferVoiceStates[idx_pitch]    = float(osc1Frequency);
+                inputBufferVoiceStates[idx_filter]   = float(1.0 - osc1_filter);
+                inputBufferVoiceStates[idx_detune]   = float(v.unisonDetune);
                 inputBufferVoiceStates[idx_detune_keytrack] = float(v.unisonDetuneKeytrack);
-                v.bIsActive                                 = v.isVoiceActive();
+                v.bIsActive = v.isVoiceActive();
                 // if (bIsFirst) {
                 //     double firstSample = velocity;
                 //     dbgassert(firstSample == 0.0);
@@ -829,25 +911,27 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
                 //     double lastSample = velocity;
                 //     dbgassert(lastSample == 0.0);
                 // }
-                inputBufferVoiceStates[idx_velocity] = float(velocity);
             }
         }
     }
+    // dbgassert(midiQueue.Empty());
+
     if (numActiveVoicesMax > this->numActiveVoicesMax) {
         this->numActiveVoicesMax = numActiveVoicesMax;
-        log_lf(Log::L_WARN, "Max poly count seen: %zu\n", numActiveVoicesMax);
+        if (!bIsBenchmark) {
+            log_lf(Log::L_WARN, "Max poly count seen: %zu\n", numActiveVoicesMax);
+        }
     }
+
+    // move this up and find out max across all subblocks
     this->numActiveVoicesBlock = numActiveVoicesMax;
 
-    auto& modVals                      = *modValuesActive;
-    gpuContext.osc1_unison_voice_count = GetParamInt(Parameters::Osc1UnisonVoiceCount)->Value();
-    gpuContext.osc1_filter             = GetParamFloat(Parameters::Osc1Filter)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1Filter]);
-    gpuContext.osc1_pw                 = GetParamFloat(Parameters::Osc1PulseWidth)->getAsDoubleModulated(modVals[ModDestinations::ModDest_Osc1PulseWidth]);
-    gpuContext.osc1_pw_mod_rate        = GetParamFloat(Parameters::Osc1PulseWidthModRate)->getAsDoubleModulated();
-    gpuContext.osc1_pw_mod_depth       = GetParamFloat(Parameters::Osc1PulseWidthModDepth)->getAsDoubleModulated();
-    gpuContext.osc1_width_keytrack     = GetParamFloat(Parameters::Osc1KeytrackStereoWidth)->getAsDoubleModulated();
-
-
+}
+void SynthImplGPU::dispatchGpuSynth() {
+    const bool bIsBenchmark = gDebugBenchmarkFlags & 1;
+    const bool bDbgSkipGPUDispatch = gDebugBenchmarkFlags & 4;
+    const int32_t programMax = math::max(1, CtrSize(gpuProgram.programs));
+    const int32_t programId  = currentProgramId % programMax;
     perfTimer.reset();
     if (!bDbgSkipGPUDispatch) {
         ssboInputSynthState.uploadBuffer();
@@ -904,11 +988,16 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
         buffer->incrementFrame();
     }
 
+    AudioBlock* output = &this->audioOutputBuffer;
+    if (!assert_expr(output->samples == gpuProgram.blocksize1024Fixed)) {
+        return;
+    }
     const auto& outputBuffer = ssboOutput.buffer;
-    // copy nFrames to outputs
+    const samplecount_t numsamples = math::min(output->samples, samplecount_t(outputBuffer.size()));
     for (samplecount_t ch = 0; ch < NUM_AUDIO_CHANNELS; ch++) {
-        for (samplecount_t sampleIdx = 0; sampleIdx < nFrames; sampleIdx++) {
-            float val        = outputBuffer[sampleIdx + ch * nFrames];
+        auto bufChannel = output->buf[ch];
+        for (samplecount_t sampleIdx = 0; sampleIdx < numsamples; sampleIdx++) {
+            float val        = outputBuffer[sampleIdx + ch * gpuProgram.blocksize1024Fixed];
             float hardClipAt = 2.5;
             if (fp_math::isNanOrInfd(val)) {
                 val = 0;
@@ -917,13 +1006,13 @@ void SynthImplGPU::processGpuSynth(float* const* outputs, int nFrames, const DAW
             } else if (val > hardClipAt) {
                 val = hardClipAt;
             }
-            outputs[ch][sampleIdx] = val;
+            bufChannel[sampleIdx] = val;
         }
     }
     if (bIsBenchmark) {
         return;
     }
-    tmNow_ms        = getTimeMillis();
+    auto tmNow_ms = getTimeMillis();
     auto tmTotal_ms = perfTimer.getTimeDoubleReset() * 1000.0;
     if (tmNow_ms - timePerfLog >= 10000 || tmTotal_ms > timeComputeAvg * 10.0) {
         if (timeComputeAvg < 0.0) {
@@ -1065,6 +1154,48 @@ param_converted_t module_synth_gpu::convertParamValueDisplay(int32_t idx, const 
         }
     }
     return module_synth_template<SynthImplGPU>::convertParamValueDisplay(idx, displayValue);
+}
+
+void module_synth_gpu::processMidi(midi_data_processing_t& midiEvents) {
+    const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
+    std::vector<IMidiMsg> messages; // TODO: get rid of heap allocation
+    messages.reserve(midiEvents.noteEvents->size());
+    auto synth = getSynth();
+    auto currentSampleOffset = int32_t(synth->getProcessingSubBlockSampleMidiWriteOffset());
+    for (auto& evt : *midiEvents.noteEvents) {
+        auto deltaFrames = math::floordS32(evt.tickOffsetInBlock * tickToSamples) + currentSampleOffset;
+        dbgassert(deltaFrames >= currentSampleOffset && deltaFrames < currentSampleOffset + format.blockSize);
+        bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
+        if (evt.isNoteOn && !bContained) {
+            insertSorted(heldNotes, evt.pitch);
+        } else if (!evt.isNoteOn && bContained) {
+            removeEntry(heldNotes, evt.pitch);
+        }
+
+        messages.emplace_back();
+        IMidiMsg& msg = messages.back();
+        if (evt.isNoteOn) {
+            msg.MakeNoteOnMsg(evt.pitch, evt.velocity, deltaFrames, evt.channel);
+        } else {
+            msg.MakeNoteOffMsg(evt.pitch, deltaFrames, evt.channel);
+        }
+        msg.note = evt.note;
+    }
+    for (auto& evt : *midiEvents.ctrlEvents) {
+        auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples) + currentSampleOffset;
+        if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
+            log_lf(Log::L_WARN, "ctrl event out of range: %d\n", offsetInBlock);
+            continue;
+        }
+        messages.push_back(IMidiMsg::FromU32AndTick(evt.message, offsetInBlock));
+    }
+    if (!messages.empty()) {
+        std::sort(std::begin(messages), std::end(messages), [](const IMidiMsg& a, const IMidiMsg& b) {
+            return a.mOffset < b.mOffset;
+        });
+    }
+    processMidiMessages(messages);
+    this->midiEventsDispatched += CtrSize(messages);
 }
 
 }// namespace PluginSynth::GPU
