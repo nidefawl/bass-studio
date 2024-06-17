@@ -1,4 +1,5 @@
 #include "assert_dbg.h"
+#include "config.h"
 #include "event.h"
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_base.h"
@@ -216,6 +217,10 @@ private:
         auto pShape = &lfoShape;
         for (auto& v : voices) {
             v.osc1a.setShape(pShape);
+            v.volEnv.a = 1.0 / 0.001;
+            v.volEnv.d = 1.0 / 0.01;
+            v.volEnv.s = 1.0;
+            v.volEnv.r = 1.0 / 0.05;
         }
 
         auto addParam = [this](SynthParamBase* param, Parameters enumParam) {
@@ -350,7 +355,7 @@ public:
         }
     }
 
-    double GetVoiceImplBasic(double dt, VoiceSynth& voice, FilterModes filtermode, double tickPos) {
+    double GetVoiceImplBasic(double dt, VoiceSynth& voice, double tickPos) {
         auto volEnvValue   = voice.velocity;
         auto osc1Waveform  = GetParamEnum(Parameters::Osc1Wave)->getEnumValue<Waveforms>();
         auto baseFrequency = voice.frequency * voice.pitchBend;
@@ -390,9 +395,7 @@ public:
         // lockProcessing only locks VST2 versions of the plugin
         auto lock = this->lockProcessing();
 
-        const FilterModes filterMode = FilterModes::Off;//GetParamEnum(Parameters::FilterMode)->getEnumValue<FilterModes>();
         const bool bIsGlideEnabled   = true;
-
         const auto dt = oneOverSR;
         float* synthOutputs[2] = {};
         synthOutputs[0] = out->buf[0];
@@ -405,13 +408,13 @@ public:
             * 1 is highest precission, automation is updated every sample
             * this can be lowered to lower CPU load
             */
-        // int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
+        int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
         const auto voiceMode = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
         for (samplecount_t s = 0; s < nFrames; s++) {
             auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
-            /* if (host && moduleSynthUnisonInstance && (s % framesPerAutomationUpdate) == 0) {
-                ReadAutomation(host, tick, state, s, nOversample);
-            } */
+            if (host && moduleInstance && (s % framesPerAutomationUpdate) == 0) {
+                this->moduleInstance->updateAutomatedParameters(host, tickPos, state);
+            }
 
             if (s % nOversample == 0) {
                 ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos, voices.size());
@@ -433,9 +436,8 @@ public:
             }
             for (auto& v : voices) {
                 if (v.bIsActive) {
-                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value();
-                    // auto noise = (synthRand.rng_double()*2-1)*0.002;
-                    double vVal               = GetVoiceImplBasic(dt, v, filterMode, tickPos);
+                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value() * v.volEnv.value;
+                    double vVal               = GetVoiceImplBasic(dt, v, tickPos);
                     auto voice                = vVal * voiceVolume;
                     auto panningMinusOneToOne = GetParamFloat(Parameters::Panning)->Value();
                     auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
@@ -503,7 +505,7 @@ public:
         for (const auto& paramEntry : vecParams) {
             if (!paramEntry)
                 continue;
-            int idx = PARAM_ENABLE + 1 + (&paramEntry - &vecParams.front());
+            int idx = PARAM_OFFSET_IMPL + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
             regparam->setInitial(float(paramEntry->getAsDouble()));
@@ -569,8 +571,10 @@ public:
             if (!vecParams[idx]) {
                 continue;
             }
-            auto param = getParam(idx + 1);
-            param->setAll(float(vecParams[idx]->getAsDouble()));
+            auto param = getParam(PARAM_OFFSET_IMPL + idx);
+            if (assert_expr(param)) {
+                param->setAll(float(vecParams[idx]->getAsDouble()));
+            }
         }
     }
     void getUiSnapshot(snapshot_t& snapshot);
@@ -768,9 +772,9 @@ public:
     }
 
     void onGuiOpen() {
-        ctr_waveform.setAutomationRef(moduleInstance, 1 + ParametersSynthMono::Osc1Wave);
-        ctr_voicemode.setAutomationRef(moduleInstance, 1 + ParametersSynthMono::VoiceMode);
-        ctr_phasresetmode.setAutomationRef(moduleInstance, 1 + ParametersSynthMono::Osc1PhaseResetMode);
+        ctr_waveform.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + ParametersSynthMono::Osc1Wave);
+        ctr_voicemode.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + ParametersSynthMono::VoiceMode);
+        ctr_phasresetmode.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + ParametersSynthMono::Osc1PhaseResetMode);
     }
 
     void onGuiClose() {
@@ -980,6 +984,10 @@ private:
         auto pShape = &oscShape;
         for (auto& v : voices) {
             v.osc1a.setShape(pShape);
+            v.volEnv.a = 1.0 / 0.001;
+            v.volEnv.d = 1.0 / 0.1;
+            v.volEnv.s = 1.0;
+            v.volEnv.r = 1.0 / 0.05;
         }
 
         auto addParam = [this](SynthParamBase* param, Parameters enumParam) {
@@ -1142,7 +1150,7 @@ public:
         }
     }
 
-    double GetVoiceImplBasic(double dt, VoiceSynth& voice, FilterModes filtermode, double tickPos) {
+    double GetVoiceImplBasic(double dt, VoiceSynth& voice, double tickPos) {
         auto volEnvValue   = voice.velocity;
         auto baseFrequency = voice.frequency * voice.pitchBend;
         auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
@@ -1182,7 +1190,6 @@ public:
         auto lock = this->lockProcessing();
 
         const auto voiceMode         = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
-        const FilterModes filterMode = FilterModes::Off;//GetParamEnum(Parameters::FilterMode)->getEnumValue<FilterModes>();
         const bool bIsGlideEnabled   = voiceMode != VoiceModes::Poly;
         const auto dt                = oneOverSR;
         float* synthOutputs[2] = {};
@@ -1196,12 +1203,12 @@ public:
             * 1 is highest precission, automation is updated every sample
             * this can be lowered to lower CPU load
             */
-        // int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
+        int framesPerAutomationUpdate = state == playback_state::status_render ? 1 : 8;
         for (samplecount_t s = 0; s < nFrames; s++) {
             auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
-            /* if (host && moduleSynthUnisonInstance && (s % framesPerAutomationUpdate) == 0) {
-                ReadAutomation(host, tick, state, s, nOversample);
-            } */
+            if (host && moduleInstance && (s % framesPerAutomationUpdate) == 0) {
+                this->moduleInstance->updateAutomatedParameters(host, tickPos, state);
+            }
 
             if (s % nOversample == 0) {
                 ProcessMidiSample(*this, voices, voiceMode, s / nOversample, tickPos, voices.size());
@@ -1223,9 +1230,8 @@ public:
             }
             for (auto& v : voices) {
                 if (v.bIsActive) {
-                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value();
-                    // auto noise = (synthRand.rng_double()*2-1)*0.002;
-                    double vVal               = GetVoiceImplBasic(dt, v, filterMode, tickPos);
+                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value() * v.volEnv.value;
+                    double vVal               = GetVoiceImplBasic(dt, v, tickPos);
                     auto voice                = vVal * voiceVolume;
                     auto panningMinusOneToOne = GetParamFloat(Parameters::Panning)->Value();
                     auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
@@ -1304,7 +1310,7 @@ public:
         for (const auto& paramEntry : vecParams) {
             if (!paramEntry)
                 continue;
-            int idx = PARAM_ENABLE + 1 + (&paramEntry - &vecParams.front());
+            int idx = PARAM_OFFSET_IMPL + (&paramEntry - &vecParams.front());
             automatable_param_t* regparam = registerParam(idx);
             dbgassert(regparam && regparam->idx > 0);
             regparam->setInitial(float(paramEntry->getAsDouble()));
@@ -1370,8 +1376,10 @@ public:
             if (!vecParams[idx]) {
                 continue;
             }
-            auto param = getParam(idx + 1);
-            param->setAll(float(vecParams[idx]->getAsDouble()));
+            auto param = getParam(PARAM_OFFSET_IMPL + idx);
+            if (assert_expr(param)) {
+                param->setAll(float(vecParams[idx]->getAsDouble()));
+            }
         }
     }
     void getUiSnapshot(snapshot_t& snapshot);
