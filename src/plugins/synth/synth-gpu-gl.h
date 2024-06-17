@@ -55,9 +55,11 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
         if (isWaveformSampler) {
             StrUtil::StringReplace(sourceCopy, "#define IS_WAVEFORM_SAMPLER 0", "#define IS_WAVEFORM_SAMPLER 1");
         }
+#if 0
         if (!isWaveformSampler) {
             log_lf(Log::L_DEBUG, "compileGPUProgram %d:\n%s\n", int(programNr), StringAsCStr(sourceCopy));
         }
+#endif
         std::array<GLchar*, 1> sources = {(GLchar*)sourceCopy.c_str()};
         glShaderSource(shader1, 1, sources.data(), NULL);
         glCompileShader(shader1);
