@@ -252,28 +252,15 @@ public:
                                         return aReleased;
                                     });
                             voice->SetNote(noteDaw);
-                            voice->SetVelocity(velocity);
-                            voice->ResetPitch();
-                            meAsDerived.StartVoice(*voice, voiceMode);
                             voice->seqNr = noteSequenceNr++;
+                            meAsDerived.StartVoice(*voice, voiceMode, velocity);
                             break;
                         }
                         default:
                         case VoiceModes::Mono:
                             voices[0].SetNote(noteDaw);
-                            voices[0].SetVelocity(velocity);
-                            meAsDerived.StartVoice(voices[0], voiceMode);
                             voices[0].seqNr = noteSequenceNr++;
-                            break;
-                        case VoiceModes::Legato:
-                            voices[0].SetNote(noteDaw);
-                            if (heldNotes.empty()) {
-                                voices[0].SetVelocity(velocity);
-                                voices[0].ResetPitch();
-                                voices[0].Start(true);
-                                meAsDerived.StartVoice(voices[0], voiceMode);
-                                voices[0].seqNr = noteSequenceNr++;
-                            }
+                            meAsDerived.StartVoice(voices[0], voiceMode, velocity);
                             break;
                     }
 

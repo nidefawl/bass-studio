@@ -173,7 +173,8 @@ struct VoiceSynth {
     void ResetPitch() { frequency = targetFrequency; }
     void SetVelocity(double v) { velocity = v; }
 
-    void Start(bool bTriggerMono) {
+    void Start(bool bTriggerMono, double velocity) {
+        SetVelocity(velocity);
         bIsActive = true;
         for (auto& r : randoms) {
             r = rand.rng_double();
@@ -251,7 +252,7 @@ public:
             delete ptr;
         }
     }
-    void StartVoice(VoiceSynth& voice, VoiceModes mode);
+    void StartVoice(VoiceSynth& voice, VoiceModes mode, double velocity);
 
     void updateProgramList() override;
 

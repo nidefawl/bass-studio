@@ -95,13 +95,22 @@ struct VoiceSynth {
     void ResetPitch() { frequency = targetFrequency; }
     void SetVelocity(double v) { velocity = v; }
 
-    void Start(bool bTriggerMono) {
-        bIsActive = true;
-        if (!bTriggerMono) {
+    void Start(bool bTriggerMono, double velocity) {
+        if (bTriggerMono && bIsActive) {
+            volEnv.ReStart();
+        } else if (bTriggerMono && !bIsActive) {
+            SetVelocity(velocity);
+            volEnv.a = targetFrequency * 0.5;
+            ResetEnvelopes();
+            volEnv.Start();
+        } else {
+            SetVelocity(velocity);
+            ResetPitch();
             ResetEnvelopes();
             osc1a.phase = rand.rng_double();
+            volEnv.Start();
         }
-        volEnv.Start();
+        bIsActive = true;
     }
 };
 }
@@ -217,6 +226,9 @@ private:
         auto pShape = &lfoShape;
         for (auto& v : voices) {
             v.osc1a.setShape(pShape);
+            v.volEnv.shapes[0] = 0.55;
+            v.volEnv.shapes[1] = 0.45;
+            v.volEnv.shapes[2] = 0.45;
             v.volEnv.a = 1.0 / 0.001;
             v.volEnv.d = 1.0 / 0.01;
             v.volEnv.s = 1.0;
@@ -289,7 +301,7 @@ private:
         setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "Waveform");
 
         addFloatParam(Parameters::GlideLength)->setRange(0.0, 1.0)->setInitialValue(0.0);
-        addFloatParam(Parameters::MasterVolume)->setRange(0.0, 0.5)->setInitialValue(0.25);
+        addFloatParam(Parameters::MasterVolume)->setRange(0.0, 1.0)->setInitialValue(0.25);
 
         setParamName(getParam(Parameters::GlideLength), "Glide length", "Glide");
         setParamName(getParam(Parameters::MasterVolume), "Volume", "Volume", "Volume", "%");
@@ -356,39 +368,29 @@ public:
     }
 
     double GetVoiceImplBasic(double dt, VoiceSynth& voice, double tickPos) {
-        auto volEnvValue   = voice.velocity;
-        auto osc1Waveform  = GetParamEnum(Parameters::Osc1Wave)->getEnumValue<Waveforms>();
+        auto volEnvValue   = voice.velocity * voice.volEnv.value;
         auto baseFrequency = voice.frequency * voice.pitchBend;
         auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
         auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
-        osc1Tune    = pitchFactor(coarse + fine);
-        auto osc1Frequency = osc1Tune * baseFrequency;
-        auto out      = 0.0;
-        auto osc1Out             = 0.0;
-        osc1Out += voice.osc1a.GetWaveform(dt, osc1Frequency, osc1Waveform, true);
-        dbgassert(!fp_math::isNanOrInfd(osc1Out));
-        out += osc1Out;
-        dbgassert(!fp_math::isNanOrInfd(out));
-        double volEnvSmoothed = volEnvValue;
-        if (voice.noteT.len > 0) {
-            const float noteProgress = float(voice.noteT.end() - tickPos);
-            const float fFadeLen = 128.0f;
-            float fFadeIn = math::smoothstep(math::clamp(noteProgress / fFadeLen, 0.0f, 1.0f));
-            float fFadeOut = math::smoothstep(math::clamp((voice.noteT.len - noteProgress) / fFadeLen, 0.0f, 1.0f));
-            volEnvSmoothed = volEnvValue * fFadeIn * fFadeOut;
-        }
-        out *= volEnvSmoothed;
-        return out;
+        const auto osc1Tune = pitchFactor(coarse + fine);
+        auto osc1Waveform  = GetParamEnum(Parameters::Osc1Wave)->getEnumValue<Waveforms>();
+        const auto osc1Frequency = osc1Tune * baseFrequency;
+        const auto osc = voice.osc1a.GetWaveform(dt, osc1Frequency, osc1Waveform, true);
+        return fp_math::silenceNanInfd(osc * volEnvValue);
     }
 
-    void StartVoice(VoiceSynth& v, VoiceModes mode) {
-        auto holdOsc1Phase = GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 1;
-        // bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
-        v.Start(mode != VoiceModes::Poly);
-        if (!holdOsc1Phase) {
+    void StartVoice(VoiceSynth& v, VoiceModes mode, double velocity) {
+        bool bWasActive = v.bIsActive;
+        bool bIsMonoTrigger = false;
+        if (mode == VoiceModes::Mono) {
+            bIsMonoTrigger = true;
+        } else if (mode == VoiceModes::Legato) {
+            bIsMonoTrigger = v.isNotReleased();
+        }
+        v.Start(bIsMonoTrigger, velocity);
+        if (!bWasActive && GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 0) {
             v.osc1a.phase = 0.0;
         }
-        v.volEnv.Reset();
     }
 
     void ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) override {
@@ -436,7 +438,7 @@ public:
             }
             for (auto& v : voices) {
                 if (v.bIsActive) {
-                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value() * v.volEnv.value;
+                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value();
                     double vVal               = GetVoiceImplBasic(dt, v, tickPos);
                     auto voice                = vVal * voiceVolume;
                     auto panningMinusOneToOne = GetParamFloat(Parameters::Panning)->Value();
@@ -995,7 +997,6 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
 
 class SynthStateShaper {
 public:
-    double osc1Tune                = 1.0;
     double glideLength             = 0.0;
     double targetMasterVolume      = 0.0;
     double masterVolume            = 0.0;
@@ -1011,6 +1012,9 @@ private:
         auto pShape = &oscShape;
         for (auto& v : voices) {
             v.osc1a.setShape(pShape);
+            v.volEnv.shapes[0] = 0.55;
+            v.volEnv.shapes[1] = 0.45;
+            v.volEnv.shapes[2] = 0.45;
             v.volEnv.a = 1.0 / 0.001;
             v.volEnv.d = 1.0 / 0.1;
             v.volEnv.s = 1.0;
@@ -1143,15 +1147,6 @@ public:
 
         switch (parameter) {
             case Parameters::Voices: {
-                // auto polyVoicesCurrent = this->polyVoiceCount;
-                // auto polyVoicesTarget  = paramIntOptional->Value();
-                // if (polyVoicesCurrent != polyVoicesTarget) {
-                //     this->maxPolyVoiceIndex = math::max(maxPolyVoiceIndex, math::max(polyVoicesCurrent, polyVoicesTarget));
-                //     this->polyVoiceCount    = polyVoicesTarget;
-                //     for (int i = this->polyVoiceCount; i < this->maxPolyVoiceIndex; ++i) {
-                //         voices[i].Release();
-                //     }
-                // }
                 break;
             }
             case Parameters::VoiceMode:
@@ -1177,39 +1172,29 @@ public:
         }
     }
 
-    double GetVoiceImplBasic(double dt, VoiceSynth& voice, double tickPos) {
-        auto volEnvValue   = voice.velocity;
+    double GetVoiceImplBasic(VoiceSynth& voice, double dt) {
+        auto volEnvValue   = voice.velocity * voice.volEnv.value;
         auto baseFrequency = voice.frequency * voice.pitchBend;
         auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
         auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
-        osc1Tune    = pitchFactor(coarse + fine);
-        auto osc1Frequency = osc1Tune * baseFrequency;
-        auto out      = 0.0;
-        auto osc1Out             = 0.0;
-        osc1Out += voice.osc1a.GetWaveformShaper(dt, osc1Frequency, true);
-        dbgassert(!fp_math::isNanOrInfd(osc1Out));
-        out += osc1Out;
-        dbgassert(!fp_math::isNanOrInfd(out));
-        double volEnvSmoothed = volEnvValue;
-        if (voice.noteT.len > 0) {
-            const float noteProgress = float(voice.noteT.end() - tickPos);
-            const float fFadeLen = 64.0f;
-            float fFadeIn = math::smoothstep(math::clamp(noteProgress / fFadeLen, 0.0f, 1.0f));
-            float fFadeOut = math::smoothstep(math::clamp((voice.noteT.len - noteProgress) / fFadeLen, 0.0f, 1.0f));
-            volEnvSmoothed = volEnvValue * fFadeIn * fFadeOut;
-        }
-        out *= volEnvSmoothed;
-        return out;
+        const auto osc1Tune = pitchFactor(coarse + fine);
+        const auto osc1Frequency = osc1Tune * baseFrequency;
+        const auto osc = voice.osc1a.GetWaveformShaper(dt, osc1Frequency, true);
+        return fp_math::silenceNanInfd(osc * volEnvValue);
     }
 
-    void StartVoice(VoiceSynth& v, VoiceModes mode) {
-        auto holdOsc1Phase = GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 1;
-        // bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
-        v.Start(mode != VoiceModes::Poly);
-        if (!holdOsc1Phase) {
+    void StartVoice(VoiceSynth& v, VoiceModes mode, double velocity) {
+        bool bWasActive = v.bIsActive;
+        bool bIsMonoTrigger = false;
+        if (mode == VoiceModes::Mono) {
+            bIsMonoTrigger = true;
+        } else if (mode == VoiceModes::Legato) {
+            bIsMonoTrigger = v.isNotReleased();
+        }
+        v.Start(bIsMonoTrigger, velocity);
+        if (!bWasActive && GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 0) {
             v.osc1a.phase = 0.0;
         }
-        v.volEnv.Reset();
     }
 
     void ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, const DAW::Host::Host* const host, double tick, double samplePos, playback_state state) override {
@@ -1257,8 +1242,8 @@ public:
             }
             for (auto& v : voices) {
                 if (v.bIsActive) {
-                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value() * v.volEnv.value;
-                    double vVal               = GetVoiceImplBasic(dt, v, tickPos);
+                    auto voiceVolume = GetParamFloat(Parameters::MasterVolume)->Value();
+                    double vVal               = GetVoiceImplBasic(v, dt);
                     auto voice                = vVal * voiceVolume;
                     auto panningMinusOneToOne = GetParamFloat(Parameters::Panning)->Value();
                     auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;

@@ -141,19 +141,20 @@ struct Envelope {
     double phase    = 0.0;
     double value    = 0.0;
     double relValue = 0.0;
+    double retrigValue = 0.0;
     double a = 0.0;
     double h = 0.0;
     double d = 0.5;
     double s = 1.0;
     double r = 0.5;
-    std::array<double, 3> shapes = {0.75, 0.35, 0.25};
+    std::array<double, 3> shapes = {0.45, 0.45, 0.45};
     EnvelopeStages stage = EnvelopeStages::Idle;
     DAW::CurveShapingFunction shaping = DAW::CurveShapingFunction::Pow;
 
     bool IsReleased() const { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
 
-    void Reset() { value = 0.0; }
-    void Kill() { stage = EnvelopeStages::Idle; value = 0.0; phase = 0.0; relValue = 0.0; }
+    void Reset() { value = 0.0; retrigValue = 0.0;}
+    void Kill() { stage = EnvelopeStages::Idle; value = 0.0; phase = 0.0; relValue = 0.0; retrigValue = 0.0; }
     void Start() { stage = EnvelopeStages::Triggered; }
     void Release() { 
         if (stage >= EnvelopeStages::Release) return;
@@ -193,6 +194,7 @@ struct Envelope {
             case EnvelopeStages::Triggered:
                 stage = EnvelopeStages::Attack;
                 phase = 0.0;
+                retrigValue = 0.0;
                 /* fallthrough */
             case EnvelopeStages::Attack:
                 // minimum att time: 1 sample
@@ -201,7 +203,7 @@ struct Envelope {
                     phase = 0.0;
                     stage = EnvelopeStages::Hold;
                 } else {
-                    value = DAW::shapeCurveSegment(shaping, phase, 1.0 - shapes[0]);
+                    value = retrigValue + (1.0 - retrigValue) * DAW::shapeCurveSegment(shaping, phase, 1.0 - shapes[0]);
                     phase += clampDuration(a) * dt;
                 }
                 break;
@@ -235,6 +237,7 @@ struct Envelope {
                 if (r == 0.0 || phase >= 1.0) {
                     value = 0.0;
                     phase = 0.0;
+                    retrigValue = 0.0;
                     stage = EnvelopeStages::Idle;
                 } else {
                     value = DAW::shapeCurveSegment(shaping, 1.0 - phase, 1.0 - shapes[2]) * relValue;
@@ -243,6 +246,23 @@ struct Envelope {
                 break;
             default:
                 break;
+        }
+    }
+    void ReStart() { 
+        if (stage == EnvelopeStages::Idle) {
+            stage = EnvelopeStages::Triggered;
+            return;
+        }
+        if (stage > EnvelopeStages::Attack) {
+            if (a == 0.0) {
+                value = 1.0;
+                phase = 0.0;
+                stage = EnvelopeStages::Hold;
+                retrigValue = 0.0;
+            } else {
+                retrigValue = value;
+                stage = EnvelopeStages::Attack;
+            }
         }
     }
 };
@@ -390,7 +410,7 @@ public:
                     triCurrent = phaseIncrement * GeneratePulse(phase, phaseIncrement, .5) + (1.0 - phaseIncrement) * triLast;
                 }
                 dbgassert(!fp_math::isNanOrInfd(triCurrent));
-                return triCurrent;
+                return triCurrent * 2.0;
             case Waveforms::Saw:
                 if (!bleb) {
                     return 1.0 - 2.0 * phase;

@@ -473,9 +473,9 @@ void SynthImplGPU::updateProgramList() {
     }
 }
 
-void SynthImplGPU::StartVoice(VoiceSynth& voice, VoiceModes mode) {
+void SynthImplGPU::StartVoice(VoiceSynth& voice, VoiceModes mode, double velocity) {
     std::fill(voice.modValues.begin(), voice.modValues.end(), 0.0);
-    voice.Start(mode == VoiceModes::Mono);
+    voice.Start(mode == VoiceModes::Mono, velocity);
     voice.unisonDetune         = GetParamFloat(Parameters::Osc1UnisonDetune)->Value();
     voice.unisonDetuneKeytrack = GetParamFloat(Parameters::Osc1KeytrackDetune)->getAsDoubleModulated();
 }

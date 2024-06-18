@@ -743,8 +743,9 @@ public:
         });
     }
 
-    void Start(bool bTriggerMono) {
+    void Start(bool bTriggerMono, double velocity) {
         numUnisonActive = static_cast<int32_t>(last - first);
+        SetVelocity(velocity);
     }
     void UpdateVoiceDrift(double dt, const HostTempo& tempo) {
         driftVelocity += getRandom() * 1.0 * dt;
@@ -1783,7 +1784,7 @@ public:
         };
     }
 
-    void StartVoice(VoiceUnison& voice, VoiceModes mode) {
+    void StartVoice(VoiceUnison& voice, VoiceModes mode, double velocity) {
         auto holdVolEnv = GetParamEnum(Parameters::VolEnvTriggerMode)->Value() == 1;
         auto holdModEnv = GetParamEnum(Parameters::ModEnvTriggerMode)->Value() == 1;
         auto holdLfo1 = GetParamEnum(Parameters::Lfo1TriggerMode)->Value() == 1;
@@ -1791,7 +1792,7 @@ public:
         auto holdOsc1Phase = GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 1;
         auto holdOsc2Phase = GetParamEnum(Parameters::Osc2PhaseResetMode)->Value() == 1;
         
-        voice.Start(mode != VoiceModes::Poly);
+        voice.Start(mode != VoiceModes::Poly, velocity);
         dbgassert(voice.numUnisonActive == unisonVoiceCount);
         voice.visitVoices([&](Voice& v) {
             bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
