@@ -1,6 +1,7 @@
 #include "assert_dbg.h"
 #include "host/audiobuffer/audioblock.h"
 #include "host/host_pluginmanager.h"
+#include "logging.h"
 #include "seq_time.h"
 #include "synth-gpu-parameters.h"
 #include "synth-gpu-snapshot.hpp"
@@ -55,6 +56,7 @@ void SynthImplGPU::init() {
         updateEnvelopeParameters(v);
     }
     if (!assert_expr(initComputeContext())) {
+        log_lf(Log::L_ERROR, "Could not initialize OpenGL context for audio processing.\n");
         return;
     }
 

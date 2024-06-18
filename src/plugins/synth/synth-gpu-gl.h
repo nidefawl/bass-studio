@@ -385,16 +385,25 @@ public:
         }
     }
     bool initComputeContext(bool bInitGL = false) {
+        
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
+
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         window = glfwCreateWindow(512, 512, "GPU Synth", NULL, NULL);
         if (!assert_expr(window != nullptr)) {
+            log_lf(Log::L_ERROR, "Failed creating glfw window\n");
             return false;
         }
         GlfwContextSwitch ctxSwitch(window);
         if (!glad_glDispatchCompute && !gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+            log_lf(Log::L_ERROR, "glad GL loader failed\n");
             return false;
         }
         if (!glad_glDispatchCompute) {
+            log_lf(Log::L_ERROR, "GL compute is not supported on this platform\n");
             return false;
         }
 
