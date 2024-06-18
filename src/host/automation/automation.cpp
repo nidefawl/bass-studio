@@ -8,6 +8,7 @@
 #include "math/seq_math.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "gui/automation/automatable.h"
+#include "platform.h"
 #include "seq_time.h"
 #include "seq_util.h"
 #include "str_util.h"
@@ -422,13 +423,21 @@ param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     if (autLane && autLane->isActive()) {
         val = param->getValueAutomated();
     }
+    const auto CACHE_ENTRY_EXPIRE_SECONDS = 5;
     auto& cacheEntry = paramStrCache[param->idx];
-    if ((cacheEntry.valueDisplay.value.empty()&&cacheEntry.valueDisplay.unit.empty()) || cacheEntry.fValue != val) {
+    auto timeSeconds = int32_t(getTimeMillis() / 1000);
+    if (
+        (cacheEntry.valueDisplay.value.empty() && cacheEntry.valueDisplay.unit.empty()) 
+        || cacheEntry.fValue != val
+        || timeSeconds - cacheEntry.time > CACHE_ENTRY_EXPIRE_SECONDS
+        ) {
         cacheEntry.valueDisplay = convertParamValueToDisplay(param->idx, val);
         cacheEntry.fValue = val;
+        cacheEntry.time = timeSeconds;
     } else {
         static size_t numCacheHits = 0;
         numCacheHits++;
+        (void) numCacheHits;
     }
     return cacheEntry.valueDisplay;
 }

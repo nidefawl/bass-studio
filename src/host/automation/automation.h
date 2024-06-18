@@ -360,6 +360,7 @@ private:
     struct param_str_cache_entry_t {
         param_unit_t valueDisplay;
         float fValue;
+        uint32_t time;
     };
     mutable std::map<int32_t, param_str_cache_entry_t> paramStrCache;
 protected:
