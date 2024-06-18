@@ -229,7 +229,7 @@ private:
     int64_t minVoiceIdx = -1;
     int64_t maxVoiceIdx = -1;
     int32_t userLimitPolyVoices = math::min<int32_t>(MAX_POLY_VOICES, 8);
-    int32_t userLimitUnisonVoices = math::min<int32_t>(MAX_POLY_VOICES, 8);
+    int32_t userLimitUnisonVoices = math::min<int32_t>(MAX_UNISON_VOICES, 8);
     AudioBlock audioOutputBuffer;
     samplecount_t sampleOffsetSubBlock = 0;
     samplecount_t readOffsetSubBlock = 0;
