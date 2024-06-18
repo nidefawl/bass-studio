@@ -197,7 +197,11 @@ void guictr_stacked::addEntry(guibase* ctr) {
     entry->splitter.setSplitterType(bVerticalLayout ? 0 : 1);
     guictr_base::add(ctr);
     entry->splitter.setCallback(this);
-    guictr_base::add(&entry->splitter);
+    // add splitter of entry at idx - 1:
+    if (!entries.empty()) {
+        auto* prevEntry = entries.back();
+        guictr_base::add(&prevEntry->splitter);
+    }
     this->entries.push_back(entry);
     updateSplitterPositions();
 }
@@ -218,13 +222,23 @@ void guictr_stacked::getSplitterPositions(std::vector<float>& splitterPos) {
 }
 
 void guictr_stacked::updateSplitterPositions() {
-    for (size_t i = 0; i < entries.size(); ++i) {
-        auto min = i == 0 ? 0 : entries[i - 1]->splitter.getScale();
-        auto max = i == entries.size() - 1 ? 1 : entries[i + 1]->splitter.getScale();
-        entries[i]->splitter.setMinMax(min, max);
-        entries[i]->splitter.setScale(entries[i]->splitter.getScaleClamped());
+    auto minSizePx = Splitter::SPLITTER_LAYOUT_THICKNESS * 3.0f;
+    auto layoutCtrSize = math::max(32.0f, float(bVerticalLayout ? size.y : size.x));
+    auto minScale = minSizePx / layoutCtrSize;
+    auto numEntries = CtrSize(entries);
+    for (int32_t i = 0; i < numEntries - 1; ++i) {
+        auto& entrySplitter = entries[i]->splitter;
+        auto scaleMin = i == 0 ? 0 : entries[i - 1]->splitter.getScale();
+        auto scaleMax = i == numEntries - 1 ? 1 : entries[i + 1]->splitter.getScale();
+        auto scale = entrySplitter.getScaleClamped();
+        scaleMin = math::min(scaleMin + minScale, scale);
+        scaleMax = math::max(scaleMax - minScale, scale);
+        entrySplitter.setMinMax(scaleMin, scaleMax);
+        entrySplitter.setScale(entrySplitter.getScaleClamped());
     }
     if (!entries.empty()) {
+        // entries.front()->splitter.setMinMax(0, 0);
+        // entries.front()->splitter.setScale(0.0f);
         entries.back()->splitter.setMinMax(1, 1);
         entries.back()->splitter.setScale(1.0f);
     }

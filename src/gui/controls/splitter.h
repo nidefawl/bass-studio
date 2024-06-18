@@ -28,7 +28,7 @@ class Splitter final : public guictr_base {
     ivec2 windowBegin{};
     ivec2 windowSize{};
 public:
-    static constexpr int SPLITTER_LAYOUT_THICKNESS = SPLITTER_HANDLE_SIZE;
+    static constexpr int SPLITTER_LAYOUT_THICKNESS = 4;
 
     Splitter(int _type, float _scale)
         : guictr_base(),

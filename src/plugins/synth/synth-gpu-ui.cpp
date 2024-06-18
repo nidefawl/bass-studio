@@ -813,8 +813,8 @@ public:
         }
         ctrOscParams.setLayoutMode(autolayout_mode::LAYOUT_GRID);
         ctrMacros.setLayoutMode(autolayout_mode::LAYOUT_GRID);
-        auto padding = 2;
-        auto margin = 2;
+        auto padding = 4;
+        auto margin = 4;
         ctrMainSection.padding      = padding;
         ctrMainSection.margin       = margin;
         ctrOscParams.padding        = padding;
