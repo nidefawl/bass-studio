@@ -8,6 +8,7 @@
 #include "color_util.h"
 #include "gui/container/container_builder.h"
 #include "host/audiobuffer/audioblock.h"
+#include "host/automation/automation.h"
 #include "host/clip/clip.h"
 #include "host/daw/clipboard.h"
 #include "event.h"
@@ -2458,12 +2459,17 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     auto track = view.track();
                     arp_snapshot snapshot;
                     tracksnapshot_store_opts_t opts;
-                    opts.storeAutomation = false;
+                    opts.storeAutomation = true;
                     opts.storeClips = false;
                     opts.storeLayouts = false;
                     opts.storePluginPreset = true;
-                    track->getStage()->arp->createSnapshot(snapshot, opts);
+                    auto* arp = track->getStage()->arp;
+                    auto paramEnable = arp->getParam(PARAM_ENABLE);
+                    arp->createSnapshot(snapshot, opts);
                     DAW::midiarp arpCopy(track->getStage());
+                    if (paramEnable->getValue() < 0.5) {
+                        toggleDeviceEnableState(&arpCopy, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+                    }
                     arpCopy.loadSnapshot(snapshot);
                     auto begin = clip->start();
                     auto end = clip->end();
@@ -2514,6 +2520,9 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     dawCtrl->getDaw()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
                     clip->setDirty();
                     view.updateNotePitches(false);
+                    if (paramEnable->getValue() >= 0.5) {
+                        toggleDeviceEnableState(arp, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+                    }
                 }
             } else if (command == CMD_APPLY_GROOVE) {
                 auto applyGroove = [&](DawInstance* daw, clip_t* clip, clip_notes_t& notes) {

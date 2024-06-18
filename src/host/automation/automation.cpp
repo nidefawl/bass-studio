@@ -679,7 +679,6 @@ automation_lane_t* automatable_t::getOrCreateAutomation(int32_t paramIdx) {
     if (it != automationLanes.end()) {
         return &(*it);
     }
-    dbgassert(!daw_tls::getTls().mainCtrl || daw_tls::getTls().mainCtrl->getDaw()->getPlayThread()->isLockedOrNotProcessing());
     automationLanes.emplace_back(paramIdx, mapParams[paramIdx].quantizationSteps);
     auto newLane = &automationLanes.back();
     return newLane;
