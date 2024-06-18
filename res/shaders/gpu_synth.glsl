@@ -63,7 +63,7 @@ layout(std430, binding = 3) buffer block_out_waveform
     float samples[];
 } waveform_out;
 
-layout(binding = 0) uniform context {
+layout(binding = 0, std140) uniform context {
     double one_over_samplerate;
     double time_sample_phase_reset;
     double bpm;
