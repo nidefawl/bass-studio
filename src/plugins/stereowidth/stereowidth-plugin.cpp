@@ -128,6 +128,9 @@ namespace PluginStereoWidth {
     param_unit_t module_stereowidth::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
+        if (param->idx == PARAM_WIDTH) {
+            return {StringFormat("%.1f", (value*2.0f) * 100.0f), param->unit};
+        }
         if (param->unit == "dB") {
             float fGain = 1.0f;
             if (dsp_util::getGainLvlWithRange(value, MTR_CEIL, DBFS_MUTE_POS, fGain)) {

@@ -542,6 +542,33 @@ public:
 
     PluginType getPluginType() override { return PLUGIN_TYPE_SYNTH_MONO; };
 
+    param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
+            if (param->enumParam == ParametersSynthMono::Panning) {
+                return DAW::ConvertParamPanningToFloat(displayValue.value);
+            }
+            if (param->enumParam == ParametersSynthMono::MasterVolume || param->enumParam == ParametersSynthMono::GlideLength) {
+                auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+                return {math::clamp(fTextFieldVal/100.0f, 0.0f, 1.0f), true};
+            }
+        }
+        return module_synth_template<SynthImplMono>::convertParamValueDisplay(idx, displayValue);
+    }
+    param_unit_t convertParamValueToDisplay(int32_t idx, float value) override {
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
+            if (param->enumParam == ParametersSynthMono::Panning) {
+                return DAW::ConvertParamPannningToString(value);
+            }
+            if (param->enumParam == ParametersSynthMono::MasterVolume || param->enumParam == ParametersSynthMono::GlideLength) {
+                return {StringFormat("%.1f", value * 100.0f), "%"};
+            }
+        }
+        return module_synth_template<SynthImplMono>::convertParamValueToDisplay(idx, value);
+    }
     std::shared_ptr<PluginViewContainer> createViewCtrInternal() override {
         return this->impl->createViewCtrImpl();
     }
@@ -1346,6 +1373,34 @@ public:
     }
 
     PluginType getPluginType() override { return PLUGIN_TYPE_SYNTH_SHAPER; };
+
+    param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
+            if (param->enumParam == ParametersSynthShaper::Panning) {
+                return DAW::ConvertParamPanningToFloat(displayValue.value);
+            }
+            if (param->enumParam == ParametersSynthShaper::MasterVolume || param->enumParam == ParametersSynthShaper::GlideLength) {
+                auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+                return {math::clamp(fTextFieldVal/100.0f, 0.0f, 1.0f), true};
+            }
+        }
+        return module_synth_template<SynthImplShaper>::convertParamValueDisplay(idx, displayValue);
+    }
+    param_unit_t convertParamValueToDisplay(int32_t idx, float value) override {
+        const auto idxInternal = idx - PARAM_OFFSET_IMPL;
+        if (isValidParamIdx(idxInternal)) {
+            SynthParamBase* param = vecParams[idxInternal];
+            if (param->enumParam == ParametersSynthShaper::Panning) {
+                return DAW::ConvertParamPannningToString(value);
+            }
+            if (param->enumParam == ParametersSynthShaper::MasterVolume || param->enumParam == ParametersSynthShaper::GlideLength) {
+                return {StringFormat("%.1f", value * 100.0f), "%"};
+            }
+        }
+        return module_synth_template<SynthImplShaper>::convertParamValueToDisplay(idx, value);
+    }
 
     std::shared_ptr<PluginViewContainer> createViewCtrInternal() override {
         return this->impl->createViewCtrImpl();

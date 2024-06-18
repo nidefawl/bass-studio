@@ -433,15 +433,51 @@ param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     return cacheEntry.valueDisplay;
 }
 
+namespace DAW {
+
+param_unit_t ConvertParamPannningToString(float value) {
+    if (value < 0.5)
+        return { StringFormat("%.0f", math::clamp((0.5f-value)*2.0f*100.0f, 0.0f, 100.0f)), "L" };
+    if (value > 0.5)
+        return { StringFormat("%.0f", math::clamp((value-0.5f)*2.0f*100.0f, 0.0f, 100.0f)), "R" };
+    return { "", "C" };
+}
+
+param_converted_t ConvertParamPanningToFloat(String str) {
+    auto side = 0;
+    if (StrUtil::StringReplace(str, "L", "")) {
+        side = -1;
+    }
+    if (StrUtil::StringReplace(str, "R", "")) {
+        side = 1;
+    }
+    if (StrUtil::StringReplace(str, "C", "")) {
+        side = 0;
+    }
+    auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(str)));
+    auto panPercent = math::clamp((fTextFieldVal/100.0f), 0.0f, 1.0f);
+    if (math::roundfS32(panPercent * 100.0f) == 0) {
+        side = 0;
+    }
+    if (side < 0) {
+        return { 0.5f - math::clamp(panPercent*0.5f, 0.0f, 0.5f), true };
+    }
+    if (side > 0) {
+        return { 0.5f + math::clamp(panPercent*0.5f, 0.0f, 0.5f), true };
+    }
+    if (side == 0) {
+        return { 0.5f, true };
+    }
+    return { 0.5f, false };
+}
+
+} // namespace DAW
+
 param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value) {
     auto param = getParam(idx);
     dbgassert(param);
     if ((param->idx == PARAM_PAN) || (param->idx >= PARAM_OFFSET_SEND_PAN && param->idx < PARAM_OFFSET_SEND_PAN + MAX_SEND_CHANNELS)) {
-        if (value < 0.5)
-            return { StringFormat("%.0f", math::clamp((0.5f-value)*2.0f*100.0f, 0.0f, 100.0f)), "L" };
-        if (value > 0.5)
-            return { StringFormat("%.0f", math::clamp((value-0.5f)*2.0f*100.0f, 0.0f, 100.0f)), "R" };
-        return { "", "C" };
+        return DAW::ConvertParamPannningToString(value);
     }
     if (param->unit == "dB") {
         float fGain = 1.0f;
@@ -461,33 +497,7 @@ param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const par
     dbgassert(param);
     //TODO: use std::from_chars when floating point version arrives in libc++
     if ((param->idx == PARAM_PAN) || (param->idx >= PARAM_OFFSET_SEND_PAN && param->idx < PARAM_OFFSET_SEND_PAN + MAX_SEND_CHANNELS)) {
-
-        String str = displayValue.value;
-        auto side = 0;
-        if (StrUtil::StringReplace(str, "L", "")) {
-            side = -1;
-        }
-        if (StrUtil::StringReplace(str, "R", "")) {
-            side = 1;
-        }
-        if (StrUtil::StringReplace(str, "C", "")) {
-            side = 0;
-        }
-        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
-        auto panPercent = math::clamp((fTextFieldVal/100.0f), 0.0f, 1.0f);
-        if (math::roundfS32(panPercent * 100.0f) == 0) {
-            side = 0;
-        }
-        if (side < 0) {
-            return { 0.5f - math::clamp(panPercent*0.5f, 0.0f, 0.5f), true };
-        }
-        if (side > 0) {
-            return { 0.5f + math::clamp(panPercent*0.5f, 0.0f, 0.5f), true };
-        }
-        if (side == 0) {
-            return { 0.5f, true };
-        }
-        return { 0.5f, false };
+        return DAW::ConvertParamPanningToFloat(displayValue.value);
     }
     auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
     if (param->unit == "dB" && displayValue.unit == "dB") {

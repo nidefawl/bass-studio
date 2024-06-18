@@ -746,4 +746,6 @@ namespace DAW {
     }
     std::vector<DAW::removed_modulation_routings> RemoveModulationTargets(Host::PluginManager* const host, internal_modulator* modulator);
     void RestoreModulationTargets(Host::PluginManager* const host, const std::vector<DAW::removed_modulation_routings>& restore);
+    param_converted_t ConvertParamPanningToFloat(String str);
+    param_unit_t ConvertParamPannningToString(float value);
 }// namespace DAW
