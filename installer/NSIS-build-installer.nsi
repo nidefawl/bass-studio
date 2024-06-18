@@ -184,6 +184,7 @@ File "${PROJ_LOC}\res\cursors\cursor14.png"
 File "${PROJ_LOC}\res\cursors\cursor15.png"
 SetOutPath "$INSTDIR\res\shaders"
 File "${PROJ_LOC}\res\shaders\fullscreen_quad.vsh"
+File "${PROJ_LOC}\res\shaders\gpu_synth.glsl"
 
 SectionEnd
 
@@ -315,6 +316,7 @@ Delete "$INSTDIR\res\cursors\cursor13.png"
 Delete "$INSTDIR\res\cursors\cursor14.png"
 Delete "$INSTDIR\res\cursors\cursor15.png"
 Delete "$INSTDIR\res\shaders\fullscreen_quad.vsh"
+Delete "$INSTDIR\res\shaders\gpu_synth.glsl"
 RmDir "$INSTDIR\res\shaders"
 RmDir "$INSTDIR\res\cursors"
 RmDir "$INSTDIR\res\fonts\gui"
