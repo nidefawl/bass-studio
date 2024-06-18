@@ -174,6 +174,7 @@ struct VoiceSynth {
     void SetVelocity(double v) { velocity = v; }
 
     void Start(bool bTriggerMono, double velocity) {
+        ResetPitch();
         SetVelocity(velocity);
         bIsActive = true;
         for (auto& r : randoms) {
