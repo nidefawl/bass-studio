@@ -2466,11 +2466,13 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     auto* arp = track->getStage()->arp;
                     auto paramEnable = arp->getParam(PARAM_ENABLE);
                     arp->createSnapshot(snapshot, opts);
+                    auto mods = arp->getModulations();
                     DAW::midiarp arpCopy(track->getStage());
                     if (paramEnable->getValue() < 0.5) {
                         toggleDeviceEnableState(&arpCopy, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
                     }
                     arpCopy.loadSnapshot(snapshot);
+                    arpCopy.setModulations(mods);
                     auto begin = clip->start();
                     auto end = clip->end();
                     if (clip->isLoopEnabled()) {
