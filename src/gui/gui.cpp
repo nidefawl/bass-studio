@@ -953,15 +953,15 @@ void printLeaked(int64_t allocCount, const std::vector<guibase*>& allocList, con
 
 
 float textlabel_dynamic_t::getScale() const {
-    return math::clamp<float>(fontSize * dynamicFontScale, math::clamp(fontSize, 1.0f, 8.0f), math::max(2.0f, (size.y - 1.5f) * 0.95f));
+    return math::clamp<float>(fontSize * dynamicFontScale, math::clamp(fontSize, 1.0f, 4.0f), math::max(2.0f, (size.y - 1.5f) * 0.95f));
 }
 
 void textlabel_dynamic_t::adjustWidth() {
     float delta = size.x - lastRenderWidthLabel;
-    if (math::abs(delta) > lastRenderWidthLabel * 0.1f) {
+    if (math::abs(delta) > 4.0f) {
         const float FONT_SCALE_MIN = 0.05f;
         const float FONT_SCALE_MAX = 2.0f;
-        const float d = math::clamp(math::abs(delta) / 50.0f, 1.0f/64.0f, 1.0f/8.0f);
+        const float d = math::clamp(math::abs(delta) / 200.0f, 1.0f/64.0f, 1.0f/8.0f);
         if (delta > 0.0f) {
             dynamicFontScale = math::min(FONT_SCALE_MAX, dynamicFontScale + d);
         } else {
