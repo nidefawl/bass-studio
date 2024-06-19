@@ -1,5 +1,6 @@
 #include <nanovg.h>
 #include "gui/container/container.h"
+#include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "guiglobals.h"
@@ -203,7 +204,8 @@ void guictr_stacked::addEntry(guibase* ctr) {
         guictr_base::add(&prevEntry->splitter);
     }
     this->entries.push_back(entry);
-    updateSplitterPositions();
+    if (this->parent)
+        updateSplitterPositions();
 }
 
 void guictr_stacked::setSplitters(const std::vector<float>& splitterPos) {
@@ -211,7 +213,8 @@ void guictr_stacked::setSplitters(const std::vector<float>& splitterPos) {
     for (size_t i = 0; i < splitterPos.size(); ++i) {
         entries[i]->splitter.setScale(splitterPos.begin()[i]);
     }
-    updateSplitterPositions();
+    if (this->parent)
+        updateSplitterPositions();
 }
 
 void guictr_stacked::getSplitterPositions(std::vector<float>& splitterPos) {
@@ -222,25 +225,33 @@ void guictr_stacked::getSplitterPositions(std::vector<float>& splitterPos) {
 }
 
 void guictr_stacked::updateSplitterPositions() {
+    if (!(this->size.x > 0 && this->size.y > 0) || entries.empty()) {
+        return;
+    }
     auto minSizePx = Splitter::SPLITTER_LAYOUT_THICKNESS * 3.0f;
     auto layoutCtrSize = math::max(32.0f, float(bVerticalLayout ? size.y : size.x));
     auto minScale = minSizePx / layoutCtrSize;
     auto numEntries = CtrSize(entries);
-    for (int32_t i = 0; i < numEntries - 1; ++i) {
-        auto& entrySplitter = entries[i]->splitter;
-        auto scaleMin = i == 0 ? 0 : entries[i - 1]->splitter.getScale();
-        auto scaleMax = i == numEntries - 1 ? 1 : entries[i + 1]->splitter.getScale();
-        auto scale = entrySplitter.getScaleClamped();
-        scaleMin = math::min(scaleMin + minScale, scale);
-        scaleMax = math::max(scaleMax - minScale, scale);
-        entrySplitter.setMinMax(scaleMin, scaleMax);
-        entrySplitter.setScale(entrySplitter.getScaleClamped());
+    if (entries.size() > 0) {
+        entries.front()->splitter.setMin(minScale);
     }
-    if (!entries.empty()) {
-        // entries.front()->splitter.setMinMax(0, 0);
-        // entries.front()->splitter.setScale(0.0f);
-        entries.back()->splitter.setMinMax(1, 1);
+    if (entries.size() > 1) {
+        entries.back()->splitter.setMax(1.0f - minScale);
         entries.back()->splitter.setScale(1.0f);
+    }
+    for (int32_t i = 0; i < numEntries; ++i) {
+        auto& entrySplitter = entries[i]->splitter;
+        auto scalePrev = i == 0 ? minScale : entries[i - 1]->splitter.getScale();
+        auto scaleNext = i == numEntries - 1 ? 1 - minScale : entries[i + 1]->splitter.getScale();
+        if (i != 0)
+            scalePrev = math::min(scalePrev + minScale, 1.0f - minScale);
+        if (i != numEntries - 1)
+            scaleNext = math::max(scaleNext - minScale, minScale);
+        entrySplitter.setMin(scalePrev);
+        entrySplitter.setMax(scaleNext);
+        entrySplitter.setScale(entrySplitter.getScaleClamped());
+        auto scale = entries[i]->splitter.getScale();
+        dbgassert(scalePrev <= scale && scale <= scaleNext);
     }
 }
 

@@ -1,4 +1,5 @@
 #include "gui/gui.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "synth-gpu-parameters.h"
 #include "synth-gpu-snapshot.hpp"
@@ -888,10 +889,10 @@ public:
         setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         add(&ctrHorizontal);
         std::vector splitterPositions = {
-            0.25f, 0.5f, 0.75f, 0.92f
+            0.27f, 0.52f, 0.74f, 0.92f
         };
-        ctrStackedOSC.setSplitters({ 0.25f });
         ctrHorizontal.setSplitters(splitterPositions);
+        ctrStackedOSC.setSplitters({ 0.25f });
         ctrStackedADSR.setSplitters({ 0.45f, 0.9f });
         ctrStackedBothLFOs.setSplitters({ 0.5f });
         ctrStackedBothMacrosAndModulation.setSplitters({ 0.5f });

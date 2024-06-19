@@ -42,6 +42,12 @@ public:
         this->scaleMin = _min;
         this->scaleMax = _max;
     }
+    void setMin(float _min) {
+        this->scaleMin = _min;
+    }
+    void setMax(float _max) {
+        this->scaleMax = _max;
+    }
     void setWindowPosSize(ivec2 begin, ivec2 size) {
         this->windowBegin = begin;
         this->windowSize  = size;
