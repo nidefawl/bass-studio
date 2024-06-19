@@ -595,9 +595,10 @@ public:
     }
 
     void layout() override {
+        auto cs = getSizeContent();
         scrollContainerModulation.pos = {0, getTitleHeight()};
-        scrollContainerModulation.size = size;
-        scrollContainerModulation.maxHeight = size.y;
+        scrollContainerModulation.size = cs;
+        scrollContainerModulation.maxHeight = cs.y;
         scrollContainerModulation.determineSize(scrollContainerModulation.size);
         for (auto* gui : guis) {
             gui->layout();
