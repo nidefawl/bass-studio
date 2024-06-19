@@ -208,16 +208,14 @@ float guibase::renderText(NVGcontext* vg,
 
 void getNvgMultiLineTextBounds(NVGcontext* vg, const String& s, float maxLineWidth, float lineh, float* bounds) {
     NVGtextRow rows[16]{};
-    int nrows;
     float textBoundsX = 0;
     float textBoundsY = 0;
     if (!s.empty()) {
-        if ((nrows = nvgTextBreakLines(vg, s.c_str(), &s.back() + 1, maxLineWidth, rows, 16))) {
-            for (int i = 0; i < nrows; i++) {
-                NVGtextRow* row = &rows[i];
-                textBoundsX     = math::max(textBoundsX, row->width);
-                textBoundsY += lineh;
-            }
+        int nrows = nvgTextBreakLines(vg, s.c_str(), &s.back() + 1, maxLineWidth, rows, 16);
+        for (int i = 0; i < nrows; i++) {
+            NVGtextRow* row = &rows[i];
+            textBoundsX     = math::max(textBoundsX, row->width);
+            textBoundsY += lineh;
         }
     }
     bounds[0] = textBoundsX;
@@ -255,10 +253,15 @@ float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme,
     vec2 vPos = pos;
     float textBounds[2];
     getNvgMultiLineTextBounds(vg, str, bounds.x, lineh, textBounds);
-    if (textBounds[1] > bounds.y && fontSizeScaled > 6) {
-        nvgFontSize(vg, fontSizeScaled - 6);
-        getNvgMultiLineTextBounds(vg, str, bounds.x, lineh, textBounds);
-    }
+    /* if (textBounds[1] > bounds.y && fontSizeScaled > 6) {
+        float diff = math::roundfS32(textBounds[1] - bounds.y);
+        if (diff > 0.0) {
+            fontSizeScaled -= diff;
+            nvgFontSize(vg, fontSizeScaled);
+            nvgTextMetrics(vg, nullptr, nullptr, &lineh);
+            getNvgMultiLineTextBounds(vg, str, bounds.x, lineh, textBounds);
+        }
+    } */
     vPos.y += bounds.y / 2.0f - (textBounds[1] / 2.0f);
     vPos.y += lineh / 2.0f;
     if (!str.empty()) {
