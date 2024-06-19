@@ -1185,10 +1185,6 @@ void guictr_select_enum::renderButtonLabel(guibutton_select_enum* button, NVGcon
         } else {
             auto& text = button->getText();
             if (!text.empty()) {
-                if (text.find("One Shot") != String::npos) {
-                    static int dummy = 0;
-                    dummy++;
-                }
                 auto fontScale = math::clamp(math::min(renderFrame.y, renderFrame.x), 4, 48) * FONT_AUTOSCALE;
                 renderCenteredMultilineText(vg, theme, text, fontScale, getLabelColor(), renderPos, renderFrame);
             }

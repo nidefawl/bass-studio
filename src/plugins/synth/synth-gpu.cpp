@@ -919,9 +919,11 @@ void SynthImplGPU::processGpuSynthInput(const DAW::Host::Host* const host, doubl
 
     if (numActiveVoicesMax > this->numActiveVoicesMax) {
         this->numActiveVoicesMax = numActiveVoicesMax;
+#ifndef NDEBUG
         if (!bIsBenchmark) {
             log_lf(Log::L_WARN, "Max poly count seen: %zu\n", numActiveVoicesMax);
         }
+#endif
     }
 
     // move this up and find out max across all subblocks
@@ -1015,6 +1017,7 @@ void SynthImplGPU::dispatchGpuSynth() {
     }
     auto tmNow_ms = getTimeMillis();
     auto tmTotal_ms = perfTimer.getTimeDoubleReset() * 1000.0;
+#ifndef NDEBUG
     if (tmNow_ms - timePerfLog >= 10000 || tmTotal_ms > timeComputeAvg * 10.0) {
         if (timeComputeAvg < 0.0) {
             if (tmNow_ms - timePerfLog > 1500)
@@ -1027,6 +1030,7 @@ void SynthImplGPU::dispatchGpuSynth() {
         }
         timePerfLog = tmNow_ms;
     }
+#endif
     timeComputeAvg = 0.95 * timeComputeAvg + 0.05 * tmTotal_ms;
 }
 
