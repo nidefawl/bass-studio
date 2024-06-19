@@ -601,6 +601,7 @@ public:
             pKnob->setSynthParam(moduleInstance->getSynth(), pOffset);
             pKnob->setFontScale(0.75f);
             pKnob->setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + pOffset);
+            pKnob->setAlignment(gui_textfield::Alignment::Right);
             ctrParams.add(pKnob);
         }
         addEntry(lfoShapeCtr);
