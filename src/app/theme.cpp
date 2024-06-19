@@ -1,6 +1,7 @@
 #include <nanovg.h>
 #include <vector>
 #include "theme.h"
+#include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "color_util.h"
@@ -9,6 +10,8 @@
 #include "renderresources.h"
 #include "gui/gui.h"
 #include "assert_dbg.h"
+#include <glm/vec3.hpp>
+#include <glm/gtx/color_space.hpp>
 
 bool nvgColorEqual(NVGcolor a, NVGcolor b) {
 #define F_EPS 0.000001f
@@ -225,6 +228,59 @@ void guitheme_t::pingConstant(GuiConstant::constant_t _constant) {
 void guitheme_t::endPing() {
     this->pOverrideState->endPing();
 }
+void guitheme_t::setThemeBaseColor(const NVGcolor& col, vec3 hueSatBrMixIntensity) {
+    if (isDefault) return;
+    static const std::array colorConstants = {
+        GuiColor::COL_AUTOMATED,
+        GuiColor::COL_AUTOMATED_INACTIVE,
+        GuiColor::COL_BASE_BG,
+        GuiColor::COL_BASE_BG_FOCUSED,
+        GuiColor::COL_BG_BRT,
+        GuiColor::COL_BG_DRK,
+        GuiColor::COL_BG_DRKER,
+        GuiColor::COL_BG_SELECTEDTRACK,
+        GuiColor::COL_BG_SELECTEDTRACK_TITLE,
+        GuiColor::COL_BTN_BG_SHOW_ACTIVE,
+        GuiColor::COL_CLEAR_COLOR,
+        GuiColor::COL_CLIP_NOTE,
+        GuiColor::COL_FOLD_BUTTON,
+        GuiColor::COL_GRID_BRT,
+        GuiColor::COL_GRID_DRK,
+        GuiColor::COL_GUI_HANDLE,
+        GuiColor::COL_KNOB,
+        GuiColor::COL_KNOB_HIGHLIGHT,
+        GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND,
+        GuiColor::COL_KNOB_IND,
+        GuiColor::COL_OFF,
+        GuiColor::COL_PLUG_TITLE,
+        GuiColor::COL_PLUG_TITLE_FOCUSED,
+        GuiColor::COL_PLUG_TITLE_SELECTED,
+        GuiColor::COL_SELECTION_BACKGROUND,
+        GuiColor::COL_SHAPE_CURVE,
+    };
+    auto hsvToSet = glm::hsvColor(glm::vec3(col.r, col.g, col.b));
+    for (auto c : colorConstants) {
+        auto& col = mapColors[c.idx];
+        auto vec = colorHex(col);
+        auto hsv = glm::hsvColor(vec3(vec.r, vec.g, vec.b));
+        auto newSat = hsv.g * (1.0f + (hsvToSet.g - 0.5f));
+        auto newBr  = hsv.b * 1.0f + (hsvToSet.b - 0.5f);
+        hsv.r = hsv.r + (hsvToSet.r - hsv.r) * hueSatBrMixIntensity.r;
+        hsv.g = hsv.g + (newSat - hsv.g) * hueSatBrMixIntensity.g;
+        hsv.b = hsv.b + (newBr - hsv.b) * hueSatBrMixIntensity.b;
+        hsv.g = math::clamp(hsv.g, 0.0f, 1.0f);
+        hsv.b = math::clamp(hsv.b, 0.0f, 1.0f);
+        auto rgb = glm::rgbColor(hsv);
+        // copy over alpha 
+        setColor(c, vec4ToRgbU32({rgb.r, rgb.g, rgb.b, vec.a}));
+    }
+}
+void guitheme_t::setColorsFrom(const guitheme_t& _otherTheme) {
+    for (auto& it : _otherTheme.mapColors) {
+        setColor(GuiColor::getConstantById(it.first), it.second);
+    }
+}
+
 
 const container_background_image* guitheme_t::getBackgroundImage(GuiBackgroundImage::constant_t _constant) const {
     auto it = mapBackgrounds.find(_constant.idx);

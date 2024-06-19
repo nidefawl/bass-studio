@@ -23,9 +23,12 @@ public:
     void loadThemes();
     void getThemes(std::vector<guitheme_t>& _out);
     void getThemeNames(std::vector<String>& _out);
+    std::optional<guitheme_t*> getThemeByName(const String& themeName);
     void setThemeName(const String& themeName);
     void setTheme(guitheme_t theme);
+    void addTheme(const guitheme_t& theme);
     void cloneCurrentTheme(const String& themeName);
     void removeCurrentTheme();
     void saveCurrentTheme();
+    String getUniqueThemeName(const String& baseName);
 };

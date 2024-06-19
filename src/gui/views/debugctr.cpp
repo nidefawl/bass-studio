@@ -1,12 +1,19 @@
 #include <cstdint>
 #include <functional>
+#include <nanovg_min.h>
 #include <vector>
+#include <glm/vec3.hpp>
+#include <glm/gtx/color_space.hpp>
 #include "assert_dbg.h"
 
+#include "color_util.h"
 #include "error.h"
+#include "gui/controls/colorpick.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "debugctr.h"
+#include "platform.h"
+#include "rand.h"
 #include "str_util.h"
 #include "gui/controls/knob.h"
 #include "guiglobals.h"
@@ -67,7 +74,10 @@ enum ID_BTN : int32_t {
     ID_BTN_UNLOAD_UNREFERENCED_AUDIOCACHE,
     ID_BTN_RESET_RESAMPLERS,
     ID_BTN_TOGGLE_CLAP_SAMPLEACCURATE_MODULATION,
-    ID_BTN_TOGGLE_64_BIT_SUMMING
+    ID_BTN_TOGGLE_64_BIT_SUMMING,
+    ID_BTN_ADJUST_THEME_HUE,
+    ID_BTN_ADJUST_THEME_SAT,
+    ID_BTN_ADJUST_THEME_BR,
 };
 struct gui_ctr_debug::ctr_debug_impl_t {
     std::vector<guibase*> debugGuis;
@@ -252,6 +262,24 @@ gui_ctr_debug::gui_ctr_debug(create_ctr_t ctxt, DebugCtrType debugCtrType)
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_64_BIT_SUMMING;
             btn3->setText(String(ctxt.daw->getHost()->bSummingIn64Bit ? "64 bit summing (ON)" : "64 bit summing (OFF)"));
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_ADJUST_THEME_HUE;
+            btn3->setText("Adjust Theme Hue");
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_ADJUST_THEME_SAT;
+            btn3->setText("Adjust Theme Saturation");
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_ADJUST_THEME_BR;
+            btn3->setText("Adjust Theme Brightness");
             debugGuis.push_back(btn3);
         }
     }
@@ -662,6 +690,43 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
             static_cast<guibutton*>(button)->setText(String(DAW::gClapUseSampleAccurateModulation ? "Clap: Sample accurate modulation (ON)" : "Clap: Sample accurate modulation (OFF)"));
             break;
         }
+        case ID_BTN_ADJUST_THEME_HUE:
+        case ID_BTN_ADJUST_THEME_BR:
+        case ID_BTN_ADJUST_THEME_SAT: {
+            seq_rand rand;
+            rand.rng_seed(getTimeMillis());
+            auto randHsv = glm::vec3(rand.rng_double() * 360.0, rand.rng_double() * 0.5, 0.5 + rand.rng_double() * 0.5);
+            if (button->id != ID_BTN_ADJUST_THEME_HUE) {
+                randHsv.g = 0.5;
+                randHsv.b = 0.5;
+            }
+            auto randomColor_vec3 = glm::rgbColor(randHsv);
+
+            auto randomColor_u32 = vec3ToRgbU32(randomColor_vec3);
+            gui_color_pick* color = new gui_color_pick();
+            color->size = { 480, 240 };
+            color->pos = { 0, 0 };
+            auto mgr = parentCtrl->getThemeMgr();
+            auto themeBaseCopy = mgr->getRef();
+            color->fnSetValue = [mgr,themeBaseCopy, buttonId=button->id](uint32_t rgba) {
+                mgr->getRef().setColorsFrom(themeBaseCopy);
+                mgr->getRef().setThemeBaseColor(rgbaToNvg(rgba), vec3(
+                                                                    buttonId == ID_BTN_ADJUST_THEME_HUE,
+                                                                    buttonId == ID_BTN_ADJUST_THEME_SAT,
+                                                                    buttonId == ID_BTN_ADJUST_THEME_BR
+                                                                    ));
+
+            };
+            color->setU32(randomColor_u32);
+            guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+            ctxtMenu->size = color->size;
+            ctxtMenu->add(color);
+            ctxtMenu->canTakeInputFocus = true;
+            ctxtMenu->maxHeight = color->size.y;
+            ctxtMenu->setBackgroundRendered(false);
+            parentCtrl->openContextMenu(ctxtMenu, parentCtrl->lastMouseEvent.mousepos);
+        }
+        break;
     }
 }
 

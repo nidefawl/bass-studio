@@ -13,7 +13,6 @@ NVGcolor rgbaToNvg(uint32_t color);
 
 struct guitheme_t {
     String name;
-    String fileName;
     bool isDefault = false;
     std::vector<NVGcolor> vecNVGColors;
     std::unordered_map<uint32_t, uint32_t> mapColors;
@@ -47,6 +46,7 @@ struct guitheme_t {
     void bindFonts();
     UIFont::font_instance setFont(UIFont::font_type_t _fonttype, String s);
     void setColor(GuiColor::constant_t _constant, uint32_t _value);
+    void setColorsFrom(const guitheme_t& _otherTheme);
     int32_t get(GuiConstant::constant_t _constant) const;
     float getFloat(GuiConstant::constant_t _constant) const;
     void set(GuiConstant::constant_t _constant, int32_t _value);
@@ -54,4 +54,6 @@ struct guitheme_t {
     void pingConstant(GuiColor::constant_t _constant);
     void pingConstant(GuiConstant::constant_t);
     void endPing();
+    /* experimental */
+    void setThemeBaseColor(const NVGcolor& col, vec3 hueSatBrMixIntensity);
 };

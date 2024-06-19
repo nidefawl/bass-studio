@@ -10,6 +10,20 @@
 #include "basectrl.h"
 #include "platform.h"
 
+
+void guitheme_mgr::addTheme(const guitheme_t& theme) {
+    dbgassert(!theme.isDefault);
+    String pathTheme = App::Platform::toUserdataPath("themes/" + theme.name);
+    if (FileExists(pathTheme)) {
+        return;
+    }
+    themefile themeFile;
+    themeFile.theme = theme;
+    // saveTheme(pathTheme, themeFile);
+    themes.push_back(theme);
+}
+
+
 void guitheme_mgr::cloneCurrentTheme(const String& themeName) {
     String pathTheme = App::Platform::toUserdataPath("themes/" + themeName);
     if (FileExists(pathTheme)) {
@@ -141,4 +155,28 @@ void guitheme_mgr::getThemeNames(std::vector<String>& _out) {
     for (guitheme_t& th : this->themes) {
         _out.push_back(th.name);
     }
+}
+
+String guitheme_mgr::getUniqueThemeName(const String& baseName) {
+    int32_t idx = 0;
+    String themeName;
+    bool bExists = true;
+    do {
+        themeName = baseName;
+        if (idx > 0) {
+            themeName = baseName + " " + std::to_string(idx);
+        }
+        idx++;
+        bExists = getThemeByName(themeName).has_value();
+        bExists |= FileExists(App::Platform::toUserdataPath("themes/" + themeName));
+    } while (bExists);
+    return themeName;
+}
+
+std::optional<guitheme_t*> guitheme_mgr::getThemeByName(const String& themeName) {
+    auto it = std::find_if(begin(themes), end(themes), [themeName](guitheme_t const& x) { return x.name == themeName; });
+    if (it != end(themes)) {
+        return &(*it);
+    }
+    return std::nullopt;
 }

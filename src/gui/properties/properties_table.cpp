@@ -1184,16 +1184,8 @@ public:
                 return true;
             };
             guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
-            auto baseName          = thememgr->getRef().isDefault ? "User" : thememgr->getRef().name;
-            int32_t idx            = 0;
-            String themeName;
-            do {
-                themeName = baseName;
-                if (idx > 0) {
-                    themeName = baseName + StringFormat(" %d", idx);
-                }
-                idx++;
-            } while (FileExists(App::Platform::toUserdataPath("themes/" + themeName)));
+            auto baseName = thememgr->getRef().isDefault ? "User" : thememgr->getRef().name;
+            String themeName = thememgr->getUniqueThemeName(baseName);
             auto popupPos = toScreenSpace(selectTheme.getLeftBottom() + ivec2(10, 10));
             DAW::OpenFloatingTextInput(dynamic_cast<AppCtrl*>(this->getControl()), popupPos, size, themeName, cb);
         }
