@@ -235,6 +235,7 @@ public:
                     switch (voiceMode) {
                         case VoiceModes::Poly: {
                             // get the quietest voice, prioritizing voices that are released
+                            // TODO: the quietest voice could be in the attack phase
                             auto voiceEnd = std::begin(voices) + polyVoiceLimit;
                             auto voice    = std::min_element(
                                     std::begin(voices),

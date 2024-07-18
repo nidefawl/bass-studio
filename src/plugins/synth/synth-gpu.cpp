@@ -820,7 +820,7 @@ void SynthImplGPU::processGpuSynthInput(const DAW::Host::Host* const host, doubl
             numActiveVoicesMax = polyCount;
         }
         if (!polyCount) {
-            gpuContext.time_sample_phase_reset = samplePos + s;
+            // gpuContext.time_sample_phase_reset = samplePos + s;
         }
 
         const auto tickPos = tick + sampleToTickConvert<double, roundmode::none>(s, tempo.bpm100, host->m_sampleFormatInternal.sampleRate * nOversample);
