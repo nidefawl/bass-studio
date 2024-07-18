@@ -179,6 +179,7 @@ namespace DAW {
                 clip.notes.visitNotes([tickBegin](note_t& note) {
                     note.time -= tickBegin;
                 });
+                clip.notes.updateBounds();
                 clipboard->tracks.emplace_back(std::make_shared<track_clipboard_t>());
                 clipboard->tracks.back()->clips.emplace_back(std::move(spClip));
             }
