@@ -18,6 +18,7 @@
 #define PROGRAM_NAME_TRIANGLE "Triangle"
 #define PROGRAM_NAME_WEIRD_TRI "Weird-Tri"
 #define PROGRAM_NAME_SINE "Sine"
+#define PROGRAM_NAME_MIX "Mix"
 #define PROGRAM_NAME_EMPTY "Empty"
 
 #define M_PI 3.1415926538
@@ -313,6 +314,8 @@ void processSynthUnison()
                 s_lr += float(triangle(p, phase_inc, param_filter)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_WEIRD_TRI
                 s_lr += float(weird_tri(p, phase_inc, param_filter)) * a * pan_lr;
+#elif N_PROGRAM == PROGRAM_MIX
+                s_lr += float(waveform_mix(p, phase_inc, param_filter)) * a * pan_lr;
 #elif N_PROGRAM == PROGRAM_ANALOG_SAW
                 s_lr += float(saw_analog(p, phase_inc, param_filter)) * a * pan_lr;
 #endif
@@ -347,6 +350,8 @@ void sampleWaveform()
     double s = weird_tri(phase, phase_inc, param_filter);
 #elif N_PROGRAM == PROGRAM_ANALOG_SAW
     double s = saw_analog(phase, phase_inc, param_filter);
+#elif N_PROGRAM == PROGRAM_MIX
+    double s = waveform_mix(phase, phase_inc, param_filter);
 #else
     double s = 0.0;
 #endif
