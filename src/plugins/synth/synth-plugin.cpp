@@ -746,6 +746,7 @@ public:
     void Start(bool bTriggerMono, double velocity) {
         numUnisonActive = static_cast<int32_t>(last - first);
         SetVelocity(velocity);
+        ResetPitch();
     }
     void UpdateVoiceDrift(double dt, const HostTempo& tempo) {
         driftVelocity += getRandom() * 1.0 * dt;
