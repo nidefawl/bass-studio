@@ -112,7 +112,7 @@ struct app_autosave_settings {
 struct app_daw_settings {
     String startupProjectPath;
     bool startupLoadDeffered = false;
-    bool audioEnabled = false;
+    bool audioEnabled = true;
     bool vmmode = false;
     bool debugMode = false;
     bool shaderDebug = true;
