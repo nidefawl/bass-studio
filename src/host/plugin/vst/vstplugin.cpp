@@ -919,7 +919,7 @@ void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
                 }
             }
             for (auto& evt : *midiEvents.ctrlEvents) {
-                auto midiChannel = int32_t(evt.message & 0x0F);
+                auto midiChannel = int32_t(evt.message & 0xF);
                 if (this->numMidiInputChannels > midiChannel) {
                     auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
                     if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {

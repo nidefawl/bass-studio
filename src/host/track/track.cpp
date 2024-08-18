@@ -2399,7 +2399,8 @@ void noteevent_buffer::getNotesDelayed(tick_t blockStart, tick_t blockEnd, const
                 ctrlEvtsOut.emplace_back(evt);
                 if (midiChannelRewrite > -1) {
                     auto& evt = ctrlEvtsOut.back();
-                    evt.message = (evt.message & 0xF0) | midiChannelRewrite;
+                    uint32_t messageChannel0 = evt.message & (~0xF);
+                    evt.message = messageChannel0 | midiChannelRewrite;
                 }
             }
         }
