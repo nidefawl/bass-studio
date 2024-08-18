@@ -129,6 +129,7 @@ void serialize(Archive& ar, app_plugin_configuration& settings) {
         make_nvp("vst2.config", settings.configVst2)
     );
     make_optional_nvp(ar, "clap.path", settings.pathClap);
+    make_optional_nvp(ar, "vst3.path", settings.pathVst3);
 }
 template <class Archive>
 void serialize(Archive& ar, appwindowsettings& settings) {
