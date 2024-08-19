@@ -152,10 +152,20 @@ namespace PyMachine {
 namespace DAW {
 #ifdef USE_PYTHON
 static bool gPythonInitialized = false;
+bool gPythonRuntimeDisabled = false;
 #endif
+
+void SetPythonRuntimeDisabled(bool disabled) {
+#ifdef USE_PYTHON
+    gPythonRuntimeDisabled = disabled;
+#endif
+}
 
 void InitPythonInterpreter() {
 #ifdef USE_PYTHON
+    if (gPythonRuntimeDisabled) {
+        return;
+    }
     if (!gPythonInitialized) {
         gPythonInitialized = PyMachine::initPython();
     }

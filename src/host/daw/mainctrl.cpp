@@ -1167,6 +1167,10 @@ void DawCtrl::destroy() {
 MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(nullptr, _daw, 0) {
 }
 
+namespace DAW {
+    void SetPythonRuntimeDisabled(bool disabled);
+}
+
 void MainCtrl::initApp(const std::vector<String>& args) {
     auto& settings = daw_tls::getSettings();
     auto pathProjStartup = settings.dawsettings.startupProjectPath;
@@ -1181,6 +1185,10 @@ void MainCtrl::initApp(const std::vector<String>& args) {
         if (args[i] == "--load" && i + 1 < args.size()) {
             loadProject = args[i + 1];
             i++;
+            continue;
+        }
+        if (args[i] == "--no-python") {
+            DAW::SetPythonRuntimeDisabled(true);
             continue;
         }
         if (args[i] == "--defer" && i + 1 < args.size()) {

@@ -16,4 +16,5 @@ namespace DAW {
     void InitPythonInterpreter();
     void DeinitPythonInterpreter();
     bool IsPythonInitialized();
+    void SetPythonRuntimeDisabled(bool disabled);
 } // namespace DAW
