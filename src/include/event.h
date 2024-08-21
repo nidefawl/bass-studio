@@ -303,6 +303,7 @@ enum GlobalCommandType {
     CMD_APPLY_GROOVE,
     CMD_APPLY_ARP,
     CMD_NOTE_ARP_RESET,
+    CMD_REVERSE,
     NUM_COMMANDS
 };
 

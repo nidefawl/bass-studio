@@ -37,6 +37,9 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
       clipAudioId(nullptr),
       clipAudioPitch(nullptr),
       clipAudioStretch(nullptr),
+#ifndef NDEBUG
+      clipAudioFlags(nullptr),
+#endif
       grooveSettings(*this, _view),
       quantization()
 {
@@ -62,7 +65,11 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     clipAudioId.setLabel("Sample ID");
     clipAudioPitch.setLabel("Pitch");
     clipAudioStretch.setLabel("Stretch");
+#ifndef NDEBUG
+    clipAudioFlags.setLabel("Flags");
+#endif
     btnDuplicateLoop.setText("Duplicate Loop");
+    btnReverseClip.setText("Reverse");
     btnSelectMuted.setText("Select all muted");
     clipAudioPitch.setStepSize(0.01f);
     clipAudioStretch.setStepSize(0.01f);
@@ -76,11 +83,15 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     add(&clipAudioId);
     add(&clipAudioPitch);
     add(&clipAudioStretch);
+#ifndef NDEBUG
+    add(&clipAudioFlags);
+#endif
+    add(&btnReverseClip);
     add(&btnDuplicateLoop);
     add(&btnSelectMuted);
     add(&grooveSettings);
     add(&quantization);
-    auto updatePitchStretch = [this](gui_numberinput_field_base*, float) {
+    auto updatePitchStretch = [this](gui_numberinput_field_base*, auto) {
         clip_t* clip = view.clip();
         if (clip && clip->clipType == CLIP_AUDIO) {
             dawCtrl->getDaw()->updateDerivedAudio(clip, clipAudioSettings);
@@ -88,6 +99,9 @@ gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_vie
     };
     clipAudioPitch.fnValueEditChanged = updatePitchStretch;
     clipAudioStretch.fnValueEditChanged = updatePitchStretch;
+#ifndef NDEBUG
+    clipAudioFlags.fnValueEditChanged = updatePitchStretch;
+#endif
 }
 
 gui_clipsettings::~gui_clipsettings() {
@@ -124,6 +138,14 @@ void gui_clipsettings::buttonClicked(guibase* button) {
             tick = math::min(clip->end(), tick);
         }
         parentClipEditor.getNoteEditor().getGrid().makeTickVisible(tick);
+    }
+    if (&btnReverseClip == button) {
+        auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
+        if (!assert_expr(clipEditor)) {
+            return;
+        }
+        auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_REVERSE};
+        clipEditor->handleEditorCommand(temp);
     }
     if (&btnSelectMuted == button) {
         selectAllMuted(daw, view);
@@ -169,6 +191,9 @@ void gui_clipsettings::updateClipViewReferences() {
             clipAudioSettings = clip->audio.settings;
             clipAudioPitch.setRef(&clipAudioSettings.pitch);
             clipAudioStretch.setRef(&clipAudioSettings.stretch);
+#ifndef NDEBUG
+            clipAudioFlags.setRef(&clipAudioSettings.flags);
+#endif
             grooveSettings.setSelectedGroove(clip->selectedGroove);
         }
     }
@@ -183,6 +208,9 @@ void gui_clipsettings::updateClipViewReferences() {
         clipAudioId.setRef(nullptr);
         clipAudioPitch.setRef(nullptr);
         clipAudioStretch.setRef(nullptr);
+#ifndef NDEBUG
+        clipAudioFlags.setRef(nullptr);
+#endif
         grooveSettings.setSelectedGroove(-1);
     }
     if (dawCtrl) {
@@ -396,7 +424,16 @@ void gui_clipsettings::layout() {
     clipAudioPitch.pos              = ivec2(0, clipAudioId.bottom() + padding);
     clipAudioStretch.size           = ivec2(btnW, btnH);
     clipAudioStretch.pos            = ivec2(clipAudioPitch.right() + padding, clipAudioPitch.top());
-    btnDuplicateLoop.pos            = ivec2(0, clipAudioStretch.bottom() + padding);
+#ifndef NDEBUG
+    clipAudioFlags.size             = ivec2(btnW, btnH);
+    clipAudioFlags.pos              = ivec2(0, clipAudioPitch.bottom() + padding);
+    btnReverseClip.size             = ivec2(btnW, btnH);
+    btnReverseClip.pos              = ivec2(clipAudioFlags.right() + padding, clipAudioFlags.top());
+#else
+    btnReverseClip.size             = ivec2(w, btnH);
+    btnReverseClip.pos              = ivec2(0, clipAudioPitch.bottom() + padding);
+#endif
+    btnDuplicateLoop.pos            = ivec2(0, btnReverseClip.bottom() + padding);
     btnDuplicateLoop.size           = ivec2(w, btnH);
     btnSelectMuted.pos              = ivec2(0, btnDuplicateLoop.bottom() + padding);
     btnSelectMuted.size             = ivec2(w, btnH);

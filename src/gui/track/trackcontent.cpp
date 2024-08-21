@@ -474,7 +474,7 @@ void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& 
     auto cache = daw->getAudioCache();
     audiofile_t* audio = cache->getDerivedSample(m_clip->audio);
 
-    if (culled || !audio) {
+    if (culled) {
         releaseWaveformTexture();
         return;
     }
@@ -485,15 +485,16 @@ void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& 
     ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
     ivec2 sizeClipped = size - shrink;
     ivec2 posClipped = pos + shrink;
-    auto fadeIn = m_clip->getSampleFadeIn(prjGlobals.tempo100, audio->sample->sampleRate);
-    auto fadeOut = m_clip->getSampleFadeOut(prjGlobals.tempo100, audio->sample->sampleRate);
+    const auto samplerate = m_track->audio->sampleFormat.sampleRate;
+    auto fadeIn = m_clip->getSampleFadeIn(prjGlobals.tempo100, samplerate);
+    auto fadeOut = m_clip->getSampleFadeOut(prjGlobals.tempo100, samplerate);
     this->fadeInLayout = { };
     this->fadeOutLayout = { };
     auto pxLen = grid.pixelsToTicks(1);
     for (auto* fadeRef : { &fadeIn, &fadeOut }) {
         const uint8_t fadeIdx = fadeRef == &fadeIn ? 0 : 1;
-        auto dTick = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos, prjGlobals.tempo100, audio->sample->sampleRate);
-        auto dTickEnd = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos + fadeRef->samplesFadeDuration, prjGlobals.tempo100, audio->sample->sampleRate);
+        auto dTick = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos, prjGlobals.tempo100, samplerate);
+        auto dTickEnd = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos + fadeRef->samplesFadeDuration, prjGlobals.tempo100, samplerate);
         auto beginX = grid.tickToScreenD(m_clip->start() + dTick);
         auto endX = grid.tickToScreenD(m_clip->start() + dTickEnd);
         auto& layout = getFadeLayout(fadeIdx);
@@ -518,8 +519,12 @@ void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& 
         return;
     }
 
+    if (!audio) {
+        releaseWaveformTexture();
+        return;
+    }
+
     const auto tempo100 = prjGlobals.tempo100;
-    const auto samplerate = m_track->audio->sampleFormat.sampleRate;
     auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, trackSize, m_clip, pos, size - shrink, posClipped, sizeClipped);
     waveform.sampleVersion = audio->sample->sampleVersion;
     if (waveform.size.x < 1 || waveform.size.y < 1) {
@@ -665,6 +670,7 @@ void guitooltip<gui_audio_clip>::setContent() {
             auto& cSettings = c->settings;
             table.rows.push_back({ { "Pitch", tblfloat{ cSettings.pitch } } });
             table.rows.push_back({ { "Stretch", tblfloat{ cSettings.stretch } } });
+            table.rows.push_back({ { "Flags", tblint{ cSettings.flags, "0x%08x" } } });
             audiofile_t* cDerived = nullptr;
             if (c->derivedFromId != 0) {
                 cDerived = cache->getSample(c->derivedFromId);

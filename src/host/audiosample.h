@@ -40,6 +40,11 @@ inline bool operator<(const audioclip_loop_pos_t& lhs, const audioclip_loop_pos_
 struct clip_audio_settings_t {
     float pitch = 0.0f;
     float stretch = 1.0f;
+    enum AudioClipFlags : uint32_t {
+        FLAG_NONE = 0,
+        FLAG_REVERSE = 1 << 0,
+    };
+    uint32_t flags = FLAG_NONE;
     auto operator<=>(const clip_audio_settings_t&) const = default;
 };
 

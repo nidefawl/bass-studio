@@ -588,7 +588,8 @@ void save(Archive& archive, clip_audio_t const& m) {
         make_nvp("fadeIn", m.fadeIn),
         make_nvp("fadeOut", m.fadeOut),
         make_nvp("pitch", m.settings.pitch),
-        make_nvp("stretch", m.settings.stretch)
+        make_nvp("stretch", m.settings.stretch),
+        make_nvp("flags", m.settings.flags)
     );
 }
 
@@ -603,6 +604,7 @@ void load(Archive& archive, clip_audio_t& m) {
         m.setDefaultFade(false);
     make_optional_nvp(archive, "pitch", m.settings.pitch);
     make_optional_nvp(archive, "stretch", m.settings.stretch);
+    make_optional_nvp(archive, "flags", m.settings.flags);
 }
 
 //TODO: don't archive each note seperately

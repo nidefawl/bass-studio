@@ -523,6 +523,10 @@ public:
     gui_numberinput_i32 clipAudioId;
     gui_numberinput_float clipAudioPitch;
     gui_numberinput_float clipAudioStretch;
+#ifndef NDEBUG
+    gui_numberinput_u32 clipAudioFlags;
+#endif
+    guibutton btnReverseClip;
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_clipgroove_settings grooveSettings;

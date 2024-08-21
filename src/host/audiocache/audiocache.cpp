@@ -1003,7 +1003,10 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<b
     if (clipAudio.isEmpty()) {
         return nullptr;
     }
-    if (clipAudio.settings.pitch == 0.0f && clipAudio.settings.stretch == 1.0f) {
+    const bool bInverseSample = clipAudio.settings.flags & clip_audio_settings_t::FLAG_REVERSE;
+    const bool bPitchStretch = clipAudio.settings.pitch != 0.0f || clipAudio.settings.stretch != 1.0f;
+    if (!bInverseSample && !bPitchStretch) {
+        clipAudio.idDerived = -1;
         return getSample(clipAudio.id);
     }
     if (clipAudio.idDerived == -1) {
@@ -1026,14 +1029,14 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<b
             return nullptr;
         }
         const auto& sourceSample = audiofile->sample;
-        const auto MAX_SAMPLES_INPUT = 1024 * 1024 * 4;
-        auto stretchFactor = math::max(double(clipAudio.settings.stretch), 0.05);
+        const auto MAX_SAMPLES_INPUT = samplecount_t(1024) * 1024 * 1024;
+        auto stretchFactor = math::clamp(double(clipAudio.settings.stretch), 0.05, 256.0);
         if (sourceSample->nSamples > MAX_SAMPLES_INPUT || sourceSample->nSamples * stretchFactor > MAX_SAMPLES_INPUT) {
             log_lf(Log::L_WARN, "getDerivedSample: sample %s too large\n", audiofile->path.c_str());
             clipAudio.idDerived = -3;
             return nullptr;
         }
-        samplecount_t numSamplesStretched = math::ceildS64(double(sourceSample->nSamples) * stretchFactor);
+        samplecount_t numSamplesStretched = bPitchStretch ? math::ceildS64(double(sourceSample->nSamples) * stretchFactor) : sourceSample->nSamples;
         create_sample_req_t ssr {
             .format = sampleformat_t{samplerate, 512, sampleformat_bits_t::FLOAT_32},
             .numChannels = sourceSample->nChannels,
@@ -1065,49 +1068,79 @@ audiofile_t* audiocache::getDerivedSample(clip_audio_t& clipAudio, std::atomic<b
         auto pitchSemitones = clipAudio.settings.pitch;
         auto pitchLinear = std::pow(2.0, pitchSemitones / 12.0);
         pitchLinear = math::clamp(pitchLinear, 1.0/32.0, 32.0);
-        stretch.setTransposeFactor(pitchLinear);
-        samplecount_t preRoll = math::ceildS64(stretch.outputLatency() + stretch.inputLatency() * stretchFactor);
+        stretch.setTransposeFactor(float(pitchLinear));
+        samplecount_t preRoll = bPitchStretch ? math::ceildS64(stretch.outputLatency() + stretch.inputLatency() * stretchFactor) : 0;
         auto blockStretched = AudioBlock(sourceSample->nChannels, numSamplesStretched + preRoll);
         blockStretched.clear();
 
         samplecount_t chunkSize = 10000;
         samplecount_t outputOffset = 0;
         std::vector<float*> bufIn;
-        for (samplecount_t i = 0; i < sourceSample->nSamples; i += chunkSize) {
-            auto blockOutOffset = blockStretched.getOffsetBlock(outputOffset);
-            bufIn.resize(sourceSample->nChannels);
-            for (channelnum_t c = 0; c < sourceSample->nChannels; c++) {
-                bufIn[c] = sourceSample->samples[c].data() + i;
+        std::vector<float*> srcSamples;
+        srcSamples.resize(sourceSample->nChannels);
+        for (channelnum_t c = 0; c < sourceSample->nChannels; c++) {
+            srcSamples[c] = sourceSample->samples[c].data();
+        }
+
+        dbgassert(bInverseSample || bPitchStretch);
+
+        // stretch + repitch sample
+        if (bPitchStretch) {
+            std::optional<std::vector<std::vector<float>>> reversedChannels;
+            // reverse sample
+            if (bInverseSample) {
+                reversedChannels = std::vector<std::vector<float>>(sourceSample->nChannels);
+                for (channelnum_t c = 0; c < sourceSample->nChannels; c++) {
+                    auto numSamples = math::min(samplecount_t(sourceSample->samples[c].size()), sourceSample->nSamples);
+                    reversedChannels->at(c).resize(numSamples);
+                    dbgassert(samplecount_t(sourceSample->samples[c].size()) >= numSamples);
+                    std::reverse_copy(sourceSample->samples[c].begin(), sourceSample->samples[c].begin() + numSamples, reversedChannels->at(c).begin());
+                    srcSamples[c] = reversedChannels->at(c).data();
+                }
             }
-            auto chSizeIn = math::min<samplecount_t>(chunkSize, sourceSample->nSamples - i);
-            auto chSizeStr = chSizeIn * stretchFactor;
-            auto chunkSizeStretched = math::min<samplecount_t>(math::ceildS64(chSizeStr), blockOutOffset.samples);
-            stretch.process(bufIn.data(), chSizeIn, blockOutOffset.buf, chunkSizeStretched);
-            outputOffset += chunkSizeStretched;
-            if (abortFlag && abortFlag->load()) {
-                return nullptr;
+            for (samplecount_t i = 0; i < sourceSample->nSamples; i += chunkSize) {
+                auto blockOutOffset = blockStretched.getOffsetBlock(outputOffset);
+                bufIn.resize(sourceSample->nChannels);
+                for (channelnum_t c = 0; c < sourceSample->nChannels; c++) {
+                    bufIn[c] = srcSamples[c] + i;
+                }
+                auto chSizeIn = math::min<samplecount_t>(chunkSize, sourceSample->nSamples - i);
+                auto chSizeStr = chSizeIn * stretchFactor;
+                auto chunkSizeStretched = math::min<samplecount_t>(math::ceildS64(chSizeStr), blockOutOffset.samples);
+                stretch.process(bufIn.data(), int32_t(chSizeIn), blockOutOffset.buf, int32_t(chunkSizeStretched));
+                outputOffset += chunkSizeStretched;
+                if (abortFlag && abortFlag->load()) {
+                    return nullptr;
+                }
+            }
+            // stretch.process(sourceSample->samples, sourceSample->nSamples, blockStretched.buf, numSamplesStretched);
+
+            // feed preroll num silent samples
+            // auto inputSizePreRoll = math::ceildS64(preRoll * (1.0 / stretchFactor));
+            // auto blockSilent = AudioBlock(sourceSample->nChannels, inputSizePreRoll);
+            // blockSilent.clear();
+            // auto blockOutOffset = blockStretched.getOffsetBlock(numSamplesStretched);
+            // stretch.process(blockSilent.buf, blockSilent.samples, blockOutOffset.buf, preRoll);
+
+            // flush preroll
+            auto blockOutOffset = blockStretched.getOffsetBlock(numSamplesStretched);
+            stretch.flush(blockOutOffset.buf, int32_t(blockOutOffset.samples));
+
+            auto blockNoPreRoll = blockStretched.getOffsetBlock(preRoll);
+            for (channelnum_t c = 0; c < derivedSample->nChannels; c++) {
+                auto& ch = derivedSample->samples[c];
+                // ch.resize(sample->nSamples);
+                std::memcpy(ch.data(), blockNoPreRoll.buf[c], blockNoPreRoll.samples * sizeof(float));
+            }
+        } else if (bInverseSample) {
+            dbgassert(blockStretched.samples == sourceSample->nSamples);
+            for (channelnum_t c = 0; c < sourceSample->nChannels; c++) {
+                auto& ch = derivedSample->samples[c];
+                std::reverse_copy(sourceSample->samples[c].begin(), sourceSample->samples[c].begin() + sourceSample->nSamples, ch.begin());
             }
         }
         if (abortFlag && abortFlag->load()) {
             return nullptr;
-        }
-        // stretch.process(sourceSample->samples, sourceSample->nSamples, blockStretched.buf, numSamplesStretched);
-
-        // feed preroll num silent samples
-        // auto inputSizePreRoll = math::ceildS64(preRoll * (1.0 / stretchFactor));
-        // auto blockSilent = AudioBlock(sourceSample->nChannels, inputSizePreRoll);
-        // blockSilent.clear();
-        // auto blockOutOffset = blockStretched.getOffsetBlock(numSamplesStretched);
-        // stretch.process(blockSilent.buf, blockSilent.samples, blockOutOffset.buf, preRoll);
-
-        auto blockOutOffset = blockStretched.getOffsetBlock(numSamplesStretched);
-        stretch.flush(blockOutOffset.buf, blockOutOffset.samples);
-
-        auto blockNoPreRoll = blockStretched.getOffsetBlock(preRoll);
-        for (channelnum_t c = 0; c < derivedSample->nChannels; c++) {
-            auto& ch = derivedSample->samples[c];
-            // ch.resize(sample->nSamples);
-            std::memcpy(ch.data(), blockNoPreRoll.buf[c], blockNoPreRoll.samples * sizeof(float));
         }
 
         derivedSample->sampleVersion++;

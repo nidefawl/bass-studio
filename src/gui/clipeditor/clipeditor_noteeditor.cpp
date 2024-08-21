@@ -12,6 +12,7 @@
 #include "gui/container/container.h"
 #include "gui/track/trackctr.h"
 #include "guiconstant.h"
+#include "host/audiosample.h"
 #include "host/clip/clip.h"
 #include "math/seq_math.h"
 #include "gui/gui.h"
@@ -1168,7 +1169,26 @@ void gui_audiocontent::layout() {
 }
 
 bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
-    return false;
+    auto daw = dawCtrl->getDaw();
+    auto command = ctxt.type;
+    auto& kevt = ctxt.kevt;
+    if (focused() && command == CMD_PASTE && daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES) {
+        return false;
+    }
+    clip_t* clip = view.clip();
+    if (kevt.type != K_RELEASE) {
+        if (kevt.type == K_PRESS) {
+            if (command == CMD_REVERSE) {
+                if (clip && clip->clipType == CLIP_AUDIO) {
+                    clip->audio.settings.flags ^= clip_audio_settings_t::FLAG_REVERSE;
+                    dawCtrl->getDaw()->updateDerivedAudio(clip, clip->audio.settings);
+                }
+                return true;
+            }
+        }
+    }
+    static constexpr auto commands = {CMD_REVERSE};
+    return std::find(commands.begin(), commands.end(), command) != commands.end();
 }
 
 guictr_audioeditor::guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view)
