@@ -2795,11 +2795,11 @@ bool DawCtrl::onFileBrowserEntryDragMove(const String& pathAbs, const String& na
     }
     if (!bIsLoaded) {
         daw.dragdropclip.reset();
-    }
-    std::vector<String> files;
-    files.push_back(pathAbs);
-    if (!preloadDraggedFiles(files)) {
-        return false;
+        std::vector<String> files;
+        files.push_back(pathAbs);
+        if (!preloadDraggedFiles(files)) {
+            return false;
+        }
     }
     if (daw.dragdropclip.isLoaded) {
         MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
