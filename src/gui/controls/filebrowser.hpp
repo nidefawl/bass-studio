@@ -41,7 +41,9 @@ public:
     }
     ~gui_filebrowser_entry_base() override = default;
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
-        dawCtrl->onFileBrowserEntryDragMove(pathAbs, name, mousepos);
+        if (dawCtrl->onFileBrowserEntryDragMove(pathAbs, name, mousepos)) {
+            setDragRendered(false);
+        }
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
         dawCtrl->onFileBrowserEntryDragRelease(pathAbs, name, mousepos);
