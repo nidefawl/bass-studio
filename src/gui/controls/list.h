@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <utility>
 #include <nanovg.h>
 #include "gui/gui.h"
 #include "gui/container/container.h"
@@ -12,7 +13,7 @@ class gui_list_entry : public guibase {
     friend class gui_list;
 
 protected:
-    int32_t icon       = 0;
+    int32_t icon       = -1;
     bool selected      = false;
     int32_t entryDepth = 0;
 
@@ -41,7 +42,7 @@ class gui_list_folder_entry : public gui_list_entry {
     const String string;
     bool bIsOpened = false;
 public:
-    gui_list_folder_entry(const String& str) : gui_list_entry(), string(str) {
+    explicit gui_list_folder_entry(String str) : gui_list_entry(), string(std::move(str)) {
         setGuiType(gui_type::GUI_TYPE_LIST_FOLDER);
         label = string;
         setBackgroundRendered(true);
@@ -154,6 +155,12 @@ public:
         for (gui_list_entry* g : _newList) {
             add(g);
         }
+
+        // fix selected index
+        if (selectedIdx >= (int32_t) listGuis.size()) {
+            selectedIdx = CtrSize(listGuis) - 1;
+        }
+
         layout();
     }
     void layout() override {
@@ -187,5 +194,11 @@ public:
 
     std::vector<gui_list_entry*>& getListRef() {
         return listGuis;
+    }
+
+    gui_list_entry* getSelectedEntry() {
+        if (selectedIdx < 0 || selectedIdx >= (int32_t) listGuis.size())
+            return nullptr;
+        return listGuis[selectedIdx];
     }
 };

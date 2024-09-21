@@ -1671,11 +1671,8 @@ void DawCtrl::filesDropCancel() {
     daw.dragdropclip.reset();
 }
 
-bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
+bool DawCtrl::pasteDraggedFiles(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
     clipreset rst(daw.dragdropclip);
-    if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
-        return false;
-    }
     if (daw.dragdropclip.isLoaded && daw.dragdropclip.isValidTarget) {
         log_lf(Log::L_DEBUG, "filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
         MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
@@ -1691,6 +1688,14 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, Keyboar
             return result;
         }
     }
+    return false;
+}
+
+bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
+    if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
+        return false;
+    }
+    pasteDraggedFiles(files, mousepos, kbmods);
     if (files.size()) {
         tmpFileDragPaths.clear();
         String path = files.front();
@@ -1702,6 +1707,7 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, Keyboar
     }
     return false;
 }
+
 DAW::async_task_t* createTestTask();
 bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
     if (event.type == KeyboardState::K_PRESS) {
@@ -1732,6 +1738,13 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                     }
                     daw.startPlaying();
                 }
+            }
+            return true;
+        }
+        case CMD_REVEAL_IN_EXPLORER: {
+            String path = ctxt.argStr0;
+            if (!path.empty()) {
+                RevealInExplorer(path);
             }
             return true;
         }
@@ -2658,14 +2671,7 @@ void DawInstance::updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& 
     }
 }
 
-bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
-    daw.dragdropclip.reset();
-    if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
-        return false;
-    }
-    if (daw.getAsyncTask()) {
-        return false;
-    }
+bool DawCtrl::preloadDraggedFiles(std::vector<String>& files) {
     tmpFileDragPaths = files;
     for (auto path : files) {
         if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT) || StrEndsWith(path, "." PROJECT_FILE_EXT))
@@ -2741,28 +2747,83 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
                     } else {
                         log_lf(Log::L_WARN, "Failed loading drag-drop clipboard\n");
                     }
+                    return true;
                 }
-            }
-        }
-        if (daw.dragdropclip.isLoaded) {
-            MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
-            for (guictr_base* ctr : containers) {
-                if (ctr->isVisible() && ctr->mouseHitTest(mousepos, evt)) {
-                    break;
-                }
-            }
-            guibase* gui = evt.getGuiHit();
-            if (gui) {
-                ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-                bool result   = gui->clipDropBegin(daw.dragdropclip, mposObj, kbmods);
-                if (!result) {
-                }
-                return result;
             }
         }
     }
     return false;
 }
+
+bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
+    daw.dragdropclip.reset();
+    if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
+        return false;
+    }
+    if (daw.getAsyncTask()) {
+        return false;
+    }
+    if (!preloadDraggedFiles(files)) {
+        return false;
+    }
+    if (daw.dragdropclip.isLoaded) {
+        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
+        for (guictr_base* ctr : containers) {
+            if (ctr->isVisible() && ctr->mouseHitTest(mousepos, evt)) {
+                break;
+            }
+        }
+        guibase* gui = evt.getGuiHit();
+        if (gui) {
+            ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
+            bool result   = gui->clipDropBegin(daw.dragdropclip, mposObj, kbmods);
+            if (!result) {
+            }
+            return result;
+        }
+    }
+    return false;
+}
+
+bool DawCtrl::onFileBrowserEntryDragMove(const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods) {
+    if (daw.getAsyncTask()) {
+        return false;
+    }
+    bool bIsLoaded = !tmpFileDragPaths.empty() && tmpFileDragPaths.front() == pathAbs;
+    if (bIsLoaded) {
+        bIsLoaded &= daw.dragdropclip.isLoaded;
+    }
+    if (!bIsLoaded) {
+        daw.dragdropclip.reset();
+    }
+    std::vector<String> files;
+    files.push_back(pathAbs);
+    if (!preloadDraggedFiles(files)) {
+        return false;
+    }
+    if (daw.dragdropclip.isLoaded) {
+        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
+        for (guictr_base* ctr : containers) {
+            if (ctr->isVisible() && ctr->mouseHitTest(mousepos, evt)) {
+                break;
+            }
+        }
+        guibase* gui = evt.getGuiHit();
+        if (gui) {
+            ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
+            bool result   = gui->clipDropMove(daw.dragdropclip, mposObj, kbmods);
+            return result;
+        }
+    }
+    return false;
+}
+
+bool DawCtrl::onFileBrowserEntryDragRelease(const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods) {
+    std::vector<String> files;
+    files.push_back(pathAbs);
+    return pasteDraggedFiles(files, mousepos, kbmods);
+}
+
 
 bool convertClipboardToGrooveData(const clip_clipboard& clipboard, std::vector<groove_data_t>& grooves) {
     if (clipboard.tracks.empty()) {

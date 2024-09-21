@@ -456,12 +456,10 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
         return;
     }
     // if selection is empty then select the clip
-    gui_clip* clip = nullptr;
     if (!dawCtrl->getCursor().getRange()) {
         trackEditor->setSelectionRange(m_clip, m_trackentry);
-        clip = this;
     }
-    parentCtrl->openContextMenu(new guictxtmenu_clip(trackEditor, m_trackentry, clip), evt.mousepos);
+    parentCtrl->openContextMenu(new guictxtmenu_clip(trackEditor, m_trackentry, this), evt.mousepos);
 }
 
 void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {

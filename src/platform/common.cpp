@@ -1,3 +1,4 @@
+#include "appsettings.h"
 #include "archive.h"
 #include "archive_entry.h"
 #include "fileio.h"
@@ -7,6 +8,7 @@
 #include "logging.h"
 #include "platform.h"
 #include "str_util.h"
+#include "tls.h"
 #include <stb/stb_image.h>
 
 namespace App::Platform {

@@ -37,6 +37,9 @@ bool getContainerLabel(gui_type type, String& out) {
         case CTR_TYPE_EFFECTLIBRARY:
             out = "Plugin Library";
             return true;
+        case CTR_TYPE_USERLIBRARY:
+            out = "User Library";
+            return true;
         case CTR_TYPE_PLUGINSLOADED:
             out = "Loaded Plugins";
             return true;
@@ -127,6 +130,9 @@ ContainerFactory& getContainerFactory() {
         };
         containerFactory[gui_type::CTR_TYPE_EFFECTLIBRARY] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(DAW::UI::makeGuiEffectLibrary(ctxt));
+        };
+        containerFactory[gui_type::CTR_TYPE_USERLIBRARY] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiUserLibrary(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_PLUGINSLOADED] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(DAW::UI::makeGuiPluginsLoadedList(ctxt));

@@ -17,6 +17,7 @@ class guictxtmenu_track_editor : public guictxtmenu {
 protected:
     guitrack_editor* const m_editor;
     track_gui_entry_t* const m_trackentry;
+    SafeRef<guibase> m_clipRef{};
     ctxtmenu_color_select* sel = nullptr;
     ctxtmenu_time_select* timeSel1 = nullptr;
     ctxtmenu_time_select* timeSel2 = nullptr;

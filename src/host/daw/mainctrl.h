@@ -746,10 +746,14 @@ public:
     void revealPlugin(effectbase* effect);
     void focusChanged(guibase* oldFocused, guibase* newFocused) override;
     void resetMouseContext() override;
+    bool preloadDraggedFiles(std::vector<String>& files);
+    bool pasteDraggedFiles(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods);
     bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override;
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
     void filesDropCancel() override;
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
+    bool onFileBrowserEntryDragMove(const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods = {});
+    bool onFileBrowserEntryDragRelease(const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods = {});
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override;
     bool menuCommand(const menucmd_t& command) override;
     void updateMenubar() override;

@@ -109,10 +109,10 @@ void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
     }
 }
 
-void findFilesWithExt(
-        String strPath,
-        String strExt,
-        bool bRecursive,
+void findFilesWithExtList(
+        const String& strPath,
+        const std::vector<String>& vecExt,
+        const bool bRecursive, const bool bIncludeDirs,
         std::vector<FileFound>& _out) {
     FTS* file_system = nullptr;
     const char* ptr  = StringAsCStr(strPath);
@@ -131,14 +131,21 @@ void findFilesWithExt(
             break;
         if (!(fs_entry->fts_info & FTS_D))
             continue;
+        if (bIncludeDirs) {
+            String path = String(fs_entry->fts_path) + fs_entry->fts_name;
+            App::Platform::sanitizePathToDirectory(path);
+            const FileFound f = { std::move(path), fs_entry->fts_name, "", true };
+            _out.push_back(f);
+        }
         FTSENT* child = fts_children(file_system, 0);
         while (child) {
             if (!(child->fts_info & FTS_DP)) {
             String fileName, ext;
             SplitPath(child->fts_name, nullptr, nullptr, &ext, &fileName);
-            if (ext == strExt) {
+            if (std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
                 String path = String(child->fts_path) + child->fts_name;
-                const FileFound f = { std::move(path), child->fts_name, ext };
+                App::Platform::sanitizePathToFile(path);
+                const FileFound f = { std::move(path), child->fts_name, ext, false };
                 _out.push_back(f);
             }
             }
@@ -151,6 +158,21 @@ void findFilesWithExt(
     fts_close(file_system);
 }
 
+
+void findFilesWithExt(
+        const String& strPath,
+        const String& strExt,
+        bool bRecursive,
+        std::vector<FileFound>& _out) {
+    findFilesWithExtList(strPath, { strExt }, bRecursive, false, _out);
+}
+
+void listDirectoryFiles(
+        const String& strPath,
+        const std::vector<String>& vecExt,
+        std::vector<FileFound>& _out) {
+    findFilesWithExtList(strPath, vecExt, false, true, _out);
+}
 
 class FileTimeGetter::Impl {
     struct stat fStat{};
@@ -339,6 +361,33 @@ finish:
     }
 
     return ret == 0;
+}
+
+void RevealInExplorer(const String& _path) {
+    if (system("which xdg-open > /dev/null") != 0) {
+        log_lf(Log::L_WARNING, "xdg-open not found, cannot reveal in explorer");
+        return;
+    }
+    
+    String path = _path;
+    App::Platform::sanitizePathToFile(path);
+    if (path.empty()) {
+        return;
+    }
+    // check if file exists
+    const bool bExists = FileExists(path);
+    // if not, pick parent folder
+    if (!bExists) {
+        String parentPath;
+        SplitPath(path, &parentPath, nullptr, nullptr);
+        if (FileExists(parentPath)) {
+            path = parentPath;
+        } else {
+            return;
+        }
+    }
+    String cmd = "xdg-open " + path;
+    system(cmd.c_str());
 }
 
 #endif

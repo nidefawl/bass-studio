@@ -128,6 +128,7 @@ struct appsettings {
     app_iosettings iosettings;
     app_path_remapping pathmapping;
     recentfilelist recentfiles;
+    std::vector<String> userLibraryPaths;
     std::vector<appwindowsettings> windowSettings = {appwindowsettings{}};
     String selectedTheme = "default";
     bool saveOnExit = true;

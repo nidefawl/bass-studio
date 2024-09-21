@@ -18,4 +18,5 @@ guictr_base* makeGuiExport(create_ctr_t ctxt);
 guictr_base* makeGuiClipEditor(create_ctr_t ctxt);
 guictr_base* makeGuiMidiInspect(create_ctr_t ctxt);
 guidialog_base* makeGuiExportDialog(create_ctr_t ctxt);
+guictr_base* makeGuiUserLibrary(create_ctr_t ctxt);
 }

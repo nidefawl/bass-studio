@@ -174,7 +174,8 @@ void save(Archive& ar, appsettings const& settings, const std::uint32_t version)
         make_nvp("pathmapping", settings.pathmapping),
         make_nvp("recentfiles", settings.recentfiles),
         make_nvp("windowSettings", settings.windowSettings),
-        make_nvp("theme", settings.selectedTheme)
+        make_nvp("theme", settings.selectedTheme),
+        make_nvp("userlibraries", settings.userLibraryPaths)
     );
 }
 
@@ -210,7 +211,7 @@ void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
             // make_nvp("wndMain", settings.wndMain),
             // make_nvp("wndCompanion", settings.wndCompanion)
         );
-    } else {
+    } else if (version < 5) {
         ar(
             make_nvp("dawsettings", settings.dawsettings),
             make_nvp("autosave", settings.autosave),
@@ -225,9 +226,21 @@ void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
                 make_nvp("theme", settings.selectedTheme)
             );
         }
+    } else {
+        ar(
+            make_nvp("dawsettings", settings.dawsettings),
+            make_nvp("autosave", settings.autosave),
+            make_nvp("pluginsettings", settings.pluginsettings),
+            make_nvp("iosettings", settings.iosettings),
+            make_nvp("pathmapping", settings.pathmapping),
+            make_nvp("recentfiles", settings.recentfiles),
+            make_nvp("windowSettings", settings.windowSettings),
+            make_nvp("theme", settings.selectedTheme),
+            make_nvp("userlibraries", settings.userLibraryPaths)
+        );
     }
 }
-CEREAL_CLASS_VERSION(appsettings, 4);
+CEREAL_CLASS_VERSION(appsettings, 5);
 
 
 void loadSettings(appsettings& settings) {

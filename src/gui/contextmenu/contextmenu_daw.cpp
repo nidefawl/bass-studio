@@ -1,5 +1,7 @@
 #include "assert_dbg.h"
 #include "basectrl.h"
+#include "fileio.h"
+#include "gui/gui.h"
 #include "host/automation/automation.h"
 #include "commands.h"
 #include "contextmenu_daw.h"
@@ -18,6 +20,7 @@
 #include "host/plugin/base/base-plugin.h"
 #include "logging.h"
 #include "math/vec.h"
+#include "saferef.h"
 #include "snapshot/track-snapshot.h"
 #include "str_util.h"
 #include "str_util.h"
@@ -253,6 +256,9 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(guitrack_editor* const _edito
     this->size.x = 260;
     this->dawCtrl = _editor->dawCtrl;
     this->maxHeight = 0;
+    if (optionalContextClip) {
+        m_clipRef = optionalContextClip->toRef();
+    }
     auto& cursor = dawCtrl->getCursor();
     auto clipboardType = dawCtrl->getDaw()->getClipboardType();
     bool bHasContentSelected = optionalContextClip != nullptr;
@@ -273,6 +279,10 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(guitrack_editor* const _edito
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_MUTE));
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_BEGIN_RENAME));
     } 
+    if (optionalContextClip && optionalContextClip->getClipType() == CLIP_AUDIO) {
+        // reveal sample in explorer
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_REVEAL_IN_EXPLORER));
+    }
     addEntry(new ctxtmenu_splitter());
     addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CUT));
     entries.back()->setGrayedOut(!bHasContentSelected);
@@ -317,6 +327,31 @@ bool guictxtmenu::clickedElement(ctxtmenu_entry* e, int _id) {
 
 bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
     scaled_grid& grid = m_editor->getGrid();
+    if (e && e->commandtype == GlobalCommandType::CMD_REVEAL_IN_EXPLORER) {
+        // resolve clipRef
+        auto clipRefGuiBase = safeRefGet(m_clipRef);
+        if (clipRefGuiBase) {
+            auto guiClip = gui_cast<gui_clip, gui_type::GUI_TYPE_CLIP>(clipRefGuiBase);
+            if (guiClip) {
+                auto clip = guiClip->m_clip;
+                if (clip->clipType == CLIP_AUDIO) {
+                    auto sample = dawCtrl->getDaw()->getAudioCache()->getSample(clip->audio.id);
+                    if (sample) {
+                        auto path = sample->pathLoaded;
+                        if (path.empty()) {
+                            path = sample->path;
+                        }
+                        auto ctxt = DAW::UI::CommandContext{e->commandtype};
+                        ctxt.argStr0 = path;
+                        closeContextMenu();
+                        dawCtrl->handleGlobalCommand(ctxt);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
     if (e == this->timeSel1 || e == this->timeSel2) {
         if (_id == 110 + 9) {// OFF
             grid.grid_dens.enabled = false;

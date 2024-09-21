@@ -38,12 +38,15 @@ struct FileFound {
     String path;
     String name;
     String ext;
+    bool bIsDir = false;
+    int32_t depth = -1; // -1 equals not set
 };
 
 using ByteBuf = std::vector<uint8_t>;
 
 class window_base;
 
+void RevealInExplorer(const String& path);
 int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writebuffer);
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out);
 int64_t ReadFileText(const String& filename, String& out, int resourceType = 0);
@@ -137,11 +140,16 @@ inline String FileNameFromPath(const String& in) {
     return fileName;
 }
 
+void listDirectoryFiles(
+        const String& strPath,
+        const std::vector<String>& vecExt,
+        std::vector<FileFound>& _out);
 void findFilesWithExt(
-        String strPath,
-        String strExt,
+        const String& strPath,
+        const String& strExt,
         bool bRecursive,
         std::vector<FileFound>& _out);
+void RevealInExplorer(const String& path);
 
 class FileTimeGetter {
     class Impl;

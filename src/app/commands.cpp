@@ -173,6 +173,7 @@ namespace DAW::UI {
         Add(CMD_APPLY_ARP, {"Apply arp", "Apply arp to clip", ""}, {});
         Add(CMD_NOTE_ARP_RESET, {"Reset Arp", "Note resets arp (Toggle)", ""}, {});
         Add(CMD_REVERSE, {"Reverse", "Reverse clip", ""}, {});
+        Add(CMD_REVEAL_IN_EXPLORER, {"Reveal in Explorer", "Reveal the file in the file explorer", ""}, {});
 
         auto cmdOpenView = Command{CMD_SWITCH_LAYOUT, {"Switch Layout", "Switch to Layout %d. Hold Shift Key to store", ""}, {}, 0, {}, {}, 0, 0, ""};
         for (int32_t i = 0; i < 10; i++) {
