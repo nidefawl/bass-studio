@@ -1003,9 +1003,6 @@ std::vector<std::weak_ptr<DropAreaUILayout>> BaseCtrl::getTargets(MouseEvent& me
     return targets;
 }
 std::vector<guictr_layout_base*> BaseCtrl::getContainers() {
-    MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, KeyboardMods::KB_MODS_NONE);
-    evtDragObj.setDraggedThing(nullptr);
-    evtDragObj.requestFocus(nullptr);
     std::vector<guictr_layout_base*> ifMatches;
     std::deque<guictr_base*> stack;
     std::vector<guictr_base*> ctrMatches;
