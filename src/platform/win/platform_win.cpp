@@ -30,20 +30,22 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #include "platform.h"
-
+constinit size_t SIZEOF_WINDOWPLACEMENT = sizeof(WINDOWPLACEMENT);
 bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* size) {
     HWND hwnd = glfwGetWin32Window(glfw);
     WINDOWPLACEMENT p{};
     p.length = sizeof(WINDOWPLACEMENT);
     size->valid = GetWindowPlacement(hwnd, &p) != 0;
-    if (size->valid && sizeof(WINDOWPLACEMENT) <= sizeof(size->data)) {
+    size_t sizeData = sizeof(size->data);
+    if (size->valid && SIZEOF_WINDOWPLACEMENT <= sizeData) {
         memcpy(&size->data[0], &p, sizeof(WINDOWPLACEMENT));
     }
     return true;
 }
 
 bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* size) {
-    if (size->valid && sizeof(WINDOWPLACEMENT) <= sizeof(size->data)) {
+    size_t sizeData = sizeof(size->data);
+    if (size->valid && SIZEOF_WINDOWPLACEMENT <= sizeData) {
         HWND hwnd = glfwGetWin32Window(glfw);
         WINDOWPLACEMENT p{};
         memcpy(&p, &size->data[0], sizeof(WINDOWPLACEMENT));
