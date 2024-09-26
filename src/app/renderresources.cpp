@@ -60,7 +60,7 @@ namespace RenderResources {
                 if (ReadImage(path, out) < 0) {
                     log_lf(Log::L_ERROR, "Error loading image %s\n", path);
                 }
-            } catch (appexception& e) {
+            } catch (FileIOException& e) {
                 log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", path, e.what());
             }
         }
