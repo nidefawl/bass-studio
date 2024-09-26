@@ -2543,7 +2543,7 @@ class ProcessClipAudioThreadTask final : public WorkerThread::ThreadTask {
     audiocache* cache = nullptr;
     audiofile_t* audiofile = nullptr;
 public:
-    void setClipData(clip_ref_t clipRef, clip_audio_t clipAudio, audiocache* cache) {
+    void setClipData(const clip_ref_t& clipRef, const clip_audio_t& clipAudio, audiocache* cache) {
         this->clipRef = clipRef;
         this->clipAudio = clipAudio;
         this->cache = cache;
