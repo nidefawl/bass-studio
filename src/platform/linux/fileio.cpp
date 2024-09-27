@@ -381,7 +381,7 @@ bool PathIsDirectory(const String& path) {
 
 void RevealInExplorer(const String& _path) {
     if (system("which xdg-open > /dev/null") != 0) {
-        log_lf(Log::L_WARNING, "xdg-open not found, cannot reveal in explorer");
+        log_lf(Log::L_WARN, "xdg-open not found, cannot reveal in explorer\n");
         return;
     }
     
