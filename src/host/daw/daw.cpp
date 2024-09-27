@@ -1526,7 +1526,6 @@ std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const Str
         uniqueFileName += ".";
         uniqueFileName += ext;
         uniqueFilePath = path;
-        uniqueFilePath += FILE_PATHSEP_CHAR;
         uniqueFilePath += uniqueFileName;
     }
     return {uniqueFilePath, uniqueFileName};

@@ -131,23 +131,31 @@ void guiplugin::buttonClicked(guibase* _button) {
     }
     if (_button == &buttonSave) {
         ThreadLock lock = dawCtrl->lockPlayThread();
-
         plugin_snapshot_t ps;
         effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
         CreateDirectoryIfNotExists(App::Platform::toUserdataPath("presets"));
         String defaultPresetPath = App::Platform::toUserdataPath("presets/" + effect->getName());
         CreateDirectoryIfNotExists(defaultPresetPath);
-        String path;
-        auto window = dawCtrl->window;
-        if (promptUserFilePath(window, 1, FILE_TYPES_PLUGINSNAPSHOT, path, defaultPresetPath)) {
-            String ext;
-            SplitPath(path, nullptr, nullptr, &ext);
-            if (ext.empty()) {
-                path += ".";
-                path += FILE_TYPES_PLUGINSNAPSHOT.types.front().ext;
-            }
-            savePluginSnapshot(ps, path);
+        String presetName = ps.currentProgramName;
+        if (presetName.empty()) {
+            presetName = effect->getName();
         }
+        String path = defaultPresetPath + FILE_PATHSEP_STR + presetName;
+        String ext;
+        SplitPath(path, nullptr, nullptr, &ext);
+        if (ext.empty()) {
+            path += ".";
+            path += FILE_TYPES_PLUGINSNAPSHOT.types.front().ext;
+        }
+        auto [pathFile, nameFile] = dawCtrl->getDaw()->createUniqueNonExistingFilename(path);
+        // save file first, then spawn popup to rename
+        savePluginSnapshot(ps, pathFile);
+        auto popupPos  = buttonSave.toScreenSpace(ivec2(buttonSave.size.x, 0));
+        auto popupSize = ivec2(size.x - buttonSave.size.x, theme->get(GuiConstant::CONST_ROW_HEIGHT));
+        // show simple dialog to edit name
+        DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [](const String& path) {
+            return true;
+        });
         return;
     }
     if (_button == &buttonDelete) {

@@ -32,12 +32,20 @@ bool CreateDirectoryIfNotExists(const String& DirPath) {
     return true;
 }
 
-bool DeleteAbsoluteFile(const String& FilePath) {
-    return 0 != DeleteFileA(StringAsCStr(FilePath));
+bool MoveAbsoluteFile(const String& src, const String& dst) {
+    auto err = MoveFileA(StringAsCStr(src), StringAsCStr(dst));
+    // if (err == 0) {
+    //     throw FileIOException(GetLastError(), "MoveFileA failed: " + src + " to " + dst);
+    // }
+    return err == 0;
 }
 
-bool MoveAbsoluteFile(const String& src, const String& dst) {
-    return 0 != MoveFileA(StringAsCStr(src), StringAsCStr(dst));
+bool DeleteAbsoluteFile(const String& FilePath) {
+    auto err = DeleteFileA(StringAsCStr(FilePath));
+    // if (err == 0) {
+    //     throw FileIOException(GetLastError(), "DeleteFileA failed: " + FilePath);
+    // }
+    return err == 0;
 }
 
 bool PathIsDirectory(const String& path) {

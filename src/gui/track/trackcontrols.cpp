@@ -96,7 +96,7 @@ namespace DAW {
         auto popupPos    = title->toScreenSpace(ivec2(0));
         OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
     }
-    bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs, const String& filename, const std::function<bool(const String& str)>& callback) {
+    bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs,  const std::function<bool(const String& str)>& callback) {
         if (pathAbs.empty()) {
             return false;
         }
@@ -1259,6 +1259,7 @@ public:
           automationSelectDevice(_entry),
           automationSelectParam(_entry) {
         setGuiType(gui_type::CTR_TYPE_TRACK_TITLE);
+        setDragRendered(true);
         setCanMouseHit(true);
         hideTrack.setRadius(12);
         hideAutomation.setRadius(10);
@@ -1451,8 +1452,6 @@ public:
         }
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
-        log_lf(Log::L_DEBUG, "dragMoveOn: target %s\n", target->getClassName().c_str());
-        setDragRendered(target->getGuiType() == gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER || target->getGuiType() == gui_type::CTR_TYPE_FILEBROWSER);
         target->trackEntryDragMove(this->m_trackentry->content, mousepos);
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
@@ -1461,7 +1460,7 @@ public:
         ivec2 popupSize;
         {
             auto folderEntry = gui_cast<gui_filebrowser_folder_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER>(target);
-            auto fileBrowser = gui_cast<guictr_filebrowser, gui_type::CTR_TYPE_FILEBROWSER>(target);
+            auto fileBrowser = guiParentType<guictr_filebrowser, gui_type::CTR_TYPE_FILEBROWSER>(target);
             if (folderEntry) {
                 exportDir = folderEntry->getPathAbs();
                 popupPos = folderEntry->toScreenSpace(ivec2(0));
@@ -1485,7 +1484,7 @@ public:
                 // TODO: trigger browser refresh globally
                 return;
             }
-            DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, nameFile, [](const String& path) {
+            DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [](const String& path) {
                 // TODO: trigger browser refresh globally
                 return true;
             });
