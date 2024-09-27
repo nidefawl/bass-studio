@@ -1026,7 +1026,9 @@ public:
         return hit;
     }
 
-    bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+    bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        if (!clip.clipboard)
+            return false;
         bool bHasAudioSample = false;
         for (auto& track : clip.clipboard->tracks) {
             for (auto& c : track->clips) {
@@ -1051,7 +1053,7 @@ public:
         return false;
     }
 
-    bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         if (!action.dragtype) {
             if (!clipDropBegin(clip, mousepos, kbmods))
                 return false;
@@ -1065,7 +1067,9 @@ public:
         return false;
     }
 
-    bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        if (!clip.clipboard)
+            return false;
         if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
 
             auto thisClip = this->view.clip();

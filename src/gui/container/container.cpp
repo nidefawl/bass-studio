@@ -519,10 +519,6 @@ bool guictr_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             evt.requestFocus(this);
             return true;
         }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            evt.requestFocus(this);
-            return true;
-        }
         if (canMouseHit()) {
             evt.requestFocus(this);
             return true;

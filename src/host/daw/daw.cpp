@@ -684,14 +684,14 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                         auto* pluginMgr = getPluginManager();
                         ThreadLock lock = getPlayThread()->lockThread();
                         for (track_snapshot_t& ts : ctr->tracks) {
+                            DAW::assignFreeStageIdsTrackSnapshot(pluginMgr, ts);
                             ts.trackLoaded = new track_t(ts);
-                            addTrackImpl(-1, ts.trackLoaded, 0);
+                            addTrackImpl(-1, ts.trackLoaded, FLG_TRK_CHANGE_USER, loadTrackIdSnapshot(ts.stageIds));
                         }
 
                         //load plugins
                         for (track_snapshot_t& ts : ctr->tracks) {
                             log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
-                            DAW::assignFreeStageIdsTrackSnapshot(pluginMgr, ts);
                             ts.trackLoaded->loadSnapshot(tls.host, ts);
                             std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                             for (auto effect: effects) {
@@ -1392,13 +1392,13 @@ public:
     }
 };
 
-void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
+void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags, std::optional<audio_stage_id_t> stageId) {
     project.trackList.addTrack(trackInsertPos, newTrack);
     if ((flags & FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
         dbgassert(newTrack->audio);
     } else {
         dbgassert(!newTrack->audio);
-        tls.host->createAudio(newTrack);
+        tls.host->createAudio(newTrack, stageId);
     }
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
@@ -1507,8 +1507,31 @@ void DawInstance::initRealtimeResources() {
 
     setAudioThreadState(playback_state::status_stop);
 }
-
-std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const String& baseDir, const String& trackName, const String& sampleName, const String& fileExt) {
+std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const String& filePath) {
+    String absFilePath = filePath;
+    App::Platform::sanitizePathToFile(absFilePath);
+    String name;
+    String ext;
+    String path;
+    int32_t idx = 0;
+    String uniqueFilePath = absFilePath;
+    SplitPath(absFilePath, &path, &name, &ext);
+    App::Platform::sanitizePathToDirectory(path);
+    String uniqueFileName = name;
+    while ((FileExists(uniqueFilePath) || tls.audioCache->getByFilename(uniqueFilePath) != nullptr) && ++idx < 10000) {
+        idx++;
+        uniqueFileName = name;
+        uniqueFileName += "-";
+        uniqueFileName += std::to_string(idx);
+        uniqueFileName += ".";
+        uniqueFileName += ext;
+        uniqueFilePath = path;
+        uniqueFilePath += FILE_PATHSEP_CHAR;
+        uniqueFilePath += uniqueFileName;
+    }
+    return {uniqueFilePath, uniqueFileName};
+}
+std::pair<String, String> DawInstance::createUniqueNonExistingProjectFilename(const String& baseDir, const String& trackName, const String& sampleName, const String& fileExt) {
     String uniqueFileName;
     if (!trackName.empty()) {
         uniqueFileName += trackName;
@@ -1529,26 +1552,7 @@ std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const Str
     pathInput += fileExt;
 
     String sampleFilePath = App::Platform::toUserdataPath(pathInput);
-    App::Platform::sanitizePathToFile(sampleFilePath);
-    String name;
-    String ext;
-    String path;
-    int32_t idx = 0;
-    String uniqueFilePath = sampleFilePath;
-    SplitPath(sampleFilePath, &path, &name, &ext);
-    App::Platform::sanitizePathToDirectory(path);
-    while ((FileExists(uniqueFilePath) || tls.audioCache->getByFilename(uniqueFilePath) != nullptr) && ++idx < 10000) {
-        idx++;
-        uniqueFileName = name;
-        uniqueFileName += "-";
-        uniqueFileName += std::to_string(idx);
-        uniqueFileName += ".";
-        uniqueFileName += ext;
-        uniqueFilePath = path;
-        uniqueFilePath += FILE_PATHSEP_CHAR;
-        uniqueFilePath += uniqueFileName;
-    }
-    return {uniqueFilePath, uniqueFileName};
+    return createUniqueNonExistingFilename(sampleFilePath);
 }
 
 void DawInstance::onPrePreDestroy() {

@@ -63,13 +63,13 @@ public:
     double getProjectWorkingArea() {
         return 6000.0;
     }
-    virtual void addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
+    virtual void addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags, std::optional<audio_stage_id_t> stageId = std::nullopt) {
         project->trackList.addTrack(trackInsertPos, newTrack);
         if ((flags & FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
             dbgassert(newTrack->audio);
         } else {
             dbgassert(!newTrack->audio);
-            daw_tls::getTls().pluginManager->createAudio(newTrack);
+            daw_tls::getTls().pluginManager->createAudio(newTrack, stageId);
         }
     }
     project_globals_t& getGlobals() {

@@ -363,6 +363,22 @@ finish:
     return ret == 0;
 }
 
+bool DeleteAbsoluteFile(const String& FilePath) {
+    return 0 != remove(StringAsCStr(FilePath));
+}
+
+bool MoveAbsoluteFile(const String& src, const String& dst) {
+    return 0 != rename(StringAsCStr(src), StringAsCStr(dst));
+}
+
+bool PathIsDirectory(const String& path) {
+    struct stat statbuf{};
+    if (stat(StringAsCStr(path), &statbuf) != 0) {
+        return false;
+    }
+    return S_ISDIR(statbuf.st_mode);
+}
+
 void RevealInExplorer(const String& _path) {
     if (system("which xdg-open > /dev/null") != 0) {
         log_lf(Log::L_WARNING, "xdg-open not found, cannot reveal in explorer");

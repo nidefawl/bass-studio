@@ -31,13 +31,13 @@ struct freeze_track_task_t final : public async_task_t {
             trackTo = daw->insertNewTrack(trInsertPos, TRACK_TYPE_AUDIO);
             trackTo->name = track->name + " (frozen)";
             trackTo->rgb = track->rgb;
-            gui_track_drop_position_t pos = {
+            auto pos =  DAW::gui_track_drop_position_t{
                 .slot = track->localIdxFlat + 1,
-                .droppedTrack = entry,
-                .droptype = gui_track_drop_position_t::drop_type::track_after,
+                .droppedTrack = entry->track,
+                .droptype =  DAW::gui_track_drop_position_t::drop_type::track_after,
                 .pos = entry->mixer->getLeftBottom()
             };
-            moveTrackToSlot(daw, trackTo, pos);
+            DAW::MoveTrackToSlot(daw, trackTo, pos);
 
             auto trackStage = trackTo->getStage();
             trackStage->inputChannel = DAW::ChannelStage(track->getStage(), stage_bufferpoint::OUTPUT_POST, 0, 0);

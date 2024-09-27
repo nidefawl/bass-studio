@@ -564,7 +564,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     }
 }
 
-guitrack_editor::guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+guitrack_editor::guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_file_clipboard& _dragdropclip)
     : guictr_base(),
       iGuiMgr(_iGuiMgr),
       cursor(_cursor),
@@ -641,11 +641,7 @@ void guitrack_editor::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrac
 
 bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
     if (this->contains(v)) {
-        // if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-        //     evt.requestFocus(this);
-        //     return true;
-        // }
-        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+        if (evt.type == MOUSE_DRAGDROP_CLIP && dawCtrl->getDaw()->getDragDropClip().type != dragdrop_file_clipboard::Type::TYPE_TRACK_CONTAINER) {
             evt.requestFocus(this);
             return true;
         }
@@ -793,21 +789,6 @@ void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom) {
     topBottom.y = maxVec.y;
 }
 
-track_gui_entry_t* getParentOf(track_gui_entry_t* t) {
-
-    dbgassert(t);
-    dbgassert(t->track);
-    dbgassert(t->parent);
-    if (t->track->parent) {
-        track_gui_entry_t* out = nullptr;
-        if (t->parent->getPointerEntry(t->track->parent, &out)) {
-            return out;
-        }
-    }
-    return nullptr;
-}
-
-
 void guitrack_topleft::buttonClicked(guibase* _button) {
     if (_button == &btnCopyAutomation) {
         daw_tls::getTls().runtime->copyAutomation = !daw_tls::getTls().runtime->copyAutomation;
@@ -852,18 +833,24 @@ guitrack_topleft::guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _da
     }
 }
 
-bool guitrack_mixers::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
-    if (this->contains(v)) {
-        ivec2 localMouse = this->toContainerSpace(v);
-        for (guibase* gui : guis) {
+bool guitrack_mixers::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (this->contains(mpos)) {
+        ivec2 localMouse = this->toContainerSpace(mpos);
+        // iterate over guis vector in reverse
+        for (auto it = guis.begin(); it != guis.end(); ++it) {
+            auto gui = *it;
             if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-                if (!evt.getGuiHit())
-                    break;
                 return true;
             }
         }
-        evt.requestFocus(this);
-        return true;
+        if (evt.type == MouseHitType::MOUSE_SCROLL) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (canMouseHit()) {
+            evt.requestFocus(this);
+            return true;
+        }
     }
     return false;
 }
@@ -935,7 +922,7 @@ void guictr_tracks::removeAllTracks() {
     }
 }
 
-guictr_tracks::guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_midifile& _dragdropclip)
+guictr_tracks::guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file_clipboard& _dragdropclip)
     : guictr_base(),
       trackContainerGlobalIndex(_dawCtrl->getDawWindowIndex()),
       project(_project),
@@ -986,16 +973,12 @@ bool guictr_tracks::handleMouseScroll(MouseEvent& evt, double xoffset, double yo
 
 bool guictr_tracks::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     bool bHit = guictr_base::mouseHitTest(mpos, evt);
-    if (bHit
-            && evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT
-            && contains(mpos)
-            && evt.getDraggedThing()
-            && (!evt.getGuiHit() || evt.getGuiHit()->parent == this)) {
-        auto type = evt.getDraggedThing()->getGuiType();
-        if (type == gui_type::CTR_TYPE_PLUGINS_DRAGGED
-            || type == gui_type::CTR_TYPE_PLUGIN
-            || type == gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY
-            || type == gui_type::CTR_TYPE_TRACK_TITLE) {
+    if (bHit && evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing() && evt.getGuiHit() && evt.getGuiHit()->parent == this) {
+        evt.requestFocus(this);
+        return true;
+    }
+    if (this->contains(mpos)) {
+        if (evt.type == MOUSE_DRAGDROP_CLIP && dawCtrl->getDaw()->getDragDropClip().type == dragdrop_file_clipboard::Type::TYPE_TRACK_CONTAINER) {
             evt.requestFocus(this);
             return true;
         }
@@ -1051,3 +1034,36 @@ void guictr_tracks::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mous
     dawCtrl->getDragDropTarget().reset();
 }
 
+bool guictr_tracks::clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    if (clip.type == dragdrop_file_clipboard::Type::TYPE_TRACK_CONTAINER) {
+        dbgassert(clip.trackcontainer);
+        clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.target = makeSafeRef();
+        return true;
+    }
+    return false;
+}
+void guictr_tracks::clipDropCancel() {
+}
+bool guictr_tracks::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    if (clip.type == dragdrop_file_clipboard::Type::TYPE_TRACK_CONTAINER) {
+        clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.target = makeSafeRef();
+        DAW::SetDragDropTrackInidicatorFromMousePos(this, trackControls.toContainerSpace(mousepos), clip.path);
+        return true;
+    }
+    return false;
+}
+bool guictr_tracks::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    if (clip.type == dragdrop_file_clipboard::Type::TYPE_TRACK_CONTAINER) {
+        dbgassert(clip.trackcontainer);
+        clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.target = makeSafeRef();
+        auto slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos));
+        auto daw = dawCtrl->getDaw();
+        ThreadLock lock = daw->getPlayThread()->lockThread();
+        DAW::InsertTrackContainerToTrack(daw, clip.trackcontainer.get(), slot);
+        return true;
+    }
+    return false;
+}

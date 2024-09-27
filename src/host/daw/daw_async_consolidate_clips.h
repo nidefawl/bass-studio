@@ -30,7 +30,7 @@ inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t ti
     csr.format      = track->audio->sampleFormat;
     csr.id          = -1;
     csr.numChannels = numChannels;
-    auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", track->name, name, "wav");
+    auto [fPath, fName] = daw->createUniqueNonExistingProjectFilename("samples", track->name, name, "wav");
     csr.path = fPath;
 
     auto numSamples = tickToSampleConvert<samplecount_t, roundmode::ceil>(tickEnd - tickBegin, prjGlobals.tempo100, csr.format.sampleRate);
@@ -299,7 +299,7 @@ struct consolidate_task_t final : public async_task_t {
                     dbgassert(stage);
                     auto numChannels = math::min<channelnum_t>(stage->input.channels, 2);
                     auto sampleFormat = stage->sampleFormat;
-                    auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", trEntry->track->name, clip->name, "wav");
+                    auto [fPath, fName] = daw->createUniqueNonExistingProjectFilename("samples", trEntry->track->name, clip->name, "wav");
                     auto& prjGlobals = daw->getProjectGlobals();
                     clip->name = fName;
                     clip->rgb = trEntry->track->rgb;

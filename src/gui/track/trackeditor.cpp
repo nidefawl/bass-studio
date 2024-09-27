@@ -1,6 +1,7 @@
 #include "appconfig.h"
 #include "assert_dbg.h"
 #include "fileio.h"
+#include "gui/controls/filebrowser.hpp"
 #include "host/audiosample.h"
 #include "commands.h"
 #include "compiler.h"
@@ -968,48 +969,61 @@ void guitrack_editor::dragClipboardMove(ivec2 local, KeyboardMods kbmods) {
 void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
     auto daw = dawCtrl->getDaw();
     if (action.dragtype) {
+
         bool showclip = true;
         if (action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY) {
             const DAW::Cursor& cursorBegin = action.cursorBegin;
-            selectionMoved |= cursorBegin.cursorPos != cursor.cursorPos;
-            selectionMoved |= cursorBegin.cursorTrack != cursor.cursorTrack;
-            ivec2 local                      = evt.relMousepos;
-            track_gui_entry_t* trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, local);
-            if (trNxtSelected) {
-                dawCtrl->setSelectedTrackEntry(trNxtSelected);
-            }
-            bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
-            if (selectionMoved && trNxtSelected) {
-                ThreadLock lock = daw->lockPlayThread();
-
-                //TODO: make this more efficient: right now tracks get copied that are not modified
-                DAW::Cursor allAffected = cursor.expandTo(cursorBegin);
-
-                track_selection_t selection;
-                iGuiMgr.getTrackSelection(allAffected, selection);
-
-                int32_t trackOffset = dragStartTrackIdx - cursorBegin.cursorTrack;
-                tick_t dstPos       = cursor.cursorPos;
-                int32_t dstTrack    = trNxtSelected->idx;
-
-                trackstate_t resizePreModifyState;
-                project.trackList.copyTracks(selection.trackIdxMin, selection.trackIdxMax, resizePreModifyState);
-
-                resizePreModifyState.cursor               = cursorBegin;
-                std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin, bCopyAutomation);
-                if (!isCtrl(evt.kbmods)) {
-                    DAW::cutSelection(daw, iGuiMgr, cursorBegin, bCopyAutomation);
+            auto guiOver = parentCtrl->getGuiOver();
+            bool bFileBrowserDrop = guiOver && guiOver->getGuiType() == gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER;
+            if (bFileBrowserDrop) {
+                auto* folder = dynamic_cast<gui_filebrowser_folder_entry*>(guiOver);
+                if (folder) {
+                    auto filePath = folder->getPathAbs();
+                    log_lf(Log::L_DEBUG, "dropped %d tracks on folder %s\n", CtrSize(action.clipboard->tracks), filePath.c_str());
+                    // std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin, true);
+                    // TODO: convert clip_clipboard to trackcontainer_snapshot_t....
                 }
-                int32_t trackGuiIdx = dstTrack - trackOffset;
-                if (clipboard->srcTrack != cursor.cursorTrack) {
-                    bCopyAutomation = false;
+            } else {
+                selectionMoved |= cursorBegin.cursorPos != cursor.cursorPos;
+                selectionMoved |= cursorBegin.cursorTrack != cursor.cursorTrack;
+                ivec2 local = evt.relMousepos;
+                track_gui_entry_t* trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, local);
+                if (trNxtSelected) {
+                    dawCtrl->setSelectedTrackEntry(trNxtSelected);
                 }
-                DAW::pasteFullClipboard(daw, iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
-                daw->updateVisibleTrackContents();
-                gui      = nullptr;
-                showclip = true;
-                auto* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
-                daw->pushHist(track_action);
+                bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
+                if (selectionMoved && trNxtSelected) {
+                    ThreadLock lock = daw->lockPlayThread();
+
+                    //TODO: make this more efficient: right now tracks get copied that are not modified
+                    DAW::Cursor allAffected = cursor.expandTo(cursorBegin);
+
+                    track_selection_t selection;
+                    iGuiMgr.getTrackSelection(allAffected, selection);
+
+                    int32_t trackOffset = dragStartTrackIdx - cursorBegin.cursorTrack;
+                    tick_t dstPos       = cursor.cursorPos;
+                    int32_t dstTrack    = trNxtSelected->idx;
+
+                    trackstate_t resizePreModifyState;
+                    project.trackList.copyTracks(selection.trackIdxMin, selection.trackIdxMax, resizePreModifyState);
+
+                    resizePreModifyState.cursor               = cursorBegin;
+                    std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin, bCopyAutomation);
+                    if (!isCtrl(evt.kbmods)) {
+                        DAW::cutSelection(daw, iGuiMgr, cursorBegin, bCopyAutomation);
+                    }
+                    int32_t trackGuiIdx = dstTrack - trackOffset;
+                    if (clipboard->srcTrack != cursor.cursorTrack) {
+                        bCopyAutomation = false;
+                    }
+                    DAW::pasteFullClipboard(daw, iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
+                    daw->updateVisibleTrackContents();
+                    gui      = nullptr;
+                    showclip = true;
+                    auto* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
+                    daw->pushHist(track_action);
+                }
             }
         } else if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT || action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
             clip_t* clipPtr        = gui->m_clip;
@@ -1065,30 +1079,32 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
     }
 }
 
-bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
-    tick_t tick                     = grid.screenToTickSnap(mousepos.x, SNAP_ON);
-    tick_t tickExact                = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
-    track_gui_entry_t* trackClicked = DAW::getTrackFromMouse(iGuiMgr, mousepos);
-    if (trackClicked != nullptr) {
-        DAW::Cursor dragCursor;
-        dragCursor.selRange      = 0;
-        dragCursor.selTrackRange = 0;
-        dragCursor.cursorPos     = tick;
-        dragCursor.setTrack(trackClicked->idx);
-        cursor = dragCursor;
+bool guitrack_editor::clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    if (clip.type == dragdrop_file_clipboard::Type::TYPE_CLIP) {
+        tick_t tick                     = grid.screenToTickSnap(mousepos.x, SNAP_ON);
+        tick_t tickExact                = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
+        track_gui_entry_t* trackClicked = DAW::getTrackFromMouse(iGuiMgr, mousepos);
+        if (trackClicked != nullptr) {
+            DAW::Cursor dragCursor;
+            dragCursor.selRange      = 0;
+            dragCursor.selTrackRange = 0;
+            dragCursor.cursorPos     = tick;
+            dragCursor.setTrack(trackClicked->idx);
+            cursor = dragCursor;
 
-        dragStartTick     = tickExact;
-        dragStartTrackIdx = trackClicked->idx;
+            dragStartTick     = tickExact;
+            dragStartTrackIdx = trackClicked->idx;
 
-        clip_clipboard* clipboard = clip.clipboard.get();
-        clipboard->srcTrack       = trackClicked->idx;
+            clip_clipboard* clipboard = clip.clipboard.get();
+            clipboard->srcTrack       = trackClicked->idx;
 
-        action.dragtype    = clip_dragtype_t::DROP_FILE_EXTERNAL;
-        action.clipboard   = clip.clipboard;
-        action.cursorBegin = dragCursor;
-        clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
-        clip.target = makeSafeRef();
-        return true;
+            action.dragtype    = clip_dragtype_t::DROP_FILE_EXTERNAL;
+            action.clipboard   = clip.clipboard;
+            action.cursorBegin = dragCursor;
+            clip.isValidTarget = true;
+            clip.target = makeSafeRef();
+            return true;
+        }
     }
     return false;
 }
@@ -1098,22 +1114,22 @@ void guitrack_editor::clipDropCancel() {
         action.dragtype    = DRAG_NONE;
     }
 }
-bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guitrack_editor::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (!action.dragtype) {
         if (!clipDropBegin(clip, mousepos, kbmods))
             return false;
     }
     if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
         dragClipboardMove(mousepos, kbmods);
-        clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.isValidTarget = true;
         clip.target = makeSafeRef();
         return true;
     }
     return false;
 }
-bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guitrack_editor::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
-//        dragClipboardMove(mousepos);//TODO: maybe call move again to set final pos?
+        // dragClipboardMove(mousepos); //TODO: maybe call move again to set final pos?
         auto daw = dawCtrl->getDaw();
         auto lock = daw->lockPlayThread();
         track_gui_entry_t* trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, mousepos);
@@ -1125,7 +1141,7 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, Key
         daw->updateVisibleTrackContents();
         action.clipboard   = nullptr;
         action.dragtype    = DRAG_NONE;
-        clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.isValidTarget = true;
         clip.target = makeSafeRef();
         return true;
     }

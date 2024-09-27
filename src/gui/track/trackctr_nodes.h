@@ -160,7 +160,7 @@ protected:
     gui_scrollbar scrollbar;
 
 public:
-    guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
+    guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_file_clipboard& _dragdropclip);
     ~guictr_nodes_editor() override;
     void render(NVGcontext* vg) override;
     void scrollTo(guibase* g);
@@ -213,7 +213,7 @@ private:
     Splitter splitter;
 
 public:
-    guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
+    guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_file_clipboard& _dragdropclip);
     ~guictr_nodes_splitview() override;
     void layout() override;
     void onChildLayoutChanged(guibase* g) override;

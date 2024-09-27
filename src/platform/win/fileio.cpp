@@ -32,6 +32,19 @@ bool CreateDirectoryIfNotExists(const String& DirPath) {
     return true;
 }
 
+bool DeleteAbsoluteFile(const String& FilePath) {
+    return 0 != DeleteFileA(StringAsCStr(FilePath));
+}
+
+bool MoveAbsoluteFile(const String& src, const String& dst) {
+    return 0 != MoveFileA(StringAsCStr(src), StringAsCStr(dst));
+}
+
+bool PathIsDirectory(const String& path) {
+    DWORD dwAttrib = GetFileAttributesA(StringAsCStr(path));
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
 bool DeleteDirectory(const String& DirPath, bool bRecursive) {
     if (!assert_expr(!DirPath.empty())) {
         return false;

@@ -2006,7 +2006,7 @@ void gui_graph::setList(std::vector<gui_graph_entry*> _newList) {
 void gui_graph::onTick(AppCtrl* appctrl) {
 }
 
-guictr_nodes_editor::guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
+guictr_nodes_editor::guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_file_clipboard& _dragdropclip)
     : guictr_base(),
       impl(new guictr_nodes_editor_impl),
       project(_project),
@@ -2234,7 +2234,7 @@ void guictr_nodes_editor::layout() {
     }
 }
 
-guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
+guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_file_clipboard& _dragdropclip)
     : project(_project),
       graphTop(_cursor, _project, _dragdropclip),
       graphBottom(_cursor, _project, _dragdropclip),

@@ -37,8 +37,11 @@ bool getContainerLabel(gui_type type, String& out) {
         case CTR_TYPE_EFFECTLIBRARY:
             out = "Plugin Library";
             return true;
-        case CTR_TYPE_USERLIBRARY:
-            out = "User Library";
+        case CTR_TYPE_USERLIBRARY_BROWSER:
+            out = "Browse User Library";
+            return true;
+        case CTR_TYPE_USERLIBRARY_SEARCH:
+            out = "Search User Library";
             return true;
         case CTR_TYPE_PLUGINSLOADED:
             out = "Loaded Plugins";
@@ -131,8 +134,11 @@ ContainerFactory& getContainerFactory() {
         containerFactory[gui_type::CTR_TYPE_EFFECTLIBRARY] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(DAW::UI::makeGuiEffectLibrary(ctxt));
         };
-        containerFactory[gui_type::CTR_TYPE_USERLIBRARY] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiUserLibrary(ctxt));
+        containerFactory[gui_type::CTR_TYPE_USERLIBRARY_BROWSER] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiUserLibraryBrowser(ctxt));
+        };
+        containerFactory[gui_type::CTR_TYPE_USERLIBRARY_SEARCH] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiUserLibrarySearch(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_PLUGINSLOADED] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(DAW::UI::makeGuiPluginsLoadedList(ctxt));

@@ -1,10 +1,13 @@
 #pragma once
 #include <list>
+#include <optional>
 #include <utility>
 #include <vector>
 #include <set>
 #include "assert_dbg.h"
 #include "commands.h"
+#include "gui/gui.h"
+#include "gui/container/container.h"
 #include "gui/dialog/dialog.h"
 #include "gui/views/asynctask.h"
 #include "host/daw/daw_async_task.h"
@@ -51,8 +54,6 @@ struct KeyEvent;
 struct MouseEvent;
 struct NVGcontext;
 
-class guibase;
-class guictr_base;
 class guictr_plugins;
 class guictr_pluginview;
 class guitrack_editor;
@@ -86,9 +87,23 @@ struct clip_dragaction {
     DAW::Cursor cursorBegin;
 };
 
-struct dragdrop_midifile {
+struct dragdrop_file_clipboard {
+    enum Type {
+        TYPE_NONE,
+        TYPE_AUDIOFILE,
+        TYPE_CLIP,
+        TYPE_TRACK_CONTAINER,
+        TYPE_PLUGIN_PRESET,
+        TYPE_DIRECTORY
+    } type = TYPE_NONE;
+    enum State {
+        STATE_NONE,
+        STATE_FAILED_LOADING,
+        STATE_LOADED
+    } state = STATE_NONE;
+    String path;
+    std::shared_ptr<trackcontainer_snapshot_t> trackcontainer;
     std::shared_ptr<clip_clipboard> clipboard;
-    bool isLoaded      = false;
     bool isValidTarget = false;
     SafeRef<guibase> target;
     void reset();
@@ -124,6 +139,7 @@ namespace DAW {
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
     void OpenFloatingTextInput(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
+    bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs, const std::function<bool(const String& str)>& callback);
     void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip);
     void deleteTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
     void insertTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor, int32_t len);
@@ -438,7 +454,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     std::shared_ptr<notes_clipboard> clipboardNotes;
     std::shared_ptr<automation_clipboard_t> clipboardAutomation;
 
-    dragdrop_midifile dragdropclip;
+    dragdrop_file_clipboard dragdropclip;
     dragdrop_target_indicator_t dragdropTarget;
     autosave_state_t autosaveState;
     DAW::async_task_t* asyncTask = nullptr;
@@ -457,7 +473,9 @@ public:
     DawInstance() : project_controller_t(&project, &projectGlobals) {
         setEmptyClipboard();
     }
-    void setEmptyClipboard();
+    dragdrop_file_clipboard& getDragDropClip() {
+        return dragdropclip;
+    }
     edithistory& getHist() {
         return hist;
     }
@@ -506,7 +524,8 @@ public:
     }
     static DawInstance* get();
     static DawInstance* getOptional();
-    std::pair<String, String> createUniqueNonExistingFilename(const String& baseDir, const String& sampleName, const String& trackName, const String& fileExt);
+    std::pair<String, String> createUniqueNonExistingFilename(const String& filePath);
+    std::pair<String, String> createUniqueNonExistingProjectFilename(const String& baseDir, const String& sampleName, const String& trackName, const String& fileExt);
     void initProcessingResources();
     void initRealtimeResources();
     void initDaw();
@@ -517,7 +536,7 @@ public:
      * addTrackImpl - adds track to trackCtr and creates gui
      * int32 trackInserPos - track-type-container local pos
      */
-    void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags) override;
+    void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags, std::optional<audio_stage_id_t> stageId = std::nullopt) override;
 
     void pushHist(action_base* action);
     void removeTrackImpl(track_t* t, int flags);
@@ -557,6 +576,9 @@ public:
     ClipBoardType getClipboardType() const {
         return clipboardType;
     }
+    void setEmptyClipboard();
+    void resetDragDropClipboards();
+    bool preloadDraggedFiles(const std::vector<String>& files);
 
     void setJumpFromTo(tick_t _tickJmpFrom, tick_t _tickJmpTo) {
         this->tickJmpFrom = _tickJmpFrom;
@@ -643,6 +665,13 @@ private:
     void saveProjectBundle(const String& path);
 };
 
+
+class guictr_tracks_clipboard : public guictr_base {
+    public:
+    guictr_tracks_clipboard() : guictr_base() {
+    }
+};
+
 class DawCtrl : public AppCtrl {
     Menus menus;
 protected:
@@ -664,6 +693,7 @@ protected:
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;
+    guictr_tracks_clipboard guiCtrTracksClipboard;
     gui_notify* guiNotify = nullptr;
     std::vector<guictr_base*> viewAsyncProgress = {&guiCtrProgress};
     std::vector<guictr_base*> viewRender;
@@ -685,7 +715,7 @@ public:
     DawInstance& daw;
     // scaled_grid grid;
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
-    std::vector<String> tmpFileDragPaths;
+    // std::vector<String> tmpFileDragPaths;
     explicit DawCtrl(AppCtrl* parent, DawInstance& _daw, int32_t _dawCtrlWindowIndex)
     : AppCtrl(parent), dawCtrlWindowIndex(_dawCtrlWindowIndex), daw(_daw)
     {
@@ -746,14 +776,13 @@ public:
     void revealPlugin(effectbase* effect);
     void focusChanged(guibase* oldFocused, guibase* newFocused) override;
     void resetMouseContext() override;
-    bool preloadDraggedFiles(std::vector<String>& files);
-    bool pasteDraggedFiles(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods);
+    bool pasteDraggedFiles(const std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods);
     bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override;
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
+    bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
     void filesDropCancel() override;
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
-    bool onFileBrowserEntryDragMove(const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods = {});
-    bool onFileBrowserEntryDragRelease(const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods = {});
+    bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
+    bool preloadFileBrowserEntry(const String& pathAbs);
+    bool onFileBrowserEntryDragRelease(guibase* target, const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods = {});
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override;
     bool menuCommand(const menucmd_t& command) override;
     void updateMenubar() override;

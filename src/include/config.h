@@ -8,6 +8,8 @@
 #define FILE_FORMAT_VERSION 3
 #define PROJECT_FILE_TYPE_DESC "Project File"
 #define PROJECT_FILE_EXT "project"
+#define TRACKCONTAINER_FILE_EXT "tracks"
+#define PRESET_FILE_EXT "preset"
 #define PROJECT_BUNDLE_FILE_EXT "zip"
 #define SUPPORTED_AUDIO_FILE_TYPES "wav", "mp3", "flac"
 #ifndef USE_GUI_MENU

@@ -74,7 +74,7 @@ public:
     project_t& project;
     project_globals_t& projectGlobals;
     scaled_grid& grid;
-    dragdrop_midifile& dragdrop;
+    dragdrop_file_clipboard& dragdrop;
     track_gui_entry_t* trSelected     = nullptr;
     gui_track_subtrack* subTrSelected = nullptr;
     clip_dragaction action;                   // move up in hierachy
@@ -85,7 +85,7 @@ public:
     trackstate_t m_resizePreModifyState;
     bool selectionMoved = false;
     std::optional<container_background_image> bgSecondImage;
-    guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip);
+    guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_file_clipboard& _dragdropclip);
     ~guitrack_editor() override = default;
     scaled_grid& getGrid() { return grid; }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
@@ -100,9 +100,9 @@ public:
     void dragSelectionRelease(gui_clip* gui, MouseEvent& evt);
     void dragClipboardMove(ivec2 local, KeyboardMods kbmods);
 
-    bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-    bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-    bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     void clipDropCancel() override;
 
     void handleRightClick(MouseEvent& evt) override;
@@ -160,6 +160,7 @@ public:
           project(_project) {
         padding      = 0;
         sortChildren = true;
+        setCanMouseHit(true);
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     void handleRightClick(MouseEvent& evt) override;
@@ -608,12 +609,12 @@ protected:
     int32_t contentViewSize = 0;
 
 public:
-    guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_midifile& _dragdropclip);
+    guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file_clipboard& _dragdropclip);
     ~guictr_tracks() override;
     scaled_grid& getGrid() {
         return m_grid;
     }
-
+    void setDragDropTrackInidicatorFromMousePos(ivec2 mousepos, const String& desc);
     int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
     int32_t getTrackTotalHeight(track_gui_entry_t* e);
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
@@ -683,4 +684,9 @@ public:
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
     void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
+
+    bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    void clipDropCancel() override;
 };

@@ -30,7 +30,7 @@ class gui_pluginlist_entry;
 class gui_track;
 class scaled_grid;
 struct guitheme_t;
-struct dragdrop_midifile;
+struct dragdrop_file_clipboard;
 namespace RenderResources {
     struct NvgImageTexture;
 }
@@ -159,7 +159,11 @@ enum gui_type : uint16_t {
     CTR_TYPE_TRACKS_TIMELINE,
     CTR_TYPE_TRACKS_EDITOR,
     CTR_TYPE_AUDIO_VISUALIZER,
-    CTR_TYPE_USERLIBRARY,
+    CTR_TYPE_USERLIBRARY_BROWSER,
+    CTR_TYPE_USERLIBRARY_SEARCH,
+    CTR_TYPE_TRACKCONTENT,
+    CTR_TYPE_FILEBROWSER,
+    CTR_TYPE_USERLIBRARY_BROWSER_PATH_LIST,
 };
 
 namespace DebugAlloc {
@@ -426,13 +430,13 @@ public:
     }
     virtual void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
     }
-    virtual bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    virtual bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
-    virtual bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    virtual bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
-    virtual bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    virtual bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
     virtual void clipDropCancel() {
@@ -444,7 +448,7 @@ public:
     virtual void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
     }
     virtual void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
-    }
+    }   
     virtual void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
     }
     virtual void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
@@ -575,9 +579,9 @@ public:
 
 public:
     virtual bool isSelected();
+    bool isChildOf(guibase* parentSearch);
 
 protected:
-    bool isChildOf(guibase* parentSearch);
     void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
     void setTheme(guitheme_t* theme);
 };

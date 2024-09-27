@@ -345,8 +345,8 @@ public:
 
     virtual void filesDropCancel() { };
     virtual bool filesDropMove(ivec2 pos, KeyboardMods kbmods) { return false; };
-    virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
-    virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
+    virtual bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
+    virtual bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
 
     virtual bool menuCommand(const menucmd_t& command) {
         return false;

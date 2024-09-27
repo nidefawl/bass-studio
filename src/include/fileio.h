@@ -66,7 +66,10 @@ inline bool FileExists(const String& Filename) {
 }
 
 bool CreateDirectoryIfNotExists(const String& DirPath);
+bool PathIsDirectory(const String& path);
 bool DeleteDirectory(const String& DirPath, bool bRecursive = false);
+bool DeleteAbsoluteFile(const String& FilePath);
+bool MoveAbsoluteFile(const String& src, const String& dst);
 
 inline int64_t FileSize(const String& fileName) {
     std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);

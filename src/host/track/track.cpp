@@ -1720,10 +1720,9 @@ namespace DAW {
         std::vector<track_modulation_routing_snapshot_t*> allModulation;
         std::vector<plugin_snapshot_t*> q;
 
-        // if (host->isStageIdInUse(snapshot.stageIds))
+        // always assign new stage ids
         {
             auto stageId = host->getNextGlobalAudioStageId();
-            log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", snapshot.stageIds.stageId, static_cast<int32_t>(stageId.stageId));
             idMap[snapshot.stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
             idMap[snapshot.stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
             idMap[snapshot.stageIds.outputStageId] = static_cast<int32_t>(stageId.outputStageId);
@@ -1939,8 +1938,8 @@ const char* TrackTypeToName(int type) {
 //vFILE_TYPES_TRACKSNAPSHOT
 //const SupportedFileType FILE_TYPE_TRACKSNAPSHOT;
 
-const SupportedFileType FILE_TYPE_TRACKSNAPSHOT{ "Track Preset File", "tracks" };
-const SupportedFileType FILE_TYPE_PLUGINSNAPSHOT{ "Plugin Preset File", "preset" };
+const SupportedFileType FILE_TYPE_TRACKSNAPSHOT{ "Track Preset File", TRACKCONTAINER_FILE_EXT };
+const SupportedFileType FILE_TYPE_PLUGINSNAPSHOT{ "Plugin Preset File", PRESET_FILE_EXT };
 const SupportedFileTypes FILE_TYPES_TRACKSNAPSHOT = SupportedFileTypes{ "Track Preset File", { FILE_TYPE_TRACKSNAPSHOT } };
 const SupportedFileTypes FILE_TYPES_PLUGINSNAPSHOT = SupportedFileTypes{ "Plugin Preset File", { FILE_TYPE_PLUGINSNAPSHOT } };
 
@@ -1965,7 +1964,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                         ssr.id          = -1;
                         ssr.numChannels = channelCount;
                         ssr.preAllocate = 1024L*64;
-                        auto [fPath, fName] = daw->createUniqueNonExistingFilename("recorded", trImpl->track ? trImpl->track->name : "", "Recorded", "wav");
+                        auto [fPath, fName] = daw->createUniqueNonExistingProjectFilename("recorded", trImpl->track ? trImpl->track->name : "", "Recorded", "wav");
                         ssr.path = fPath;
                         // createSample is not thread safe, we might be doing a lookup from waveformrenderer
                         auto file = cache->createSample(ssr);

@@ -589,7 +589,7 @@ public:
         glfwMaximizeWindow(glfw);
     }
 
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
+    bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return true;
     }
 
@@ -600,7 +600,7 @@ public:
     void filesDropCancel() override {
     }
 
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
+    bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return true;
     }
 
@@ -948,7 +948,7 @@ public:
         appwindow::showWindow();
     }
 
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
+    bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return ctrl->filesDropBegin(files, pos, kbmods);
     }
 
@@ -960,7 +960,7 @@ public:
         ctrl->filesDropCancel();
     }
 
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
+    bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return ctrl->filesDropFinal(files, pos, kbmods);
     }
 
