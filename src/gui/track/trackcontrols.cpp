@@ -53,8 +53,6 @@
 #include "gui/plugin/pluginctr.h"
 #include "host/host_pluginmanager.h"
 #include "window.h"
-#include <cassert>
-#include <windows.h>
 
 using namespace DAW::AudioIO;
 using DAW::bus_type;
