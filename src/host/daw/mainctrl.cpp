@@ -2657,6 +2657,7 @@ void DawInstance::updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& 
 }
 
 bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
+    resetDragDropClipboards();
     using State = dragdrop_file_clipboard::State;
     using Type = dragdrop_file_clipboard::Type;
 
@@ -2717,7 +2718,6 @@ bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
                     trClipboard->clips.push_back(std::make_shared<clip_t>(std::move(clip)));
                     std::shared_ptr<clip_clipboard> fileClipboard = std::make_shared<clip_clipboard>();
                     fileClipboard->tracks.push_back(trClipboard);
-                    resetDragDropClipboards();
                     dragdropclip.path = path;
                     dragdropclip.clipboard = fileClipboard;
                 }
@@ -2775,7 +2775,6 @@ bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
 }
 
 bool DawCtrl::filesDropBegin(const std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
-    daw.resetDragDropClipboards();
     if (daw.getAsyncTask()) {
         return false;
     }
@@ -2798,7 +2797,6 @@ bool DawCtrl::preloadFileBrowserEntry(const String& pathAbs) {
                 break;
             }
         case dragdrop_file_clipboard::STATE_NONE: {
-            daw.resetDragDropClipboards();
             std::vector<String> files;
             files.push_back(pathAbs);
             if (!daw.preloadDraggedFiles(files)) {

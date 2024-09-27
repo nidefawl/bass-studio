@@ -1080,7 +1080,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 }
 
 bool guitrack_editor::clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
-    if (clip.type == dragdrop_file_clipboard::Type::TYPE_CLIP) {
+    if (clip.type == dragdrop_file_clipboard::Type::TYPE_CLIP || clip.type == dragdrop_file_clipboard::Type::TYPE_AUDIOFILE) {
         tick_t tick                     = grid.screenToTickSnap(mousepos.x, SNAP_ON);
         tick_t tickExact                = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
         track_gui_entry_t* trackClicked = DAW::getTrackFromMouse(iGuiMgr, mousepos);
