@@ -105,6 +105,17 @@ bool guictr_plugins::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
+        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+            auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+            switch (clipboard.type) {
+                case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET:
+                    evt.requestFocus(this);
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
         if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT || evt.type == MouseHitType::MOUSE_RIGHT) {
             evt.requestFocus(this);
             return true;
@@ -161,20 +172,10 @@ void pastePluginClipboard(DawInstance* daw, std::shared_ptr<plugin_clipboard_t>&
         DAW::assignFreeStageIds(pluginMgr, pluginSnapshot);
         auto effect = pluginMgr->loadPluginDeferred(pluginSnapshot);
         if (effect) {
-            effect->projectGlobalId = 0;// generate new id
-            stage->deferredEffects.push_back(effect);
-            if (!pluginMgr->addDeferredEffect(effect)) {
-                log_printf("Failed loading effect\n");
-                delete effect;
-                continue;
-            }
-            effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
-            effect->load(pluginMgr);
-            pluginMgr->insertNewPlugin(stage, effect, pos);
+            DAW::InsertEffectDeferredOnStage(daw, stage, effect, pos, true, false);
             //keep negative values
             if (pos >= 0)
                 pos++;
-            pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         } else {
             //TODO: handle
         }
@@ -719,6 +720,49 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
     //  }
 }
 
+bool guictr_plugins::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    if (!this->stage) return false;
+    int highlightSlot = slotFromCoord(mousepos);
+    auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+    switch (clipboard.type) {
+        case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET:
+            dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+                dragdrop_target_indicator_t::target_area,
+                highlightSlot,
+                this,
+                { -1, -1 }
+            };
+            clip.isValidTarget = true;
+            clip.target = makeSafeRef();
+            return true;
+        default:
+            break;
+    }
+    return false;
+}
+
+bool guictr_plugins::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    if (!this->stage) return false;
+    auto daw = dawCtrl->getDaw();
+    auto clipboard = daw->getDragDropClip();
+    switch (clipboard.type) {
+        case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET: {
+            auto dstStage = this->stage;
+            auto* pluginMgr = daw->getPluginManager();
+            auto pluginSnapshot = clip.pluginSnapshot.get();
+            DAW::assignFreeStageIds(pluginMgr, *pluginSnapshot);
+            auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
+            if (effect) {
+                ThreadLock lock = daw->getPlayThread()->lockThread();
+                DAW::InsertEffectDeferredOnStage(daw, dstStage, effect, slotFromCoord(mousepos), true, false);
+            }
+            return true;
+        }
+        default:
+            break;
+    }
+    return false;
+}
 // gui_ctr_plugins receiving list of effectbase
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
     dawCtrl->getDragDropTarget().reset();

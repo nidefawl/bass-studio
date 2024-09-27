@@ -763,7 +763,11 @@ void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
 }
 
 bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-    if (this->contains(mpos)) {
+    bool bContains = this->contains(mpos);
+    if (bContains) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_CLIP) {
+            return false;
+        }
         if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
             evt.requestFocus(this);
             return true;
@@ -772,7 +776,7 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (automation.mouseHitTest(mpos, evt)) {
         return true;
     }
-    if (this->contains(mpos)) {
+    if (bContains) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (guibase* gui : guis) {
             if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {

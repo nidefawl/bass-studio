@@ -1026,7 +1026,7 @@ public:
         return hit;
     }
 
-    bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+    bool setDragAction(dragdrop_file_clipboard& clip, KeyboardMods kbmods) {
         if (!clip.clipboard)
             return false;
         bool bHasAudioSample = false;
@@ -1055,11 +1055,10 @@ public:
 
     bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         if (!action.dragtype) {
-            if (!clipDropBegin(clip, mousepos, kbmods))
+            if (!setDragAction(clip, kbmods))
                 return false;
         }
         if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
-            // dragClipboardMove(mousepos, kbmods);
             clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
             clip.target        = makeSafeRef();
             return true;

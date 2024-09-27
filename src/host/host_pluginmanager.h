@@ -149,7 +149,6 @@ private:
 public:
     virtual void onTrackLayoutChange() {
     }
-    static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY    = 1;
     static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
     static bool assignMasterCallback(PluginManager* host);
     static bool assignVST2MasterCallback(PluginManager* host, ::DAW::Host::PluginHostCallback* cb);

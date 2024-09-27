@@ -422,7 +422,7 @@ public:
                     continue;
                 log_printf("activate %s\n", StringAsCStr(plugin->sName));
                 effectbase* effectLoaded = nullptr;
-                host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
+                host->activateDeferred(plugin, 0, &effectLoaded);
                 if (effectLoaded) {
                     audioStagesAffected.push_back(effectLoaded->getTrackLink());
                 }

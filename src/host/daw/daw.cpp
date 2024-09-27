@@ -695,7 +695,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                             ts.trackLoaded->loadSnapshot(tls.host, ts);
                             std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                             for (auto effect: effects) {
-                                pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                                pluginMgr->activateDeferred(effect, 0);
                             }
                         }
                         onPluginsChanged();
@@ -1178,7 +1178,7 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
             dbgassert(pluginsDeferred[i]->getModuleType() == MODULE_TYPE_DEFERRED);
             auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
             effectbase* pluginLoaded = nullptr;
-            tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+            tls.host->activateDeferred(plugin, 0, &pluginLoaded);
             (void) pluginLoaded;
         }
     }

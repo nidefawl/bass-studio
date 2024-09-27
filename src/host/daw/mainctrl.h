@@ -102,6 +102,7 @@ struct dragdrop_file_clipboard {
         STATE_LOADED
     } state = STATE_NONE;
     String path;
+    std::shared_ptr<plugin_snapshot_t> pluginSnapshot;
     std::shared_ptr<trackcontainer_snapshot_t> trackcontainer;
     std::shared_ptr<clip_clipboard> clipboard;
     bool isValidTarget = false;
@@ -776,13 +777,11 @@ public:
     void revealPlugin(effectbase* effect);
     void focusChanged(guibase* oldFocused, guibase* newFocused) override;
     void resetMouseContext() override;
-    bool pasteDraggedFiles(const std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods);
     bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override;
     bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
     void filesDropCancel() override;
     bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
     bool preloadFileBrowserEntry(const String& pathAbs);
-    bool onFileBrowserEntryDragRelease(guibase* target, const String& pathAbs, const String& name, ivec2 mousepos, KeyboardMods kbmods = {});
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override;
     bool menuCommand(const menucmd_t& command) override;
     void updateMenubar() override;

@@ -775,7 +775,6 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
     for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
         auto effect = host->loadPluginDeferred(pluginSnapshot);
         if (effect) {
-            //this->deferredEffects.push_back(effect);
             if (!host->addDeferredEffect(effect)) {
                 log_printf("Failed loading effect\n");
                 delete effect;
@@ -788,7 +787,7 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
             dbgassert(!effects.empty());
             if (effect->getModuleStoredType() == MODULE_TYPE_INTERNAL_EFFECT
                 && effect->getSnapshot().uId == PLUGIN_TYPE_GROUP) {
-                host->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                host->activateDeferred(effect, 0);
             }
         }
     }
@@ -2414,3 +2413,28 @@ void noteevent_buffer::getNotesDelayed(tick_t blockStart, tick_t blockEnd, const
 }
 
 } // namespace DAW::Host
+
+namespace DAW {
+    void InsertEffectDeferredOnStage(DawInstance* daw, audio_stage_t* stage, effect_deferred* effect, int32_t slot, bool activate, bool scrollTo) {
+        dbgassert(stage && effect);
+        dbgassert(!effect->getTrackLink());
+        if (effect->getTrackLink() == nullptr) {
+            auto* pluginMgr = daw->getPluginManager();
+            effect->projectGlobalId = 0;// generate new id
+            always_assert(pluginMgr->addDeferredEffect(effect));
+            effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
+            effect->load(pluginMgr);
+            pluginMgr->insertNewPlugin(stage, effect, -2);// insert at end
+            effectbase* effectLoaded = nullptr;
+            if (activate) {
+                pluginMgr->activateDeferred(effect, 0, &effectLoaded);
+            }
+            daw->onPluginsChanged();
+            if (scrollTo) {
+                for (auto& gui : stage->gui) {
+                    gui->scrollToPluginGui(effectLoaded ? effectLoaded : effect);
+                }
+            }
+        }
+    }
+}

@@ -430,9 +430,6 @@ public:
     }
     virtual void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
     }
-    virtual bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
-        return false;
-    }
     virtual bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }

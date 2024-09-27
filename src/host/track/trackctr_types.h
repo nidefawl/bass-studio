@@ -15,6 +15,7 @@ class gui_track;
 class guictr_tracks;
 class gui_track_subtrack;
 class gui_track_controls;
+class effect_deferred;
 class DawCtrl;
 
 struct tracklayout_state_t {
@@ -64,8 +65,9 @@ namespace DAW {
         drop_type droptype = none;
         ivec2 pos{};
     };
-    gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ivec2 _pos);
-    void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepos, const String& trackName);
+    gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ivec2 pos, bool bIncludeBeforeAfter = true);
+    void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepos, const String& trackName, bool bIncludeBeforeAfter = true);
     void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot);
-    void InsertTrackContainerToTrack(DawInstance* daw, trackcontainer_snapshot_t* ctr, const gui_track_drop_position_t& slot);
+    void InsertTrackContainerOnTrack(DawInstance* daw, trackcontainer_snapshot_t* ctr, const gui_track_drop_position_t& slot);
+    void InsertEffectDeferredOnStage(DawInstance* daw, audio_stage_t* stage, effect_deferred* effect, int32_t slot, bool activate, bool scrollTo);
 }

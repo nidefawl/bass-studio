@@ -171,6 +171,8 @@ public:
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
     void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
+    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     void showTrack(audio_stage_t* track, std::shared_ptr<guictr_plugins>& ctr);
     void relayout();
     void resetTrackIf(audio_stage_t* _track);

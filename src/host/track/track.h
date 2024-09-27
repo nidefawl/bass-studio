@@ -431,7 +431,10 @@ public:
     void add(track_t* trackAdd) {
         dbgassert(trackAdd);
         dbgassert(trackAdd->childIdxTree >= -1);
-        //TODO: check that track isn't contained already;
+        //TODO: check that track isn't contained already
+
+        // only add root tracks (nodes with no parent) to root list
+        // children have to have to set their parent reference outside
         if (!trackAdd->parent) {
             if (trackAdd->childIdxTree < 0 || trackAdd->childIdxTree >= (int) tracksTree.size()) {
                 tracksTree.push_back(trackAdd);

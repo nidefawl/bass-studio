@@ -489,7 +489,6 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
         String pathPresets = App::Platform::toUserdataPath("presets");
         if (promptUserFilePath(window, 0, FILE_TYPES_PLUGINSNAPSHOT, path, pathPresets)) {
             auto daw = dawCtrl->getDaw();
-            ThreadLock lock = daw->lockPlayThread();
             std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
             dbgassert(pluginSnapshot);
             if (pluginSnapshot) {
@@ -497,21 +496,8 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
                 DAW::assignFreeStageIds(pluginMgr, *pluginSnapshot);
                 auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
                 if (effect) {
-                    effect->projectGlobalId = 0;// generate new id
-                    if (!pluginMgr->addDeferredEffect(effect)) {
-                        log_printf("Failed loading effect\n");
-                        delete effect;
-                        return true;
-                    }
-                    effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
-                    effect->load(pluginMgr);
-                    pluginMgr->insertNewPlugin(stage, effect, -2);// insert at end
-                    stage->pluginsChanged();
-                    daw->onPluginsChanged();
-                    for (auto& gui : stage->gui) {
-                        gui->scrollToPluginGui(effect);
-                    }
-                    // host->activateDeferred(effect, 0);
+                    ThreadLock lock = daw->lockPlayThread();
+                    DAW::InsertEffectDeferredOnStage(daw, stage, effect, -2, true, true);
                 }
             }
         }

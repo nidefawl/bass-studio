@@ -310,7 +310,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                     for (auto plugin : pluginsDeferred) {
                         log_printf("activate %s\n", StringAsCStr(plugin->sName));
 
-                        host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                        host->activateDeferred(plugin, 0);
                         //                        if (effectLoaded) {
                         //                            effectLoaded->show();
                         //                        }
@@ -357,7 +357,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                             std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                             for (auto eff : effects) {
                                 log_printf("activate plugin %s\n", StringAsCStr(eff->getName()));
-                                host->activateDeferred(eff, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                                host->activateDeferred(eff, 0);
                             }
                         }
                     }

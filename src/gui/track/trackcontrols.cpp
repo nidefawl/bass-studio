@@ -10,6 +10,7 @@
 #include "gui/views/pluginlist.h"
 #include "guiglobals.h"
 #include "host/daw_channel.h"
+#include "host/plugin/base/base-plugin.h"
 #include "keyboard.h"
 #include "logging.h"
 #include "math/seq_math.h"
@@ -995,7 +996,7 @@ public:
             std::vector<effectbase*> effects;
             m_track->audio->getDeferredEffects(effects);
             for (auto effect : effects) {
-                pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                pluginMgr->activateDeferred(effect, 0);
             }
             daw->onPluginsChanged();
             onChildLayoutChanged(button);
@@ -1736,7 +1737,10 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     ivec2 local    = this->toContainerSpace(mpos);
     bool contained = contains(mpos);
     if (contained) {
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT
+        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+            return false;
+        }
+        if (evt.type == MOUSE_DRAGDROP_OBJECT
             && evt.getDraggedThing()) {
             auto type = evt.getDraggedThing()->getGuiType();
             if (type == gui_type::CTR_TYPE_PLUGINS_DRAGGED
@@ -1755,7 +1759,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
         evt.requestFocus(this);
     }
-    if (evt.type <= MouseHitType::MOUSE_RIGHT) {
+    if (evt.type <= MOUSE_RIGHT) {
         guibase* g = nullptr;
         if (m_track->type < TRACK_TYPE_MIDI) {
             if (isResize(mpos)) {
@@ -1845,10 +1849,11 @@ void gui_track_content_base::pluginMultiDragMove(guictr_dragged_plugins* g, ivec
             return;
         }
     } else {
-        //prevent dragging onto if any of the effects is parent of this
+        // prevent dragging onto if any of the effects is parent of this
         audio_stage_t* p = dstStage;
         while (p) {
             if (p->owner && std::find(g->effects.begin(), g->effects.end(), p->owner) != g->effects.end()) {
+                // NOTE: I think this can never happen here, because we're dragging from a track to another track
                 return;
             }
             p = p->parent;
@@ -1955,7 +1960,7 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
 
 namespace DAW {
 
-gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ivec2 _pos) {
+gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ivec2 _pos, bool bIncludeBeforeAfter) {
     const int dropMaxDistance = 32;
 
     using drop_type = gui_track_drop_position_t::drop_type;
@@ -1979,28 +1984,31 @@ gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ive
         auto* gui = trackEntry->mixer;
         auto* gui2 = trackEntry->mixer;
         dbgassert(gui->isVisible());
-        int32_t distDragPoint = checkDropPoint(gui->pos.y - dropMaxDistance, gui->pos.y + dropMaxDistance, _pos.y);
-        if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
-            minDistDragPoint = distDragPoint;
-            minSlot = { slotIdx, trackEntry->track, drop_type::track_before, { gui->pos.x, gui->pos.y } };
+        int32_t distDragPoint = 0;
+        if (bIncludeBeforeAfter) {
+            distDragPoint = checkDropPoint(gui->pos.y - dropMaxDistance, gui->pos.y + dropMaxDistance, _pos.y);
+            if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
+                minDistDragPoint = distDragPoint;
+                minSlot          = { slotIdx, trackEntry->track, drop_type::track_before, { gui->pos.x, gui->pos.y } };
+            }
+            if (trackEntry->track->children.empty()) {
+                distDragPoint = checkDropPoint(gui->pos.y + gui->size.y - dropMaxDistance, gui->pos.y + gui->size.y + dropMaxDistance, _pos.y);
+                if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
+                    minDistDragPoint = distDragPoint;
+                    minSlot          = { slotIdx, trackEntry->track, drop_type::track_after, { gui->pos.x, gui->pos.y + gui->size.y } };
+                }
+            }
         }
         distDragPoint = checkDropPoint(gui2->pos.y + dropMaxDistance, gui2->pos.y + gui2->size.y - dropMaxDistance, _pos.y);
         if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
             minDistDragPoint = distDragPoint;
-            minSlot = { slotIdx, trackEntry->track, drop_type::track_on, { gui2->pos.x, gui2->pos.y + gui2->size.y / 2 } };
-        }
-        if (trackEntry->track->children.empty()) {
-            distDragPoint = checkDropPoint(gui->pos.y + gui->size.y - dropMaxDistance, gui->pos.y + gui->size.y + dropMaxDistance, _pos.y);
-            if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
-                minDistDragPoint = distDragPoint;
-                minSlot = { slotIdx, trackEntry->track, drop_type::track_after, { gui->pos.x, gui->pos.y + gui->size.y } };
-            }
+            minSlot          = { slotIdx, trackEntry->track, drop_type::track_on, { gui2->pos.x, gui2->pos.y + gui2->size.y / 2 } };
         }
     }
     return minSlot;
 }
 
-void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepos, const String& trackName) {
+void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepos, const String& clipboardName, bool bIncludeBeforeAfter) {
     using drop_type = gui_track_drop_position_t::drop_type;
     parent->dawCtrl->getDragDropTarget().reset();
     gui_track_drop_position_t slot = GetTrackSlotFromCoord(parent, mousepos);
@@ -2010,7 +2018,7 @@ void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepo
     track_t* targetTrack = slot.droppedTrack;
     switch (slot.droptype) {
         case drop_type::none:
-            return;
+            break;
         case drop_type::track_on:
             //insert into slot.droppedTrack at end
             treeIdx     = !slot.droppedTrack->children.empty() ? slot.droppedTrack->children.back()->childIdxTree : 0;
@@ -2050,16 +2058,18 @@ void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepo
     }
     switch (slot.droptype) {
         case drop_type::track_on:
-            target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget, dropPos + ivec2(0, dropSize.y / 2), "Move Track '"+trackName+"' to '"+trNameDest+"'" };
+            target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget, dropPos + ivec2(0, dropSize.y / 2), "Move '" + clipboardName + "' to '" + trNameDest + "'" };
             break;
         case drop_type::track_before:
-            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, dropPos + ivec2(0, 2), "Move Track '"+trackName+"' here" };
+            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, dropPos + ivec2(0, 2), "Move '" + clipboardName + "' here" };
             break;
         case drop_type::track_after:
-            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, dropPos + ivec2(0, dropSize.y - 2), "Move Track '"+trackName+"' here" };
+            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, dropPos + ivec2(0, dropSize.y - 2), "Move '" + clipboardName + "' here" };
             break;
         case drop_type::none:
-            return;
+            // new track
+            target = { dragdrop_target_indicator_t::target_area, -2, parent, parent->pos + parent->size / 2, "Insert " + clipboardName + " on new track" };
+            break;
         default:
             dbgassert(0);
             return;
@@ -2126,7 +2136,7 @@ void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t
     //TODO: edithistory entry
 }
 
-void InsertTrackContainerToTrack(DawInstance* daw, trackcontainer_snapshot_t* ctr, const gui_track_drop_position_t& slot) {
+void InsertTrackContainerOnTrack(DawInstance* daw, trackcontainer_snapshot_t* ctr, const gui_track_drop_position_t& slot) {
     auto* pluginMgr = daw->getPluginManager();
     for (track_snapshot_t& ts : ctr->tracks) {
         DAW::assignFreeStageIdsTrackSnapshot(pluginMgr, ts);
@@ -2148,7 +2158,7 @@ void InsertTrackContainerToTrack(DawInstance* daw, trackcontainer_snapshot_t* ct
         log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
         std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
         for (auto effect: effects) {
-            pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            pluginMgr->activateDeferred(effect, 0);
         }
     } */
     daw->onPluginsChanged();
@@ -2157,18 +2167,13 @@ void InsertTrackContainerToTrack(DawInstance* daw, trackcontainer_snapshot_t* ct
 }// namespace DAW
 
 void gui_track_content_base::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
-    auto trackEntry = g->getTrackEntry();
-    DAW::SetDragDropTrackInidicatorFromMousePos(trackEntry->parent, toControlsObjectSpace(mousepos, &trackEntry->parent->trackControls), trackEntry->track->name);
-}
-
-void guictr_tracks::setDragDropTrackInidicatorFromMousePos(ivec2 mousepos, const String& desc) {
-    DAW::SetDragDropTrackInidicatorFromMousePos(this, toControlsObjectSpace(mousepos, &trackControls), desc);
+    DAW::SetDragDropTrackInidicatorFromMousePos(m_trackentry->parent, toControlsObjectSpace(mousepos, &m_trackentry->parent->trackControls), g->m_trackentry->track->name);
 }
 
 void gui_track_content_base::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
     auto trackEntry = g->getTrackEntry();
-    mousepos = toControlsObjectSpace(mousepos, &trackEntry->parent->trackControls);
-    auto slot = DAW::GetTrackSlotFromCoord(trackEntry->parent, mousepos);
+    mousepos = toControlsObjectSpace(mousepos, &m_trackentry->parent->trackControls);
+    auto slot = DAW::GetTrackSlotFromCoord(m_trackentry->parent, mousepos);
     DAW::MoveTrackToSlot(parent->dawCtrl->getDaw(), trackEntry->track, slot);
 }
 

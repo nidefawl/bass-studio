@@ -100,7 +100,6 @@ public:
     void dragSelectionRelease(gui_clip* gui, MouseEvent& evt);
     void dragClipboardMove(ivec2 local, KeyboardMods kbmods);
 
-    bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     void clipDropCancel() override;
@@ -614,7 +613,6 @@ public:
     scaled_grid& getGrid() {
         return m_grid;
     }
-    void setDragDropTrackInidicatorFromMousePos(ivec2 mousepos, const String& desc);
     int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
     int32_t getTrackTotalHeight(track_gui_entry_t* e);
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
@@ -685,8 +683,6 @@ public:
     void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
     void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
 
-    bool clipDropBegin(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-    void clipDropCancel() override;
 };

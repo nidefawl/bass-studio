@@ -141,9 +141,9 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
     // trackInsertPos is tracktype-container index
     trackcontainer_tracktype_t* trackTypeCtr = trackTypeCtrs[newTrack->type];
 
-    // only add root tracks (nodes with no parent) to root list
-    // children have to have to set their parent reference outside
+     // TODO: I think this line is not required and argument trackInsertPos has no effect
     newTrack->localIdxFlat = trackInsertPos;
+
     trackTypeCtr->add(newTrack);
 
     int32_t idx = 0;
