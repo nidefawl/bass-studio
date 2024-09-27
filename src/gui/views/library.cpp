@@ -18,6 +18,54 @@
 
 static const std::vector<String> supportedExtensions = { "project", "tracks", "preset", SUPPORTED_AUDIO_FILE_TYPES, "mid" };
 
+int32_t GetIconFromExtension(const String& path) {
+    static const std::map<String, int> extensionToIcon = {
+        { "preset", ICON_EFFECT },
+        { "tracks", ICON_SYNTH_SMALL },
+        { "project", ICON_DAW_EXE },
+        { "mp3", ICON_FILE_AUDIO },
+        { "flac", ICON_FILE_AUDIO },
+        { "mid", ICON_FILE_MIDI },
+        { "wav", ICON_FILE_AUDIO },
+        { "aif", ICON_FILE_AUDIO },
+        { "aiff", ICON_FILE_AUDIO },
+        { "ogg", ICON_FILE_AUDIO },
+        { "m4a", ICON_FILE_AUDIO },
+        { "wma", ICON_FILE_AUDIO },
+        { "aac", ICON_FILE_AUDIO },
+        { "ac3", ICON_FILE_AUDIO },
+        { "amr", ICON_FILE_AUDIO },
+        { "au", ICON_FILE_AUDIO },
+        { "flac", ICON_FILE_AUDIO },
+        { "mka", ICON_FILE_AUDIO },
+        { "mp2", ICON_FILE_AUDIO },
+        { "mp3", ICON_FILE_AUDIO },
+        { "mpc", ICON_FILE_AUDIO },
+        { "ogg", ICON_FILE_AUDIO },
+        { "ra", ICON_FILE_AUDIO },
+        { "tta", ICON_FILE_AUDIO },
+        { "wav", ICON_FILE_AUDIO },
+        { "wma", ICON_FILE_AUDIO },
+    };
+    String ext;
+    SplitPath(path, nullptr, nullptr, &ext);
+    auto it = extensionToIcon.find(ext);
+    if (it != extensionToIcon.end()) {
+        return it->second;
+    }
+    return ICON_FILE;
+}
+
+String DirNameFromPath(String in) {
+    App::Platform::sanitizePathToDirectory(in);
+    String pathDirecotry;
+    SplitPath(in, &pathDirecotry, nullptr, nullptr);
+    String dirNameOnly;
+    SplitPath(pathDirecotry, nullptr, &dirNameOnly, nullptr);
+    return dirNameOnly;
+}
+
+
 void setupUserDefaultLibrary() {
     auto& tls = daw_tls::getTls();
     if (!assert_expr(tls.settings)) {
@@ -92,15 +140,6 @@ public:
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
     void buttonClicked(guibase* button) override;
 };
-
-inline String DirNameFromPath(String in) {
-    App::Platform::sanitizePathToDirectory(in);
-    String pathDirecotry;
-    SplitPath(in, &pathDirecotry, nullptr, nullptr);
-    String dirNameOnly;
-    SplitPath(pathDirecotry, nullptr, &dirNameOnly, nullptr);
-    return dirNameOnly;
-}
 
 class gui_user_library_browser final : public guictr_stacked {
     gui_user_library_path_list ctr_folders_list;

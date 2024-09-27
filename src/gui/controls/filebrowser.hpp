@@ -85,29 +85,15 @@ public:
         icon      = opened ? ICON_FOLDER_OPEN : ICON_FOLDER;
     }
 };
-
+int32_t GetIconFromExtension(const String& path);
 class gui_filebrowser_file_entry_t final : public gui_filebrowser_entry_base {
 public:
     explicit gui_filebrowser_file_entry_t(const FileFound& f)
         : gui_filebrowser_entry_base(f.name, f.path) {
         setGuiType(gui_type::GUI_TYPE_LIST_USER_LIBRARY_FILE);
-        icon = ICON_FILE;
-        static const std::map<String, int> extensionToIcon = {
-            { "preset", ICON_EFFECT },
-            { "tracks", ICON_SYNTH_SMALL },
-            { "project", ICON_DAW_EXE },
-            { "mp3", ICON_FILE },
-            { "flac", ICON_FILE },
-            { "mid", ICON_FILE },
-        };
-        String ext;
-        SplitPath(f.name, nullptr, nullptr, &ext);
-        auto it = extensionToIcon.find(ext);
-        if (it != extensionToIcon.end()) {
-            icon = it->second;
-        }
-
+        icon = GetIconFromExtension(f.name);
     }
+
     bool& isDragging() {
         static bool bDragging = false;
         return bDragging;
