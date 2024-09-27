@@ -63,6 +63,8 @@ public:
             parentCtrl->openContextMenu(ctxt, evt.mousepos);
         }
     }
+    void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
+    void dragMoveOn(guibase* target, ivec2 mousepos) override {}
 };
 
 class gui_filebrowser_folder_entry : public gui_filebrowser_entry_base {
@@ -81,8 +83,6 @@ public:
         bIsOpened = opened;
         icon      = opened ? ICON_FOLDER_OPEN : ICON_FOLDER;
     }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {}
 };
 
 class gui_filebrowser_file_entry_t final : public gui_filebrowser_entry_base {
@@ -113,7 +113,7 @@ public:
             if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED) {
                 dawCtrl->filesDropMove(evt.mousepos, evt.kbmods);
             }
-            parentCtrl->objectDragMove(this, evt);
+            // parentCtrl->objectDragMove(this, evt);
         }
     }
 
@@ -126,36 +126,11 @@ public:
         if (!isDragging()) {
             if (parent) parent->buttonClicked(this);
         } else {
-            parentCtrl->objectDragRelease(this, evt);
+            // parentCtrl->objectDragRelease(this, evt);
             auto daw        = dawCtrl->getDaw();
             auto& clipboard = daw->getDragDropClip();
             if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED) {
                 dawCtrl->filesDropFinal({ getPathAbs() }, evt.mousepos, evt.kbmods);
-            }
-        }
-    }
-
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {
-        auto daw        = dawCtrl->getDaw();
-        auto& clipboard = daw->getDragDropClip();
-        if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED) {
-            if (target->getGuiType() == gui_type::CTR_TYPE_TRACKS) {
-                auto trackCtr = gui_cast<guictr_tracks, gui_type::CTR_TYPE_TRACKS>(target);
-                trackCtr->setDragDropTrackInidicatorFromMousePos(mousepos, getText());
-            }
-        }
-    }
-
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-        auto daw        = dawCtrl->getDaw();
-        auto& clipboard = daw->getDragDropClip();
-        if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED && clipboard.type == dragdrop_file_clipboard::TYPE_TRACK_CONTAINER) {
-            if (target->getGuiType() == gui_type::CTR_TYPE_TRACKS) {
-                auto trackCtr   = gui_cast<guictr_tracks, gui_type::CTR_TYPE_TRACKS>(target);
-                auto slot       = DAW::GetTrackSlotFromCoord(trackCtr, toControlsObjectSpace(mousepos, &trackCtr->trackControls));
-                ThreadLock lock = daw->getPlayThread()->lockThread();
-                DAW::InsertTrackContainerToTrack(daw, clipboard.trackcontainer.get(), slot);
-                dawCtrl->getDragDropTarget().reset();
             }
         }
     }
