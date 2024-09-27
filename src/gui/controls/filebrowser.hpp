@@ -17,18 +17,19 @@
 
 class guictxtmenu_filebrowser_base final : public guictxtmenu {
     const String path;
+
 public:
-    explicit guictxtmenu_filebrowser_base(DawCtrl* _dawCtrl, String  _path) 
+    explicit guictxtmenu_filebrowser_base(DawCtrl* _dawCtrl, String _path)
         : guictxtmenu(), path(std::move(_path)) {
-        this->size.x  = 260;
+        this->size.x    = 260;
         this->maxHeight = 0;
-        this->dawCtrl = _dawCtrl;
+        this->dawCtrl   = _dawCtrl;
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_REVEAL_IN_EXPLORER));
     }
     ~guictxtmenu_filebrowser_base() override = default;
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
         if (e && e->commandtype == GlobalCommandType::CMD_REVEAL_IN_EXPLORER) {
-            auto ctxt = DAW::UI::CommandContext{e->commandtype};
+            auto ctxt    = DAW::UI::CommandContext{ e->commandtype };
             ctxt.argStr0 = path;
             closeContextMenu();
             dawCtrl->handleGlobalCommand(ctxt);
@@ -41,6 +42,7 @@ public:
 class gui_filebrowser_entry_base : public gui_list_entry {
     const String name;
     const String pathAbs;
+
 public:
     gui_filebrowser_entry_base(String _name, String _pathAbs) : gui_list_entry(), name(std::move(_name)), pathAbs(std::move(_pathAbs)) {
         setDragRendered(false);
@@ -65,6 +67,7 @@ public:
 
 class gui_filebrowser_folder_entry : public gui_filebrowser_entry_base {
     bool bIsOpened = false;
+
 public:
     gui_filebrowser_folder_entry(String _name, String _pathAbs, bool _bIsOpened = false)
         : gui_filebrowser_entry_base(std::move(_name), std::move(_pathAbs)), bIsOpened(_bIsOpened) {
@@ -76,10 +79,10 @@ public:
     }
     void setIsOpened(const bool opened) {
         bIsOpened = opened;
-        icon = opened ? ICON_FOLDER_OPEN : ICON_FOLDER;
+        icon      = opened ? ICON_FOLDER_OPEN : ICON_FOLDER;
     }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override { }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override { }
+    void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
+    void dragMoveOn(guibase* target, ivec2 mousepos) override {}
 };
 
 class gui_filebrowser_file_entry_t final : public gui_filebrowser_entry_base {
@@ -88,20 +91,22 @@ public:
         : gui_filebrowser_entry_base(f.name, f.path) {
         setGuiType(gui_type::GUI_TYPE_LIST_USER_LIBRARY_FILE);
         icon = ICON_FILE;
-    }    bool& isDragging() {
+    }
+    bool& isDragging() {
         static bool bDragging = false;
         return bDragging;
     }
+
     void handleDraggedMove(MouseEvent& evt) override {
-        auto daw = dawCtrl->getDaw();
+        auto daw        = dawCtrl->getDaw();
         auto& clipboard = daw->getDragDropClip();
-        bool bDragging = glm::length(vec2(*evt.dragDistance)) > 2.0f;
+        bool bDragging  = glm::length(vec2(*evt.dragDistance)) > 2.0f;
         if (!isDragging() && bDragging) {
             isDragging() = true;
             if (clipboard.state == dragdrop_file_clipboard::STATE_NONE) {
-                dawCtrl->filesDropBegin({getPathAbs()}, evt.mousepos, evt.kbmods);
+                dawCtrl->filesDropBegin({ getPathAbs() }, evt.mousepos, evt.kbmods);
             }
-             // TODO: show error message if loading failed
+            // TODO: show error message if loading failed
             setDragRendered(clipboard.state == dragdrop_file_clipboard::STATE_LOADED);
         }
         if (isDragging()) {
@@ -111,6 +116,7 @@ public:
             parentCtrl->objectDragMove(this, evt);
         }
     }
+
     void handleDraggedBegin(MouseEvent& evt) override {
         isDragging() = false;
         dawCtrl->getDaw()->resetDragDropClipboards();
@@ -121,16 +127,16 @@ public:
             if (parent) parent->buttonClicked(this);
         } else {
             parentCtrl->objectDragRelease(this, evt);
-            auto daw = dawCtrl->getDaw();
+            auto daw        = dawCtrl->getDaw();
             auto& clipboard = daw->getDragDropClip();
             if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED) {
-                dawCtrl->filesDropFinal({getPathAbs()}, evt.mousepos, evt.kbmods);
+                dawCtrl->filesDropFinal({ getPathAbs() }, evt.mousepos, evt.kbmods);
             }
         }
     }
-    
+
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
-        auto daw = dawCtrl->getDaw();
+        auto daw        = dawCtrl->getDaw();
         auto& clipboard = daw->getDragDropClip();
         if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED) {
             if (target->getGuiType() == gui_type::CTR_TYPE_TRACKS) {
@@ -139,13 +145,14 @@ public:
             }
         }
     }
+
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-        auto daw = dawCtrl->getDaw();
+        auto daw        = dawCtrl->getDaw();
         auto& clipboard = daw->getDragDropClip();
         if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED && clipboard.type == dragdrop_file_clipboard::TYPE_TRACK_CONTAINER) {
             if (target->getGuiType() == gui_type::CTR_TYPE_TRACKS) {
-                auto trackCtr = gui_cast<guictr_tracks, gui_type::CTR_TYPE_TRACKS>(target);
-                auto slot = DAW::GetTrackSlotFromCoord(trackCtr, toControlsObjectSpace(mousepos, &trackCtr->trackControls));
+                auto trackCtr   = gui_cast<guictr_tracks, gui_type::CTR_TYPE_TRACKS>(target);
+                auto slot       = DAW::GetTrackSlotFromCoord(trackCtr, toControlsObjectSpace(mousepos, &trackCtr->trackControls));
                 ThreadLock lock = daw->getPlayThread()->lockThread();
                 DAW::InsertTrackContainerToTrack(daw, clipboard.trackcontainer.get(), slot);
                 dawCtrl->getDragDropTarget().reset();
@@ -160,6 +167,7 @@ class guictr_filebrowser final : public gui_list {
     String selectedFolderAbsPath;
     std::vector<String> fileExtensions;
     std::vector<String> openedFoldersAbsPaths;
+
 public:
     guictr_filebrowser() : gui_list() {
         setGuiType(gui_type::CTR_TYPE_FILEBROWSER);
@@ -178,9 +186,9 @@ public:
         return workingDirAbsPath;
     }
     void buttonClicked(guibase* button) override {
-        selectedFileAbsPath = "";
+        selectedFileAbsPath   = "";
         selectedFolderAbsPath = "";
-        auto folder = gui_cast<gui_filebrowser_folder_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER>(button);
+        auto folder           = gui_cast<gui_filebrowser_folder_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER>(button);
         if (folder) {
             bool bIsOpened = folder->isOpened();
             folder->setIsOpened(!bIsOpened);
@@ -201,7 +209,7 @@ public:
 
     void updateList() {
         std::vector<gui_list_entry*> _newList;
-        std::vector<String> dirsVisited; // to avoid infinite recursion
+        std::vector<String> dirsVisited;// to avoid infinite recursion
         std::vector<FileFound> files;
         dirsVisited.push_back(workingDirAbsPath);
         updateListRecursive(workingDirAbsPath, fileExtensions, dirsVisited, 0, files);
@@ -222,7 +230,7 @@ public:
         std::vector<FileFound> files;
         listDirectoryFiles(path, fileExtensions, files);
         for (auto& f : files) {
-            auto fClone = f;
+            auto fClone  = f;
             fClone.depth = depth;
             if (fClone.bIsDir) {
                 if (std::find(dirsVisited.cbegin(), dirsVisited.cend(), fClone.path) == dirsVisited.cend()) {
@@ -237,96 +245,96 @@ public:
                 outFiles.push_back(fClone);
             }
         }
-
     }
 };
 
 namespace DAW {
 
-class SearchFileTask final : public WorkerThread::ThreadTask {
-    std::atomic<bool> m_cancelled{};
+    class SearchFileTask final : public WorkerThread::ThreadTask {
+        std::atomic<bool> m_cancelled{};
 
-    std::vector<String> directories;
-    std::vector<String> fileExtensions;
-    std::vector<String> searchTerms;
+        std::vector<String> directories;
+        std::vector<String> fileExtensions;
+        std::vector<String> searchTerms;
 
-    std::vector<FileFound> filesFound;
-    size_t maxFiles = 1000;
-public:
-    ~SearchFileTask() {
-    }
-    void setMaxFiles(size_t _maxFiles) {
-        maxFiles = _maxFiles;
-    }
-    void setSearchOptions(const std::vector<String>& _directories, const std::vector<String>& _fileExtensions, const std::vector<String>& _searchTerms) {
-        directories = _directories;
-        fileExtensions = _fileExtensions;
-        searchTerms = _searchTerms;
-    }
-    void run() override {
-        std::vector<String> dirsVisited; // to avoid infinite recursion
-        for (auto& dir : directories) {
-            dirsVisited.push_back(dir);
-            updateListRecursive(dir, dirsVisited, 0);
+        std::vector<FileFound> filesFound;
+        size_t maxFiles = 1000;
+
+    public:
+        ~SearchFileTask() {
         }
-    }
-
-    void setCancelled() {
-        m_cancelled = true;
-        setError();
-    }
-
-    bool isCancelled() const {
-        return m_cancelled;
-    }
-
-    void updateListRecursive(const String& path, std::vector<String>& dirsVisited, int32_t depth) {
-        if (isCancelled()) {
-            return;
+        void setMaxFiles(size_t _maxFiles) {
+            maxFiles = _maxFiles;
         }
-        std::vector<FileFound> files;
-        listDirectoryFiles(path, fileExtensions, files);
-        for (auto& f : files) {
-            auto fClone = f;
-            // fClone.depth = depth;
-            if (fClone.bIsDir) {
-                if (std::find(dirsVisited.cbegin(), dirsVisited.cend(), fClone.path) == dirsVisited.cend()) {
-                    dirsVisited.push_back(fClone.path);
-                    updateListRecursive(fClone.path, dirsVisited, depth + 1);
-                }
-            } else {
-                bool bMatch = true;
-                for (auto& term : searchTerms) {
-                    if (fClone.name.find(term) == String::npos) {
-                        bMatch = false;
-                        break;
-                    }
-                }
-                if (bMatch) {
-                    this->filesFound.push_back(fClone);
-                    if (this->filesFound.size() > maxFiles) {
-                        break;
-                    }
-                }
+        void setSearchOptions(const std::vector<String>& _directories, const std::vector<String>& _fileExtensions, const std::vector<String>& _searchTerms) {
+            directories    = _directories;
+            fileExtensions = _fileExtensions;
+            searchTerms    = _searchTerms;
+        }
+        void run() override {
+            std::vector<String> dirsVisited;// to avoid infinite recursion
+            for (auto& dir : directories) {
+                dirsVisited.push_back(dir);
+                updateListRecursive(dir, dirsVisited, 0);
             }
+        }
+
+        void setCancelled() {
+            m_cancelled = true;
+            setError();
+        }
+
+        bool isCancelled() const {
+            return m_cancelled;
+        }
+
+        void updateListRecursive(const String& path, std::vector<String>& dirsVisited, int32_t depth) {
             if (isCancelled()) {
-                break;
+                return;
+            }
+            std::vector<FileFound> files;
+            listDirectoryFiles(path, fileExtensions, files);
+            for (auto& f : files) {
+                auto fClone = f;
+                // fClone.depth = depth;
+                if (fClone.bIsDir) {
+                    if (std::find(dirsVisited.cbegin(), dirsVisited.cend(), fClone.path) == dirsVisited.cend()) {
+                        dirsVisited.push_back(fClone.path);
+                        updateListRecursive(fClone.path, dirsVisited, depth + 1);
+                    }
+                } else {
+                    bool bMatch = true;
+                    for (auto& term : searchTerms) {
+                        if (fClone.name.find(term) == String::npos) {
+                            bMatch = false;
+                            break;
+                        }
+                    }
+                    if (bMatch) {
+                        this->filesFound.push_back(fClone);
+                        if (this->filesFound.size() > maxFiles) {
+                            break;
+                        }
+                    }
+                }
+                if (isCancelled()) {
+                    break;
+                }
             }
         }
 
-    }
+        std::vector<FileFound>& getFilesFound() {
+            return filesFound;
+        }
+    };
 
-    std::vector<FileFound>& getFilesFound() {
-        return filesFound;
-    }
-};
-
-} // namespace DAW
+}// namespace DAW
 
 class guictr_filesearch final : public gui_list {
-    std::shared_ptr<DAW::SearchFileTask> searchFileTask; // TODO: make sure lifetime extends this object
+    std::shared_ptr<DAW::SearchFileTask> searchFileTask;// TODO: make sure lifetime extends this object
     std::vector<std::shared_ptr<DAW::SearchFileTask>> previousSearchFileTasks;
     std::vector<FileFound> filesFound;
+
 public:
     guictr_filesearch() : gui_list() {
     }
@@ -380,6 +388,4 @@ public:
             setList(_newList);
         }
     }
-
 };
-
