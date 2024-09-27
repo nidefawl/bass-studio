@@ -28,6 +28,7 @@ Checks: >
     -google-readability-*,
     -google-build-using-namespace,
     -cert-err33-c,
+    -cert-err58-cpp,
     -hicpp-*,
     -llvm-*,
     -llvmlibc-*,
