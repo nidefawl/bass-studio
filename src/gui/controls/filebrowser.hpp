@@ -13,6 +13,7 @@
 #include "host/track/track_impl.h"
 #include "host/track/trackctr_types.h"
 #include "logging.h"
+#include "renderresources.h"
 #include "str_util.h"
 
 class guictxtmenu_filebrowser_base final : public guictxtmenu {
@@ -91,6 +92,21 @@ public:
         : gui_filebrowser_entry_base(f.name, f.path) {
         setGuiType(gui_type::GUI_TYPE_LIST_USER_LIBRARY_FILE);
         icon = ICON_FILE;
+        static const std::map<String, int> extensionToIcon = {
+            { "preset", ICON_EFFECT },
+            { "tracks", ICON_SYNTH_SMALL },
+            { "project", ICON_DAW_EXE },
+            { "mp3", ICON_FILE },
+            { "flac", ICON_FILE },
+            { "mid", ICON_FILE },
+        };
+        String ext;
+        SplitPath(f.name, nullptr, nullptr, &ext);
+        auto it = extensionToIcon.find(ext);
+        if (it != extensionToIcon.end()) {
+            icon = it->second;
+        }
+
     }
     bool& isDragging() {
         static bool bDragging = false;
