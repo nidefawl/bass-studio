@@ -769,8 +769,7 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             return false;
         }
         if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            evt.requestFocus(this);
-            return true;
+            return false;
         }
     }
     if (automation.mouseHitTest(mpos, evt)) {

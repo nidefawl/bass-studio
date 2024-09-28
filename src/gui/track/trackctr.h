@@ -45,6 +45,8 @@ public:
 
     virtual bool isVisible(const track_gui_entry_t* entry)     = 0;
     virtual const track_gui_vector_td& getTracksVisibleFlat()  = 0;
+    virtual const track_gui_vector_td& getTracksTopFlat()      = 0;
+    virtual const track_gui_vector_td& getTracksBottomFlat()   = 0;
 
     virtual bool getTrackEntryCopy(const track_t* t, track_gui_entry_t& out) = 0;
     virtual bool getPointerEntry(const track_t* t, track_gui_entry_t** out)  = 0;
@@ -517,6 +519,12 @@ public:
     const track_gui_vector_td& getTracksVisibleFlat() override {
         return tracksVisibleFlat;
     }
+    const track_gui_vector_td& getTracksTopFlat() override {
+        return trackEntriesTop;
+    }
+    const track_gui_vector_td& getTracksBottomFlat() override {
+        return trackEntriesBottom;
+    }
     void reset() override {
         dbgassert(entries.empty());
         tracksVisibleFlat.clear();
@@ -677,6 +685,10 @@ public:
         return guiMgr.isVisible(entry);
     }
     void resetView();
+
+
+    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override;
+    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override;
 
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;

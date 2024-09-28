@@ -3,6 +3,7 @@
 #include "event.h"
 #include "fileio.h"
 #include "guicolors.h"
+#include "host/plugin/base/base-plugin.h"
 #include "str_util.h"
 #include "tls.h"
 #include "trackctr.h"
@@ -661,10 +662,8 @@ bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
             }
             return false;
         }
-        if (evt.type == MOUSE_DRAGDROP_CLIP) {
-            
-            evt.requestFocus(this);
-            return true;
+        if (evt.type == MOUSE_DRAGDROP_OBJECT) {
+            return false;
         }
         evt.requestFocus(this);
         return true;
@@ -859,6 +858,9 @@ bool guitrack_mixers::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         if (evt.type == MOUSE_DRAGDROP_CLIP) {
             return false;
         }
+        if (evt.type == MOUSE_DRAGDROP_OBJECT) {
+            return false;
+        }
         if (evt.type == MouseHitType::MOUSE_SCROLL) {
             evt.requestFocus(this);
             return true;
@@ -1002,9 +1004,19 @@ bool guictr_tracks::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             evt.requestFocus(this);
             return true;
         }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing() && evt.getGuiHit() && evt.getGuiHit()->parent == this) {
-            evt.requestFocus(this);
-            return true;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing()) {
+            auto type = evt.getDraggedThing()->getGuiType();
+            switch (type) {
+                case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
+                case gui_type::CTR_TYPE_PLUGIN:
+                case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
+                case gui_type::CTR_TYPE_TRACK_TITLE:
+                    evt.requestFocus(this);
+                    return true;
+                default:
+                    break;
+            }
+            return false;
         }
         if (evt.type == MOUSE_DRAGDROP_CLIP) {
             auto clipboard = dawCtrl->getDaw()->getDragDropClip();
@@ -1025,52 +1037,242 @@ bool guictr_tracks::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 
-void guictr_tracks::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
+void guictr_tracks::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
+    String clipboardDescription = StringFormat("%d Plugins", CtrSize(g->effects));
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), false);
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+            dragdrop_target_indicator_t::target_area,
+            -2,
+            this,
+            this->pos + this->size/2,
+            "Move " + clipboardDescription + " to new track"
+        };
+        return;
+    }
+
     dawCtrl->getDragDropTarget().reset();
+
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
+        return;
+    }
+
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+
+    audio_stage_t* srcStage = g->getTrackLink();
+    audio_stage_t* dstStage = dstTrack->getStage();
+    int highlightSlot = CtrSize(dstStage->effects);
+
+    if (dstStage == srcStage) {
+        int first = g->effects.front()->getSlot();
+        int last  = g->effects.back()->getSlot();
+        if (highlightSlot >= first && highlightSlot <= last) {
+            return;
+        }
+    } else {
+        // prevent dragging onto if any of the effects is parent of this
+        audio_stage_t* p = dstStage;
+        while (p) {
+            if (p->owner && std::find(g->effects.begin(), g->effects.end(), p->owner) != g->effects.end()) {
+                // NOTE: I think this can never happen here, because we're dragging from a track to another track
+                return;
+            }
+            p = p->parent;
+        }
+    }
+
+    track_gui_entry_t* dstTrackEntry = nullptr;
+    if (!this->guiMgr.getTrackEntry(dstTrack, &dstTrackEntry))
+        return;
+
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
-        -2,
-        this,
-        this->pos + this->size/2,
-        "Insert " + g->getLabel() + " on new track"
+        highlightSlot,
+        dstTrackEntry->mixer,
+        slot.pos, 
+        "Move " + clipboardDescription + " to " + dstTrack->name
     };
 }
+
+void guictr_tracks::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
+    String clipboardDescription = g->getLabel();
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), false);
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+            dragdrop_target_indicator_t::target_area,
+            -2,
+            this,
+            this->pos + this->size/2,
+            "Insert " + clipboardDescription + " on new track"
+        };
+        return;
+    }
+
+    dawCtrl->getDragDropTarget().reset();
+
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
+        return;
+    }
+
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+
+    audio_stage_t* dstStage = dstTrack->getStage();
+    int highlightSlot = CtrSize(dstStage->effects);
+
+    track_gui_entry_t* dstTrackEntry = nullptr;
+    if (!this->guiMgr.getTrackEntry(dstTrack, &dstTrackEntry))
+        return;
+
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+        dragdrop_target_indicator_t::target_area,
+        highlightSlot,
+        dstTrackEntry->mixer,
+        slot.pos, 
+        "Insert " + clipboardDescription + " on " + dstTrack->name
+    };
+}
+
+namespace DAW {
+    void InsertDraggedPluginsOnTrack(DawInstance* daw, track_t* track, guictr_dragged_plugins* g) {
+        dbgassert(g->effects.size());
+
+        audio_stage_t* srcStage = g->getTrackLink();
+        audio_stage_t* dstStage = track->getStage();
+
+        // make sure this pluginctrs stage-owner and all parents stage-owners aren't in the list of dragged effectbase instances
+        // this is to avoid i.e. dragging a group into itself
+        // this might not be necessary anymore, but it's a good check to have
+        auto dstStageOrParent = dstStage;
+        while (dstStageOrParent) {
+            if (!dstStageOrParent->parent) {
+                dbgassert(dstStageOrParent->owner == nullptr);
+            }
+            if (dstStageOrParent->parent && std::find(g->effects.begin(), g->effects.end(), dstStageOrParent->owner) != g->effects.end()) {
+                return;
+            }
+            dstStageOrParent = dstStageOrParent->parent;
+        }
+
+        auto targetslot = g->effects.front()->isSynth ? 0 : CtrSize(dstStage->effects);
+
+
+        ThreadLock lock = daw->lockPlayThread();
+        int first       = g->effects.front()->getSlot();
+        int last        = g->effects.back()->getSlot();
+        if (srcStage == dstStage) {
+            if (targetslot >= first && targetslot <= last) {
+                return;
+            }
+        }
+        if (targetslot >= 0) {
+            if (srcStage != dstStage) {
+                daw->getPluginManager()->movePluginsToStage(dstStage, srcStage, first, targetslot, last - first + 1);
+                audio_stage_ref_t refsrc = srcStage->toRef();
+                audio_stage_ref_t refdst = dstStage->toRef();
+                daw->pushHist(new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last - first + 1));
+            } else {
+                if (targetslot > first) targetslot -= CtrSize(g->effects);
+                if (first == targetslot)
+                    return;
+                daw->getPluginManager()->movePluginsOnStage(dstStage, first, targetslot, last - first + 1);
+                audio_stage_ref_t ref = dstStage->toRef();
+                daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
+            }
+            daw->onPluginsChanged();
+            for (auto& gui : dstStage->gui) {
+                gui->scrollToPluginGui(g->effects.back());
+            }
+        }
+    }
+    void InsertPluginOnTrack(DawInstance* daw, track_t* track, effectbase* effect) {
+        auto pluginMgr = daw->getPluginManager();
+        if (assert_expr(effect)) {
+            ThreadLock lock = daw->lockPlayThread();
+            int32_t dstSlot = effect->isSynth ? 0 : CtrSize(track->getStage()->effects);
+            pluginMgr->insertNewPlugin(track->getStage(), effect, dstSlot);
+            effect->onEnable();
+            daw->pushHist(new action_insert_effect("Insert plugin", effect, track->getStage()->toRef(), dstSlot));
+            daw->onPluginsChanged();
+            for (auto& gui : track->getStage()->gui) {
+                gui->scrollToPluginGui(effect);
+            }
+        }
+    }
+} // namespace DAW
 
 void guictr_tracks::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
     auto daw = dawCtrl->getDaw();
-    auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
-    if (!track)
-        return;
-    track_gui_entry_t* entry = nullptr;
-    if (!this->guiMgr.getTrackEntry(track, &entry))
-        return;
-    dawCtrl->setSelectedTrackEntry(entry);
-    entry->content->pluginEntryDragRelease(g, mousepos);
-    dawCtrl->getDragDropTarget().reset();
-}
+    String clipboardDescription = g->getLabel();
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), false);
 
-void guictr_tracks::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
-    dawCtrl->getDragDropTarget().reset();
-    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
-        dragdrop_target_indicator_t::target_area,
-        -2,
-        this,
-        this->pos + this->size/2,
-        "Move Plugins to new track"
-    };
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        ThreadLock lock = daw->lockPlayThread();
+        auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
+        if (!track)
+            return;
+        track_gui_entry_t* entry = nullptr;
+        if (!this->guiMgr.getTrackEntry(track, &entry))
+            return;
+        dawCtrl->setSelectedTrackEntry(entry);
+        dawCtrl->showPluginView();
+        dawCtrl->getDragDropTarget().reset();
+        auto effect = g->makeInstance();
+        if (effect) {
+            DAW::InsertPluginOnTrack(daw, track, effect);
+        }
+        return;
+    }
+
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
+        return;
+    }
+
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+
+    auto effect = g->makeInstance();
+    if (effect) {
+        ThreadLock lock = daw->lockPlayThread();
+        DAW::InsertPluginOnTrack(daw, dstTrack, effect);
+    }
 }
 
 void guictr_tracks::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
     auto daw = dawCtrl->getDaw();
-    auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
-    if (!track)
+    String clipboardDescription = StringFormat("%d Plugins", CtrSize(g->effects));
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), false);
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        ThreadLock lock = daw->lockPlayThread();
+        auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
+        if (!track)
+            return;
+        track_gui_entry_t* entry = nullptr;
+        if (!this->guiMgr.getTrackEntry(track, &entry))
+            return;
+        dawCtrl->setSelectedTrackEntry(entry);
+        dawCtrl->showPluginView();
+        dawCtrl->getDragDropTarget().reset();
+        DAW::InsertDraggedPluginsOnTrack(daw, track, g);
         return;
-    track_gui_entry_t* entry = nullptr;
-    if (!this->guiMgr.getTrackEntry(track, &entry))
+    }
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
         return;
-    dawCtrl->setSelectedTrackEntry(entry);
-    entry->content->pluginMultiDragRelease(g, mousepos);
-    dawCtrl->getDragDropTarget().reset();
+    }
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+    audio_stage_t* srcStage = g->getTrackLink();
+    audio_stage_t* dstStage = dstTrack->getStage();
+    if (dstStage == srcStage) {
+        return;
+    }
+    ThreadLock lock = daw->lockPlayThread();
+    DAW::InsertDraggedPluginsOnTrack(daw, dstTrack, g);
 }
 
 bool guictr_tracks::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
@@ -1127,4 +1329,14 @@ bool guictr_tracks::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos,
             break;
     }
     return false;
+}
+
+void guictr_tracks::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
+    DAW::SetDragDropTrackInidicatorFromMousePos(this, trackControls.toContainerSpace(mousepos), g->m_trackentry->track->name, true);
+}
+
+void guictr_tracks::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
+    auto trackEntry = g->getTrackEntry();
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), true);
+    DAW::MoveTrackToSlot(parent->dawCtrl->getDaw(), trackEntry->track, slot);
 }
