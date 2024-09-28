@@ -127,7 +127,7 @@ public:
 
     void render(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-    void setList(std::vector<gui_list_entry*> _newList) {
+    void setList(const std::vector<gui_list_entry*>& _newList) {
         //newList may contain pointers that are already added
 
         //make a copy of current loaded guis

@@ -90,7 +90,7 @@ public:
     guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_file_clipboard& _dragdropclip);
     ~guitrack_editor() override = default;
     scaled_grid& getGrid() { return grid; }
-    bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
 

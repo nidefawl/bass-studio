@@ -96,12 +96,13 @@ namespace DAW {
         auto popupPos    = title->toScreenSpace(ivec2(0));
         OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
     }
-    bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs,  const std::function<bool(const String& str)>& callback) {
+    bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs, std::function<bool(const String& str)> callback) {
         if (pathAbs.empty()) {
             return false;
         }
         String pathOnly, nameOnly, ext;
         SplitPath(pathAbs, &pathOnly, &nameOnly, &ext);
+        App::Platform::sanitizePathToDirectory(pathOnly);
         auto cb = [=](const String& newFileName) {
             if (newFileName.empty()) {
                 return false;
@@ -115,7 +116,7 @@ namespace DAW {
             if (newFileNameNoExt.empty()) {
                 return false;
             }
-            String newPath = pathOnly + FILE_PATHSEP_STR + newFileNameNoExt + "." + ext;
+            String newPath = pathOnly + newFileNameNoExt + "." + ext;
             if (FileExists(newPath)) {
                 return false;
             }
@@ -1455,42 +1456,7 @@ public:
         target->trackEntryDragMove(this->m_trackentry->content, toControlsObjectSpace(mousepos, target));
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-        String exportDir;
-        ivec2 popupPos;
-        ivec2 popupSize;
-        {
-            auto folderEntry = gui_cast<gui_filebrowser_folder_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER>(target);
-            auto fileBrowser = guiParentType<guictr_filebrowser, gui_type::CTR_TYPE_FILEBROWSER>(target);
-            if (folderEntry) {
-                exportDir = folderEntry->getPathAbs();
-                popupPos = folderEntry->toScreenSpace(ivec2(0));
-                popupSize = folderEntry->size;
-            } else if (fileBrowser) {
-                exportDir = fileBrowser->getWorkingDirAbsPath();
-                popupPos = fileBrowser->toScreenSpace(ivec2(0));
-                popupSize = fileBrowser->size;
-                popupSize.y = fileBrowser->getRowHeight();
-            }
-        }
-        if (!exportDir.empty()) {
-            track_snapshot_t snapshot(m_track, tracksnapshot_store_opts_t::All());
-            trackcontainer_snapshot_t trackContainerSnapshot;
-            trackContainerSnapshot.tracks.push_back(snapshot);
-            auto exportFilename = m_track->name + "." + FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
-            String path = exportDir + FILE_PATHSEP_STR + exportFilename;
-            auto [pathFile, nameFile] = dawCtrl->getDaw()->createUniqueNonExistingFilename(path);
-            // save file first, then spawn popup to rename
-            if (!saveTrackContainer(trackContainerSnapshot, pathFile)) {
-                // TODO: trigger browser refresh globally
-                return;
-            }
-            DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [](const String& path) {
-                // TODO: trigger browser refresh globally
-                return true;
-            });
-        } else {
-            target->trackEntryDragRelease(this->m_trackentry->content, toControlsObjectSpace(mousepos, target));
-        }
+        target->trackEntryDragRelease(this->m_trackentry->content, toControlsObjectSpace(mousepos, target));
     }
     void handleRightClick(MouseEvent& evt) override {
         parent->handleRightClick(evt);

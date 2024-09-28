@@ -1,3 +1,4 @@
+#include "logging.h"
 #ifdef _WIN32
 #include "str_util.h"
 #include "fileio.h"
@@ -31,21 +32,25 @@ bool CreateDirectoryIfNotExists(const String& DirPath) {
     } while (partPath.size() < DirPath.size());
     return true;
 }
+void LogLastWin32Error(const String& msg) {
+    DWORD err = GetLastError();
+    log_lf(Log::L_ERROR, "%s: %s\n", StringAsCStr(msg), FormatErrorMessage(err).c_str());
+}
 
 bool MoveAbsoluteFile(const String& src, const String& dst) {
     auto err = MoveFileA(StringAsCStr(src), StringAsCStr(dst));
-    // if (err == 0) {
-    //     throw FileIOException(GetLastError(), "MoveFileA failed: " + src + " to " + dst);
-    // }
-    return err == 0;
+    if (err) {
+        LogLastWin32Error("MoveFileA failed");
+    }
+    return err;
 }
 
 bool DeleteAbsoluteFile(const String& FilePath) {
     auto err = DeleteFileA(StringAsCStr(FilePath));
-    // if (err == 0) {
-    //     throw FileIOException(GetLastError(), "DeleteFileA failed: " + FilePath);
-    // }
-    return err == 0;
+    if (err) {
+        LogLastWin32Error("DeleteFileA failed");
+    }
+    return err;
 }
 
 bool PathIsDirectory(const String& path) {

@@ -243,6 +243,9 @@ public:
     guibase* getDraggedThing() {
         return draggedThing;
     }
+    const guibase* getDraggedThing() const {
+        return draggedThing;
+    }
     void setDraggedThing(guibase* _draggedThing) {
         draggedThing = _draggedThing;
     }

@@ -152,8 +152,10 @@ void guiplugin::buttonClicked(guibase* _button) {
         savePluginSnapshot(ps, pathFile);
         auto popupPos  = buttonSave.toScreenSpace(ivec2(buttonSave.size.x, 0));
         auto popupSize = ivec2(size.x - buttonSave.size.x, theme->get(GuiConstant::CONST_ROW_HEIGHT));
-        // show simple dialog to edit name
-        DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [](const String& path) {
+        auto daw = dawCtrl->getDaw();
+        daw->refreshAllUserlibraryBrowsers();
+        DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [daw](const String& path) {
+            daw->refreshAllUserlibraryBrowsers();
             return true;
         });
         return;

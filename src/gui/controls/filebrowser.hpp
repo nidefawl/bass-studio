@@ -41,6 +41,7 @@ public:
 };
 
 class gui_filebrowser_entry_base : public gui_list_entry {
+protected:
     const String name;
     const String pathAbs;
 
@@ -72,8 +73,8 @@ class gui_filebrowser_folder_entry : public gui_filebrowser_entry_base {
     bool bIsOpened = false;
 
 public:
-    gui_filebrowser_folder_entry(String _name, String _pathAbs, bool _bIsOpened = false)
-        : gui_filebrowser_entry_base(std::move(_name), std::move(_pathAbs)), bIsOpened(_bIsOpened) {
+    explicit gui_filebrowser_folder_entry(const FileFound& f, bool _bIsOpened = false)
+        : gui_filebrowser_entry_base(f.name, f.path), bIsOpened(_bIsOpened) {
         setGuiType(gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER);
         icon = bIsOpened ? ICON_FOLDER_OPEN : ICON_FOLDER;
     }
@@ -138,7 +139,8 @@ public:
     }
 };
 
-class guictr_filebrowser final : public gui_list {
+class guictr_filebrowser : public gui_list {
+protected:
     String workingDirAbsPath;
     String selectedFileAbsPath;
     String selectedFolderAbsPath;
@@ -163,6 +165,7 @@ public:
         return workingDirAbsPath;
     }
     void buttonClicked(guibase* button) override {
+        gui_list::buttonClicked(button);
         selectedFileAbsPath   = "";
         selectedFolderAbsPath = "";
         auto folder           = gui_cast<gui_filebrowser_folder_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER>(button);
@@ -190,17 +193,50 @@ public:
         std::vector<FileFound> files;
         dirsVisited.push_back(workingDirAbsPath);
         updateListRecursive(workingDirAbsPath, fileExtensions, dirsVisited, 0, files);
+
+        // store selected entry, so we can restore it after updating the list
+        // TODO: restoring the focused entry should be handled by the list internally
+        String pathAbsSelectedEntry;
+        bool bRestoreFocused = false;
+        auto entry = getSelectedEntry();
+        if (entry) {
+            pathAbsSelectedEntry = static_cast<gui_filebrowser_entry_base*>(entry)->getPathAbs();
+            auto focusedGui = parentCtrl->getGuiFocused();
+            if (focusedGui == entry) {
+                bRestoreFocused = true;
+            }
+        }
         for (auto& f : files) {
             if (f.bIsDir) {
                 auto isOpenFolder = std::find(openedFoldersAbsPaths.cbegin(), openedFoldersAbsPaths.cend(), f.path) != openedFoldersAbsPaths.cend();
-                _newList.push_back(new gui_filebrowser_folder_entry(f.name, f.path, isOpenFolder));
+                _newList.push_back(createFileBrowserFolderEntry(f, isOpenFolder));
             } else {
-                _newList.push_back(new gui_filebrowser_file_entry_t(f));
+                _newList.push_back(createFileBrowserFileEntry(f));
             }
             _newList.back()->setDepth(f.depth);
             _newList.back()->setTooltipText(f.path);
         }
         setList(_newList);
+        if (!pathAbsSelectedEntry.empty()) {
+            auto it = std::find_if(_newList.begin(), _newList.end(), [pathAbsSelectedEntry](gui_list_entry* e) {
+                return static_cast<gui_filebrowser_entry_base*>(e)->getPathAbs() == pathAbsSelectedEntry;
+            });
+            if (it != _newList.end()) {
+                auto idx = int32_t(it - _newList.begin());
+                setSelectedIdx(idx);
+                if (bRestoreFocused) {
+                    parentCtrl->focusGui(*it);
+                }
+            }
+        }
+    }
+
+    virtual gui_filebrowser_folder_entry* createFileBrowserFolderEntry(const FileFound& f, bool bIsOpened) {
+        return new gui_filebrowser_folder_entry(f, bIsOpened);
+    }
+
+    virtual gui_filebrowser_file_entry_t* createFileBrowserFileEntry(const FileFound& f) {
+        return new gui_filebrowser_file_entry_t(f);
     }
 
     void updateListRecursive(const String& path, const std::vector<String>& fileExtensions, std::vector<String>& dirsVisited, int32_t depth, std::vector<FileFound>& outFiles) {

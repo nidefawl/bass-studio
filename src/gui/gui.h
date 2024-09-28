@@ -385,6 +385,8 @@ public:
         }
     }
     virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_CLIP) return false;
         if (canMouseHit() && contains(mpos)) {
             evt.requestFocus(this);
             return true;

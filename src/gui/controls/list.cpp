@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <nanovg.h>
 #include <algorithm>
 #include "guiglobals.h"
@@ -11,6 +12,7 @@
 #include "gui/container/container.h"
 #include "renderresources.h"
 #include "basectrl.h"
+#include "host/daw/mainctrl.h"
 
 void gui_list_entry::handleDraggedMove(MouseEvent& evt) {
     parentCtrl->objectDragMove(this, evt);
@@ -86,9 +88,30 @@ void gui_list::render(NVGcontext* vg) {
         gui_list_entry* g = listGuis[first];
         nvgTranslate(vg, 0, -g->top());
     }
+    int32_t dragDropHighlightIdx = -1;
+    const auto dragdropTarget = dawCtrl->getDragDropTarget();
+    const auto frameWidth = 3;
+    if (dragdropTarget.dst && dragdropTarget.dst->parent == this) {
+        dragDropHighlightIdx = indexOfCtr(listGuis, dragdropTarget.dst);
+    }
+    if (dragDropHighlightIdx >= first && dragDropHighlightIdx < last) {
+        auto dst = listGuis[dragDropHighlightIdx];
+        nvgBeginPath(vg);
+        nvgRect(vg, dst->pos.x + frameWidth, dst->pos.y + frameWidth, dst->size.x - 2 * frameWidth, dst->size.y - 2 * frameWidth);
+        nvgFillColor(vg, rgbaToNvg(0x3fdddd33));
+        nvgFill(vg);
+    }
     for (int32_t idx = first; idx < last; idx++) {
-        listGuis[idx]->selected = selectedIdx == idx;
+        listGuis[idx]->selected = selectedIdx == idx && dragDropHighlightIdx != idx;
         listGuis[idx]->render(vg);
+    }
+    if (dragDropHighlightIdx >= first && dragDropHighlightIdx < last) {
+        auto dst = listGuis[dragDropHighlightIdx];
+        nvgBeginPath(vg);
+        nvgRect(vg, dst->pos.x + frameWidth * 0.5f, dst->pos.y + frameWidth * 0.5f, dst->size.x - frameWidth, dst->size.y - frameWidth);
+        nvgStrokeColor(vg, rgbaToNvg(0x7fdddd33));
+        nvgStrokeWidth(vg, frameWidth);
+        nvgStroke(vg);
     }
     if (renderHR && first < last) {
         for (int32_t idx = first; idx < last; idx++) {

@@ -17,6 +17,7 @@
 #include "renderresources.h"
 #include "gui/controls/button.h"
 #include "str_util.h"
+#include "host/daw/mainctrl.h"
 
 void guictr_base::setControl(BaseCtrl* parentCtrl) {
     guibase::setControl(parentCtrl);
@@ -109,8 +110,12 @@ void guictr_base::renderBackground(NVGcontext* vg) {
         nvgFillColor(vg, rgbaToNvg(0x7fff00ff));
         nvgFill(vg);
     }
-    auto& target = dawCtrl->getDragDropTarget();
-    bool extend = target.dst == this->ctr.get();
+    if (dawCtrl->getDragDropTarget().dst == this) {
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y, size.x, size.y);
+        nvgFillColor(vg, rgbaToNvg(0x3fdddd33));
+        nvgFill(vg);
+    }
 }
 
 void guictr_base::renderFrameBase(NVGcontext* vg) {

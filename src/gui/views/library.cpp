@@ -1,4 +1,5 @@
 #include "event.h"
+#include "fileio.h"
 #include "gui/container/container.h"
 #include "gui/container/container_builder.h"
 #include "gui/container/container_layout.h"
@@ -7,14 +8,18 @@
 #include "gui/controls/textfield.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/views/pluginlist.h"
+#include "host/daw/mainctrl.h"
 #include "host/plugin/base/base-plugin.h"
+#include "host/track/track.h"
 #include "host/track/trackctr_types.h"
 #include "host/track/track_impl.h"
+#include "logging.h"
 #include "platform.h"
 #include "renderresources.h"
 #include "str_util.h"
 #include "tls.h"
 #include "appsettings.h"
+#include "gui/track/trackcontent.h"
 
 static const std::vector<String> supportedExtensions = { "project", "tracks", "preset", SUPPORTED_AUDIO_FILE_TYPES, "mid" };
 
@@ -65,22 +70,62 @@ String DirNameFromPath(String in) {
     return dirNameOnly;
 }
 
-
-void setupUserDefaultLibrary() {
-    auto& tls = daw_tls::getTls();
-    if (!assert_expr(tls.settings)) {
-        return;
-    }
-    auto& settings = *tls.settings;
-    if (settings.userLibraryPaths.empty()) {
-        String path = App::Platform::toUserdataPath("");
-        if (!FileExists(path)) {
-            CreateDirectoryIfNotExists(path);
+namespace {
+    void setupUserDefaultLibrary() {
+        auto& tls = daw_tls::getTls();
+        if (!assert_expr(tls.settings)) {
+            return;
         }
-        settings.userLibraryPaths.push_back(path);
-        saveSettings(settings);
+        auto& settings = *tls.settings;
+        if (settings.userLibraryPaths.empty()) {
+            String path = App::Platform::toUserdataPath("");
+            if (!FileExists(path)) {
+                CreateDirectoryIfNotExists(path);
+            }
+            settings.userLibraryPaths.push_back(path);
+            saveSettings(settings);
+        }
     }
-}
+
+    bool IsHandledDragDropMouseEvent(const MouseHitEvt& evt, DawCtrl* dawCtrl) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing()) {
+            auto type = evt.getDraggedThing()->getGuiType();
+            switch (type) {
+                case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
+                case gui_type::CTR_TYPE_PLUGIN:
+                case gui_type::CTR_TYPE_TRACK_TITLE:
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+            auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+            switch (clipboard.type) {
+                case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET:
+                case dragdrop_file_clipboard::TYPE_TRACK_CONTAINER:
+                    return true;
+                default:
+                    break;
+            }
+        }
+        return false;
+    }
+
+    bool ExportTrackToFile(DawInstance* daw, track_t* track, const String& exportDir, String& outFilename) {
+        track_snapshot_t snapshot(track, tracksnapshot_store_opts_t::All());
+        trackcontainer_snapshot_t trackContainerSnapshot;
+        trackContainerSnapshot.tracks.push_back(snapshot);
+        auto exportFilename = track->name + "." + FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
+        String path = exportDir + FILE_PATHSEP_STR + exportFilename;
+        auto [pathFile, nameFile] = daw->createUniqueNonExistingFilename(path);
+        outFilename = pathFile;
+        bool bStatus = saveTrackContainer(trackContainerSnapshot, pathFile);
+        return bStatus;
+    }
+
+} // namespace
 
 class gui_userlibrary_list_entry_t final : public gui_list_entry {
 public:
@@ -95,10 +140,95 @@ public:
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
     }
+    const String& getPathAbs() const {
+        return path;
+    }
+    const String& getDisplayName() const {
+        return displayName;
+    }
     String getText() override {
         return displayName;
     }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (this->contains(mpos) && IsHandledDragDropMouseEvent(evt, dawCtrl)) {
+            evt.requestFocus(this);
+            return true;
+        }
+        return gui_list_entry::mouseHitTest(mpos, evt);
+    }
+
+    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override {
+        auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+            dragdrop_target_indicator_t::target_area,
+            -2,
+            this,
+            { -1, -1 }
+        };
+        clipboard.isValidTarget = true;
+        clipboard.target = makeSafeRef();
+    }
+    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override;
+    void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override {
+    }
+    void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override {
+    }
+    void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override {
+    }
+    void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override {
+    }
+    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        return true;
+    }
+    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        return true;
+    }
 };
+
+class gui_user_library_browser_filebrowser_folder_entry : public gui_filebrowser_folder_entry {
+public:
+    explicit gui_user_library_browser_filebrowser_folder_entry(const FileFound& f, bool bIsOpened)
+        : gui_filebrowser_folder_entry(f, bIsOpened) {
+        icon = ICON_FOLDER;
+    }
+    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override {
+        auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+            dragdrop_target_indicator_t::target_area,
+            -2,
+            this,
+            { -1, -1 }
+        };
+        clipboard.isValidTarget = true;
+        clipboard.target = makeSafeRef();
+    }
+    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override {
+        String pathFile;
+        if (ExportTrackToFile(dawCtrl->getDaw(), g->getTrack(), getPathAbs(), pathFile)) {
+            if (!pathFile.empty()) {
+                auto popupPos = this->toScreenSpace(ivec2(0));
+                auto popupSize = this->size;
+                auto dawCtrl = this->dawCtrl;
+                auto daw = dawCtrl->getDaw();
+                daw->refreshAllUserlibraryBrowsers(); // this call may delete this instance
+                DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [daw](const String& path) {
+                    daw->refreshAllUserlibraryBrowsers();
+                    return true;
+                });
+            }
+        } else {
+            log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
+        }
+    }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (this->contains(mpos) && IsHandledDragDropMouseEvent(evt, dawCtrl)) {
+            evt.requestFocus(this);
+            return true;
+        }
+        return gui_filebrowser_folder_entry::mouseHitTest(mpos, evt);
+    }
+};
+
 namespace DAW {
     void UserLibraryAddPath(const String& path) {
         String pathSanitized = path;
@@ -139,11 +269,88 @@ public:
     }
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
     void buttonClicked(guibase* button) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (this->contains(mpos)) {
+            if (evt.type == MOUSE_DRAGDROP_CLIP) {
+                auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+                if (clipboard.type == dragdrop_file_clipboard::TYPE_DIRECTORY) {
+                    evt.requestFocus(this);
+                    return true;
+                }
+            }
+        }
+        return gui_list::mouseHitTest(mpos, evt);
+    }
+};
+
+class gui_user_library_browser_filebrowser final : public guictr_filebrowser {
+public:
+    gui_user_library_browser_filebrowser() : guictr_filebrowser() {
+    }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        bool bHit = guictr_filebrowser::mouseHitTest(mpos, evt);
+        if (!bHit && this->contains(mpos) && IsHandledDragDropMouseEvent(evt, dawCtrl)) {
+            evt.requestFocus(this);
+            return true;
+        }
+        return bHit;
+    }
+    gui_filebrowser_folder_entry* createFileBrowserFolderEntry(const FileFound& f, bool _bIsOpened) override {
+        return new gui_user_library_browser_filebrowser_folder_entry(f, _bIsOpened);
+    }
+
+    gui_filebrowser_file_entry_t* createFileBrowserFileEntry(const FileFound& f) override {
+        return new gui_filebrowser_file_entry_t(f);
+    }
+
+    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override {
+        auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+            dragdrop_target_indicator_t::target_area,
+            -2,
+            this,
+            { -1, -1 }
+        };
+        clipboard.isValidTarget = true;
+        clipboard.target = makeSafeRef();
+    }
+    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override {
+        String pathFile;
+        if (ExportTrackToFile(dawCtrl->getDaw(), g->getTrack(), getWorkingDirAbsPath(), pathFile)) {
+            if (!pathFile.empty()) {
+                auto popupPos = this->toScreenSpace(ivec2(0));
+                auto popupSize = this->size;
+                auto dawCtrl = this->dawCtrl;
+                auto daw = dawCtrl->getDaw();
+                daw->refreshAllUserlibraryBrowsers(); // this call may delete this instance
+                DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [daw](const String& path) {
+                    daw->refreshAllUserlibraryBrowsers();
+                    return true;
+                });
+            }
+        } else {
+            log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
+        }
+    }
+    void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override {
+    }
+    void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override {
+    }
+    void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override {
+    }
+    void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override {
+    }
+    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        return true;
+    }
+    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        return true;
+    }
 };
 
 class gui_user_library_browser final : public guictr_stacked {
     gui_user_library_path_list ctr_folders_list;
-    guictr_filebrowser ctr_filebrowser;
+    gui_user_library_browser_filebrowser ctr_filebrowser;
 
 public:
     gui_user_library_browser() : guictr_stacked() {
@@ -170,16 +377,70 @@ public:
         ctr_filebrowser.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
         guictr_stacked::layout();
     }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        bool bHit = guictr_stacked::mouseHitTest(mpos, evt);
+        if (!bHit && this->contains(mpos) && IsHandledDragDropMouseEvent(evt, dawCtrl)) {
+            evt.requestFocus(this);
+            return true;
+        }
+        return bHit;
+    }
+
+    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override {
+    }
+    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override {
+    }
+    void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override {
+    }
+    void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override {
+    }
+    void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override {
+    }
+    void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override {
+    }
+    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        return true;
+    }
+    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        return true;
+    }
+
     void updateList() {
         setupUserDefaultLibrary();
         auto& tls          = daw_tls::getTls();
         auto& userLibPaths = tls.settings->userLibraryPaths;
+
+        // store selected entry, so we can restore it after updating the list
+        // TODO: restoring the focused entry should be handled by the list internally
+        String pathAbsSelectedEntry;
+        bool bRestoreFocused = false;
+        auto entry = ctr_folders_list.getSelectedEntry();
+        if (entry) {
+            pathAbsSelectedEntry = static_cast<gui_userlibrary_list_entry_t*>(entry)->getPathAbs();
+            auto focusedGui = parentCtrl->getGuiFocused();
+            if (focusedGui == entry) {
+                bRestoreFocused = true;
+            }
+        }
         std::vector<gui_list_entry*> _newList;
         _newList.reserve(userLibPaths.size());
         for (auto& path : userLibPaths) {
             _newList.push_back(new gui_userlibrary_list_entry_t({ path, DirNameFromPath(path), "" }));
         }
         ctr_folders_list.setList(_newList);
+        // restore selected entry
+        if (!pathAbsSelectedEntry.empty()) {
+            auto it = std::find_if(_newList.begin(), _newList.end(), [pathAbsSelectedEntry](gui_list_entry* e) {
+                return static_cast<gui_userlibrary_list_entry_t*>(e)->getPathAbs() == pathAbsSelectedEntry;
+            });
+            if (it != _newList.end()) {
+                auto idx = int32_t(it - _newList.begin());
+                ctr_folders_list.setSelectedIdx(idx);
+                if (bRestoreFocused) {
+                    parentCtrl->focusGui(*it);
+                }
+            }
+        }
         if (ctr_folders_list.getSelectedIdx() < 0) {
             ctr_folders_list.setSelectedIdx(0);
         }
@@ -249,6 +510,26 @@ public:
         layout();
     }
 };
+
+void gui_userlibrary_list_entry_t::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
+    String pathFile;
+    if (ExportTrackToFile(dawCtrl->getDaw(), g->getTrack(), getPathAbs(), pathFile)) {
+        if (!pathFile.empty()) {
+            auto popupPos = this->toScreenSpace(ivec2(0));
+            auto popupSize = this->size;
+            auto dawCtrl = this->dawCtrl;
+            auto daw = dawCtrl->getDaw();
+            parent->buttonClicked(this);
+            // daw->refreshAllUserlibraryBrowsers(); // this call may delete this instance
+            DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [daw](const String& path) {
+                daw->refreshAllUserlibraryBrowsers();
+                return true;
+            });
+        }
+    } else {
+        log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
+    }
+}
 
 bool gui_user_library_path_list::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
     auto parent = guiParentType<gui_user_library_browser, gui_type::CTR_TYPE_USERLIBRARY_BROWSER>(this);
@@ -371,3 +652,12 @@ namespace DAW::UI {
         return new guictr_effectlibrary();
     }
 }// namespace DAW::UI
+
+void DawCtrl::refreshAllUserlibraryBrowsers() {
+    visitGuis(gui_type::CTR_TYPE_USERLIBRARY_BROWSER, [](guictr_base* ctr) {
+        auto list = gui_cast<gui_user_library_browser, gui_type::CTR_TYPE_USERLIBRARY_BROWSER>(ctr);
+        if (list) {
+            list->updateList();
+        }
+    });
+}

@@ -640,9 +640,9 @@ void guitrack_editor::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrac
     }
 }
 
-bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
-    if (this->contains(v)) {
-        ivec2 localMouse = this->toContainerSpace(v);
+bool guitrack_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (this->contains(mpos)) {
+        ivec2 localMouse = this->toContainerSpace(mpos);
         for (guibase* gui : guis) {
             if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                 if (!evt.getGuiHit()) 

@@ -2120,6 +2120,17 @@ void DawCtrl::updateClipViews(clip_t* notifyClip) {
         return true;
     });
 }
+bool DawCtrl::visitGuis(gui_type type, std::function<void(guictr_base*)> func) {
+    bool bAny = false;
+    view->visitEntries([&](SPLayoutEntry& entry) {
+        if (entry->getType() == type) {
+            bAny = true;
+            func(entry->getGui());
+        }
+        return true;
+    });
+    return bAny;
+}
 
 void DawCtrl::resetClipViews() {
     // auto countVec = view->vecClipEditors.size();

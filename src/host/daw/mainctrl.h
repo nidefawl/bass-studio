@@ -140,7 +140,7 @@ namespace DAW {
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
     void OpenFloatingTextInput(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
-    bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs, const std::function<bool(const String& str)>& callback);
+    bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs, std::function<bool(const String& str)> callback);
     void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip);
     void deleteTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
     void insertTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor, int32_t len);
@@ -661,6 +661,7 @@ public:
     void updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& settings);
     void updateAudioProcessingTask();
     void updateLoadAudioTasks();
+    void refreshAllUserlibraryBrowsers();
 private:
     void onDawCompanionWindowClose(DawWindowCompanion& entry);
     void saveProjectBundle(const String& path);
@@ -814,7 +815,8 @@ public:
     void resetClipViews();
     void onTrackContentRemoved(track_gui_entry_t& e);
     void onTrackMixerRemoved(track_gui_entry_t& e);
-
+    bool visitGuis(gui_type type, std::function<void(guictr_base*)> func);
+    void refreshAllUserlibraryBrowsers();
     void updateVisibleTrackContents();
 
     virtual void setStatusText(String s) {

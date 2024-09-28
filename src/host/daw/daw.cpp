@@ -1045,6 +1045,12 @@ void DawInstance::setAsyncTask(DAW::async_task_t* task) {
     }
 }
 
+void DawInstance::refreshAllUserlibraryBrowsers() {
+    for (auto* dawctrl : dawCtrls) {
+        dawctrl->refreshAllUserlibraryBrowsers();
+    }
+}
+
 void DawInstance::setMainControl(MainCtrl* _mainCtrl) {
     dbgassert(!tls.mainCtrl);
     tls.mainCtrl = _mainCtrl;
