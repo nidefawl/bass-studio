@@ -130,7 +130,6 @@ void guictr_pluginlibrary::update() {
 void guictr_pluginlibrary::buttonClicked(guibase* button) {
     guictr_base::buttonClicked(button);
     if (button->parent == &pluginListCtr) {
-        log_printf("Selected %s\n", StringAsCStr(button->getLabel()));
         auto gui = gui_cast<gui_list_folder_entry, gui_type::GUI_TYPE_LIST_FOLDER>(button);
         if (gui) {
             bool bIsOpened = gui->isOpened();

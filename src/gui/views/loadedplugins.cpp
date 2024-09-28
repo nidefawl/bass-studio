@@ -233,22 +233,19 @@ public:
     }
 };
 
-class gui_list_plugins final : public guictr_base {
+class gui_list_plugins final : public gui_list {
     std::vector<gui_pluginsloaded_list_entry*>& entries;
 
 public:
-    gui_list list;
 
-    gui_list_plugins(std::vector<gui_pluginsloaded_list_entry*>& _entries) : guictr_base(), entries(_entries) {
+    explicit gui_list_plugins(std::vector<gui_pluginsloaded_list_entry*>& _entries) : gui_list(), entries(_entries) {
         setBackgroundRendered(true);
-        list.padding = 0;
-        list.setBackgroundRendered(false);
-        list.setRowHeight(14);
-        add(&list);
+        // padding = 0;
+        // setBackgroundRendered(false);
+        setRowHeight(14);
     }
-    void sort() {
-
-        list.sort([](gui_list_entry* ptrA, gui_list_entry* ptrB) {
+    void sortList() {
+        sort([](gui_list_entry* ptrA, gui_list_entry* ptrB) {
             dbgassert(ptrA && ptrB);
             effectbase* ptrEffA = safeRefGet(static_cast<gui_pluginsloaded_list_entry*>(ptrA)->getRef());
             effectbase* ptrEffB = safeRefGet(static_cast<gui_pluginsloaded_list_entry*>(ptrB)->getRef());
@@ -262,15 +259,11 @@ public:
         });
     }
     void layout() override {
-        auto cs           = getSizeContent();
-        list.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
-        list.pos            = { 0, 0 };
-        list.size           = cs;
-        for (auto* g : guis) {
-            g->layout();
-        }
+        setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
+        gui_list::layout();
     }
     void buttonClicked(guibase* button) override {
+        gui_list::buttonClicked(button);
         if (stl_contains(entries, button)) {
             auto entry = static_cast<gui_pluginsloaded_list_entry*>(button);
             auto* effectbase = safeRefGet(entry->getRef());
@@ -280,27 +273,10 @@ public:
                     dawCtrl->setSelectedTrack(tr);
                     dawCtrl->showPluginView();
                     dawCtrl->revealPlugin(effectbase);
+                    dawCtrl->focusGui(button);
                 }
             }
         }
-    }
-    void render(NVGcontext* vg) override {
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        for (auto* g : guis) {
-            if (g->isVisible()) {
-                nvgSave(vg);
-                g->render(vg);
-                nvgRestore(vg);
-            }
-        }
-    }
-    ~gui_list_plugins() override {
-        removeGuis();
     }
 };
 class gui_pluginsloaded_list final : public guictr_base {
@@ -399,12 +375,12 @@ public:
             btnLoadAll.setText(btnLoadAll.getLabel());
         }
 
-        listCtr.list.setList(_newList);
-        listDeferredCtr.list.setList(_newListDef);
+        listCtr.setList(_newList);
+        listDeferredCtr.setList(_newListDef);
         listEntriesLoadedPlugins = _newListLoadedPlugins;
         listEntriesDef           = _newListDefPlugins;
-        listDeferredCtr.sort();
-        listCtr.sort();
+        listDeferredCtr.sortList();
+        listCtr.sortList();
         layout();
     }
     void buttonClicked(guibase* button) override {

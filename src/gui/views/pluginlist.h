@@ -1,20 +1,13 @@
 #pragma once
 #include "gui/container/container_layout_types.h"
-#include "logging.h"
-#include "nanovg/nanovg.h"
 #include "host/daw/mainctrl.h"
 #include "gui/gui.h"
-#include "saferef.h"
 #include "str_util.h"
-#include "guicolors.h"
-#include "exceptions.h"
-#include "mouse.h"
 #include "gui/controls/textfield.h"
 #include "gui/controls/list.h"
 #include "host/plugindatabase/plugindatabase.h"
 #include "host/host_pluginmanager.h"
 #include "host/plugin/modules.h"
-#include "gui/tooltip/tooltip.h"
 #include "host/host_pluginmanager.h"
 #include <vector>
 
@@ -170,7 +163,7 @@ struct module_desc_t {
 class gui_modulelist_entry final : public gui_pluginlist_entry {
 public:
     const module_desc_t entry;
-    gui_modulelist_entry(const module_desc_t _entry) : gui_pluginlist_entry(), entry(_entry) {
+    explicit gui_modulelist_entry(const module_desc_t& _entry) : gui_pluginlist_entry(), entry(_entry) {
         icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
         label = _entry.name;
     }

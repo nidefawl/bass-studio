@@ -141,3 +141,12 @@ bool gui_list::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset
     }
     return true;
 }
+
+guibase* gui_list::getFocusedContainer() {
+    if (this->parent != nullptr && !this->isBackgroundRendered()) {
+        if (this->parent->getGuiType() != gui_type::CTR_TYPE_LAYOUT) {
+            return this->parent->getFocusedContainer();
+        }
+    }
+    return this;
+}

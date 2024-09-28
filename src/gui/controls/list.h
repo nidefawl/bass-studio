@@ -34,7 +34,6 @@ public:
     }
     void setDepth(int32_t depth) {
         entryDepth = depth;
-    
     }
 };
 
@@ -188,9 +187,7 @@ public:
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
     void buttonClicked(guibase* button) override;
 
-    guibase* getFocusedContainer() override {
-        return this;
-    }
+    guibase* getFocusedContainer() override;
 
     std::vector<gui_list_entry*>& getListRef() {
         return listGuis;

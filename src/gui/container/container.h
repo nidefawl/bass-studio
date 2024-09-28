@@ -283,12 +283,7 @@ public:
         }
     }
 
-    guibase* getFocusedContainer() override {
-        if (this->parent != nullptr) {
-            return this->parent->getFocusedContainer();
-        }
-        return this;
-    }
+    guibase* getFocusedContainer() override;
 
     void addProperties(Table::tbl* table) override;
 

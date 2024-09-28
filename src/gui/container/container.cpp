@@ -207,19 +207,30 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
     posInset -= ivec2(margin);
     sizeInset += ivec2(margin) * 2;
     if (sizeInset.y > 0 && sizeInset.x > 0) {
+        nvgTranslateZ(vg, -2.0f);
         auto stateflags = getStateFlags();
-        nvgTranslateZ(vg, -2.0f);
         nvgShapeAntiAlias(vg, 0);
-        nvgBeginPath(vg);
-        nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-        NVGcolor bg = theme->getColor(getOuterBackgroundColorFromState(stateflags));
-        nvgFillColor(vg, bg);
-        nvgFill(vg);
-        nvgShapeAntiAlias(vg, USE_NANOVG_AA);
-        nvgTranslateZ(vg, -2.0f);
-        posInset += borderThickness;
-        sizeInset -= borderThickness * 2;
-        if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
+        getFocusedContainer();
+        if (this == parentCtrl->getGuiCtrFocused()) {
+            nvgBeginPath(vg);
+            nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+            NVGcolor bg = theme->getColor(getOuterBackgroundColorFromState(stateflags));
+
+            nvgFillColor(vg, bg);
+            if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
+                // nvgFillCustomPar(vg, -5);
+            }
+            nvgFill(vg);
+            nvgTranslateZ(vg, -2.0f);
+            posInset += borderThickness;
+            sizeInset -= borderThickness * 2;
+            if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
+                nvgBeginPath(vg);
+                nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+                nvgFillColor(vg, theme->getColor(getInnerBackgroundColorFromState(stateflags)));
+                nvgFill(vg);
+            }
+        } else {
             nvgBeginPath(vg);
             nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
             nvgFillColor(vg, theme->getColor(getInnerBackgroundColorFromState(stateflags)));
@@ -227,6 +238,7 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
         }
         nvgTranslateZ(vg, 3.0f);
     }
+    nvgShapeAntiAlias(vg, USE_NANOVG_AA);
 }
 
 bool guictr_base::setScissorTransformContainer(NVGcontext* vg) {
@@ -525,4 +537,13 @@ bool guictr_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
     }
     return false;
+}
+
+guibase* guictr_base::getFocusedContainer() {
+    if (this->parent != nullptr && !this->isBackgroundRendered()) {
+        if (this->parent->getGuiType() != gui_type::CTR_TYPE_LAYOUT) {
+            return this->parent->getFocusedContainer();
+        }
+    }
+    return this;
 }
