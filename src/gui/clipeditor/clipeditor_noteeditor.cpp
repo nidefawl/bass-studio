@@ -1116,9 +1116,10 @@ void gui_audiocontent::updatePosition() {
     }
     const auto tempo100 = dawCtrl->getDaw()->getGlobals().tempo100;
     const auto samplerate = view.track()->audio->sampleFormat.sampleRate;
-
-    dbgassert(size.x > 0);
-    audioclip_texture_t waveform = makeWaveformFromSample(tempo100, samplerate, grid, clipAudio, ivec2(0, 0), size);
+    audioclip_texture_t waveform;
+    if (size.x > 0) {
+        waveform = makeWaveformFromSample(tempo100, samplerate, grid, clipAudio, ivec2(0, 0), size);
+    } 
     waveform.sampleVersion = audio->getSample()->sampleVersion;
     if (waveform.size.x < 1 || waveform.size.y < 1) {
         releaseRendered();
