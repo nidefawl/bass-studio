@@ -592,11 +592,16 @@ effectbase* gui_pluginlibrary_entry::makeInstance() {
         res.plugin->setName(entry.name);
         res.plugin->localDbId = entry.localDbId;
         return res.plugin;
+    } else {
+        log_lf(Log::L_ERROR, "makeInstance failed: Cannot load %s\n", StringAsCStr(entry.name));
     }
     return nullptr;
 }
 effectbase* gui_modulelist_entry::makeInstance() {
     effectbase* instance = dawCtrl->getDaw()->getPluginManager()->makeModuleInstance(entry.moduleType, entry.moduleId, -1);
+    if (!instance) {
+        log_lf(Log::L_ERROR, "makeModuleInstance failed: Cannot load %s\n", StringAsCStr(entry.name));
+    }
     return instance;
 }
 
@@ -634,7 +639,6 @@ void guictr_dragged_plugins::dragMoveOn(guibase* target, ivec2 mousepos) {
 }
 
 void guictr_dragged_plugins::dragReleaseOn(guibase* target, ivec2 mousepos) {
-    log_printf("guictr_dragged_plugins %s drag on %s\n", StringAsCStr(effects.front()->getName()), StringAsCStr(target->getClassName()));
     target->pluginMultiDragRelease(this, toControlsObjectSpace(mousepos, target));
 }
 void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
