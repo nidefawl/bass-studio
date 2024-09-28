@@ -109,6 +109,8 @@ void guictr_base::renderBackground(NVGcontext* vg) {
         nvgFillColor(vg, rgbaToNvg(0x7fff00ff));
         nvgFill(vg);
     }
+    auto& target = dawCtrl->getDragDropTarget();
+    bool extend = target.dst == this->ctr.get();
 }
 
 void guictr_base::renderFrameBase(NVGcontext* vg) {
@@ -210,16 +212,12 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
         nvgTranslateZ(vg, -2.0f);
         auto stateflags = getStateFlags();
         nvgShapeAntiAlias(vg, 0);
-        getFocusedContainer();
         if (this == parentCtrl->getGuiCtrFocused()) {
             nvgBeginPath(vg);
             nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
             NVGcolor bg = theme->getColor(getOuterBackgroundColorFromState(stateflags));
 
             nvgFillColor(vg, bg);
-            if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
-                // nvgFillCustomPar(vg, -5);
-            }
             nvgFill(vg);
             nvgTranslateZ(vg, -2.0f);
             posInset += borderThickness;
