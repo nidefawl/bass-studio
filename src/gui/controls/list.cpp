@@ -26,8 +26,8 @@ void gui_list_entry::render(NVGcontext* vg) {
     float spacing   = INSET_TITLE;
     float x         = spacing;
     float rowHeight = size.y;
-    bool focused = ctrl->isCtrOrChildFocused(this);
-    if (focused || selected) {
+    if (selected) {
+        bool focused = ctrl->isCtrOrChildFocused(this); // this check might get expensive on lists with many entries
         auto color = theme->getColor(focused ? GuiColor::COL_BG_DRKER : GuiColor::COL_BG_DRK);
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
