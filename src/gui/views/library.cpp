@@ -358,8 +358,8 @@ public:
         return new gui_user_library_browser_filebrowser_folder_entry(f, _bIsOpened);
     }
 
-    gui_filebrowser_file_entry_t* createFileBrowserFileEntry(const FileFound& f) override {
-        return new gui_filebrowser_file_entry_t(f);
+    gui_filebrowser_file_entry* createFileBrowserFileEntry(const FileFound& f) override {
+        return new gui_filebrowser_file_entry(f);
     }
 
     void trackEntryDragMove(gui_track* g, ivec2 mousepos) override {

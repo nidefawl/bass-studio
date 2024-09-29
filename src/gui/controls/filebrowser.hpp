@@ -94,10 +94,10 @@ public:
     }
 };
 
-class gui_filebrowser_file_entry_t final : public gui_filebrowser_entry_base {
+class gui_filebrowser_file_entry final : public gui_filebrowser_entry_base {
     bool bTriedLoading = false;
 public:
-    explicit gui_filebrowser_file_entry_t(const FileFound& f)
+    explicit gui_filebrowser_file_entry(const FileFound& f)
         : gui_filebrowser_entry_base(f.name, f.path) {
         setGuiType(gui_type::GUI_TYPE_LIST_USER_LIBRARY_FILE);
         icon = GetIconFromExtension(f.name);
@@ -173,7 +173,7 @@ public:
             selectedFolderAbsPath = folder->getPathAbs();
             updateList();
         } else {
-            auto file = gui_cast<gui_filebrowser_file_entry_t, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FILE>(button);
+            auto file = gui_cast<gui_filebrowser_file_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FILE>(button);
             if (file) {
                 selectedFileAbsPath = file->getPathAbs();
             }
@@ -228,8 +228,8 @@ public:
         return new gui_filebrowser_folder_entry(f, bIsOpened);
     }
 
-    virtual gui_filebrowser_file_entry_t* createFileBrowserFileEntry(const FileFound& f) {
-        return new gui_filebrowser_file_entry_t(f);
+    virtual gui_filebrowser_file_entry* createFileBrowserFileEntry(const FileFound& f) {
+        return new gui_filebrowser_file_entry(f);
     }
 
     void updateListRecursive(const String& path, const std::vector<String>& fileExtensions, std::vector<String>& dirsVisited, int32_t depth, std::vector<FileFound>& outFiles) {
@@ -387,7 +387,7 @@ public:
             filesFound = task->getFilesFound();
             std::vector<gui_list_entry*> _newList;
             for (auto& f : filesFound) {
-                _newList.push_back(new gui_filebrowser_file_entry_t(f));
+                _newList.push_back(new gui_filebrowser_file_entry(f));
                 _newList.back()->setDepth(f.depth);
                 _newList.back()->setTooltipText(f.path);
             }
