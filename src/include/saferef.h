@@ -10,11 +10,11 @@ protected:
     ~SafeRefHandler() = default;
 
 public:
-    SafeRefHandler()                        = default;
-    virtual size_t safeRefCreate(T*)           = 0;
-    virtual T* safeRefGetPtr(size_t refId) = 0;
+    SafeRefHandler()                                   = default;
+    virtual size_t safeRefCreate(T*)                   = 0;
+    virtual T* safeRefGetPtr(size_t refId)             = 0;
     virtual const T* safeRefGetPtr(size_t refId) const = 0;
-    virtual void safeRefDestroy(size_t refId) = 0;
+    virtual void safeRefDestroy(size_t refId)          = 0;
 };
 
 template<typename T>

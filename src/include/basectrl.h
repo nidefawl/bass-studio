@@ -196,9 +196,6 @@ public:
     virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
     bool isDraggingContainer() const { return draggedLayoutContainer != nullptr || bShowDebugFrames; }
     SafeRefStorage<guibase>& getRefStorage();
-    // int safeRefCreate(guibase* gui) override;
-    // guibase* safeRefGetPtr(int32_t refId) override;
-    // void safeRefDestroy(int32_t refId) override;
     bool isOk() const { return isOK; }
     virtual guitheme_t* getTheme() { return &themes.getRef(); }
     guitheme_mgr* getThemeMgr() { return &themes; }
