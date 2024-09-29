@@ -16,6 +16,7 @@
 #include "event.h"
 #include "renderresources.h"
 #include "gui/controls/button.h"
+#include "saferef.h"
 #include "str_util.h"
 #include "host/daw/mainctrl.h"
 
@@ -110,7 +111,7 @@ void guictr_base::renderBackground(NVGcontext* vg) {
         nvgFillColor(vg, rgbaToNvg(0x7fff00ff));
         nvgFill(vg);
     }
-    if (dawCtrl->getDragDropTarget().dst == this) {
+    if (safeRefGet(dawCtrl->getDragDropTarget().target) == this) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
         nvgFillColor(vg, rgbaToNvg(0x3fdddd33));
@@ -530,6 +531,8 @@ bool guictr_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
         if (evt.type == MouseHitType::MOUSE_SCROLL) {
             evt.requestFocus(this);
             return true;

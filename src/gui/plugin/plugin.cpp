@@ -321,12 +321,9 @@ void guiplugin::handleDraggedMove(MouseEvent& evt) {
             parentCtrl->setDragged(&sel.pluginCtr->dragged);
             hasDragged = true;
         }
-    } else {
-        dawCtrl->objectDragMove(this, evt);
     }
 }
 void guiplugin::handleDraggedRelease(MouseEvent& evt) {
-    dawCtrl->objectDragRelease(this, evt);
     if (hasDragged) {
         dbgassert(0);
         return;
@@ -372,9 +369,6 @@ bool guiplugin::focusEvent(MouseHitEvt& evt, bool focused) {
 }
 void guiplugin::setControl(BaseCtrl* parentCtrl) {
     guictr_base::setControl(parentCtrl);
-}
-guibase* guiplugin::getDraggedControl() {
-    return this;
 }
 bool guiplugin::isSelected() {
     if (!parentCtrl) {

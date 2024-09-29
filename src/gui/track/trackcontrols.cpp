@@ -1670,6 +1670,13 @@ void gui_track_controls::render(NVGcontext* vg) {
     nvgFillColor(vg, bgColor);
     nvgFill(vg);
 
+    if (safeRefGet(dawCtrl->getDragDropTarget().target) == this) {
+        nvgBeginPath(vg);
+        nvgRect(vg, 0, 0, size.x, size.y);
+        nvgFillColor(vg, rgbaToNvg(0x3fdddd33));
+        nvgFill(vg);
+    }
+
     for (guibase* g : guis) {
         //content
         nvgSave(vg);
@@ -1700,10 +1707,14 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     ivec2 local    = this->toContainerSpace(mpos);
     bool contained = contains(mpos);
     if (contained) {
-        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_HOVER) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) {
             return false;
         }
-        if (evt.type == MOUSE_DRAGDROP_OBJECT) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
             return false;
         }
         for (guibase* gui : guis) {
@@ -1713,7 +1724,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
         evt.requestFocus(this);
     }
-    if (evt.type <= MOUSE_RIGHT) {
+    if (evt.type <= MouseHitType::MOUSE_RIGHT) {
         guibase* g = nullptr;
         if (m_track->type < TRACK_TYPE_MIDI) {
             if (isResize(mpos)) {
@@ -1735,6 +1746,10 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
     }
     return contained;// always need to return true if contained, parent has z-order
+}
+
+void gui_track_controls::handleDragDropHover(MouseHitEvt& mouseHit) {
+    dawCtrl->setSelectedTrackEntry(m_trackentry);
 }
 
 gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry, scaled_grid& _grid)
@@ -1922,17 +1937,17 @@ void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepo
     }
     switch (slot.droptype) {
         case drop_type::track_on:
-            target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget, dropPos + ivec2(0, dropSize.y / 2), "Move '" + clipboardName + "' to '" + trNameDest + "'" };
+            target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget->toRef(), dropPos + ivec2(0, dropSize.y / 2), "Move '" + clipboardName + "' to '" + trNameDest + "'" };
             break;
         case drop_type::track_before:
-            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, dropPos + ivec2(0, 2), "Move '" + clipboardName + "' here" };
+            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget->toRef(), dropPos + ivec2(0, 2), "Move '" + clipboardName + "' here" };
             break;
         case drop_type::track_after:
-            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, dropPos + ivec2(0, dropSize.y - 2), "Move '" + clipboardName + "' here" };
+            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget->toRef(), dropPos + ivec2(0, dropSize.y - 2), "Move '" + clipboardName + "' here" };
             break;
         case drop_type::none:
             // new track
-            target = { dragdrop_target_indicator_t::target_area, treeIdx, parent, parent->pos + parent->size / 2, "Insert " + clipboardName + " on new track" };
+            target = { dragdrop_target_indicator_t::target_area, treeIdx, parent->toRef(), parent->pos + parent->size / 2, "Insert " + clipboardName + " on new track" };
             break;
         default:
             dbgassert(0);

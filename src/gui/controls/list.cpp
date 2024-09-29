@@ -89,10 +89,11 @@ void gui_list::render(NVGcontext* vg) {
         nvgTranslate(vg, 0, -g->top());
     }
     int32_t dragDropHighlightIdx = -1;
-    const auto dragdropTarget = dawCtrl->getDragDropTarget();
+    const auto dragDropTarget = dawCtrl->getDragDropTarget();
+    const auto dragdropTargetGui = safeRefGet(dragDropTarget.target);
     const auto frameWidth = 3;
-    if (dragdropTarget.dst && dragdropTarget.dst->parent == this) {
-        dragDropHighlightIdx = indexOfCtr(listGuis, dragdropTarget.dst);
+    if (dragdropTargetGui && dragdropTargetGui->parent == this) {
+        dragDropHighlightIdx = indexOfCtr(listGuis, dragdropTargetGui);
     }
     if (dragDropHighlightIdx >= first && dragDropHighlightIdx < last) {
         auto dst = listGuis[dragDropHighlightIdx];

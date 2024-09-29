@@ -60,14 +60,11 @@ public:
     ~guictr_dragged_plugins() override = default;
     void layout() override {
     }
-    bool isDragMoveable() override {
-        return true;
-    }
     virtual audio_stage_t* getTrackLink() {
         return trackImpl;
     }
     void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
-    void setStrings(std::vector<String>&& list);
+    void setStrings(std::vector<String> list);
     void handleDraggedRelease(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void dragMoveOn(guibase* target, ivec2 mousepos) override;
@@ -171,8 +168,8 @@ public:
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
     void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
-    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     void showTrack(audio_stage_t* track, std::shared_ptr<guictr_plugins>& ctr);
     void relayout();
     void resetTrackIf(audio_stage_t* _track);
@@ -206,6 +203,7 @@ public:
     float getMinScale();
     void handleDraggedMove(MouseEvent& evt) override;
     void layout() override;
+    void handleDragDropHover(MouseHitEvt& mouseHit) override;
 };
 
 class action_remove_modules final : public action_base {

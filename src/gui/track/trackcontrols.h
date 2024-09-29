@@ -51,4 +51,5 @@ public:
     void layout() override;
     guibase* getTitle();
     String getLabel() const override;
+    void handleDragDropHover(MouseHitEvt& mouseHit) override;
 };

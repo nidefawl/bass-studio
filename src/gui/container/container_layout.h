@@ -83,7 +83,6 @@ class guictr_tabbed : public guictr_base {
 public:
     guictr_tabbed() : guictr_base() {
         setCanMouseHit(true);
-        setDragRendered(true);
     }
     ~guictr_tabbed();
     void setTabMenuInset(ivec2 offset) {

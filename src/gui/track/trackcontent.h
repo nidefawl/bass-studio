@@ -109,9 +109,6 @@ public:
     void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) override;
     void trackViewDragMove(guitrack_editor* view, MouseEvent& evt) override;
     void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) override;
-    bool isDragMoveable() override {
-        return true;
-    }
 
     virtual int getClipType()                    = 0;
     virtual void renderDebugPass(NVGcontext* vg) = 0;
@@ -327,6 +324,7 @@ public:
 
     void handleRightClick(MouseEvent& evt) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void handleDragDropHover(MouseHitEvt& mouseHit) override;
     void prerender(NVGcontext* vg) override;
     void renderDebugPass(NVGcontext* vg);
     void renderTrackFolded(NVGcontext* vg);

@@ -473,7 +473,8 @@ void guictr_tracks::render(NVGcontext* vg) {
         nvgRestore(vg);
 
         dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
-        if (dragDropTarget.dst && (dragDropTarget.dst == this || dragDropTarget.dst->parent == &trackControls || dragDropTarget.dst->parent == &trackView)) {
+        const auto dragdropTargetGui = safeRefGet(dragDropTarget.target);
+        if (dragdropTargetGui && (dragdropTargetGui == this || dragdropTargetGui->parent == &trackControls || dragdropTargetGui->parent == &trackView)) {
             nvgSave(vg);
             nvgTranslate(vg, 0, trackView.top());
             int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
@@ -497,7 +498,7 @@ void guictr_tracks::render(NVGcontext* vg) {
                             dragDropTarget.targetPos = ivec2(0, lastEntry->mixer->bottom() + TRACK_HEIGHT_SPACING_HALF*2.0f + trackHeight * 0.5f);
                         }
                     } else {
-                        nvgRect(vg, dragDropTarget.dst->pos.x, dragDropTarget.dst->pos.y, dragDropTarget.dst->size.x, dragDropTarget.dst->size.y);
+                        nvgRect(vg, dragdropTargetGui->pos.x, dragdropTargetGui->pos.y, dragdropTargetGui->size.x, dragdropTargetGui->size.y);
                     }
                     nvgPathWinding(vg, NVGwinding::NVG_CCW);
                 }
@@ -512,7 +513,7 @@ void guictr_tracks::render(NVGcontext* vg) {
             int fontScale = titleHeight;
             auto desc = dragDropTarget.desc;
             if (desc.empty()) {
-                // desc = "Drop " dragDropTarget.dst->getLabel() + StringFormat("[%d]", dragDropTarget.slotIdx)
+                // desc = "Drop " dragdropTargetGui->getLabel() + StringFormat("[%d]", dragDropTarget.slotIdx)
                 desc = "Drop here";
             }
             renderCenteredMultilineText(vg, theme, desc, fontScale, getLabelColor(), indicatorPos, ivec2(titleHeight * 30, titleHeight * 2));
@@ -565,7 +566,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     }
 }
 
-guitrack_editor::guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_file_clipboard& _dragdropclip)
+guitrack_editor::guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_file& _dragdropclip)
     : guictr_base(),
       iGuiMgr(_iGuiMgr),
       cursor(_cursor),
@@ -650,11 +651,11 @@ bool guitrack_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
-        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+        if (evt.type == MOUSE_DRAGDROP_FILE) {
             auto clipboard = dawCtrl->getDaw()->getDragDropClip();
             switch (clipboard.type) {
-                case dragdrop_file_clipboard::TYPE_AUDIOFILE:
-                case dragdrop_file_clipboard::TYPE_CLIP:
+                case dragdrop_file::TYPE_AUDIOFILE:
+                case dragdrop_file::TYPE_CLIP:
                     evt.requestFocus(this);
                     return true;
                 default:
@@ -855,7 +856,7 @@ bool guitrack_mixers::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
-        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+        if (evt.type == MOUSE_DRAGDROP_FILE) {
             return false;
         }
         if (evt.type == MOUSE_DRAGDROP_OBJECT) {
@@ -940,7 +941,7 @@ void guictr_tracks::removeAllTracks() {
     }
 }
 
-guictr_tracks::guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file_clipboard& _dragdropclip)
+guictr_tracks::guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file& _dragdropclip)
     : guictr_base(),
       trackContainerGlobalIndex(_dawCtrl->getDawWindowIndex()),
       project(_project),
@@ -1008,7 +1009,6 @@ bool guictr_tracks::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             auto type = evt.getDraggedThing()->getGuiType();
             switch (type) {
                 case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
-                case gui_type::CTR_TYPE_PLUGIN:
                 case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
                 case gui_type::CTR_TYPE_TRACK_TITLE:
                     evt.requestFocus(this);
@@ -1018,11 +1018,11 @@ bool guictr_tracks::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
             return false;
         }
-        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+        if (evt.type == MOUSE_DRAGDROP_FILE) {
             auto clipboard = dawCtrl->getDaw()->getDragDropClip();
             switch (clipboard.type) {
-                case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET:
-                case dragdrop_file_clipboard::TYPE_TRACK_CONTAINER:
+                case dragdrop_file::TYPE_PLUGIN_PRESET:
+                case dragdrop_file::TYPE_TRACK_CONTAINER:
                     evt.requestFocus(this);
                     return true;
                 default:
@@ -1044,7 +1044,7 @@ void guictr_tracks::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepo
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
             dragdrop_target_indicator_t::target_area,
             -2,
-            this,
+            toRef(),
             this->pos + this->size/2,
             "Move " + clipboardDescription + " to new track"
         };
@@ -1090,7 +1090,7 @@ void guictr_tracks::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepo
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        dstTrackEntry->mixer,
+        dstTrackEntry->mixer->toRef(),
         slot.pos, 
         "Move " + clipboardDescription + " to " + dstTrack->name
     };
@@ -1103,7 +1103,7 @@ void guictr_tracks::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos)
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
             dragdrop_target_indicator_t::target_area,
             -2,
-            this,
+            toRef(),
             this->pos + this->size/2,
             "Insert " + clipboardDescription + " on new track"
         };
@@ -1130,7 +1130,7 @@ void guictr_tracks::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos)
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        dstTrackEntry->mixer,
+        dstTrackEntry->mixer->toRef(),
         slot.pos, 
         "Insert " + clipboardDescription + " on " + dstTrack->name
     };
@@ -1275,12 +1275,12 @@ void guictr_tracks::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mous
     DAW::InsertDraggedPluginsOnTrack(daw, dstTrack, g);
 }
 
-bool guictr_tracks::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guictr_tracks::fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
     auto clipboard = dawCtrl->getDaw()->getDragDropClip();
     switch (clipboard.type) {
-        case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET:
-        case dragdrop_file_clipboard::TYPE_TRACK_CONTAINER:
-            DAW::SetDragDropTrackInidicatorFromMousePos(this, trackControls.toContainerSpace(mousepos), clip.path, clipboard.type == dragdrop_file_clipboard::TYPE_TRACK_CONTAINER);
+        case dragdrop_file::TYPE_PLUGIN_PRESET:
+        case dragdrop_file::TYPE_TRACK_CONTAINER:
+            DAW::SetDragDropTrackInidicatorFromMousePos(this, trackControls.toContainerSpace(mousepos), clip.path, clipboard.type == dragdrop_file::TYPE_TRACK_CONTAINER);
             clip.isValidTarget = true;
             clip.target = makeSafeRef();
             return true;
@@ -1289,12 +1289,12 @@ bool guictr_tracks::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, 
     }
     return false;
 }
-bool guictr_tracks::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guictr_tracks::fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
     auto daw = dawCtrl->getDaw();
     auto clipboard = daw->getDragDropClip();
-    DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), clipboard.type == dragdrop_file_clipboard::TYPE_TRACK_CONTAINER);
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), clipboard.type == dragdrop_file::TYPE_TRACK_CONTAINER);
     switch (clipboard.type) {
-        case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET: {
+        case dragdrop_file::TYPE_PLUGIN_PRESET: {
             ThreadLock lock = daw->getPlayThread()->lockThread();
             track_t* track = nullptr;
             if (slot.droptype == DAW::gui_track_drop_position_t::drop_type::none) {
@@ -1320,7 +1320,7 @@ bool guictr_tracks::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos,
             }
             return true;
         }
-        case dragdrop_file_clipboard::TYPE_TRACK_CONTAINER: {
+        case dragdrop_file::TYPE_TRACK_CONTAINER: {
             ThreadLock lock = daw->getPlayThread()->lockThread();
             DAW::InsertTrackContainerOnTrack(daw, clip.trackcontainer.get(), slot);
             return true;

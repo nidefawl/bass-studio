@@ -77,13 +77,9 @@ public:
     }
     void setState(bool state) {
     }
-    bool isDragMoveable() override {
-        return true;
-    }
     bool focusEvent(MouseHitEvt& evt, bool focused) override;
 
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
-    guibase* getDraggedControl() override;
     void setControl(BaseCtrl* parentCtrl) override;
     bool isSelected() override;
     void addProperties(Table::tbl* table) override;

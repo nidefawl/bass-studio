@@ -435,10 +435,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         strings.push_back(String("guiFocused: ") + str);
         str = "<null>";
         auto& target = ctrl->getDragDropTarget();
-        if (target.dst) {
-            strings.push_back(String("DragDropTarget: ") + target.dst->getClassName());
-        }
-
+        const auto dragdropTargetGui = safeRefGet(target.target);
+        strings.push_back(String("DragDropTarget: ") + (dragdropTargetGui ? dragdropTargetGui->getClassName() : "<null>"));
         guibase* p = guiFocused;
         int lvl    = 0;
         while (p) {

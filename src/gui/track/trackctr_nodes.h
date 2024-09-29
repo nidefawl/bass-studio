@@ -62,9 +62,6 @@ public:
     void dragMoveOn(guibase* target, ivec2 mousepos) override    = 0;
     void dragReleaseOn(guibase* target, ivec2 mousepos) override = 0;
     virtual String getText()                                     = 0;
-    bool isDragMoveable() override {
-        return true;
-    }
     bool setScissorTransformContainer(NVGcontext* vg) override;
 };
 class gui_graph_n;
@@ -160,7 +157,7 @@ protected:
     gui_scrollbar scrollbar;
 
 public:
-    guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_file_clipboard& _dragdropclip);
+    guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_file& _dragdropclip);
     ~guictr_nodes_editor() override;
     void render(NVGcontext* vg) override;
     void scrollTo(guibase* g);
@@ -213,7 +210,7 @@ private:
     Splitter splitter;
 
 public:
-    guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_file_clipboard& _dragdropclip);
+    guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_file& _dragdropclip);
     ~guictr_nodes_splitview() override;
     void layout() override;
     void onChildLayoutChanged(guibase* g) override;

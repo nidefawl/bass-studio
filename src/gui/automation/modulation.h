@@ -116,9 +116,6 @@ class gui_dragged_modulation final :
             return ref;
         }
         ~gui_dragged_modulation() override = default;
-        bool isDragMoveable() override {
-            return true;
-        }
         void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
         void handleDraggedRelease(MouseEvent& evt) override;
         void handleDraggedMove(MouseEvent& evt) override;

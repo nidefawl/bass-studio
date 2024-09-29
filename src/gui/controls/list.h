@@ -29,9 +29,6 @@ public:
     void dragMoveOn(guibase* target, ivec2 mousepos)    override = 0;
     void dragReleaseOn(guibase* target, ivec2 mousepos) override = 0;
     virtual String getText()                                    = 0;
-    bool isDragMoveable() override {
-        return true;
-    }
     void setDepth(int32_t depth) {
         entryDepth = depth;
     }
@@ -46,7 +43,6 @@ public:
         label = string;
         setBackgroundRendered(true);
         icon = ICON_FOLDER;
-        setDragRendered(false);
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
     }

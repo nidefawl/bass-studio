@@ -139,10 +139,7 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
             make_nvp("name", m.name),
             make_nvp("uId", m.uId)
         );
-        if (m.moduleType == PLUGIN_TYPE_GROUP) {
-            m.uId = m.moduleType;
-            m.moduleType = MODULE_TYPE_INTERNAL_EFFECT;
-        } else if (m.moduleType >= PLUGIN_TYPE_GAIN) {
+        if (m.moduleType == PLUGIN_TYPE_GROUP || m.moduleType >= PLUGIN_TYPE_GAIN) {
             m.uId = m.moduleType;
             m.moduleType = MODULE_TYPE_INTERNAL_EFFECT;
         }

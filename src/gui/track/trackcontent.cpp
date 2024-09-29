@@ -765,7 +765,11 @@ void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
 bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     bool bContains = this->contains(mpos);
     if (bContains) {
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_CLIP) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_HOVER) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) {
             return false;
         }
         if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
@@ -794,6 +798,10 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         return true;
     }
     return false;
+}
+
+void gui_track::handleDragDropHover(MouseHitEvt& mouseHit) {
+    dawCtrl->setSelectedTrackEntry(m_trackentry);
 }
 
 void gui_track_subtrack::updateVisibleTrackContents(scaled_grid& grid) {

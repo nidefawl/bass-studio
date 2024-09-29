@@ -1084,10 +1084,10 @@ void guitrack_editor::clipDropCancel() {
     action.dragtype    = DRAG_NONE;
 }
 
-bool guitrack_editor::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guitrack_editor::fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (!action.dragtype) {
-        if (clip.type == dragdrop_file_clipboard::Type::TYPE_CLIP
-        || clip.type == dragdrop_file_clipboard::Type::TYPE_AUDIOFILE) {
+        if (clip.type == dragdrop_file::Type::TYPE_CLIP
+        || clip.type == dragdrop_file::Type::TYPE_AUDIOFILE) {
             tick_t tick                     = grid.screenToTickSnap(mousepos.x, SNAP_ON);
             tick_t tickExact                = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
             track_gui_entry_t* trackClicked = DAW::getTrackFromMouse(iGuiMgr, mousepos);
@@ -1122,7 +1122,7 @@ bool guitrack_editor::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos
     }
     return false;
 }
-bool guitrack_editor::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guitrack_editor::fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
         auto daw = dawCtrl->getDaw();
         auto lock = daw->lockPlayThread();

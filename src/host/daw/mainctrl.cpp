@@ -96,9 +96,7 @@
 #include <psapi.h>
 #endif
 
-constexpr int32_t GUITICKS_MOUSEHOVER_UNTIL_SELECT = 10;
-
-void dragdrop_file_clipboard::reset() {
+void dragdrop_file::reset() {
     auto dragTarget = safeRefGet(this->target);
     if (dragTarget) {
         dragTarget->clipDropCancel();
@@ -270,7 +268,7 @@ private:
     }
 
 public:
-    DawViewContainersMain(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file_clipboard& dragdropclip, int32_t instanceId)
+    DawViewContainersMain(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file& dragdropclip, int32_t instanceId)
         : dawCtrl(_dawCtrl),
           ctr_Left(std::make_shared<guictr_layout>()),
           ctr_Center(std::make_shared<guictr_layout>()),
@@ -1378,6 +1376,8 @@ void MainCtrl::onFastTick() {
 void MainCtrl::onTick() {
     daw.onTick();
     DawCtrl::onTick();
+
+    // TODO: move down to DawCtrl
     graphMonitor.onTick(this);
     guiNotify = graphMonitor.getNotifyError();
     bool bIsInContainers = stl_contains(this->viewRender, guiNotify);
@@ -1388,62 +1388,6 @@ void MainCtrl::onTick() {
         guiNotify->size = ivec2(m_size.x/3, 90);
         guiNotify->pos = (m_size - guiNotify->size) / 2;
         guiNotify->layout();
-    }
-
-    auto guiCaptured = getGuiCaptured();
-    auto guiDragged = getGuiDragged();
-    if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
-        int32_t hoverTicks     = 0;
-        track_gui_entry_t* tr  = nullptr;
-        view->visitEntries([&](SPLayoutEntry& entry) {
-            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
-                guictr_tracks* tracksCtr = guictr_cast<guictr_tracks>(entry);
-                guictr_base& ctrMixers = tracksCtr->trackControls;
-                guictr_base& ctrTrackView = tracksCtr->trackView;
-                if (tracksCtr->isVisible()) {
-                    ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, tracksCtr);
-                    ivec2 posRelative(0, 0);
-                    bool bHit = false;
-                    if (ctrMixers.contains(trackViewLocalPos)) {
-                        posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
-                        bHit = true;
-                    } else if (ctrTrackView.contains(trackViewLocalPos)) {
-                        posRelative = m_mousePos - ctrTrackView.toScreenSpace(ivec2(0));
-                        bHit = true;
-                    }
-                    if (bHit) {
-                        tr = DAW::getTrackFromMouse(tracksCtr->guiMgr, posRelative);
-                        if (tr && tr == lastHoveredTrack && getSelectedTrack() != tr->track) {
-                            hoverTicks = lastHoveredTrackTicks + 1;
-                            if (lastHoveredTrackTicks >= 6) {
-                                setSelectedTrackEntry(tr);
-                                if (guiDragged->getGuiType() != gui_type::GUI_TYPE_CLIP) {
-                                    showPluginView();
-                                }
-                                hoverTicks = 0;
-                            }
-                        }
-                        return false;
-                    }
-                }
-            }
-            return true;
-        });
-        if (view->ctr_pluginview.isVisible() && view->ctr_pluginview.contains(m_mousePos)) {
-            hoverTicks = lastHoveredTrackTicks + 1;
-            if (lastHoveredTrackTicks >= GUITICKS_MOUSEHOVER_UNTIL_SELECT) {
-                showPluginView();
-                hoverTicks = 0;
-            }
-        } else if (view->ctr_clipeditorview.isVisible() && view->ctr_clipeditorview.contains(m_mousePos)) {
-            hoverTicks = lastHoveredTrackTicks + 1;
-            if (lastHoveredTrackTicks >= GUITICKS_MOUSEHOVER_UNTIL_SELECT) {
-                showClipEditor();
-                hoverTicks = 0;
-            }
-        }
-        lastHoveredTrackTicks = hoverTicks;
-        lastHoveredTrack      = tr;
     }
 }
 
@@ -1626,73 +1570,16 @@ void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
     BaseCtrl::mouseMoved(mousePos, deltaPos, kbmods);
 }
 
-bool DawCtrl::filesDropMove(ivec2 mousepos, KeyboardMods kbmods) {
-    if (daw.getAsyncTask()) {
-        return false;
-    }
-    if (daw.dragdropclip.state == dragdrop_file_clipboard::State::STATE_LOADED) {
-        daw.dragdropclip.isValidTarget = false;
-
-        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
-        for (guictr_base* ctr : containers) {
-            if (ctr->isVisible() && ctr->mouseHitTest(mousepos, evt)) {
-                break;
-            }
-        }
-        guibase* gui = evt.getGuiHit();
-        if (gui) {
-            ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-            daw.dragdropclip.isValidTarget = gui->clipDropMove(daw.dragdropclip, mposObj, kbmods);
-            return daw.dragdropclip.isValidTarget;
-        }
-    }
-    return false;
-}
-
 /* RAII helper to reset clip when scope is left */
 class clipreset {
-    dragdrop_file_clipboard& clip;
+    dragdrop_file& clip;
 
 public:
-    explicit clipreset(dragdrop_file_clipboard& _clip) : clip(_clip){};
+    explicit clipreset(dragdrop_file& _clip) : clip(_clip){};
     ~clipreset() {
         clip.reset();
     }
 };
-
-void DawCtrl::filesDropCancel() {
-    daw.resetDragDropClipboards();
-}
-
-bool DawCtrl::filesDropFinal(const std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
-    if (daw.getAsyncTask()) {
-        return false;
-    }
-    clipreset rst(daw.dragdropclip);
-    if (daw.dragdropclip.state == dragdrop_file_clipboard::State::STATE_LOADED && daw.dragdropclip.isValidTarget) {
-        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
-        for (guictr_base* ctr : containers) {
-            if (ctr->isVisible() && ctr->mouseHitTest(mousepos, evt)) {
-                break;
-            }
-        }
-        guibase* gui = evt.getGuiHit();
-        if (gui) {
-            ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-            bool result   = gui->clipDropFinal(daw.dragdropclip, mposObj, kbmods);
-            return result;
-        }
-    }
-    if (files.size()) {
-        const String& path = files.front();
-        if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT)
-            || StrEndsWith(path, "." PROJECT_FILE_EXT)) {
-            daw.tls.mainCtrl->loadProject = path;
-            return true;
-        }
-    }
-    return false;
-}
 
 DAW::async_task_t* createTestTask();
 bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
@@ -2670,8 +2557,8 @@ void DawInstance::updateDerivedAudio(clip_t* clip, const clip_audio_settings_t& 
 
 bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
     resetDragDropClipboards();
-    using State = dragdrop_file_clipboard::State;
-    using Type = dragdrop_file_clipboard::Type;
+    using State = dragdrop_file::State;
+    using Type = dragdrop_file::Type;
 
     for (auto path : files) {
         String ext;
@@ -2795,37 +2682,6 @@ bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
     return false;
 }
 
-bool DawCtrl::filesDropBegin(const std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
-    if (daw.getAsyncTask()) {
-        return false;
-    }
-    return daw.preloadDraggedFiles(files);
-}
-
-bool DawCtrl::preloadFileBrowserEntry(const String& pathAbs) {
-    switch (daw.dragdropclip.state) {
-        case dragdrop_file_clipboard::STATE_LOADED:
-            if (daw.dragdropclip.path != pathAbs) {
-                // fallthrough
-            } else {
-                break;
-            }
-        case dragdrop_file_clipboard::STATE_NONE: {
-            std::vector<String> files;
-            files.push_back(pathAbs);
-            if (!daw.preloadDraggedFiles(files)) {
-                return false;
-            }
-            break;
-        }
-
-        case dragdrop_file_clipboard::STATE_FAILED_LOADING:
-            return false;
-    }
-    dbgassert(daw.dragdropclip.state == dragdrop_file_clipboard::STATE_LOADED);
-    return true;
-}
-
 bool convertClipboardToGrooveData(const clip_clipboard& clipboard, std::vector<groove_data_t>& grooves) {
     if (clipboard.tracks.empty()) {
         return false;
@@ -2897,4 +2753,81 @@ void GrooveLibrary::loadGrooves() {
     // if (!FileExists(samplePath)) {
     //     saveGrooveFile(this->grooves, samplePath);
     // }
+}
+
+
+bool DawCtrl::filesDropBegin(const std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods, bool bIsExternal) {
+    if (daw.getAsyncTask()) {
+        return false;
+    }
+    if (!daw.preloadDraggedFiles(files)) {
+        return false;
+    }
+    guiDraggedFiles.setExternal(bIsExternal);
+    guiDraggedFiles.theme = getTheme();
+    guiDraggedFiles.setFiles(files);
+    setDragged(&guiDraggedFiles);
+    return true;
+}
+
+bool DawCtrl::filesDropMove(ivec2 mousepos, KeyboardMods kbmods) {
+    if (daw.getAsyncTask()) {
+        return false;
+    }
+    if (daw.dragdropclip.state == dragdrop_file::State::STATE_LOADED) {
+        daw.dragdropclip.isValidTarget = false;
+
+        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_FILE, kbmods);
+        for (guictr_base* ctr : containers) {
+            if (ctr->isVisible() && ctr->mouseHitTest(mousepos, evt)) {
+                break;
+            }
+        }
+        guibase* gui = evt.getGuiHit();
+        if (gui) {
+            ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
+            daw.dragdropclip.isValidTarget = gui->fileDropMove(daw.dragdropclip, mposObj, kbmods);
+            return daw.dragdropclip.isValidTarget;
+        }
+    }
+    return false;
+}
+
+void DawCtrl::filesDropCancel() {
+    daw.resetDragDropClipboards();
+    if (getGuiDragged() == &guiDraggedFiles) {
+        setDragged(nullptr);
+    }
+}
+
+bool DawCtrl::filesDropFinal(ivec2 mousepos, KeyboardMods kbmods) {
+    if (getGuiDragged() == &guiDraggedFiles) {
+        setDragged(nullptr);
+    }
+    if (daw.getAsyncTask()) {
+        return false;
+    }
+    clipreset rst(daw.dragdropclip);
+    if (daw.dragdropclip.state == dragdrop_file::State::STATE_LOADED && daw.dragdropclip.isValidTarget) {
+        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_FILE, kbmods);
+        for (guictr_base* ctr : containers) {
+            if (ctr->isVisible() && ctr->mouseHitTest(mousepos, evt)) {
+                break;
+            }
+        }
+        guibase* gui = evt.getGuiHit();
+        if (gui) {
+            ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
+            bool result   = gui->fileDropRelease(daw.dragdropclip, mposObj, kbmods);
+            return result;
+        }
+    }
+    return false;
+}
+
+DawCtrl::DawCtrl(AppCtrl* parent, DawInstance& _daw, int32_t _dawCtrlWindowIndex)
+    : AppCtrl(parent), dawCtrlWindowIndex(_dawCtrlWindowIndex), daw(_daw) {
+    this->parentDawCtrl = this;
+    setWindowName(BuildInfo::PRODUCT_NAME_DISPLAY);
+    guiDraggedFiles.setControl(this);
 }

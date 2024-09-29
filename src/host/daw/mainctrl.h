@@ -47,6 +47,7 @@
 #include "host/project/projectcontroller.h"
 #include "dragdrop.h"
 #include "gui/container/container_dnd_layout.h"
+#include "gui/controls/draggedfiles.hpp"
 #include "buildinfo.h"
 
 struct automatable_t;
@@ -64,6 +65,7 @@ class guictr_tracks;
 class guictr_nodes_splitview;
 class gui_statusbar;
 class gui_notify;
+class gui_dragged_files;
 class guictr_clipeditor;
 class guictr_clipeditorview;
 class guictxtmenu_base;
@@ -87,7 +89,7 @@ struct clip_dragaction {
     DAW::Cursor cursorBegin;
 };
 
-struct dragdrop_file_clipboard {
+struct dragdrop_file {
     enum Type {
         TYPE_NONE,
         TYPE_AUDIOFILE,
@@ -455,7 +457,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     std::shared_ptr<notes_clipboard> clipboardNotes;
     std::shared_ptr<automation_clipboard_t> clipboardAutomation;
 
-    dragdrop_file_clipboard dragdropclip;
+    dragdrop_file dragdropclip;
     dragdrop_target_indicator_t dragdropTarget;
     autosave_state_t autosaveState;
     DAW::async_task_t* asyncTask = nullptr;
@@ -474,7 +476,7 @@ public:
     DawInstance() : project_controller_t(&project, &projectGlobals) {
         setEmptyClipboard();
     }
-    dragdrop_file_clipboard& getDragDropClip() {
+    dragdrop_file& getDragDropClip() {
         return dragdropclip;
     }
     edithistory& getHist() {
@@ -667,13 +669,6 @@ private:
     void saveProjectBundle(const String& path);
 };
 
-
-class guictr_tracks_clipboard : public guictr_base {
-    public:
-    guictr_tracks_clipboard() : guictr_base() {
-    }
-};
-
 class DawCtrl : public AppCtrl {
     Menus menus;
 protected:
@@ -683,7 +678,6 @@ protected:
     int32_t numCallsWaitEvents = 0;
 
     track_gui_entry_t* lastHoveredTrack = nullptr;
-    int32_t lastHoveredTrackTicks       = 0;
     int64_t tmLastRenderUpdatesMs       = 0;
 
     track_t* selectedTrack = nullptr;
@@ -695,7 +689,7 @@ protected:
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;
-    guictr_tracks_clipboard guiCtrTracksClipboard;
+    gui_dragged_files guiDraggedFiles;
     gui_notify* guiNotify = nullptr;
     std::vector<guictr_base*> viewAsyncProgress = {&guiCtrProgress};
     std::vector<guictr_base*> viewRender;
@@ -715,17 +709,8 @@ public:
     String lastKeyDebug;
     DawViewContainersMain* view = nullptr;
     DawInstance& daw;
-    // scaled_grid grid;
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
-    // std::vector<String> tmpFileDragPaths;
-    explicit DawCtrl(AppCtrl* parent, DawInstance& _daw, int32_t _dawCtrlWindowIndex)
-    : AppCtrl(parent), dawCtrlWindowIndex(_dawCtrlWindowIndex), daw(_daw)
-    {
-#if BUILD_DAW_HOST
-        this->parentDawCtrl = this;
-#endif
-        setWindowName(BuildInfo::PRODUCT_NAME_DISPLAY);
-    }
+    DawCtrl(AppCtrl* parent, DawInstance& _daw, int32_t _dawCtrlWindowIndex);
     ~DawCtrl() override = default;
     void updateViewGuiContainers();
 
@@ -779,10 +764,9 @@ public:
     void focusChanged(guibase* oldFocused, guibase* newFocused) override;
     void resetMouseContext() override;
     bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override;
-    bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
+    bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods, bool bIsExternal) override;
     void filesDropCancel() override;
-    bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
-    bool preloadFileBrowserEntry(const String& pathAbs);
+    bool filesDropFinal(ivec2 pos, KeyboardMods kbmods) override;
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override;
     bool menuCommand(const menucmd_t& command) override;
     void updateMenubar() override;

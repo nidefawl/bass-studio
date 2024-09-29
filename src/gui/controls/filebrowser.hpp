@@ -16,6 +16,9 @@
 #include "renderresources.h"
 #include "str_util.h"
 
+
+int32_t GetIconFromExtension(const String& path);
+
 class guictxtmenu_filebrowser_base final : public guictxtmenu {
     const String path;
 
@@ -47,7 +50,6 @@ protected:
 
 public:
     gui_filebrowser_entry_base(String _name, String _pathAbs) : gui_list_entry(), name(std::move(_name)), pathAbs(std::move(_pathAbs)) {
-        setDragRendered(false);
         setLabel(name);
         setTooltipText(pathAbs);
     }
@@ -85,9 +87,15 @@ public:
         bIsOpened = opened;
         icon      = opened ? ICON_FOLDER_OPEN : ICON_FOLDER;
     }
+
+    void handleDragDropHover(MouseHitEvt& mouseHit) override {
+        bIsOpened = false;
+        parent->buttonClicked(this);
+    }
 };
-int32_t GetIconFromExtension(const String& path);
+
 class gui_filebrowser_file_entry_t final : public gui_filebrowser_entry_base {
+    bool bTriedLoading = false;
 public:
     explicit gui_filebrowser_file_entry_t(const FileFound& f)
         : gui_filebrowser_entry_base(f.name, f.path) {
@@ -104,37 +112,23 @@ public:
         auto daw        = dawCtrl->getDaw();
         auto& clipboard = daw->getDragDropClip();
         bool bDragging  = glm::length(vec2(*evt.dragDistance)) > 2.0f;
-        if (!isDragging() && bDragging) {
-            isDragging() = true;
-            if (clipboard.state == dragdrop_file_clipboard::STATE_NONE) {
-                dawCtrl->filesDropBegin({ getPathAbs() }, evt.mousepos, evt.kbmods);
+        if (!bTriedLoading && bDragging) {
+            bTriedLoading = true;
+            if (clipboard.state == dragdrop_file::STATE_NONE) {
+                dawCtrl->filesDropBegin({ getPathAbs() }, evt.mousepos, evt.kbmods, false);
+                // after this point the mouse events are delegated to gui_dragged_files
             }
-            // TODO: show error message if loading failed
-            setDragRendered(clipboard.state == dragdrop_file_clipboard::STATE_LOADED);
-        }
-        if (isDragging()) {
-            if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED) {
-                dawCtrl->filesDropMove(evt.mousepos, evt.kbmods);
-            }
-            // parentCtrl->objectDragMove(this, evt);
         }
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
-        isDragging() = false;
+        bTriedLoading = false;
         dawCtrl->getDaw()->resetDragDropClipboards();
     }
 
     void handleDraggedRelease(MouseEvent& evt) override {
-        if (!isDragging()) {
+        if (!bTriedLoading) {
             if (parent) parent->buttonClicked(this);
-        } else {
-            // parentCtrl->objectDragRelease(this, evt);
-            auto daw        = dawCtrl->getDaw();
-            auto& clipboard = daw->getDragDropClip();
-            if (clipboard.state == dragdrop_file_clipboard::STATE_LOADED) {
-                dawCtrl->filesDropFinal({ getPathAbs() }, evt.mousepos, evt.kbmods);
-            }
         }
     }
 };
@@ -170,11 +164,10 @@ public:
         selectedFolderAbsPath = "";
         auto folder           = gui_cast<gui_filebrowser_folder_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER>(button);
         if (folder) {
-            bool bIsOpened = folder->isOpened();
-            folder->setIsOpened(!bIsOpened);
+            bool bIsOpened = !folder->isOpened();
+            folder->setIsOpened(bIsOpened);
+            openedFoldersAbsPaths.erase(std::remove(openedFoldersAbsPaths.begin(), openedFoldersAbsPaths.end(), folder->getPathAbs()), openedFoldersAbsPaths.end());
             if (bIsOpened) {
-                openedFoldersAbsPaths.erase(std::remove(openedFoldersAbsPaths.begin(), openedFoldersAbsPaths.end(), folder->getPathAbs()), openedFoldersAbsPaths.end());
-            } else {
                 openedFoldersAbsPaths.push_back(folder->getPathAbs());
             }
             selectedFolderAbsPath = folder->getPathAbs();

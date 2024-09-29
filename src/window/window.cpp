@@ -949,10 +949,11 @@ public:
     }
 
     bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
-        return ctrl->filesDropBegin(files, pos, kbmods);
+        return ctrl->filesDropBegin(files, pos, kbmods, true);
     }
 
     bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override {
+        _onMouseMoved(pos.x, pos.y);
         return ctrl->filesDropMove(pos, kbmods);
     }
 
@@ -961,7 +962,7 @@ public:
     }
 
     bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
-        return ctrl->filesDropFinal(files, pos, kbmods);
+        return ctrl->filesDropFinal(pos, kbmods);
     }
 
     void requestClose() override {

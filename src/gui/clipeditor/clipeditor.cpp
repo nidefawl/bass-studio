@@ -3275,6 +3275,10 @@ bool guictr_clipeditorview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 
+void guictr_clipeditorview::handleDragDropHover(MouseHitEvt& mouseHit) {
+    dawCtrl->showClipEditor();
+}
+
 float guictr_cliphandles::clipStartScrX() const {
     return (float) (grid.tickToScreenD(getTickOffsetOffset()));
 }

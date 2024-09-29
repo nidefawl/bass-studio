@@ -69,10 +69,9 @@ public:
     std::vector<DropAreaUILayout> boxes;
     dock_pos dockPos  = dock_pos::NONE;
     bool validPreview = false;
-    guictr_dragged_container_instance() : guictr_base() { setDragRendered(true); }
+    guictr_dragged_container_instance() : guictr_base() { }
     ~guictr_dragged_container_instance() override = default;
     void layout() override {}
-    bool isDragMoveable() override { return true; }
     void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
@@ -303,10 +302,15 @@ protected:
     guidialog_base* dialog = nullptr;
     bool bIsVisible = false;
 
+    // hover tooltips
     int nextTooltipId = 0;
     int64_t tmLastHoveredTooltip        = 0;
     void* lastHoveredTooltip            = nullptr;
     void* lastTooltipSrc                = nullptr;
+
+    // hover drag drop container focusing
+    int32_t ticksDragDropGuiHovered     = 0;
+    SafeRef<guibase> dragDropGuiHovered = {};
 public:
     bool hasMenuWindow() {
         for (auto& w : menuWindows) {
@@ -344,9 +348,15 @@ public:
     void closePopup() override { }; // close this window if its a popup window
 
     virtual void filesDropCancel() { };
-    virtual bool filesDropMove(ivec2 pos, KeyboardMods kbmods) { return false; };
-    virtual bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
-    virtual bool filesDropFinal(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
+    virtual bool filesDropMove(ivec2 pos, KeyboardMods kbmods) {
+        return false;
+    };
+    virtual bool filesDropBegin(const std::vector<String>& files, ivec2 pos, KeyboardMods kbmods, bool bIsExternal) {
+        return false;
+    };
+    virtual bool filesDropFinal(ivec2 pos, KeyboardMods kbmods) {
+        return false;
+    };
 
     virtual bool menuCommand(const menucmd_t& command) {
         return false;

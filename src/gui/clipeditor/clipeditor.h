@@ -1019,14 +1019,14 @@ public:
 
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
         bool hit = guictr_base::mouseHitTest(v, evt);
-        if (!hit && this->contains(v) && evt.type == MOUSE_DRAGDROP_CLIP) {
+        if (!hit && this->contains(v) && evt.type == MOUSE_DRAGDROP_FILE) {
             evt.requestFocus(this);
             return true;
         }
         return hit;
     }
 
-    bool setDragAction(dragdrop_file_clipboard& clip, KeyboardMods kbmods) {
+    bool setDragAction(dragdrop_file& clip, KeyboardMods kbmods) {
         if (!clip.clipboard)
             return false;
         bool bHasAudioSample = false;
@@ -1053,7 +1053,7 @@ public:
         return false;
     }
 
-    bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+    bool fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         if (!action.dragtype) {
             if (!setDragAction(clip, kbmods))
                 return false;
@@ -1066,7 +1066,7 @@ public:
         return false;
     }
 
-    bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+    bool fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         if (!clip.clipboard)
             return false;
         if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
@@ -1234,4 +1234,5 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void handleDragDropHover(MouseHitEvt& mouseHit) override;
 };

@@ -99,7 +99,8 @@ void guimodule_group::render(NVGcontext* vg) {
         return;
     dbgassert(ctr->parent == this);
     dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
-    bool extend = target.dst == this->ctr.get();
+    const auto dragdropTargetGui = safeRefGet(target.target);
+    bool extend = dragdropTargetGui == this->ctr.get();
     int extX    = 8;
     if (extend) {
         size.x += extX;

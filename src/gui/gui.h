@@ -30,7 +30,7 @@ class gui_pluginlist_entry;
 class gui_track;
 class scaled_grid;
 struct guitheme_t;
-struct dragdrop_file_clipboard;
+struct dragdrop_file;
 namespace RenderResources {
     struct NvgImageTexture;
 }
@@ -164,6 +164,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_TRACKCONTENT,
     CTR_TYPE_FILEBROWSER,
     CTR_TYPE_USERLIBRARY_BROWSER_PATH_LIST,
+    CTR_TYPE_DRAGGED_FILE,
 };
 
 namespace DebugAlloc {
@@ -386,7 +387,7 @@ public:
     }
     virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_CLIP) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
         if (canMouseHit() && contains(mpos)) {
             evt.requestFocus(this);
             return true;
@@ -408,6 +409,9 @@ public:
     virtual void handleDraggedMove(MouseEvent& evt) {
     }
     virtual void handleDraggedRelease(MouseEvent& evt) {
+    }
+    /** handleDragDropHover is called a few ticks after hovering an object while dragging an object */
+    virtual void handleDragDropHover(MouseHitEvt& mouseHit) {
     }
     void handleMouseDownBegin(MouseEvent& evt);
     virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
@@ -432,10 +436,10 @@ public:
     }
     virtual void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
     }
-    virtual bool clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    virtual bool fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
-    virtual bool clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+    virtual bool fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
     virtual void clipDropCancel() {
@@ -466,13 +470,6 @@ public:
     }
     virtual void rightClicked(MouseEvent& evt, guibase* button) {
         if (parent) parent->rightClicked(evt, button);
-    }
-    /*
-     * determines if drag operations should focus containers
-     * when hovering target containers for short periods
-     */
-    virtual bool isDragMoveable() {
-        return false;
     }
     virtual bool isRenderableSizeAndContext(NVGcontext* vg) {
         if (size.y <= 0 || size.x <= 0) {

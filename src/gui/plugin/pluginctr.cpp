@@ -105,10 +105,10 @@ bool guictr_plugins::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
-        if (evt.type == MOUSE_DRAGDROP_CLIP) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) {
             auto clipboard = dawCtrl->getDaw()->getDragDropClip();
             switch (clipboard.type) {
-                case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET:
+                case dragdrop_file::TYPE_PLUGIN_PRESET:
                     evt.requestFocus(this);
                     return true;
                 default:
@@ -430,9 +430,10 @@ void guictr_plugins::render(NVGcontext* vg) {
     
     int32_t slot     = 0;
     guibase* lastGui = nullptr;
-    dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
+    dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
+    const auto dragdropTargetGui = safeRefGet(dragDropTarget.target);
     for (guibase* gui : guis) {
-        if (target.dst == this && target.slotIdx == slot) {
+        if (dragdropTargetGui == this && dragDropTarget.slotIdx == slot) {
             ivec2 posHL(gui->pos.x + (isDefaultPluginCtr ? -4 : 4), 0);
             verticalLineAt(vg, posHL);
             nvgTranslate(vg, 8, 0);
@@ -444,8 +445,8 @@ void guictr_plugins::render(NVGcontext* vg) {
         lastGui = gui;
     }
     nvgResetScissor(vg);
-    if (target.dst == this) {
-        if (target.slotIdx == slot) {
+    if (dragdropTargetGui == this) {
+        if (dragDropTarget.slotIdx == slot) {
 
             ivec2 posHL(4, 0);
             if (lastGui) posHL.x += lastGui->right();
@@ -571,7 +572,7 @@ void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos
     dawCtrl->getDragDropTarget().reset();
     if (!track) return;
     auto slot = slotFromCoord(mousepos);
-    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, slot, this, this->pos };
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, slot, toRef(), this->pos };
 }
 int guictr_plugins::slotFromCoord(ivec2 _pos) {
     if (stage->effects.empty())
@@ -653,7 +654,7 @@ void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2
     nvgFillColor(vg, THEMECOL_TEXT);
     Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
 }
-void guictr_dragged_plugins::setStrings(std::vector<String>&& list) {
+void guictr_dragged_plugins::setStrings(std::vector<String> list) {
     table.tableWidth  = 200 - (INSET_TABLE<<1);
     table.titleHeight = HEIGHT_ENTRY;
     table.rowHeight   = HEIGHT_ENTRY;
@@ -667,6 +668,7 @@ void guictr_dragged_plugins::setStrings(std::vector<String>&& list) {
     }
     Table::AdjustColSizes(table);
     size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
+    list.clear();
 }
 void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
     dawCtrl->getDragDropTarget().reset();
@@ -697,10 +699,10 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
         }
     }
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
-        dragdrop_target_indicator_t::target_area,
-        highlightSlot,
-        this,
-        { -1, -1 }
+        .type=dragdrop_target_indicator_t::target_area,
+        .slotIdx=highlightSlot,
+        .target=toRef(),
+        .targetPos={ -1, -1 }
     };
 }
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
@@ -716,24 +718,24 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
         return;
     }
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
-        dragdrop_target_indicator_t::target_area,
-        highlightSlot,
-        this,
-        { -1, -1 }
+        .type=dragdrop_target_indicator_t::target_area,
+        .slotIdx=highlightSlot,
+        .target=toRef(),
+        .targetPos={ -1, -1 }
     };
     //  }
 }
 
-bool guictr_plugins::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guictr_plugins::fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (!this->stage) return false;
     int highlightSlot = slotFromCoord(mousepos);
     auto clipboard = dawCtrl->getDaw()->getDragDropClip();
     switch (clipboard.type) {
-        case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET:
+        case dragdrop_file::TYPE_PLUGIN_PRESET:
             dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
                 dragdrop_target_indicator_t::target_area,
                 highlightSlot,
-                this,
+                toRef(),
                 { -1, -1 }
             };
             clip.isValidTarget = true;
@@ -745,12 +747,12 @@ bool guictr_plugins::clipDropMove(dragdrop_file_clipboard& clip, ivec2 mousepos,
     return false;
 }
 
-bool guictr_plugins::clipDropFinal(dragdrop_file_clipboard& clip, ivec2 mousepos, KeyboardMods kbmods) {
+bool guictr_plugins::fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (!this->stage) return false;
     auto daw = dawCtrl->getDaw();
     auto clipboard = daw->getDragDropClip();
     switch (clipboard.type) {
-        case dragdrop_file_clipboard::TYPE_PLUGIN_PRESET: {
+        case dragdrop_file::TYPE_PLUGIN_PRESET: {
             auto dstStage = this->stage;
             auto* pluginMgr = daw->getPluginManager();
             auto pluginSnapshot = clip.pluginSnapshot.get();
@@ -902,7 +904,6 @@ void guictr_plugins::onTick(AppCtrl* ctrl) {
         if (draggedCtr) {
             auto ctrType = draggedCtr->getGuiType();
             switch(ctrType) {
-                case gui_type::CTR_TYPE_PLUGIN:
                 case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
                 case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
                 case gui_type::CTR_TYPE_MODULATION_DRAGGED: {
@@ -1172,13 +1173,19 @@ void guictr_pluginview::handleDraggedMove(MouseEvent& evt) {
     }
 }
 
+void guictr_pluginview::handleDragDropHover(MouseHitEvt& mouseHit) {
+    dawCtrl->showPluginView();
+}
+
 void guictr_pluginview::layout() {
 }
+
 void guictr_plugins::onRemove() {
     hideTrack();
     guiPlugins.clear();
     guictr_base::onRemove();
 }
+
 void guictr_plugins::onAdded() {
     guictr_base::onAdded();
     if (parent) {

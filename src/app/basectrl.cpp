@@ -573,6 +573,35 @@ void AppCtrl::onAppTick() {
             closeContextMenu();
         }
     }
+    auto guiCaptured = getGuiCaptured();
+    auto guiDragged = getGuiDragged();
+
+    if (guiDragged && !guiCaptured && guiDragged->isDragRendered()) {
+        constexpr int32_t GUITICKS_MOUSEHOVER_UNTIL_SELECT = 10;
+        MouseHitEvt mouseHit = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_HOVER, KeyboardMods{});
+        mouseHit.setDraggedThing(guiDragged);
+        for (guictr_base* ctr : containers) {
+            if (ctr->isVisible() && ctr->mouseHitTest(m_mousePos, mouseHit)) {
+                break;
+            }
+        }
+        guibase* gui = mouseHit.getGuiHit();
+        if (!gui || safeRefGet(dragDropGuiHovered) != gui) {
+            ticksDragDropGuiHovered = 0;
+            if (gui) {
+                dragDropGuiHovered = gui->toRef();
+            } else {
+                dragDropGuiHovered = {};
+            }
+        } else {
+            ticksDragDropGuiHovered++;
+        }
+        if (ticksDragDropGuiHovered == GUITICKS_MOUSEHOVER_UNTIL_SELECT) {
+            if (gui) {
+                gui->handleDragDropHover(mouseHit);
+            }
+        }
+    }
     /* run deferred delete of contextmenus */
     releaseGarbageGuis();
 }
@@ -1043,27 +1072,13 @@ void guictr_dragged_container_instance::handleDraggedRelease(MouseEvent& evt) {
 }
 
 void guictr_dragged_container_instance::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
-    // pos = dummyPreview.pos;
-    // size = dummyPreview.size;
-    // nvgSave(vg);
-    // render(vg);
-    // nvgRestore(vg);
     renderContainerLabel(vg);
-    if (isDragRendered() && validPreview) {
-        // nvgLineCap(vg, NVGlineCap::NVG_ROUND);
-        //  for (ivec4& box : boxes) {
-        //   nvgBeginPath(vg);
-        //   nvgRect(vg, box.x, box.y, box.z, box.w);
-        //   nvgStrokeColor(vg, G_MOVE_HIGHLIGHT);
-        //   nvgStrokeWidth(vg, 4.0);
-        //   nvgStroke(vg);
-        //  }
-        // nvgLineCap(vg, NVGlineCap::NVG_BUTT);
-    }
 }
+
 void BaseCtrl::closeAllAppMenus() {
     closeAppMenusAtLvl(0);
 }
+
 SafeRefStorage<guibase>& BaseCtrl::getRefStorage() {
     // TODO: make runtime pointer a member of BaseCtrl
     // runtime lifetime is guaranteed to exceed the lifetime of the BaseCtrl
