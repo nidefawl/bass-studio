@@ -209,6 +209,7 @@ public:
         if (!parentCtrl || !dawCtrl) {
             return;
         }
+        effectEntries.clear();
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_LFO, "LFO", false });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_MACROS, "Macros", false });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_EMPTY, "Empty", false });
