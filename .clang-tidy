@@ -1,6 +1,7 @@
 ---
 Checks: >
     *,
+
     -cppcoreguidelines-avoid-do-while,
     -cppcoreguidelines-avoid-const-or-ref-data-members,
     -cppcoreguidelines-avoid-non-const-global-variables,
@@ -27,6 +28,7 @@ Checks: >
     -readability-*,
     -google-readability-*,
     -google-build-using-namespace,
+    -google-default-arguments,
     -cert-err33-c,
     -cert-err58-cpp,
     -hicpp-*,
@@ -37,6 +39,7 @@ Checks: >
     -android-*,
     -boost-*,
     -fuchsia-*,
+    -modernize-use-designated-initializers,
 
 # DisabledChecks: >
 #     clang-analyzer-optin.cplusplus.*,
