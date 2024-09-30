@@ -22,6 +22,7 @@
 
 #include "keyboard.h"
 #include "logging.h"
+#include "math/vec.h"
 #include "mouse.h"
 #include "seq_time.h"
 #include "host/shape/shape.h"
@@ -175,7 +176,7 @@ void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
         if (sizeClipped.x > 0 && sizeClipped.y > 0) {
             gui_waveform_texture_ref* ref = getWaveformTextureRef();
             auto file = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(m_clip->audio);
-            renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
+            renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_clip, file, ref, pos, size, posClipped, sizeClipped);
             nvgBeginPath(vg);
             nvgRect(vg, posClipped.x, posClipped.y, sizeClipped.x, sizeClipped.y);
             nvgFillColor(vg, rgbaToNvg(0x7Fff00ff));
@@ -206,7 +207,7 @@ void gui_audio_clip::render(NVGcontext* vg) {
         gui_waveform_texture_ref* ref = getWaveformTextureRef();
         auto file = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(m_clip->audio);
         auto colOutline = hovered() ? GuiColor::COL_CLIP_OUTLINE_HOVER : GuiColor::COL_CLIP_OUTLINE;
-        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped, colOutline);
+        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_clip, file, ref, pos, size, posClipped, sizeClipped, colOutline);
         if (fadeInLayout.size.y < 5 || sizeClipped.x < 1 || sizeClipped.y < 1) {
             return;
         }
@@ -730,10 +731,20 @@ void gui_clip::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
 }
 
 void gui_clip::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) {
+    bool bMouseInsideParent = view->parent->contains(view->toParentSpace(evt.relMousepos));
+    setDragRendered(!bMouseInsideParent);
+    if (!bMouseInsideParent) {
+        parentCtrl->objectDragMove(this, evt);
+    }
     view->dragSelectionMove(this, evt);
 }
 
 void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
+    bool bMouseInsideParent = view->parent->contains(view->toParentSpace(evt.relMousepos));
+    setDragRendered(false);
+    if (!bMouseInsideParent) {
+        parentCtrl->objectDragRelease(this, evt);
+    }
     view->dragSelectionRelease(this, evt);
     //!CLIP COULD BE DELETED AT THIS POINT
 }
@@ -769,12 +780,8 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             evt.requestFocus(this);
             return true;
         }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) {
-            return false;
-        }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            return false;
-        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
     }
     if (automation.mouseHitTest(mpos, evt)) {
         return true;
@@ -1042,4 +1049,23 @@ bool gui_track_subtrack::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         return true;
     }
     return false;
+}
+
+void gui_clip::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
+    if (!isDragRendered() || !isRenderableSizeAndContext(vg)) {
+        return;
+    }
+    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
+    auto clipSize = ivec2(math::min(size.x, 200), size.y);
+    mousepos.x -= clipSize.x / 2;
+    auto clipPos = mousepos;
+    DAW::RenderClipAt(vg, theme, dawCtrl, trackEditor->getGrid(), m_clip, 0, clipPos, clipSize);
+}
+
+void gui_clip::dragMoveOn(guibase* target, ivec2 mousepos) {
+    target->clipDragMove(this, toControlsObjectSpace(mousepos, target));
+}
+
+void gui_clip::dragReleaseOn(guibase* target, ivec2 mousepos) {
+    target->clipDragRelease(this, toControlsObjectSpace(mousepos, target));
 }

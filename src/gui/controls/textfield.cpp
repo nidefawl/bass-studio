@@ -35,12 +35,15 @@ ivec2 gui_textfield::preferredSize(NVGcontext* ctx) const {
 }
 
 bool gui_textfield::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-    if (contains(mpos)) {
+    if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+    if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
+    if (canMouseHit() && contains(mpos)) {
         evt.requestFocus(this);
         return true;
     }
     return false;
 }
+
 bool gui_textfield::handleKeyInput(KeyEvent& kevt) {
     return keyboardEvent(kevt.keyCode, 0, kevt.type, kevt.mods);
 }

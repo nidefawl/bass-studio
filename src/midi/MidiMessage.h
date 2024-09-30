@@ -99,6 +99,7 @@ public:
     void makeTimeSignature(int top, int bottom,
                            int clocksPerClick    = 24,
                            int num32dsPerQuarter = 8);
+    void makeEndOfTrack();
 
     // meta-message related functions:
     int getMetaType() const;

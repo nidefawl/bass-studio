@@ -712,7 +712,10 @@ int saveSampleToArchive(audiofile_t& file, struct archive_entry* entry, struct a
     }
     return ARCHIVE_OK;
 }
-samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
+
+namespace DAW {
+
+samplecount_t SaveSampleToFile(audiofile_t& file, const String& fOutWave) {
     if (fOutWave.empty()) {
         dbgassert(0);
         return 0;
@@ -724,7 +727,6 @@ samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
     }
     auto sample = file.getSample();
     dbgassert(sample->nSamples == 0 || sample->nChannels == sample->samples.size());
-    log_printf("saveSampleToFile %d %s len %zd\n", file.id, StringAsCStr(fOutWave), sample->nSamples);
 
     drwav_data_format format;
     format.container = drwav_container_riff;    // drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
@@ -762,6 +764,9 @@ samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
 
     return samplecount_t(samplesWritten);
 }
+
+} // namespace DAW
+
 void audiocache::saveSamples(const std::vector<int32_t>& refSampleIds) {
     for (auto& w : list) {
         auto* ptr = w.get();
@@ -772,7 +777,7 @@ void audiocache::saveSamples(const std::vector<int32_t>& refSampleIds) {
             if (FileExists(ptr->path)) {
                 log_lf(Log::L_WARN, "Overwriting sample %s\n", StringAsCStr(ptr->path));
             }
-            saveSampleToFile(*ptr, ptr->path);
+            DAW::SaveSampleToFile(*ptr, ptr->path);
             ptr->pathLoaded = ptr->path;
             ptr->state &= ~audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MODIFIED;
         }
@@ -814,7 +819,7 @@ void audiocache::rellocateSamples(const std::vector<int32_t>& refSampleIds, cons
             }
             const String newPath = String("samples") + FILE_PATHSEP_STR + uniqueName + "." + fileExt;
             if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED) {
-                saveSampleToFile(*file, uniquePath);
+                DAW::SaveSampleToFile(*file, uniquePath);
                 file->name = uniqueName;
                 file->path = newPath;
                 file->pathLoaded = file->path;

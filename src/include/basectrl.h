@@ -236,8 +236,8 @@ public:
     virtual void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos, int flags){};
     virtual void closePopup(){}; // close this window if its a popup window
     virtual bool hasContextMenu() { return false; };
-    virtual void objectDragMove(guibase* g, MouseEvent& mevt);
-    virtual void objectDragRelease(guibase* g, MouseEvent& mevt);
+    virtual MouseHitEvt objectDragMove(guibase* g, MouseEvent& mevt);
+    virtual MouseHitEvt objectDragRelease(guibase* g, MouseEvent& mevt);
     bool captureMouse(guibase* gui);
     virtual String getClipboardText();
     virtual void setClipboardText(String s);

@@ -3267,13 +3267,6 @@ void guictr_clipeditorview::handleDraggedRelease(MouseEvent& evt) {
     dawCtrl->getDaw()->updateVisibleTrackContents();
 }
 
-bool guictr_clipeditorview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-    if (this->contains(mpos)) {
-        evt.requestFocus(this);
-        return true;
-    }
-    return false;
-}
 
 void guictr_clipeditorview::handleDragDropHover(MouseHitEvt& mouseHit) {
     dawCtrl->showClipEditor();

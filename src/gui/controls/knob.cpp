@@ -1231,3 +1231,47 @@ float guictr_select_enum::modifyParam(float param, float amt, bool applyUserInpu
     }
     return math::clamp(param - amt, 0.0f, 1.0f);
 }
+
+bool guiknob::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
+    if (contains(mpos)) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing()) {
+            auto type = evt.getDraggedThing()->getGuiType();
+            switch (type) {
+                case gui_type::CTR_TYPE_MODULATION_DRAGGED:
+                    evt.requestFocus(this);
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+        if (canMouseHit()) {
+            evt.requestFocus(this);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool gui_slider_textfield::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
+    if (contains(mpos)) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing()) {
+            auto type = evt.getDraggedThing()->getGuiType();
+            switch (type) {
+                case gui_type::CTR_TYPE_MODULATION_DRAGGED:
+                    evt.requestFocus(this);
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+        if (canMouseHit()) {
+            evt.requestFocus(this);
+            return true;
+        }
+    }
+    return false;
+}

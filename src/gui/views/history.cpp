@@ -24,10 +24,6 @@ public:
         : gui_list_entry(), desc(_entry->getDesc()) {
         icon = 0;
     }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {
-    }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-    }
     String getText() override {
         return desc;
     }

@@ -171,6 +171,7 @@ public:
         return std::nullopt;
     }
     void storeEditModulationTransform(NVGcontext* vg);
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };
 
 class gui_slider_textfield : public gui_textfield, public DAW::UI::IModulateable {
@@ -252,6 +253,7 @@ public:
         }
         return 0.0f;
     }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };
 
 class guictr_select_enum final : public guictr_base, public DAW::UI::IModulateable {

@@ -156,15 +156,6 @@ class guictxtmenu_modulation final : public guictxtmenu {
         }
     };
 
-
-    void gui_dragged_modulation::handleDraggedRelease(MouseEvent& evt) {
-        dawCtrl->objectDragRelease(this, evt);
-    }
-
-    void gui_dragged_modulation::handleDraggedMove(MouseEvent& evt) {
-        dawCtrl->objectDragMove(this, evt);
-    }
-
     void gui_dragged_modulation::dragMoveOn(guibase* target, ivec2 mousepos) {
         automatable_param_ref_t newRef = {.type = AUTOMATABLE_NONE, .paramIdx = -1};
         automatable_t* newAt = nullptr;
@@ -199,6 +190,34 @@ class guictxtmenu_modulation final : public guictxtmenu {
             }
         }
     }
+
+    void gui_dragged_modulation::disconnectPreviewModulation() {
+        auto daw = dawCtrl->getDaw();
+        auto prevAt = resolveAutomatableRefDevice(daw->getHost(), previewParamRef);
+        if (prevAt) {
+            auto lock = daw->lockPlayThread();
+            auto refCopy = getChannelRef();
+            refCopy.paramIdxDst = previewParamRef.paramIdx;
+            DAW::DisonnectModulation(prevAt, refCopy);
+        }
+        previewParamRef = {};
+        previewScaling = {};
+    }
+
+    void gui_dragged_modulation::handleDraggedRelease(MouseEvent& evt) {
+        auto mouseHit = dawCtrl->objectDragRelease(this, evt);
+        if (!mouseHit.getGuiHit()) {
+            disconnectPreviewModulation();
+        }
+    }
+
+    void gui_dragged_modulation::handleDraggedMove(MouseEvent& evt) {
+        auto mouseHit = dawCtrl->objectDragMove(this, evt);
+        if (!mouseHit.getGuiHit()) {
+            disconnectPreviewModulation();
+        }
+    }
+
 
     void gui_dragged_modulation::dragReleaseOn(guibase* target, ivec2 mousepos) {
         if (previewParamRef.type != AUTOMATABLE_NONE) {

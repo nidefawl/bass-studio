@@ -110,8 +110,10 @@ struct create_sample_req_t {
     int32_t id = -1;
     samplecount_t preAllocate = 0;
 };
-struct create_derived_sample_req_t {
-};
+
+namespace DAW {
+    samplecount_t SaveSampleToFile(audiofile_t& file, const String& fOutWave);
+}
 class audiocache {
     samplerate_t samplerate = 0;
     std::atomic<int32_t> nextIdx{ 0 };

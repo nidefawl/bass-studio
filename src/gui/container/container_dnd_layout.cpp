@@ -767,6 +767,8 @@ bool guictr_layout::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
         if (canMouseHit()) {
             evt.requestFocus(this);
             return true;

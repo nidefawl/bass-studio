@@ -833,6 +833,14 @@ int MidiFile::addCompoundTimeSignature(int aTrack, int aTick, int top,
                             num32ndsPerQuarter);
 }
 
+int MidiFile::addEndOfTrack(int aTrack, int aTick) {
+    MidiEvent* me = new MidiEvent;
+    me->makeEndOfTrack();
+    me->tick = aTick;
+    tracks[aTrack]->push_back_no_copy(me);
+    return tracks[aTrack]->getSize() - 1;
+}
+
 /* MidiFile::makeVLV --  This function is used to create
   size byte(s) for meta-messages.  If the size of the data
   in the meta-message is greater than 127, then the size

@@ -651,6 +651,7 @@ bool guitrack_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
         if (evt.type == MOUSE_DRAGDROP_FILE) {
             auto clipboard = dawCtrl->getDaw()->getDragDropClip();
             switch (clipboard.type) {
@@ -661,9 +662,6 @@ bool guitrack_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 default:
                     break;
             }
-            return false;
-        }
-        if (evt.type == MOUSE_DRAGDROP_OBJECT) {
             return false;
         }
         evt.requestFocus(this);

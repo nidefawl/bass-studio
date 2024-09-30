@@ -28,7 +28,7 @@ public:
 class gui_pluginlibrary_entry final : public gui_pluginlist_entry {
     const pluginentry_t entry;
 public:
-    gui_pluginlibrary_entry(const pluginentry_t _entry) : gui_pluginlist_entry(), entry(_entry) {
+    explicit gui_pluginlibrary_entry(const pluginentry_t& _entry) : gui_pluginlist_entry(), entry(_entry) {
         icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
         label = _entry.name;
     }

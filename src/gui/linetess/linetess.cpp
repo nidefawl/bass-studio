@@ -420,10 +420,6 @@ namespace lineplot {
             String getText() override {
                 return presetName;
             }
-            void dragMoveOn(guibase* target, ivec2 mousepos) override {
-            }
-            void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-            }
         };
         void setPresets(const std::vector<settings_preset_t>& presets) {
             std::vector<gui_list_entry*> entries;
@@ -478,10 +474,6 @@ namespace lineplot {
             }
             String getText() override {
                 return displayName;
-            }
-            void dragMoveOn(guibase* target, ivec2 mousepos) override {
-            }
-            void dragReleaseOn(guibase* target, ivec2 mousepos) override {
             }
         };
         void setFunctions(const std::vector<String>& functions) {

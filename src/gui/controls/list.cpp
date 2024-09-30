@@ -71,6 +71,8 @@ bool gui_list::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
         evt.requestFocus(this);
         return true;
     }

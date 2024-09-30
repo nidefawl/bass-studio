@@ -1162,3 +1162,7 @@ void MidiMessage::makeMarker(const std::string& text) {
 void MidiMessage::makeCue(const std::string& text) {
     makeMetaMessage(0x07, text);
 }
+
+void MidiMessage::makeEndOfTrack() {
+    makeMetaMessage(0x2f, "");
+}

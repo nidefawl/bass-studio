@@ -878,7 +878,7 @@ void BaseCtrl::windowSizeChanged(int32_t w, int32_t h) {
     relayout(m_size.x * 1.0 / m_scale, m_size.y * 1.0 / m_scale);
 }
 
-void BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
+MouseHitEvt BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
     MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
     evt.setDraggedThing(g);
     for (guictr_base* ctr : containers) {
@@ -889,10 +889,11 @@ void BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
     guibase* gui = evt.getGuiHit();
     if (gui) {
         g->dragMoveOn(gui, mevt.mousepos);
-    } else {
     }
+    return evt;
 }
-void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
+
+MouseHitEvt BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
     MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
     evt.setDraggedThing(g);
     for (guictr_base* ctr : containers) {
@@ -904,7 +905,9 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
     if (gui) {
         g->dragReleaseOn(gui, mevt.mousepos);
     }
+    return evt;
 }
+
 void BaseCtrl::dragContainerBegin(MouseEvent& evt, GuiCtrLayoutEntry* ctrDragSrc) {
     draggedLayoutContainer.reset();
     // get a shared pointer reference to ctrDragSrc, this is a bit awkward, as are all interfaces using shared_ptr

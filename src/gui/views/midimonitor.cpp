@@ -35,10 +35,6 @@ public:
         icon = ICON_MIDIPLUG;
         setLabel(IMidiMsg::FromU32AndTick(evt.message, evt.timestamp).ToString());
     }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {
-    }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-    }
     String getText() override {
         return label;
     }

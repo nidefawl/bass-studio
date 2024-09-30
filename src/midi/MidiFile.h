@@ -145,6 +145,7 @@ public:
                                  int top, int bottom,
                                  int clocksPerClick    = 36,
                                  int num32dsPerQuarter = 8);
+    int addEndOfTrack(int aTrack, int aTick);
 
     void erase();
     void clear();

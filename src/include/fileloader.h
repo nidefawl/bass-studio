@@ -1,20 +1,18 @@
 #pragma once
 #include "threads/workerthread.h"
-#include "midi/MidiFile.h"
-#include "seq_time.h"
 #include "str_util.h"
-#include "host/clip/clip.h"
-#include "fileio.h"
-#include "logging.h"
 #include "host/daw/clipboard.h"
+
+namespace DAW {
+    std::shared_ptr<clip_clipboard> LoadMidiFile(const String& path);
+    bool SaveMidiFile(const String& path, const clip_clipboard& clipboard);
+}
 
 class LoadMidiTask final : public WorkerThread::ThreadTask {
     String path;
     std::shared_ptr<clip_clipboard> clipboard;
-    void loadFile();
-
 public:
-    explicit LoadMidiTask(const String& _path) : ThreadTask(), path(_path) {}
+    explicit LoadMidiTask(String _path) : ThreadTask(), path(std::move(_path)) {}
     void run() override;
 
 public:

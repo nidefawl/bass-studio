@@ -76,8 +76,6 @@ public:
         icon = -1;
     }
     String getText() override { return deviceName; }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {}
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
     void handleDraggedBegin(MouseEvent& evt) override { toggle(); }
     app_ioaudioconfig& getCnf() { return daw_tls::getSettings().iosettings.getConfig(deviceAPI); }
     bool enabled() {
@@ -914,8 +912,6 @@ public:
     }
 
     String getText() override { return deviceName; }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {}
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
     void handleDraggedBegin(MouseEvent& evt) override { toggle(); }
     std::vector<midi_channel>& getCnf() {
         return isInput ? settings.iosettings.getIOConfigMidi(deviceAPI).inputs
@@ -1135,8 +1131,6 @@ class gui_listentry_settings_other_bool final : public gui_list_entry {
             icon = -1;
         }
         String getText() override { return title; }
-        void dragMoveOn(guibase* target, ivec2 mousepos) override {}
-        void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
         void handleDraggedBegin(MouseEvent& evt) override { toggle(); parent->buttonClicked(this); }
         bool enabled() {
             auto& dawsettings = daw_tls::getSettings().dawsettings;

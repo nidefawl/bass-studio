@@ -172,9 +172,8 @@ bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            return false;
-        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
         if (isShift(evt.kbmods)) {
             if (dawCtrl->getPluginSel().pluginCtr != this->parent) {
                 return true;
@@ -442,7 +441,6 @@ guictxtmenu_base* guiplugin::getTooltip(AppCtrl* appctrl) {
 
 
 class gui_plugin_paramlist_entry final : public gui_list_entry {
-
     const float spacing = INSET_TITLE;
 
 public:
@@ -473,10 +471,6 @@ public:
             return true;
         }
         return false;
-    }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {
-    }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
     }
     void setControl(BaseCtrl* parentCtrl) override {
         guibase::setControl(parentCtrl);
@@ -808,9 +802,8 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            return false;
-        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
         evt.requestFocus(this);
         return true;
     }

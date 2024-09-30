@@ -1,6 +1,7 @@
 #include "basectrl.h"
 #include "event.h"
 #include "fileio.h"
+#include "fileloader.h"
 #include "gui/container/container.h"
 #include "gui/container/container_builder.h"
 #include "gui/container/container_layout.h"
@@ -9,6 +10,7 @@
 #include "gui/controls/textfield.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/views/pluginlist.h"
+#include "host/clip/clip.h"
 #include "host/daw/mainctrl.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/track/track.h"
@@ -94,6 +96,7 @@ namespace {
             switch (type) {
                 case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
                 case gui_type::CTR_TYPE_TRACK_TITLE:
+                case gui_type::GUI_TYPE_CLIP:
                     return true;
                 default:
                     break;
@@ -147,6 +150,42 @@ namespace {
         return bStatus;
     }
 
+    bool ExportClipToFile(DawInstance* daw, clip_t* clip, const String& exportDir, String& outFilename) {
+        dbgassert(clip->clipType == CLIP_MIDI || clip->clipType == CLIP_AUDIO);
+        ThreadLock lock = daw->lockPlayThread();
+        String presetName = clip->name;
+        if (presetName.empty()) {
+            presetName = clip->clipType == CLIP_MIDI ? "Midi" : "Audio";
+        }
+        String path = exportDir + FILE_PATHSEP_STR + presetName;
+        String ext;
+        SplitPath(path, nullptr, nullptr, &ext);
+        if (ext.empty()) {
+            if (clip->clipType == CLIP_MIDI) {
+                path += ".mid";
+            } else if (clip->clipType == CLIP_AUDIO) {
+                path += ".wav";
+            }
+        }
+
+        auto [pathFile, nameFile] = daw->createUniqueNonExistingFilename(path);
+        // save file first, then spawn popup to rename
+        outFilename = pathFile;
+        if (clip->clipType == CLIP_MIDI) {
+            auto track = std::make_shared<track_clipboard_t>();
+            track->clips.push_back(std::make_shared<clip_t>(*clip));
+            clip_clipboard clipboard;
+            clipboard.tracks.push_back(track);
+            return DAW::SaveMidiFile(pathFile, clipboard);
+        } else {
+            // save audio clip
+            auto cache = daw->getAudioCache();
+            audiofile_t* c = cache->getDerivedSample(clip->audio);
+            return c && DAW::SaveSampleToFile(*c, pathFile) > 0;
+        }
+        return false;
+    }
+
 } // namespace
 
 class gui_userlibrary_list_entry_t final : public gui_list_entry {
@@ -157,10 +196,6 @@ public:
         : gui_list_entry(), path(f.path), displayName(f.name) {
         icon = ICON_FOLDER;
         setTooltipText(f.path);
-    }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {
-    }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
     }
     const String& getPathAbs() const {
         return path;
@@ -183,6 +218,11 @@ public:
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
     }
     void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override;
+    void clipDragMove(gui_clip* g, ivec2 mousepos) override {
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
+    }
+    void clipDragRelease(gui_clip* g, ivec2 mousepos) override {
+    }
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override {
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
     }
@@ -251,6 +291,11 @@ public:
         } else {
             log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
         }
+    }
+    void clipDragMove(gui_clip* g, ivec2 mousepos) override {
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
+    }
+    void clipDragRelease(gui_clip* g, ivec2 mousepos) override {
     }
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override {
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
@@ -381,6 +426,27 @@ public:
             }
         } else {
             log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
+        }
+    }
+    void clipDragMove(gui_clip* g, ivec2 mousepos) override {
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
+    }
+    void clipDragRelease(gui_clip* g, ivec2 mousepos) override {
+        String pathFile;
+        if (ExportClipToFile(dawCtrl->getDaw(), g->m_clip, getWorkingDirAbsPath(), pathFile)) {
+            if (!pathFile.empty()) {
+                auto popupPos = this->toScreenSpace(ivec2(0));
+                auto popupSize = this->size;
+                auto dawCtrl = this->dawCtrl;
+                auto daw = dawCtrl->getDaw();
+                daw->refreshAllUserlibraryBrowsers(); // this call may delete this instance
+                DAW::OpenRenameAbsoluteFilePopup(dawCtrl, popupPos, popupSize, pathFile, [daw](const String& path) {
+                    daw->refreshAllUserlibraryBrowsers();
+                    return true;
+                });
+            }
+        } else {
+            log_lf(Log::L_WARN, "Failed to export clip to file %s\n", StringAsCStr(pathFile));
         }
     }
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override {

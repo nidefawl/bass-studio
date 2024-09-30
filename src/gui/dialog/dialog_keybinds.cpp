@@ -142,8 +142,6 @@ class gui_keybind_entry final : public gui_list_entry {
             return keyComboIdx;
         }
         String getText() override { return title; }
-        void dragMoveOn(guibase* target, ivec2 mousepos) override {}
-        void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
         void handleDraggedBegin(MouseEvent& evt) override { toggle(); parent->buttonClicked(this); }
         void toggle() {
         }

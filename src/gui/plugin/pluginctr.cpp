@@ -116,7 +116,19 @@ bool guictr_plugins::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
             return false;
         }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT || evt.type == MouseHitType::MOUSE_RIGHT) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing()) {
+            auto type = evt.getDraggedThing()->getGuiType();
+            switch (type) {
+                case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
+                case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
+                    evt.requestFocus(this);
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+        if (evt.type == MouseHitType::MOUSE_RIGHT) {
             evt.requestFocus(this);
             return true;
         }

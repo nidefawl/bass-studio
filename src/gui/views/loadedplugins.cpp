@@ -173,10 +173,6 @@ public:
             return false;
         return _entry->isSynth;
     }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {
-    }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-    }
 
     void render(NVGcontext* vg) override {
         if (!isRenderableSizeAndContext(vg))

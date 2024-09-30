@@ -934,13 +934,13 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 void guitrack_editor::dragClipboardMove(ivec2 local, KeyboardMods kbmods) {
     if (action.dragtype) {
         track_gui_entry_t* trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, local);
-
+        bool bMouseInsideParent = parent->contains(toParentSpace(local));
         const DAW::Cursor& cursorBegin = action.cursorBegin;
         tick_t dragMousePos            = grid.screenToTick(local.x);
         tick_t dragMouseTicks          = dragMousePos - dragStartTick;
 
         tick_t timeOffset = cursorBegin.getTickBegin();
-        if (dragMouseTicks) {
+        if (dragMouseTicks && bMouseInsideParent) {
             tick_t tickendExact = cursorBegin.getTickBegin() + dragMouseTicks;
             timeOffset          = tickendExact;
             if (grid.grid_dens.getSnap() != SNAP_OFF && !isAlt(kbmods)) {
@@ -961,8 +961,10 @@ void guitrack_editor::dragClipboardMove(ivec2 local, KeyboardMods kbmods) {
             }
         }
         cursor.cursorPos = timeOffset;
-        if (trNxtSelected) {
+        if (trNxtSelected && bMouseInsideParent) {
             cursor.setTrack(cursorBegin.cursorTrack + (trNxtSelected->idx - dragStartTrackIdx));
+        } else {
+            cursor.setTrack(cursorBegin.cursorTrack);
         }
     }
 }
@@ -970,11 +972,13 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
     auto daw = dawCtrl->getDaw();
     if (action.dragtype) {
 
-        bool showclip = true;
+        bool showclip = false;
         if (action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY) {
             const DAW::Cursor& cursorBegin = action.cursorBegin;
+            ivec2 local = evt.relMousepos;
             auto guiOver = parentCtrl->getGuiOver();
             bool bFileBrowserDrop = guiOver && guiOver->getGuiType() == gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER;
+            bool bMouseInsideParent = parent->contains(toParentSpace(local));
             if (bFileBrowserDrop) {
                 auto* folder = dynamic_cast<gui_filebrowser_folder_entry*>(guiOver);
                 if (folder) {
@@ -983,15 +987,15 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
                     // std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin, true);
                     // TODO: convert clip_clipboard to trackcontainer_snapshot_t....
                 }
-            } else {
+            } else if (bMouseInsideParent) {
                 selectionMoved |= cursorBegin.cursorPos != cursor.cursorPos;
                 selectionMoved |= cursorBegin.cursorTrack != cursor.cursorTrack;
-                ivec2 local = evt.relMousepos;
                 track_gui_entry_t* trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, local);
                 if (trNxtSelected) {
                     dawCtrl->setSelectedTrackEntry(trNxtSelected);
                 }
                 bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
+                showclip = true;
                 if (selectionMoved && trNxtSelected) {
                     ThreadLock lock = daw->lockPlayThread();
 
@@ -1020,7 +1024,6 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
                     DAW::pasteFullClipboard(daw, iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
                     daw->updateVisibleTrackContents();
                     gui      = nullptr;
-                    showclip = true;
                     auto* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
                     daw->pushHist(track_action);
                 }
@@ -1053,7 +1056,8 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             }
             if (!midi.hasClip(clipPtr)) {
                 gui      = nullptr;
-                showclip = false;
+            } else {
+                showclip = true;
             }
             if (dragStartLayout.diff(trackPtr)) {
                 auto* track_action = new action_modify_track("Resize clips", m_resizePreModifyState.copy());
@@ -1142,6 +1146,77 @@ bool guitrack_editor::fileDropRelease(dragdrop_file& clip, ivec2 mousepos, Keybo
     return false;
 }
 
+namespace DAW {
+void RenderClipAt(NVGcontext* vg, guitheme_t* theme, DawCtrl* dawCtrl, scaled_grid& grid, clip_t* cl, tick_t offset, ivec2 clipPos, ivec2 clipSize) {
+    if (cl->clipType == CLIP_MIDI) {
+        renderMidiClip(vg, theme, cl, clipPos, clipSize);
+    } else if (cl->clipType == CLIP_AUDIO) {
+        auto daw = dawCtrl->getDaw();
+
+        //TODO: move this out of here
+        auto prjGlobals = daw->getHost()->prjGlobals;
+        auto& clipAudio = cl->audio;
+        if (!clipAudio.renderedAudio) {
+            clipAudio.renderedAudio = new rendered_audio_clip_t(dawCtrl->getWaveformRenderer());
+        }
+        audiofile_t* audio = daw->getAudioCache()->getDerivedSample(clipAudio);
+
+        if (!audio) {
+            clipAudio.renderedAudio->releaseWaveformTexture();
+            return;
+        }
+
+        dbgassert(clipSize.x > 0);
+
+        const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+        // const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP) / 2;
+        ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
+        ivec2 sizeClipped = clipSize - shrink;
+        ivec2 posClipped = clipPos + shrink;
+
+        // getClippedPosSize(parent->size, posClipped, sizeClipped);
+
+        if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
+            clipAudio.renderedAudio->releaseWaveformTexture();
+            return;
+        }
+
+        const auto tempo100 = prjGlobals.tempo100;
+        const auto samplerate = audio->sample->sampleRate;
+        auto contentSize = ivec2(clipSize); // TODO: this was entry->content->size before
+        auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, contentSize, cl, clipPos, clipSize - shrink, posClipped, sizeClipped);
+        waveform.sampleVersion = audio->sample->sampleVersion;
+        if (waveform.size.x < 1 || waveform.size.y < 1) {
+            clipAudio.renderedAudio->releaseWaveformTexture();
+            clipAudio.renderedAudio->updateWaveformTexture(waveform);
+            return;
+        }
+        auto& currentWaveformShape = clipAudio.renderedAudio->getCurrentWaveformShape();
+        bool equal = ((waveform.size.y > 0) == (currentWaveformShape.size.y > 0)) && isEqualWaveform3(waveform, currentWaveformShape);
+
+        bool canQueue  = clipAudio.renderedAudio->getWaveformRenderer()->canQueueUpdate();
+        ivec2 sizeDiff = math::absvec2(waveform.size - currentWaveformShape.size);
+        ivec2 limit    = math::maxvec2(ivec2(1), ivec2(waveform.size.x / 4, 16));
+        if (!canQueue) {
+            limit.x = waveform.size.x / 4;
+        }
+        if (waveform.samplesClipped || (dawCtrl && !dawCtrl->isZooming())) {
+            limit = { 0, 0 };
+        }
+        if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
+            clipAudio.renderedAudio->updateWaveformTexture(waveform);
+            if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
+                //releaseRendered();
+            }
+        }
+
+        clipAudio.renderedAudio->updateClipPrerender(vg, cl, audio, false);
+        gui_waveform_texture_ref* ref = clipAudio.renderedAudio->getWaveformTextureRef();
+        renderAudioClip(vg, clipAudio.renderedAudio->getWaveformRenderer(), theme, cl, audio, ref, clipPos, clipSize, posClipped, sizeClipped);
+    }
+}
+} // namespace DAW
+
 void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const entry, clip_t* cl, tick_t offset) {
     ivec2 clipPos     = ivec2();
     ivec2 scissorSize = entry->content->size;
@@ -1149,69 +1224,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
 
     if (getClipPositionInt(grid, scissorSize, cl, clipPos, clipSize, offset)) {
         clipPos.y += entry->content->pos.y;
-        if (cl->clipType == CLIP_MIDI) {
-            renderMidiClip(vg, theme, entry, cl, clipPos, clipSize);
-        } else if (cl->clipType == CLIP_AUDIO) {
-            //TODO: move this out of here
-            auto prjGlobals = dawCtrl->getDaw()->getHost()->prjGlobals;
-            auto& clipAudio = cl->audio;
-            if (!clipAudio.renderedAudio) {
-                clipAudio.renderedAudio = new rendered_audio_clip_t(dawCtrl->getWaveformRenderer());
-            }
-            audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->getDerivedSample(clipAudio);
-
-            if (!audio) {
-                clipAudio.renderedAudio->releaseWaveformTexture();
-                return;
-            }
-
-            dbgassert(clipSize.x > 0);
-
-            const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-            // const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP) / 2;
-            ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
-            ivec2 sizeClipped = clipSize - shrink;
-            ivec2 posClipped = clipPos + shrink;
-
-            // getClippedPosSize(parent->size, posClipped, sizeClipped);
-
-            if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
-                clipAudio.renderedAudio->releaseWaveformTexture();
-                return;
-            }
-
-            const auto tempo100 = prjGlobals.tempo100;
-            const auto samplerate = audio->sample->sampleRate;
-            auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, entry->content->size, cl, clipPos, clipSize - shrink, posClipped, sizeClipped);
-            waveform.sampleVersion = audio->sample->sampleVersion;
-            if (waveform.size.x < 1 || waveform.size.y < 1) {
-                clipAudio.renderedAudio->releaseWaveformTexture();
-                clipAudio.renderedAudio->updateWaveformTexture(waveform);
-                return;
-            }
-            auto& currentWaveformShape = clipAudio.renderedAudio->getCurrentWaveformShape();
-            bool equal = ((waveform.size.y > 0) == (currentWaveformShape.size.y > 0)) && isEqualWaveform3(waveform, currentWaveformShape);
-
-            bool canQueue  = clipAudio.renderedAudio->getWaveformRenderer()->canQueueUpdate();
-            ivec2 sizeDiff = math::absvec2(waveform.size - currentWaveformShape.size);
-            ivec2 limit    = math::maxvec2(ivec2(1), ivec2(waveform.size.x / 4, 16));
-            if (!canQueue) {
-                limit.x = waveform.size.x / 4;
-            }
-            if (waveform.samplesClipped || (dawCtrl && !dawCtrl->isZooming())) {
-                limit = { 0, 0 };
-            }
-            if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
-                clipAudio.renderedAudio->updateWaveformTexture(waveform);
-                if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
-                    //releaseRendered();
-                }
-            }
-
-            clipAudio.renderedAudio->updateClipPrerender(vg, cl, audio, false);
-            gui_waveform_texture_ref* ref = clipAudio.renderedAudio->getWaveformTextureRef();
-            renderAudioClip(vg, clipAudio.renderedAudio->getWaveformRenderer(), theme, entry->track, cl, audio, ref, clipPos, clipSize, posClipped, sizeClipped);
-        }
+        DAW::RenderClipAt(vg, theme, dawCtrl, grid, cl, offset, clipPos, clipSize);
     }
 }
 

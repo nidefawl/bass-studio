@@ -40,6 +40,8 @@ public:
     }
     ~gui_clip() override = default;
 
+    void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
+
     bool isClipTitleBar(ivec2 mpos, int32_t heightTitle) {
         return mpos.x >= pos.x &&
                mpos.y >= pos.y &&
@@ -109,6 +111,8 @@ public:
     void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) override;
     void trackViewDragMove(guitrack_editor* view, MouseEvent& evt) override;
     void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) override;
+    void dragMoveOn(guibase* target, ivec2 mousepos) override;
+    void dragReleaseOn(guibase* target, ivec2 mousepos) override;
 
     virtual int getClipType()                    = 0;
     virtual void renderDebugPass(NVGcontext* vg) = 0;

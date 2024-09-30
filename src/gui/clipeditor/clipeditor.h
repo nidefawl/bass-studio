@@ -1233,6 +1233,5 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void handleDragDropHover(MouseHitEvt& mouseHit) override;
 };

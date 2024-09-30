@@ -2562,8 +2562,6 @@ public:
     }
 
     String getText() override { return name; }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {}
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
     void handleDraggedBegin(MouseEvent& evt) override { toggle(); }
     bool enabled() { return synth->getSetting(setting); }
 
@@ -2683,10 +2681,6 @@ class guicontainer_plugin_synth_editor final : public guictr_base, public splitt
         gui_synth_stats_list_entry() {
             setBackgroundRendered(true);
             icon = -1;
-        }
-        void dragMoveOn(guibase* target, ivec2 mousepos) override {
-        }
-        void dragReleaseOn(guibase* target, ivec2 mousepos) override {
         }
         String getText() override {
             return string;

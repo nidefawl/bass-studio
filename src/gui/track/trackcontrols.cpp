@@ -1711,17 +1711,13 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             evt.requestFocus(this);
             return true;
         }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) {
-            return false;
-        }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            return false;
-        }
         for (guibase* gui : guis) {
             if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
                 return true;
             }
         }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
         evt.requestFocus(this);
     }
     if (evt.type <= MouseHitType::MOUSE_RIGHT) {

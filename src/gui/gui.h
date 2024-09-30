@@ -1,10 +1,7 @@
 #pragma once
 #include <nanovg.h>
 #include <vector>
-#include <algorithm>
 #include "grid.h"
-#include "host/automation/automation.h"
-#include "types.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
 #include "str_util.h"
@@ -27,6 +24,7 @@ class guiplugin;
 class guictr_dragged_plugins;
 class guictr_base;
 class gui_pluginlist_entry;
+class gui_clip;
 class gui_track;
 class scaled_grid;
 struct guitheme_t;
@@ -385,15 +383,7 @@ public:
             setTheme(parent->theme);
         }
     }
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_FILE) return false;
-        if (canMouseHit() && contains(mpos)) {
-            evt.requestFocus(this);
-            return true;
-        }
-        return false;
-    }
+    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt);
     guibase* getTopParent() {
         guibase* parentGui = parent;
         while (parentGui) {
@@ -444,6 +434,9 @@ public:
     }
     virtual void clipDropCancel() {
     }
+
+    // TODO: Remove these interface methods
+    // either use generic parameters or built a proper interface system (like in CLAP)
     virtual void pluginDragMove(guiplugin* g, ivec2 mousepos) {
     }
     virtual void pluginDragRelease(guiplugin* g, ivec2 mousepos) {
@@ -460,7 +453,9 @@ public:
     }
     virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
     }
-    virtual void dragBeginOn(guibase* target, ivec2 mousepos) {
+    virtual void clipDragMove(gui_clip* g, ivec2 mousepos) {
+    }
+    virtual void clipDragRelease(gui_clip* g, ivec2 mousepos) {
     }
     virtual void dragMoveOn(guibase* target, ivec2 mousepos) {
     }

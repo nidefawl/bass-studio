@@ -105,7 +105,7 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     return w;
 }
 
-void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const audiofile_t* file, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped, GuiColor::constant_t colOutline) {
+void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const clip_t* cl, const audiofile_t* file, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped, GuiColor::constant_t colOutline) {
     if (size.y < 1) {
         return;
     }
@@ -503,7 +503,7 @@ void gui_midi_clip::render(NVGcontext* vg) {
         renderStats.clipsRendered++;
     }
 }
-void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_entry_t* const entry, const clip_t* cl, ivec2 pos, ivec2 size, GuiColor::constant_t colOutline) {
+void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const clip_t* cl, ivec2 pos, ivec2 size, GuiColor::constant_t colOutline) {
     if (cl->getLen() <= 0) {
         return;
     }

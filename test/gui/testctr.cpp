@@ -197,10 +197,6 @@ public:
         icon = ICON_FILE;
         setDragRendered(true);
     }
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {
-    }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-    }
     String getText() override {
         return string;
     }

@@ -67,8 +67,6 @@ public:
             parentCtrl->openContextMenu(ctxt, evt.mousepos);
         }
     }
-    void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
-    void dragMoveOn(guibase* target, ivec2 mousepos) override {}
 };
 
 class gui_filebrowser_folder_entry : public gui_filebrowser_entry_base {

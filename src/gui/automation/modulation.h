@@ -121,6 +121,7 @@ class gui_dragged_modulation final :
         void handleDraggedMove(MouseEvent& evt) override;
         void dragMoveOn(guibase* target, ivec2 mousepos) override;
         void dragReleaseOn(guibase* target, ivec2 mousepos) override;
+        void disconnectPreviewModulation();
     };
 
 class guibutton_modulate final : public guibutton, public IDraggedModulationSource {
