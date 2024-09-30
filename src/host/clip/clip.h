@@ -159,6 +159,27 @@ public:
         copy(obj);
     }
 
+    clip_notes_t& operator=(clip_notes_t&& obj) noexcept {
+        if (this != &obj) {
+            m_list = std::move(obj.m_list);
+            selection = std::move(obj.selection);
+            firstNote = obj.firstNote;
+            lastNote = obj.lastNote;
+            minNote = obj.minNote;
+            maxNote = obj.maxNote;
+        }
+        return *this;
+    }
+
+    clip_notes_t(clip_notes_t&& obj) noexcept {
+        m_list = std::move(obj.m_list);
+        selection = std::move(obj.selection);
+        firstNote = obj.firstNote;
+        lastNote = obj.lastNote;
+        minNote = obj.minNote;
+        maxNote = obj.maxNote;
+    }
+
     template<typename Functor>
     void visitNotes(Functor f) {
         std::for_each(m_list.begin(), m_list.end(), f);
