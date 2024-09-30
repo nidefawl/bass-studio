@@ -1525,7 +1525,6 @@ std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const Str
     App::Platform::sanitizePathToDirectory(path);
     String uniqueFileName = name;
     while ((FileExists(uniqueFilePath) || tls.audioCache->getByFilename(uniqueFilePath) != nullptr) && ++idx < 10000) {
-        idx++;
         uniqueFileName = name;
         uniqueFileName += "-";
         uniqueFileName += std::to_string(idx);
