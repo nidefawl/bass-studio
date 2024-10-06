@@ -627,6 +627,8 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange(clip_t* optionalClipOnly) 
         view.visitClipView([&](clip_t* clip) {
             if (optionalClipOnly && clip != optionalClipOnly)
                 return true;
+            if (clip->notes.isEmpty())
+                return true;
             if (view.isAbsoluteTimeMode()) {
                 auto& view = clip->getNoteViewRender();
                 minSemi = minSemi == -1 ? view.minNote.pitch : math::min<int32_t>(minSemi, view.minNote.pitch);
@@ -637,6 +639,9 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange(clip_t* optionalClipOnly) 
             }
             return true;
         });
+    }
+    if (minSemi == -1 || maxSemi == -1) {
+        return;
     }
     int32_t range = math::abs(maxSemi - minSemi);
     if (range < 6) {
@@ -663,14 +668,26 @@ void guictr_noteeditor::relayout() {
     clip_t* currentClip = view.clip();
     bool bIsAbsMode = view.isAbsoluteTimeMode();
     clip_editor_layout_t layout = lastLayout;
-    if (!bIsAbsMode && currentClip && !currentClip->editorLayout.noLayout) {
-        layout = currentClip->editorLayout;
-    } else if (bIsAbsMode && !view.m_selectionView.editorLayout.noLayout && view.m_selectionView.totalClipCount) {
+    if (!bIsAbsMode && currentClip) {
+        if (!currentClip->editorLayout.noLayout) {
+            layout = currentClip->editorLayout;
+        } else {
+            layout.noLayout = true;
+        }
+    } else if (bIsAbsMode && view.m_selectionView.totalClipCount) {
+        if (!view.m_selectionView.editorLayout.noLayout) {
+            layout = view.m_selectionView.editorLayout;
+        } else {
+            layout.noLayout = true;
+        }
         layout = view.m_selectionView.editorLayout;
     }
 
     if (!layout.noLayout) {
         setLayout(layout.layoutPianoRoll);
+    } else {
+        layout_pianoroll_t defaultLayout{};
+        setLayout(defaultLayout);
     }
 
     zoomPianoRollToClipsNoteRange(nullptr);
@@ -680,8 +697,12 @@ void guictr_editor_base::relayout() {
     clip_t* currentClip = view.clip();
     bool bIsAbsMode = view.isAbsoluteTimeMode();
     clip_editor_layout_t layout = lastLayout;
-    if (!bIsAbsMode && currentClip && !currentClip->editorLayout.noLayout) {
-        layout = currentClip->editorLayout;
+    if (!bIsAbsMode && currentClip) {
+        if (!currentClip->editorLayout.noLayout) {
+            layout = currentClip->editorLayout;
+        } else {
+            layout.noLayout = true;
+        }
         m_grid.setLayout(layout.layoutGrid);
     } else if (bIsAbsMode && !view.m_selectionView.editorLayout.noLayout && view.m_selectionView.totalClipCount) {
         layout = view.m_selectionView.editorLayout;
@@ -754,8 +775,8 @@ void guictr_editor_base::onClipChanged() {
         }
     } else if (currentClip) {
         if (currentClip->editorLayout.noLayout) {
-            getGrid().showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
-            storeEditorLayout();
+            // getGrid().showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
+            // storeEditorLayout();
         }
     }
 }
@@ -856,7 +877,7 @@ void guictr_noteeditor::setLayout(layout_pianoroll_t& layout) {
     yoffset     = layout.yoffset;
     yscalefold  = layout.yscalefold;
     yoffsetfold = layout.yoffsetfold;
-    bFoldNotes        = layout.bFoldNotes;
+    bFoldNotes  = layout.bFoldNotes;
 }
 
 void renderClipHandlesBackground(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, vec2 handlesPos, vec2 handlesSize) {
