@@ -217,7 +217,7 @@ void findFilesWithExtRecursive(
                 curFilePath = strSearchPath + file.cFileName;
                 String fileName, ext;
                 SplitPath(curFilePath, nullptr, nullptr, &ext, &fileName);
-                if (std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
+                if (vecExt.empty() || std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
                     String absFilePath = strSearchPath + file.cFileName;
                     App::Platform::sanitizePathToFile(absFilePath);
                     const FileFound f = { absFilePath, fileName, ext, false };

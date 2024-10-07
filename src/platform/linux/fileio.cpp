@@ -140,14 +140,14 @@ void findFilesWithExtList(
         FTSENT* child = fts_children(file_system, 0);
         while (child) {
             if (!(child->fts_info & FTS_DP)) {
-            String fileName, ext;
-            SplitPath(child->fts_name, nullptr, nullptr, &ext, &fileName);
-            if (std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
-                String path = String(child->fts_path) + child->fts_name;
-                App::Platform::sanitizePathToFile(path);
-                const FileFound f = { std::move(path), child->fts_name, ext, false };
-                _out.push_back(f);
-            }
+                String fileName, ext;
+                SplitPath(child->fts_name, nullptr, nullptr, &ext, &fileName);
+                if (vecExt.empty() || std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
+                    String path = String(child->fts_path) + child->fts_name;
+                    App::Platform::sanitizePathToFile(path);
+                    const FileFound f = { std::move(path), child->fts_name, ext, false };
+                    _out.push_back(f);
+                }
             }
             child = child->fts_link;
         }
