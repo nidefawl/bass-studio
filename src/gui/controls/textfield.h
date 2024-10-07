@@ -106,6 +106,7 @@ public:
     gui_textfield() {
         setFlag(FLG_RENDER_BACKGROUND_INSET, true);
         setFlag(FLG_BG_SHADING, true);
+        setCanMouseHit(true);
     };
 
     float fontSize() const {

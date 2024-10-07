@@ -2891,6 +2891,7 @@ guictr_clipeditorview::guictr_clipeditorview()
     : guictr_base(),
       cache(new midi_clip_render_cache_t{})
 {
+    setCanMouseHit(true);
 }
 guictr_clipeditorview::~guictr_clipeditorview() {
     delete cache;
