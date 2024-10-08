@@ -519,6 +519,8 @@ guictr_base::guictr_base(gui_type guiType)
     setBackgroundRendered(false);
     setBackgroundRenderedInset(true);
     setFlag(FLG_SUPPRESS_TOOLTIP, true);
+    padding = 12;
+    margin  = 8;
 }
 
 bool guictr_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {

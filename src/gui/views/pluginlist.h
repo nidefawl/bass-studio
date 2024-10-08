@@ -61,7 +61,6 @@ public:
     };
 private:
     GroupBy groupBy = GROUP_BY_FORMAT;
-    const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
     gui_textfield textField;
     gui_textfield textField2;
     gui_list pluginListCtr;
@@ -115,12 +114,12 @@ public:
         textField2.setVisible(!textField2.value().empty());
         ivec2 cs          = getSizeContent();
         textField.pos     = ivec2(0, 0);
-        textField.size    = ivec2(cs.x, heightTextField);
-        textField2.pos    = ivec2(textField.left(), textField.bottom());
+        textField.size    = ivec2(cs.x, HEIGHT_DEFAULT_INPUT);
+        textField2.pos    = ivec2(textField.left(), textField.bottom() + padding/2);
         textField2.size   = textField.size;
-        pluginListCtr.pos = ivec2(0, textField.bottom());
+        pluginListCtr.pos = ivec2(0, textField.bottom() + padding/2);
         if (textField2.isVisible()) {
-            pluginListCtr.pos = ivec2(textField2.left(), textField2.bottom());
+            pluginListCtr.pos = ivec2(textField2.left(), textField2.bottom() + padding/2);
         }
         pluginListCtr.size = ivec2(cs.x, cs.y - pluginListCtr.pos.y);
         for (guibase* gui : guis) {
@@ -182,7 +181,6 @@ public:
     }
 };
 class guictr_modulelibrary final : public guictr_base {
-    const int32_t heightTextField = 30;
     gui_textfield textField;
     gui_list pluginListCtr;
     String curquery = "";
@@ -191,8 +189,6 @@ class guictr_modulelibrary final : public guictr_base {
 public:
     guictr_modulelibrary() : guictr_base() {
         setBackgroundRendered(true);
-        padding = 4;
-        margin = 2;
         pluginListCtr.padding = 0;
         pluginListCtr.setBackgroundRendered(false);
         add(&textField);
@@ -250,9 +246,9 @@ public:
     void layout() override {
         pluginListCtr.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
         ivec2 cs           = getSizeContent();
-        textField.size     = ivec2(cs.x, heightTextField);
+        textField.size     = ivec2(cs.x, HEIGHT_DEFAULT_INPUT);
         textField.pos      = ivec2(0, 0);
-        pluginListCtr.pos  = ivec2(0, textField.bottom()+padding);
+        pluginListCtr.pos  = ivec2(0, textField.bottom() + padding/2);
         pluginListCtr.size = ivec2(cs.x, cs.y - pluginListCtr.top());
         for (guibase* gui : guis) {
             gui->layout();

@@ -36,7 +36,6 @@ public:
         this->bVerticalLayout = bVertical;
     }
     int32_t getNumEntries();
-    void toggleEntry(int32_t idx);
     void addEntry(guibase* ctr);
     void removeEntries();
     void buttonClicked(guibase* button) override;
@@ -46,10 +45,10 @@ public:
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
     ivec2 getContainerPos() override;
     ivec2 getContainerSize() override;
-    int32_t getCollapsedCtrHeight(guictr_base* ctr);
     void updateSplitterPositions();
     void setSplitters(const std::vector<float>& splitterPos);
     void getSplitterPositions(std::vector<float>& splitterPos);
+    void setFixedHeight(int32_t idx, int32_t height);
     void renderContainerLabel(NVGcontext* vg) override {
         const auto h = titleHeight;
         if (isFlag(FLG_RENDER_LABEL) && label.length() && h > 0) {

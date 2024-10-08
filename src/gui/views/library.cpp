@@ -6,9 +6,11 @@
 #include "gui/container/container_builder.h"
 #include "gui/container/container_layout.h"
 #include "gui/controls/list.h"
+#include "gui/controls/button.h"
 #include "gui/controls/filebrowser.hpp"
 #include "gui/controls/textfield.h"
 #include "gui/plugin/pluginctr.h"
+#include "gui/views/controls.h"
 #include "gui/views/pluginlist.h"
 #include "host/clip/clip.h"
 #include "host/daw/mainctrl.h"
@@ -24,37 +26,37 @@
 #include "appsettings.h"
 #include "gui/track/trackcontent.h"
 
+static const std::map<String, int> extensionToIcon = {
+    { "preset", ICON_EFFECT },
+    { "tracks", ICON_SYNTH_SMALL },
+    { "project", ICON_DAW_EXE },
+    { "mp3", ICON_FILE_AUDIO },
+    { "flac", ICON_FILE_AUDIO },
+    { "mid", ICON_FILE_MIDI },
+    { "wav", ICON_FILE_AUDIO },
+    { "aif", ICON_FILE_AUDIO },
+    { "aiff", ICON_FILE_AUDIO },
+    { "ogg", ICON_FILE_AUDIO },
+    { "m4a", ICON_FILE_AUDIO },
+    { "wma", ICON_FILE_AUDIO },
+    { "aac", ICON_FILE_AUDIO },
+    { "ac3", ICON_FILE_AUDIO },
+    { "amr", ICON_FILE_AUDIO },
+    { "au", ICON_FILE_AUDIO },
+    { "flac", ICON_FILE_AUDIO },
+    { "mka", ICON_FILE_AUDIO },
+    { "mp2", ICON_FILE_AUDIO },
+    { "mp3", ICON_FILE_AUDIO },
+    { "mpc", ICON_FILE_AUDIO },
+    { "ogg", ICON_FILE_AUDIO },
+    { "ra", ICON_FILE_AUDIO },
+    { "tta", ICON_FILE_AUDIO },
+    { "wav", ICON_FILE_AUDIO },
+    { "wma", ICON_FILE_AUDIO },
+};
 static const std::vector<String> supportedExtensions = { "project", "tracks", "preset", SUPPORTED_AUDIO_FILE_TYPES, "mid" };
 
 int32_t GetIconFromExtension(const String& path) {
-    static const std::map<String, int> extensionToIcon = {
-        { "preset", ICON_EFFECT },
-        { "tracks", ICON_SYNTH_SMALL },
-        { "project", ICON_DAW_EXE },
-        { "mp3", ICON_FILE_AUDIO },
-        { "flac", ICON_FILE_AUDIO },
-        { "mid", ICON_FILE_MIDI },
-        { "wav", ICON_FILE_AUDIO },
-        { "aif", ICON_FILE_AUDIO },
-        { "aiff", ICON_FILE_AUDIO },
-        { "ogg", ICON_FILE_AUDIO },
-        { "m4a", ICON_FILE_AUDIO },
-        { "wma", ICON_FILE_AUDIO },
-        { "aac", ICON_FILE_AUDIO },
-        { "ac3", ICON_FILE_AUDIO },
-        { "amr", ICON_FILE_AUDIO },
-        { "au", ICON_FILE_AUDIO },
-        { "flac", ICON_FILE_AUDIO },
-        { "mka", ICON_FILE_AUDIO },
-        { "mp2", ICON_FILE_AUDIO },
-        { "mp3", ICON_FILE_AUDIO },
-        { "mpc", ICON_FILE_AUDIO },
-        { "ogg", ICON_FILE_AUDIO },
-        { "ra", ICON_FILE_AUDIO },
-        { "tta", ICON_FILE_AUDIO },
-        { "wav", ICON_FILE_AUDIO },
-        { "wma", ICON_FILE_AUDIO },
-    };
     String ext;
     SplitPath(path, nullptr, nullptr, &ext);
     auto it = extensionToIcon.find(ext);
@@ -484,8 +486,150 @@ public:
     }
 };
 
+enum class filter_type {
+    ANY, // all files aka .*
+    ALL, // all other enum entries after this one
+    AUDIO,
+    MIDI,
+    PROJECT,
+    TRACKS,
+    PRESET,
+};
+
+class guictr_filebrowser_filetype_filter final : public guictr_base {
+    class guibutton_select_filter : public guibutton {
+    public:
+        bool bIsSelected = false;
+        int32_t btnIndex = 0;
+        int32_t getIndex() const {
+            return btnIndex;
+        }
+        guibutton_select_filter() = default;
+        bool getState() const override {
+            return bIsSelected;
+        }
+        void setState(bool b) {
+            bIsSelected = b;
+        }
+    };
+    std::array<guibutton_select_filter, 7> btnViews;
+    int32_t selectedFilter = 0;
+public:
+    guictr_filebrowser_filetype_filter() {
+        setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        padding = 6;
+        margin  = 6;
+        snapSides.y = snapSides.w = 1;
+        snapSides.x = snapSides.z = 0;
+        for (auto& btn : btnViews) {
+            btn.btnIndex = static_cast<int32_t>(&btn - btnViews.data());
+            btn.drawFn   = drawTextureSymbol;
+            String text;
+            switch (btn.btnIndex) {
+                case 0:
+                    text = "Any";
+                    btn.drawFn   = nullptr;
+                    btn.setText("*");
+                    // btn.drawParm = ICON_FILE;
+                    break;
+                case 1:
+                    text = "All";
+                    btn.drawParm = ICON_FILE;
+                    break;
+                case 2:
+                    text = "Audio";
+                    btn.drawParm = ICON_FILE_AUDIO;
+                    break;
+                case 3:
+                    text = "Midi";
+                    btn.drawParm = ICON_FILE_MIDI;
+                    break;
+                case 4:
+                    text = "Project";
+                    btn.drawParm = ICON_DAW_EXE;
+                    break;
+                case 5:
+                    text = "Tracks";
+                    btn.drawParm = ICON_SYNTH_SMALL;
+                    break;
+                case 6:
+                    text = "Preset";
+                    btn.drawParm = ICON_EFFECT;
+                    break;
+                default:
+                    break;
+            }
+            btn.setTooltipText(text);
+            btn.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
+            add(&btn);
+        }
+        // move "*" to the end
+        remove(&btnViews[0]);
+        add(&btnViews[0]);
+        setActiveFilter(filter_type::ALL);
+    }
+    ~guictr_filebrowser_filetype_filter() override {
+        removeGuis();
+    }
+    void layout() override {
+        auto pos = ivec2(0, 0);
+        for (auto& gui : btnViews) {
+            gui.pos = pos;
+            gui.size = ivec2(size.x / btnViews.size(), size.y);
+        }
+        guictr_base::layout();
+    }
+    int32_t getNumButtons() const {
+        return CtrSize(btnViews);
+    }
+    void setActiveFilter(filter_type filter) {
+        for (auto& btn : btnViews) {
+            if (btn.btnIndex == static_cast<int32_t>(filter)) {
+                btn.setState(true);
+                selectedFilter = btn.btnIndex;
+            } else {
+                btn.setState(false);
+            }
+        }
+    }
+    void buttonClicked(guibase* button) override {
+        for (auto& btn : btnViews) {
+            if (&btn == button) {
+                btn.setState(true);
+                selectedFilter = btn.btnIndex;
+            } else {
+                btn.setState(false);
+            }
+        }
+        if (parent) {
+            parent->buttonClicked(this);
+        }
+    }
+    filter_type getSelectedFilter() const {
+        switch (selectedFilter) {
+            case 0:
+                return filter_type::ANY;
+            case 1:
+                return filter_type::ALL;
+            case 2:
+                return filter_type::AUDIO;
+            case 3:
+                return filter_type::MIDI;
+            case 4:
+                return filter_type::PROJECT;
+            case 5:
+                return filter_type::TRACKS;
+            case 6:
+                return filter_type::PRESET;
+            default:
+                return filter_type::ALL;
+        }
+    }
+};
+
 class gui_user_library_browser final : public guictr_stacked {
     gui_user_library_path_list ctr_folders_list;
+    guictr_filebrowser_filetype_filter ctr_fileTypeFilter;
     gui_user_library_browser_filebrowser ctr_filebrowser;
     bool bRefresh = false;
 public:
@@ -493,8 +637,9 @@ public:
         setGuiType(gui_type::CTR_TYPE_USERLIBRARY_BROWSER);
         setVerticalLayout(true);
         addEntry(&ctr_folders_list);
+        addEntry(&ctr_fileTypeFilter);
         addEntry(&ctr_filebrowser);
-        setSplitters({ 0.25f });
+        setSplitters({ 0.25f, 0.285f });
     }
     ~gui_user_library_browser() override {
         removeGuis();
@@ -504,7 +649,7 @@ public:
         bRefresh = true;
     }
     void buttonClicked(guibase* button) override {
-        if (button->parent == &ctr_folders_list) {
+        if (button == &ctr_fileTypeFilter || button->parent == &ctr_folders_list) {
             updateList();
         }
     }
@@ -518,8 +663,10 @@ public:
         }
     }
     void layout() override {
-        ctr_folders_list.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
-        ctr_filebrowser.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
+        auto rowHeight = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+        setFixedHeight(1, rowHeight + 2);
+        ctr_folders_list.setRowHeight(rowHeight);
+        ctr_filebrowser.setRowHeight(rowHeight);
         guictr_stacked::layout();
     }
     void updateList() {
@@ -565,7 +712,44 @@ public:
         const auto selectedEntry = dynamic_cast<gui_userlibrary_list_entry_t*>(ctr_folders_list.getSelectedEntry());
         if (selectedEntry) {
             ctr_filebrowser.setWorkingDir(selectedEntry->path);
-            ctr_filebrowser.setFileExtensions(supportedExtensions);
+            std::vector<String> selectedExtensions = {};
+            auto filter = ctr_fileTypeFilter.getSelectedFilter();
+            auto addFileTypes = [](auto& selectedExtensions, auto filter){
+                switch (filter) {
+                    case filter_type::ANY:
+                        break;
+                    case filter_type::AUDIO:
+                        for (auto& ext : std::array{SUPPORTED_AUDIO_FILE_TYPES}) {
+                            selectedExtensions.emplace_back(ext);
+                        }
+                        break;
+                    case filter_type::MIDI:
+                        selectedExtensions.emplace_back("mid");
+                        break;
+                    case filter_type::PROJECT:
+                        selectedExtensions.emplace_back("project");
+                        break;
+                    case filter_type::TRACKS:
+                        selectedExtensions.emplace_back("tracks");
+                        break;
+                    case filter_type::PRESET:
+                        selectedExtensions.emplace_back("preset");
+                        break;
+                    case filter_type::ALL:
+                    default:
+                        break;
+                }
+            };
+            if (filter == filter_type::ALL) {
+                addFileTypes(selectedExtensions, filter_type::AUDIO);
+                addFileTypes(selectedExtensions, filter_type::MIDI);
+                addFileTypes(selectedExtensions, filter_type::PROJECT);
+                addFileTypes(selectedExtensions, filter_type::TRACKS);
+                addFileTypes(selectedExtensions, filter_type::PRESET);
+            } else {
+                addFileTypes(selectedExtensions, filter);
+            }
+            ctr_filebrowser.setFileExtensions(selectedExtensions);
             ctr_filebrowser.updateList();
         } else {
             ctr_filebrowser.setList({});
@@ -580,9 +764,9 @@ class gui_user_library_search final : public guictr_base {
 public:
     gui_user_library_search() : guictr_base() {
         setGuiType(gui_type::CTR_TYPE_USERLIBRARY_SEARCH);
-        padding = 4;
-        margin = 2;
-        // setVerticalLayout(true);
+        setBackgroundRendered(true);
+        ctr_filesearch.padding = 0;
+        ctr_filesearch.setBackgroundRendered(false);
         add(&textField);
         add(&ctr_filesearch);
         gui_list pluginListCtr;
@@ -602,7 +786,7 @@ public:
         ivec2 cs           = getSizeContent();
         textField.size     = ivec2(cs.x, rowHeight);
         textField.pos      = ivec2(0, 0);
-        ctr_filesearch.pos  = ivec2(0, textField.bottom()+padding);
+        ctr_filesearch.pos  = ivec2(0, textField.bottom() + padding/2);
         ctr_filesearch.size = ivec2(cs.x, cs.y - ctr_filesearch.top());
         for (guibase* gui : guis) {
             gui->layout();
