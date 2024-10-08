@@ -111,7 +111,7 @@ void guictr_base::renderBackground(NVGcontext* vg) {
         nvgFillColor(vg, rgbaToNvg(0x7fff00ff));
         nvgFill(vg);
     }
-    if (safeRefGet(dawCtrl->getDragDropTarget().target) == this) {
+    if (dawCtrl && safeRefGet(dawCtrl->getDragDropTarget().target) == this) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
         nvgFillColor(vg, rgbaToNvg(0x3fdddd33));
