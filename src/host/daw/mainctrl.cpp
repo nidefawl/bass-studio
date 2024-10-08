@@ -2831,3 +2831,26 @@ DawCtrl::DawCtrl(AppCtrl* parent, DawInstance& _daw, int32_t _dawCtrlWindowIndex
     setWindowName(BuildInfo::PRODUCT_NAME_DISPLAY);
     guiDraggedFiles.setControl(this);
 }
+
+void DawInstance::fileSearchCancel() {
+    if (searchFileTask && !searchFileTask->isCompleted()) {
+        searchFileTask->setCancelled();
+        previousSearchFileTasks.push_back(searchFileTask);
+        searchFileTask.reset();
+    }
+}
+void DawInstance::fileSearchUpdate() {
+        for (auto it = previousSearchFileTasks.begin(); it != previousSearchFileTasks.end();) {
+            if ((*it)->isCompleted()) {
+                it = previousSearchFileTasks.erase(it);
+            } else {
+                ++it;
+            }
+        }
+}
+
+void DawInstance::fileSeachStart(std::shared_ptr<DAW::SearchFileTask> task) {
+    fileSearchCancel();
+    searchFileTask = std::move(task);
+    workerThread.pushTask(searchFileTask.get());
+}

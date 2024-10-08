@@ -132,6 +132,7 @@ namespace DAW {
     struct load_project_task;
     class LoadAudioTask;
     class ProcessClipAudioThreadTask;
+    class SearchFileTask;
     std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const Cursor& _cursor, bool copyAutomation);
     std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const Cursor& _cursor);
     void pasteFullClipboard(DawInstance* daw, track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation);
@@ -146,6 +147,86 @@ namespace DAW {
     void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip);
     void deleteTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
     void insertTime(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor, int32_t len);
+
+
+    class SearchFileTask final : public WorkerThread::ThreadTask {
+        std::atomic<bool> m_cancelled{};
+
+        std::vector<String> directories;
+        std::vector<String> fileExtensions;
+        std::vector<String> searchTerms;
+
+        std::vector<FileFound> filesFound;
+        size_t maxFiles = 1000;
+
+    public:
+        ~SearchFileTask() {
+        }
+        void setMaxFiles(size_t _maxFiles) {
+            maxFiles = _maxFiles;
+        }
+        void setSearchOptions(const std::vector<String>& _directories, const std::vector<String>& _fileExtensions, const std::vector<String>& _searchTerms) {
+            directories    = _directories;
+            fileExtensions = _fileExtensions;
+            searchTerms    = _searchTerms;
+        }
+        void run() override {
+            std::vector<String> dirsVisited;// to avoid infinite recursion
+            for (auto& dir : directories) {
+                dirsVisited.push_back(dir);
+                updateListRecursive(dir, dirsVisited, 0);
+            }
+        }
+
+        void setCancelled() {
+            m_cancelled = true;
+            setError();
+        }
+
+        bool isCancelled() const {
+            return m_cancelled;
+        }
+
+        void updateListRecursive(const String& path, std::vector<String>& dirsVisited, int32_t depth) {
+            if (isCancelled()) {
+                return;
+            }
+            std::vector<FileFound> files;
+            listDirectoryFiles(path, fileExtensions, files);
+            for (auto& f : files) {
+                auto fClone = f;
+                // fClone.depth = depth;
+                if (fClone.bIsDir) {
+                    if (std::find(dirsVisited.cbegin(), dirsVisited.cend(), fClone.path) == dirsVisited.cend()) {
+                        dirsVisited.push_back(fClone.path);
+                        updateListRecursive(fClone.path, dirsVisited, depth + 1);
+                    }
+                } else {
+                    bool bMatch = true;
+                    for (auto& term : searchTerms) {
+                        if (fClone.name.find(term) == String::npos) {
+                            bMatch = false;
+                            break;
+                        }
+                    }
+                    if (bMatch) {
+                        this->filesFound.push_back(fClone);
+                        if (this->filesFound.size() > maxFiles) {
+                            break;
+                        }
+                    }
+                }
+                if (isCancelled()) {
+                    break;
+                }
+            }
+        }
+
+        std::vector<FileFound>& getFilesFound() {
+            return filesFound;
+        }
+    };
+
 }// namespace DAW
 
 struct clip_cursor_t {
@@ -450,6 +531,8 @@ class DawInstance final : public project_controller_t, public delete_cb {
     std::shared_ptr<DAW::ProcessClipAudioThreadTask> processAudioTaskRunning;
     std::vector<std::shared_ptr<DAW::ProcessClipAudioThreadTask>> processAudioTasks;
     std::vector<std::shared_ptr<DAW::LoadAudioTask>> loadAudioTasks;
+    std::shared_ptr<DAW::SearchFileTask> searchFileTask;
+    std::vector<std::shared_ptr<DAW::SearchFileTask>> previousSearchFileTasks;
 
     ClipBoardType clipboardType = CLIPBOARD_NONE;
     std::shared_ptr<plugin_clipboard_t> clipboardPlugins;
@@ -664,6 +747,9 @@ public:
     void updateAudioProcessingTask();
     void updateLoadAudioTasks();
     void refreshAllUserlibraryBrowsers();
+    void fileSearchCancel();
+    void fileSearchUpdate();
+    void fileSeachStart(std::shared_ptr<DAW::SearchFileTask> task);
 private:
     void onDawCompanionWindowClose(DawWindowCompanion& entry);
     void saveProjectBundle(const String& path);

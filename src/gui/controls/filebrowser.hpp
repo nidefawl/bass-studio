@@ -252,91 +252,8 @@ public:
     }
 };
 
-namespace DAW {
-
-    class SearchFileTask final : public WorkerThread::ThreadTask {
-        std::atomic<bool> m_cancelled{};
-
-        std::vector<String> directories;
-        std::vector<String> fileExtensions;
-        std::vector<String> searchTerms;
-
-        std::vector<FileFound> filesFound;
-        size_t maxFiles = 1000;
-
-    public:
-        ~SearchFileTask() {
-        }
-        void setMaxFiles(size_t _maxFiles) {
-            maxFiles = _maxFiles;
-        }
-        void setSearchOptions(const std::vector<String>& _directories, const std::vector<String>& _fileExtensions, const std::vector<String>& _searchTerms) {
-            directories    = _directories;
-            fileExtensions = _fileExtensions;
-            searchTerms    = _searchTerms;
-        }
-        void run() override {
-            std::vector<String> dirsVisited;// to avoid infinite recursion
-            for (auto& dir : directories) {
-                dirsVisited.push_back(dir);
-                updateListRecursive(dir, dirsVisited, 0);
-            }
-        }
-
-        void setCancelled() {
-            m_cancelled = true;
-            setError();
-        }
-
-        bool isCancelled() const {
-            return m_cancelled;
-        }
-
-        void updateListRecursive(const String& path, std::vector<String>& dirsVisited, int32_t depth) {
-            if (isCancelled()) {
-                return;
-            }
-            std::vector<FileFound> files;
-            listDirectoryFiles(path, fileExtensions, files);
-            for (auto& f : files) {
-                auto fClone = f;
-                // fClone.depth = depth;
-                if (fClone.bIsDir) {
-                    if (std::find(dirsVisited.cbegin(), dirsVisited.cend(), fClone.path) == dirsVisited.cend()) {
-                        dirsVisited.push_back(fClone.path);
-                        updateListRecursive(fClone.path, dirsVisited, depth + 1);
-                    }
-                } else {
-                    bool bMatch = true;
-                    for (auto& term : searchTerms) {
-                        if (fClone.name.find(term) == String::npos) {
-                            bMatch = false;
-                            break;
-                        }
-                    }
-                    if (bMatch) {
-                        this->filesFound.push_back(fClone);
-                        if (this->filesFound.size() > maxFiles) {
-                            break;
-                        }
-                    }
-                }
-                if (isCancelled()) {
-                    break;
-                }
-            }
-        }
-
-        std::vector<FileFound>& getFilesFound() {
-            return filesFound;
-        }
-    };
-
-}// namespace DAW
-
 class guictr_filesearch final : public gui_list {
     std::shared_ptr<DAW::SearchFileTask> searchFileTask;// TODO: make sure lifetime extends this object
-    std::vector<std::shared_ptr<DAW::SearchFileTask>> previousSearchFileTasks;
     std::vector<FileFound> filesFound;
 
 public:
@@ -349,20 +266,11 @@ public:
     }
     void search(const std::vector<String>& _directories, const std::vector<String>& _fileExtensions, const std::vector<String>& _searchTerms) {
         filesFound.clear();
-        if (searchFileTask && !searchFileTask->isCompleted()) {
-            searchFileTask->setCancelled();
-            previousSearchFileTasks.push_back(searchFileTask);
-        }
-        for (auto it = previousSearchFileTasks.begin(); it != previousSearchFileTasks.end();) {
-            if ((*it)->isCompleted()) {
-                it = previousSearchFileTasks.erase(it);
-            } else {
-                ++it;
-            }
-        }
+        dawCtrl->getDaw()->fileSearchCancel();
+        dawCtrl->getDaw()->fileSearchUpdate();
         searchFileTask = std::make_shared<DAW::SearchFileTask>();
         searchFileTask->setSearchOptions(_directories, _fileExtensions, _searchTerms);
-        dawCtrl->getDaw()->getWorkerThread()->pushTask(searchFileTask.get());
+        dawCtrl->getDaw()->fileSeachStart(searchFileTask);
     }
 
     void onTick(AppCtrl* ctrl) override {
@@ -370,13 +278,6 @@ public:
         if (searchFileTask && searchFileTask->isCompleted()) {
             onCompletedSearch(searchFileTask.get());
             searchFileTask.reset();
-        }
-        for (auto it = previousSearchFileTasks.begin(); it != previousSearchFileTasks.end();) {
-            if ((*it)->isCompleted()) {
-                it = previousSearchFileTasks.erase(it);
-            } else {
-                ++it;
-            }
         }
     }
 
