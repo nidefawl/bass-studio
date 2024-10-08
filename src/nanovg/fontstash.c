@@ -859,7 +859,12 @@ static FONSglyph* fons__getGlyph(FONScontext* stash, FONSfont* font, unsigned in
         // In that case the glyph index 'g' is 0, and we'll proceed below and cache empty glyph.
     }
     scale = fons__tt_getPixelHeightScale(&renderFont->font, size);
-    fons__tt_buildGlyphBitmap(&renderFont->font, g, size, scale, &advance, &lsb, &x0, &y0, &x1, &y1);
+    int queryGlyph = g;
+    if (codepoint == 32) {
+        int codepointDash = '-';
+        queryGlyph = fons__tt_getGlyphIndex(&font->font, codepointDash);
+    }
+    fons__tt_buildGlyphBitmap(&renderFont->font, queryGlyph, size, scale, &advance, &lsb, &x0, &y0, &x1, &y1);
     gw = x1-x0 + pad*2;
     gh = y1-y0 + pad*2;
 
