@@ -309,6 +309,12 @@ private:
                     if (numBlocksProcessed) {
                         samplePos += blockSize * numBlocksProcessed;
                         tickPos += props.ticksPerBlock * numBlocksProcessed;
+                        /* auto tickPosFromSample = sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, sampleRate);
+                        auto errorTicks = tickPos - tickPosFromSample;
+                        static const double maxError = 0.0001;
+                        if (errorTicks > maxError) {
+                            log_printf("ERROR: tickPos: %.6f, tickPosFromSample: %.6f, errorTicks: %.6f\n", tickPos, tickPosFromSample, errorTicks);
+                        } */
                         if (m_status == status_playback) {
                             if (inLoop && tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
                                 // if (m_threadTls.dawInstance) {
