@@ -268,7 +268,7 @@ class gui_user_library_browser_filebrowser_folder_entry : public gui_filebrowser
 public:
     explicit gui_user_library_browser_filebrowser_folder_entry(const FileFound& f, bool bIsOpened)
         : gui_filebrowser_folder_entry(f, bIsOpened) {
-        icon = ICON_FOLDER;
+        icon = bIsOpened ? ICON_FOLDER_OPEN : ICON_FOLDER;
     }
     void trackEntryDragMove(gui_track* g, ivec2 mousepos) override {
         auto clipboard = dawCtrl->getDaw()->getDragDropClip();
