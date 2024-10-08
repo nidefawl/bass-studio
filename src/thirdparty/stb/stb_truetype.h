@@ -421,7 +421,6 @@ int main(int arg, char **argv)
 ////   The following sections allow you to supply alternate definitions
 ////   of C library functions used by stb_truetype, e.g. if you don't
 ////   link with the C runtime library.
-#define STB_TRUETYPE_IMPLEMENTATION
 #ifdef STB_TRUETYPE_IMPLEMENTATION
    // #define your own (u)stbtt_int8/16/32 before including to override this
    #ifndef stbtt_uint8
