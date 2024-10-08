@@ -895,6 +895,7 @@ void guictr_pluginview::render(NVGcontext* vg) {
             if (setScissorTransform(vg)) {
                 nvgScale(vg, minScale, scY);
                 for (guibase* gui : ctrPlugins->guis) {
+                    //TODO: skip rendering complex nested UI elements like textfields
                     nvgSave(vg);
                     gui->render(vg);
                     nvgRestore(vg);
