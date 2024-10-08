@@ -65,6 +65,8 @@ void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
             mSelectionPos = 0;
             mCursorPos    = (int) mValueTemp.size();
             mMouseDownPos = ivec2(-1, -1);
+        } else {
+            updateCursor(nullptr, metrics.textBounds[2]);
         }
         m_tmLastClick = tmNow;
     }
@@ -124,7 +126,6 @@ void gui_textfield::render(NVGcontext* ctx) {
 }
 #define X_SPACING (size.y * 0.3f)
 void gui_textfield::updateTextLayout(NVGcontext* ctx) {
-
     nvgTextBounds(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.textBounds);
     metrics.lineH = metrics.textBounds[3] - metrics.textBounds[1];
 
@@ -611,13 +612,9 @@ void gui_textfield::updateCursor(NVGcontext*, float lastx) {
 }
 
 float gui_textfield::cursorIndex2Position(int index, float lastx) const {
-    float pos = 0;
-    if (index >= metrics.numGlyphs)
-        pos = lastx;// last character
-    else
-        pos = metrics.glyphPositions[index].x;
-
-    return pos;
+    if (index >= 0 && index < metrics.numGlyphs)
+        return metrics.glyphPositions[index].x;
+    return lastx;
 }
 
 int gui_textfield::position2CursorIndex(float posx, float lastx) const {
