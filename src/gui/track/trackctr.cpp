@@ -1221,6 +1221,7 @@ void guictr_tracks::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousep
         auto effect = g->makeInstance();
         if (effect) {
             DAW::InsertPluginOnTrack(daw, track, effect);
+            track->name = effect->getName();
         }
         return;
     }
@@ -1295,8 +1296,10 @@ bool guictr_tracks::fileDropRelease(dragdrop_file& clip, ivec2 mousepos, Keyboar
         case dragdrop_file::TYPE_PLUGIN_PRESET: {
             ThreadLock lock = daw->getPlayThread()->lockThread();
             track_t* track = nullptr;
+            bool bSetName = false;
             if (slot.droptype == DAW::gui_track_drop_position_t::drop_type::none) {
                 track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
+                bSetName = true;
             } else if (slot.droppedTrack) {
                 track = slot.droppedTrack;
             }
@@ -1314,6 +1317,9 @@ bool guictr_tracks::fileDropRelease(dragdrop_file& clip, ivec2 mousepos, Keyboar
             auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
             if (effect) {
                 ThreadLock lock = daw->getPlayThread()->lockThread();
+                if (bSetName) {
+                    track->name = effect->getDfrdPluginName();
+                }
                 DAW::InsertEffectDeferredOnStage(daw, dstStage, effect, -2, true, true);
             }
             return true;

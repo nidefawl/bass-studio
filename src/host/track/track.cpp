@@ -55,6 +55,24 @@
 
 const tick_t INVALID_TICK = 1 << 31;
 
+namespace DAW {
+    bool IsTrackDefaultNamed(const String& name) {
+        if (name.find("Audio ") == 0) {
+            return true;
+        }
+        if (name.find("Midi ") == 0) {
+            return true;
+        }
+        if (name.find("Return ") == 0) {
+            return true;
+        }
+        if (name.find("Master ") == 0) {
+            return true;
+        }
+        return false;
+    }
+} // namespace DAW
+
 void releaseClipResources(clip_t* cl, delete_cb* cb) {
     if (cb)
         cb->preClipDelete(cl);
@@ -425,7 +443,18 @@ void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
     for (effectbase* effect : effects) {
         effect->setSlot(slot++);
     }
-    // this->notifyPluginContainers();
+
+    if (effects.size() == 1) {
+        auto track = getTrack();
+        if (track && DAW::IsTrackDefaultNamed(track->name)) {
+            auto deferred = dynamic_cast<effect_deferred*>(_effect);
+            if (deferred) {
+                track->name = deferred->getDfrdPluginName();
+            } else {
+                track->name = _effect->getName();
+            }
+        }
+    }
 }
 
 track_impl_t::~track_impl_t() {
