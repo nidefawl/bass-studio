@@ -136,6 +136,43 @@ inline void SplitPath(const String& in, String* path, String* name, String* ext,
         *nameExt = _nameExt;
     }
 }
+inline void SplitPathWide(const WString& in, WString* path, WString* name, WString* ext, WString* nameExt = nullptr) {
+    WString pathCopy = in;
+    App::Platform::sanitizePathToFileWide(pathCopy);
+    std::size_t pathSep = pathCopy.find_last_of(FILE_PATHSEP_CHAR);
+    WString _nameExt;
+    if (pathSep == WString::npos) {
+        _nameExt = in;
+    } else {
+        _nameExt = pathSep + 1 < in.length() ? in.substr(pathSep + 1) : L"";
+    }
+    if (path) {
+        if (pathSep == WString::npos) {
+            *path = L"";
+        } else {
+            *path = in.substr(0, pathSep);
+        }
+    }
+    // TODO: We don't want to cut at the dot if the path names a directory
+    std::size_t fileExtSep = _nameExt.find_last_of('.');
+    if (name) {
+        if (fileExtSep == WString::npos || fileExtSep < 1) {
+            *name = _nameExt;
+        } else {
+            *name = _nameExt.substr(0, fileExtSep);
+        }
+    }
+    if (ext) {
+        if (fileExtSep == WString::npos || fileExtSep >= _nameExt.length() - 1) {
+            *ext = L"";
+        } else {
+            *ext = _nameExt.substr(fileExtSep + 1);
+        }
+    }
+    if (nameExt) {
+        *nameExt = _nameExt;
+    }
+}
 inline String FileNameFromPath(const String& in) {
     String fileName;
     SplitPath(in, nullptr, nullptr, nullptr, &fileName);

@@ -136,7 +136,6 @@ int promptUserFilePathAnsi(window_base* w, int mode, SupportedFileTypes fileType
 }
 // same as above, but with unicode support
 int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, String& _out, String _defaultPath, String _defaultName) {
-    using WString = std::basic_string<wchar_t>;
     std::vector<std::pair<WString, WString>> filterItems;
     filterItems.reserve(fileTypes.types.size() + 1);
     WString multiFilter = L"";

@@ -47,10 +47,13 @@ using Stringstream = std::stringstream;
 # define FORMAT(f, a)  __attribute__((format(printf, f, a)))
 #endif  // _MSC_VER
 
+using WString = std::basic_string<wchar_t>;
+
 String StringFormat(const char* fmt, ...) FORMAT(1, 2);
 String FormatTempo(float tempo);
 String StringLimit(String s, int limit);
 void replaceString(String& s, String f, String r);
+void replaceStringWide(WString& s, WString f, WString r);
 const char* noteName(int note);//DONT KEEP REFERENCE
 String noteNameAndNumber(int note);//DONT KEEP REFERENCE
 namespace StrUtil {

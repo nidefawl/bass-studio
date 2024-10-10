@@ -183,56 +183,78 @@ void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
     BOOL result = ReadFile(fobj.GetHandle(), out.data(), static_cast<DWORD>(filesize), &bytesRead, nullptr);
     ThrowLastErrorIf(result == FALSE, "ReadFile failed: " + filename);
 }
+bool DirectoryHasOneOrMoreFiles(const WString& dirPath) {
+    WIN32_FIND_DATAW file;
+    WString strSearchPath = dirPath;
+    App::Platform::sanitizePathToDirectoryWide(strSearchPath);
+    WString findPattern = strSearchPath + L"*";
 
+    HANDLE hFile = FindFirstFileW(findPattern.c_str(), &file);
+    if (hFile != INVALID_HANDLE_VALUE) {
+        do {
+            WString curFilePath = file.cFileName;
+            if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                if ((curFilePath != L".") && (curFilePath != L"..")) {
+                    FindClose(hFile);
+                    return true;
+                }
+            } else {
+                FindClose(hFile);
+                return true;
+            }
+        } while (FindNextFileW(hFile, &file));
+        FindClose(hFile);
+    }
+    return false;
+}
 void findFilesWithExtRecursive(
-        const String& strPath,
-        const std::vector<String>& vecExt,
+        const WString& strPath,
+        const std::vector<WString>& vecExt,
         const bool bRecursive, const bool bIncludeDirs,
         std::vector<FileFound>& _out, int depth) {
-    WIN32_FIND_DATA file;
+    const bool bIncludeEmptyDirs = false;
+    WIN32_FIND_DATAW file;
 
-    String strSearchPath = strPath;
-    App::Platform::sanitizePathToDirectory(strSearchPath);
-    String findPattern = strSearchPath + "*";
+    WString strSearchPath = strPath;
+    App::Platform::sanitizePathToDirectoryWide(strSearchPath);
+    WString findPattern = strSearchPath + L"*";
 
-    HANDLE hFile = FindFirstFile(findPattern.c_str(), &file);
+    HANDLE hFile = FindFirstFileW(findPattern.c_str(), &file);
     if (hFile != INVALID_HANDLE_VALUE) {
-        std::vector<String> subDirs;
+        std::vector<WString> subDirs;
 
         do {
-            String curFilePath;
-            curFilePath = file.cFileName;
+            WString curFilePath = file.cFileName;
 
             if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                if ((curFilePath != ".") && (curFilePath != "..")) {
+                if ((curFilePath != L".") && (curFilePath != L"..")) {
                     if (bRecursive) {
                         subDirs.push_back(strSearchPath + curFilePath);
                     }
-                    if (bIncludeDirs) {
-                        String absDirPath = strSearchPath + curFilePath;
-                        App::Platform::sanitizePathToDirectory(absDirPath);
-                        const FileFound f = { absDirPath, curFilePath, "", true };
+                    if (bIncludeDirs && (bIncludeEmptyDirs || DirectoryHasOneOrMoreFiles(strSearchPath + curFilePath))) {
+                        auto absDirPath = strSearchPath + curFilePath;
+                        App::Platform::sanitizePathToDirectoryWide(absDirPath);
+                        const FileFound f = { StringWToU8(absDirPath), StringWToU8(curFilePath), "", true };
                         _out.push_back(f);
                     }
                 }
             } else {
                 curFilePath = strSearchPath + file.cFileName;
-                String fileName, ext;
-                SplitPath(curFilePath, nullptr, nullptr, &ext, &fileName);
+                WString fileName, ext;
+                SplitPathWide(curFilePath, nullptr, nullptr, &ext, &fileName);
                 if (vecExt.empty() || std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
-                    String absFilePath = strSearchPath + file.cFileName;
-                    App::Platform::sanitizePathToFile(absFilePath);
-                    const FileFound f = { absFilePath, fileName, ext, false };
+                    auto absFilePath = strSearchPath + file.cFileName;
+                    App::Platform::sanitizePathToFileWide(absFilePath);
+                    const FileFound f = { StringWToU8(absFilePath), StringWToU8(fileName), StringWToU8(ext), false };
                     _out.push_back(f);
                 }
             }
-        } while (FindNextFile(hFile, &file));
+        } while (FindNextFileW(hFile, &file));
 
         FindClose(hFile);
 
-
         if (!subDirs.empty()) {
-            for (String& s : subDirs) {
+            for (auto& s : subDirs) {
                 findFilesWithExtRecursive(s, vecExt, bRecursive, bIncludeDirs, _out, depth + 1);
             }
         }
@@ -244,13 +266,18 @@ void findFilesWithExt(
         const String& strExt,
         bool bRecursive,
         std::vector<FileFound>& _out) {
-    findFilesWithExtRecursive(strPath, {strExt}, bRecursive, false, _out, 0);
+    findFilesWithExtRecursive(StringU8ToW(strPath), {StringU8ToW(strExt)}, bRecursive, false, _out, 0);
 }
 void listDirectoryFiles(
         const String& strPath,
         const std::vector<String>& vecExt,
         std::vector<FileFound>& _out) {
-    findFilesWithExtRecursive(strPath, vecExt, false, true, _out, 0);
+    std::vector<WString> vecExtW;
+    vecExtW.reserve(vecExt.size());
+    for (const auto& ext : vecExt) {
+        vecExtW.push_back(StringU8ToW(ext));
+    }
+    findFilesWithExtRecursive(StringU8ToW(strPath), vecExtW, false, true, _out, 0);
 }
 
 class FileTimeGetter::Impl {

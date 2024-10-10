@@ -326,8 +326,22 @@ namespace App::Platform {
             pathString += FILE_PATHSEP_STR;
     }
 
+    void sanitizePathToDirectoryWide(WString& pathString) {
+        auto StrEndsWithWide = [](WString const& a, WString const& b) {
+            if (b.size() > a.size()) return false;
+            return std::equal(a.begin() + static_cast<uint32_t>(a.size() - b.size()), a.end(), b.begin());
+        };
+        replaceStringWide(pathString, L"/", FILE_PATHSEP_STR_WIDE);
+        if (pathString.length() && !StrEndsWithWide(pathString, FILE_PATHSEP_STR_WIDE))
+            pathString += FILE_PATHSEP_STR_WIDE;
+    }
+
     void sanitizePathToFile(String& pathString) {
         replaceString(pathString, "/", FILE_PATHSEP_STR);
+    }
+
+    void sanitizePathToFileWide(WString& pathString) {
+        replaceStringWide(pathString, L"/", FILE_PATHSEP_STR_WIDE);
     }
     
     void shellExpandPath(String& pathString) {

@@ -68,6 +68,14 @@ void replaceString(String& s, String f, String r) {
         offset = index + r.length();
     }
 }
+void replaceStringWide(WString& s, WString f, WString r) {
+    size_t index;
+    size_t offset = 0;
+    while ((index = s.find(f, offset)) != WString::npos) {
+        s.replace(index, f.length(), r);
+        offset = index + r.length();
+    }
+}
 namespace StrUtil {
 int32_t StringReplace(String& s, const String& f, const String& r) {
     int32_t nOccurences = 0;

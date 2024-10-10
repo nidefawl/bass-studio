@@ -12,9 +12,11 @@
 #if defined(_WIN32)
 #define FILE_PATHSEP_CHAR '\\'
 #define FILE_PATHSEP_STR "\\"
+#define FILE_PATHSEP_STR_WIDE L"\\"
 #else
 #define FILE_PATHSEP_CHAR '/'
 #define FILE_PATHSEP_STR "/"
+#define FILE_PATHSEP_WIDE L"/"
 #endif
 #if defined(_WIN32)
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "C:\\Program Files\\Steinberg\\VstPlugins"
@@ -74,6 +76,7 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd = 
  * @param pathString path to a directory
  */
 void sanitizePathToDirectory(String& pathString);
+void sanitizePathToDirectoryWide(WString& pathString);
 void shellExpandPath(String& pathString);
 
 /**
@@ -81,5 +84,6 @@ void shellExpandPath(String& pathString);
  * @param pathString path to a file
  */
 void sanitizePathToFile(String& pathString);
+void sanitizePathToFileWide(WString& pathString);
 int32_t createUniqueFilename(String& pathString, const String& baseName);
 }
