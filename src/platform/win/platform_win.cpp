@@ -272,11 +272,12 @@ String getKeyName(int scancode) {
 
 String FormatErrorMessage(uint32_t error, const String& msg) {
     static const int BUFFERLENGTH = 1024;
-    std::vector<char> buf(BUFFERLENGTH);
-        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, buf.data(), BUFFERLENGTH - 1, nullptr);
+    WString buf;
+    buf.resize(BUFFERLENGTH);
+    FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, buf.data(), BUFFERLENGTH - 1, nullptr);
     if (msg.empty())
-        return { buf.data() };
-    return msg + " (" + StringTrim(String(buf.data())) + ")";
+        return { StringWToU8(buf) };
+    return msg + " (" + StringTrim(StringWToU8(buf)) + ")";
 }
 
 namespace App::Platform {
