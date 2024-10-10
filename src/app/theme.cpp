@@ -182,6 +182,11 @@ void guitheme_t::bindFont(NVGcontext* ctx, UIFont::font_type_t _fonttype) const 
                 if (RenderResources::emojiFont.nvgId >= 0) {
                     nvgAddFallbackFontId(ctx, bindFont.nvgId, RenderResources::emojiFont.nvgId);
                 }
+            } else {
+                // try binding second font if loaded
+                if (fonts.fontsLoaded.size() > 1) {
+                    bindFont.nvgId = fonts.fontsLoaded[1].nvgId;
+                }
             }
         }
         nvgFontFaceId(ctx, bindFont.nvgId);
