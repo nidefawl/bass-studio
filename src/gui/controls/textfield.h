@@ -54,6 +54,7 @@ public:
         return formatNumber(parseString(string));
     }
 };
+
 class gui_textfield : public guibase {
 public:
     enum class Alignment {
@@ -72,7 +73,7 @@ private:
     std::string mDefaultValue;
     std::string mUnits;
     std::string mFormat;
-    std::string mValueTemp;
+    std::u32string mValueTemp;
     std::string mPlaceholder;
 
     bool mCommitted = true;
@@ -132,11 +133,7 @@ public:
     void setReturnCommits(bool bReturnCommits) { mReturnCommits = bReturnCommits; }
 
     const std::string& value() const { return mValue; }
-    std::string getEditValue() const {
-        if (!mCommitted)
-            return mValueTemp;
-        return mValue;
-    }
+    std::string getEditValue() const;
     void setValue(const std::string& value) { mValue = value; }
     void setSelectionRange(int start, int end) {
         if (this->mValue.empty()) {

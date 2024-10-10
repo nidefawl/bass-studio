@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iostream>
 #include <nanovg.h>
+#include <utfconv/utf.hpp>
 
 #include "logging.h"
 #include "math/seq_math.h"
@@ -82,11 +83,13 @@ void gui_textfield::handleDraggedRelease(MouseEvent& evt) {
     mMouseDragPos = ivec2(-1, -1);
 }
 void gui_textfield::onTextChange() {
-    if (mCallback && !mCallback(mValueTemp)) {
+    auto tempU8 = utf::as_str8(mValueTemp);
+    if (mCallback && !mCallback(tempU8)) {
     }
 }
 void gui_textfield::onTextEndEdit() {
-    if (mCallbackEnd && !mCallbackEnd(mValueTemp)) {
+    auto tempU8 = utf::as_str8(mValueTemp);
+    if (mCallbackEnd && !mCallbackEnd(tempU8)) {
         parentCtrl->closePopup();
     }
 }
@@ -126,14 +129,15 @@ void gui_textfield::render(NVGcontext* ctx) {
 }
 #define X_SPACING (size.y * 0.3f)
 void gui_textfield::updateTextLayout(NVGcontext* ctx) {
-    nvgTextBounds(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.textBounds);
+    auto tempU8 = utf::as_str8(mValueTemp);
+    nvgTextBounds(ctx, 0, 0, tempU8.c_str(), nullptr, metrics.textBounds);
     metrics.lineH = metrics.textBounds[3] - metrics.textBounds[1];
 
     // find cursor positions
     if (metrics.glyphPositions.size() < mValueTemp.length()) {
         metrics.glyphPositions.resize(mValueTemp.length());
     }
-    metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.glyphPositions.data(), metrics.glyphPositions.size());
+    metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, tempU8.c_str(), nullptr, metrics.glyphPositions.data(), metrics.glyphPositions.size());
     metrics.numGlyphs = math::min<int>(metrics.numGlyphs, metrics.glyphPositions.size());
     
     ivec2 insetPos(pos.x, pos.y + size.y * 0.5f + 1);
@@ -242,13 +246,14 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
         nvgFillColor(ctx, mColor);
         // draw text with offset
-        nvgText(ctx, 0, 0, mValueTemp.c_str(), nullptr);
+        auto strEditValue = utf::as_str8(mValueTemp);
+        nvgText(ctx, 0, 0, strEditValue.c_str(), nullptr);
     }
     nvgRestore(ctx);
 }
 
 void gui_textfield::beginEdit() {
-    mValueTemp = mValue;
+    mValueTemp = utf::as_u32(mValue);
     mCommitted = false;
     int begin  = mCursorPos;
     int end    = mSelectionPos;
@@ -259,20 +264,20 @@ void gui_textfield::beginEdit() {
         mCursorPos    = 0;
         mSelectionPos = -1;
     }
-    mValidFormat = (mValueTemp.empty()) || checkFormat(mValueTemp, mFormat);
+    mValidFormat = (mValueTemp.empty()) || checkFormat(utf::as_str8(mValueTemp), mFormat);
 }
 void gui_textfield::endEdit(bool success) {
     if (success) {
-        mValidFormat = (mValueTemp.empty()) || checkFormat(mValueTemp, mFormat);
+        mValidFormat = (mValueTemp.empty()) || checkFormat(utf::as_str8(mValueTemp), mFormat);
         if (mValidFormat) {
             if (mValueTemp.empty())
                 mValue = mDefaultValue;
             else
-                mValue = mValueTemp;
+                mValue = utf::as_str8(mValueTemp);
         }
         onTextEndEdit();
     } else {
-        mValueTemp = mValue;
+        mValueTemp = utf::as_u32(mValue);
     }
 
     mValidFormat  = true;
@@ -416,14 +421,7 @@ bool gui_textfield::handleCharInput(uint32_t codepoint) {
             if (!mInputActivates) return false;
             beginEdit();
         }
-        std::ostringstream convert;
-        convert << (char) codepoint;
         if (mCursorPos > -1) {
-            auto cvstr = convert.str();
-            if (!cvstr.length()) {
-                return true;
-            }
-            auto cvchar = cvstr[0];
             if (filter && filter->isReplaceInput()) {
                 int32_t len       = 1;
                 int32_t mincursor = mCursorPos;
@@ -432,7 +430,7 @@ bool gui_textfield::handleCharInput(uint32_t codepoint) {
                     len       = math::max(mSelectionPos, mCursorPos) - mincursor;
                 }
                 for (int i = 0; i < len; i++) {
-                    mValueTemp[i + mincursor] = cvchar;
+                    mValueTemp[i + mincursor] = codepoint;
                 }
 
                 if (mSelectionPos < 0) {
@@ -443,8 +441,8 @@ bool gui_textfield::handleCharInput(uint32_t codepoint) {
                 }
             } else {
                 deleteSelection();
-                mValueTemp.insert(mCursorPos, cvstr);
-                mCursorPos++;
+                mValueTemp.insert(mValueTemp.begin() + mCursorPos, codepoint);
+                mCursorPos += 1;
             }
             onChange();
         }
@@ -454,9 +452,9 @@ bool gui_textfield::handleCharInput(uint32_t codepoint) {
     return false;
 }
 void gui_textfield::onChange() {
-    mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
+    mValidFormat = mValueTemp.empty() || checkFormat(utf::as_str8(mValueTemp), mFormat);
     if (filter) {
-        mValueTemp = filter->parse(mValueTemp);
+        mValueTemp = utf::as_u32(filter->parse(utf::as_str8(mValueTemp)));
         if (mCursorPos > static_cast<int32_t>(mValueTemp.length())) {
             mCursorPos = static_cast<int32_t>(mValueTemp.length());
         }
@@ -491,7 +489,7 @@ bool gui_textfield::copySelectionString(std::string& output) {
         if (begin > end)
             std::swap(begin, end);
         if ((int) mValueTemp.length() >= end - begin)
-            output = mValueTemp.substr(begin, end).c_str();
+            output = utf::as_str8(mValueTemp.substr(begin, end));
         return true;
     }
 
@@ -504,8 +502,9 @@ bool gui_textfield::copySelection() {
 
         if (begin > end)
             std::swap(begin, end);
-        if ((int) mValueTemp.length() >= end - begin)
-            parentCtrl->setClipboardText(mValueTemp.substr(begin, end).c_str());
+        if ((int) mValueTemp.length() >= end - begin) {
+            parentCtrl->setClipboardText(utf::as_str8(mValueTemp.substr(begin, end)));
+        }
         onChange();//=??????
         return true;
     }
@@ -516,8 +515,9 @@ bool gui_textfield::copySelection() {
 void gui_textfield::pasteFromClipboard() {
     if (mCursorPos >= 0 && mCursorPos <= (int) mValueTemp.size()) {
         String str = parentCtrl->getClipboardText();
-        mValueTemp.insert(mCursorPos, str);
-        mCursorPos += str.length();
+        auto u32str = utf::as_u32(str);
+        mValueTemp.insert(mCursorPos, u32str);
+        mCursorPos += u32str.length();
         onChange();
     }
 }
@@ -632,4 +632,10 @@ int gui_textfield::position2CursorIndex(float posx, float lastx) const {
         mCursorId = metrics.numGlyphs;
 
     return mCursorId;
+}
+std::string gui_textfield::getEditValue() const {
+    if (!mCommitted) {
+        return utf::as_str8(mValueTemp);
+    }
+    return mValue;
 }
