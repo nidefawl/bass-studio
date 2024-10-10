@@ -98,8 +98,7 @@ void guitrack_timeline::render(NVGcontext* vg) {
     grid_div& last = gridList.back();
     String textTmp = StringFormat("%d.%d.%d", last.pos.bar, last.pos.beat, last.pos.th);
 
-    UIFont::font_instance instance = theme->getFont(UIFont::FONT_DECIMAL);
-    UIFont::bindFont(vg, instance);
+    theme->bindFont(vg, UIFont::FONT_DECIMAL);
     float textWidth = nvgTextBounds(vg, 0, 0, StringAsCStr(textTmp), nullptr, nullptr);
 
     float barSize = grid.bar_size;

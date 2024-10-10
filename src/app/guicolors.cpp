@@ -7,6 +7,7 @@
 #include "renderresources.h"
 #include "guifonts.h"
 #include "guiglobals.h"
+#include "theme.h"
 #include <nanovg.h>
 
 
@@ -225,29 +226,5 @@ namespace UIFont {
     const font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Regular.ttf");
     const font_type_t FONT_DECIMAL      = font_type_t("FONT_DECIMAL", "Roboto-Regular.ttf");
     const font_type_t FONT_TEST         = font_type_t("FONT_TEST", "jbmononf.ttf");
-
-    void bindFont(NVGcontext* ctx, UIFont::font_instance font) {
-        RenderResources::NvgFonts& fonts = RenderResources::perContextFonts[ctx];
-        if (font.fontInstanceIdx == -1) {
-            font.fontInstanceIdx = -2;
-            int i                = 0;
-            for (auto& f : fonts.fontsLoaded) {
-                if (f.name == font.name) {
-                    font.fontInstanceIdx = i;
-                    break;
-                }
-                i++;
-            }
-        }
-        if (fonts.fontsLoaded.empty()) {
-            return;
-        }
-        const auto fontIdx = math::clamp<uint32_t>(font.fontInstanceIdx, 0, fonts.fontsLoaded.size());
-        auto& fontloaded  = fonts.fontsLoaded[fontIdx];
-        if (fontloaded.nvgId == -999) {
-            fontloaded.nvgId = nvgCreateFont(ctx, StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
-        }
-        nvgFontFaceId(ctx, fontloaded.nvgId);
-    }
 
 } // namespace UIFont

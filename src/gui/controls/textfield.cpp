@@ -93,25 +93,24 @@ void gui_textfield::onTextEndEdit() {
         parentCtrl->closePopup();
     }
 }
-void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
+void setTfFont(NVGcontext* vg, const gui_textfield* tf) {
     auto fs = tf->fontSize();
     auto fs2 = fs;
     if (fs2 <= 0.0f) {
         fs2 = math::clamp(math::min(tf->size.y, tf->size.x), 4, 48) * FONT_AUTOSCALE;
     }
+    tf->theme->bindFont(vg, UIFont::FONT_TEXTFIELD);
     auto fontScale = fs2 * tf->theme->getFloat(GuiConstant::CONST_FONT_SCALE);
-    nvgFontSize(ctx, fontScale);
-    UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXTFIELD);
-    UIFont::bindFont(ctx, instance);
+    nvgFontSize(vg, fontScale);
     switch (tf->alignment()) {
         case gui_textfield::Alignment::Left:
-            nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             break;
         case gui_textfield::Alignment::Right:
-            nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+            nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
             break;
         case gui_textfield::Alignment::Center:
-            nvgTextAlign(ctx, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             break;
     }
 }

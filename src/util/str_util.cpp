@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "assert_dbg.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "seq_time.h"
 #include "str_util.h"
@@ -143,6 +144,58 @@ uint32_t stringToWchar(uint32_t codepage, const char* mbsz, size_t mbsz_len, std
     }
     return ::GetLastError();
 }
+
+String FormatErrorMessage(uint32_t error, const String& msg);
+
+std::basic_string<wchar_t> StringU8ToW(String const& s) {
+    if (s.empty()) {
+        return {};
+    }
+    auto codepage = CP_UTF8;
+    auto mbsz     = s.c_str();
+    auto mbsz_len = s.length();
+    std::basic_string<wchar_t> converted;
+    int len  = MultiByteToWideChar(codepage, 0, mbsz, (int)mbsz_len, converted.data(), 0);
+    if (len  > 0) {
+        converted.reserve(len);
+        converted.resize(len);
+        converted.front() = 0;
+        len  = MultiByteToWideChar(codepage, 0, mbsz, (int)mbsz_len, converted.data(), (int)converted.size());
+        if (len > 0) {
+            return converted;
+        }
+    }
+    auto lastError = ::GetLastError();
+    String errMsg = FormatErrorMessage(lastError, "Failed to convert UTF-8 to UTF-16");
+    log_lf(Log::L_ERROR, "%s\n", StringAsCStr(errMsg));
+    return {};
+}
+
+String StringWToU8(std::basic_string<wchar_t> const& s) {
+    if (s.empty()) {
+        return {};
+    }
+    auto codepage = CP_UTF8;
+    auto wcsz     = s.c_str();
+    auto wcsz_len = s.length();
+    std::basic_string<char> converted;
+    int len  = WideCharToMultiByte(codepage, 0, wcsz, (int)wcsz_len, converted.data(), 0, nullptr, nullptr);
+    if (len  > 0) {
+        converted.reserve(len);
+        converted.resize(len);
+        converted.front() = 0;
+        len  = WideCharToMultiByte(codepage, 0, wcsz, (int)wcsz_len, converted.data(), (int)converted.size(), nullptr, nullptr);
+        if (len > 0) {
+            return converted;
+        }
+    }
+    auto lastError = ::GetLastError();
+    String errMsg = FormatErrorMessage(lastError, "Failed to convert UTF-16 to UTF-8");
+    log_lf(Log::L_ERROR, "%s\n", StringAsCStr(errMsg));
+    return {};
+}
+
+
 #endif//_WIN32
 
 /**

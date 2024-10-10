@@ -206,8 +206,7 @@ public:
         // mousepos.x -= size.x / 2;
         nvgTranslate(vg, mousepos.x+20, mousepos.y+20);
         ivec2 inset                    = { 2, 2 };
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        UIFont::bindFont(vg, instance);
+        theme->bindFont(vg, UIFont::FONT_DEFAULT);
         nvgFillColor(vg, THEMECOL_TEXT);
         auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
         String text = "Insert " + label;

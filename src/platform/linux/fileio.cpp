@@ -406,4 +406,8 @@ void RevealInExplorer(const String& _path) {
     system(cmd.c_str());
 }
 
+bool FileExists(const String& Filename) {
+    return shareMode(Filename.c_str(), 0) == 0;
+}
+
 #endif

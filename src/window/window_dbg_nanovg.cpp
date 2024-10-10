@@ -339,26 +339,6 @@ public:
             nvgBatchedRender(vg);
         }
 
-        String strTest   = "Test String 🤩🤩🤩";
-        ivec2 strBoxSize = { 160, 40 };
-        ivec2 strPos     = ivec2{ winW, winH } / 2 - strBoxSize / 2;
-        for (int i = 0; i < 4; i++) {
-
-            nvgBeginPath(vg);
-            nvgRect(vg, strPos.x, strPos.y, strBoxSize.x, strBoxSize.y);
-            nvgFillColor(vg, rgbaToNvg(0xffffff7f));
-            nvgFill(vg);
-            float fSize = (i&1) ? 32 : 20;
-
-            UIFont::bindFont(vg, instance);
-            nvgFontSize(vg, fSize);
-            nvgFillColor(vg, rgbaToNvg(0xFF00FFFF));
-            int fontVAlign = (i&2) ? NVG_ALIGN_MIDDLE_DESCENDER : NVG_ALIGN_MIDDLE;
-            nvgTextAlign(vg, NVG_ALIGN_CENTER | fontVAlign);
-            nvgText(vg, strPos.x + strBoxSize.x / 2.0f, strPos.y + strBoxSize.y / 2.0f, StringAsCStr(strTest), NULL);
-
-            strPos.y += strBoxSize.y+10;
-        }
         nvgEndFrame(vg);
         return 1;
     }

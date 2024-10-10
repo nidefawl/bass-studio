@@ -61,9 +61,7 @@ inline void writeStringStream(const String& path, Stringstream& sstream) {
     WriteFileVector(path, buf);
 }
 
-inline bool FileExists(const String& Filename) {
-    return shareMode(Filename.c_str(), 0) == 0;
-}
+bool FileExists(const String& Filename);
 
 bool CreateDirectoryIfNotExists(const String& DirPath);
 bool PathIsDirectory(const String& path);
@@ -118,6 +116,7 @@ inline void SplitPath(const String& in, String* path, String* name, String* ext,
             *path = in.substr(0, pathSep);
         }
     }
+    // TODO: We don't want to cut at the dot if the path names a directory
     std::size_t fileExtSep = _nameExt.find_last_of('.');
     if (name) {
         if (fileExtSep == String::npos || fileExtSep < 1) {

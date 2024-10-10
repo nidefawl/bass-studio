@@ -157,18 +157,41 @@ UIFont::font_instance guitheme_t::getFont(UIFont::font_type_t _fonttype) const {
         return UIFont::font_instance{_fonttype.defValue};
     }
     return mapFonts.at(_fonttype.idx);
+
+}
+void guitheme_t::bindFont(NVGcontext* ctx, UIFont::font_type_t _fonttype) const {
+    UIFont::font_instance& font = mapFonts.at(_fonttype.idx);
+    RenderResources::NvgFonts& fonts = RenderResources::perContextFonts[ctx];
+    if (font.fontInstanceIdx == -1) {
+        font.fontInstanceIdx = -2;
+        int i                = 0;
+        for (auto& f : fonts.fontsLoaded) {
+            if (f.name == font.name) {
+                font.fontInstanceIdx = i;
+                break;
+            }
+            i++;
+        }
+    }
+    if (font.fontInstanceIdx >= 0) {
+        auto& bindFont = fonts.fontsLoaded[font.fontInstanceIdx];
+        if (bindFont.nvgId < 0) {
+            auto fontPath = App::Platform::toResourcePath("fonts/gui/" + font.name);
+            bindFont.nvgId = nvgCreateFont(ctx, StringAsCStr(font.name), StringAsCStr(fontPath));
+            if (bindFont.nvgId >= 0) {
+                if (RenderResources::emojiFont.nvgId >= 0) {
+                    nvgAddFallbackFontId(ctx, bindFont.nvgId, RenderResources::emojiFont.nvgId);
+                }
+            }
+        }
+        nvgFontFaceId(ctx, bindFont.nvgId);
+    }
 }
 void guitheme_t::bindFonts() {
     for (auto& mapFont : mapFonts) {
         UIFont::font_type_t c = UIFont::getConstantById(mapFont.first);
         if (c.idx == 0) continue;
         mapFont.second.fontInstanceIdx = -1;
-        //for (int i = 0; i < MAX_FONTS; i++) {
-        //if (RenderResources::fontsLoaded[i].name == it->second.name) {
-        //it->second.fontInstanceIdx = i;
-        //return;
-        //}
-        //}
     }
 }
 UIFont::font_instance guitheme_t::setFont(UIFont::font_type_t _fonttype, String s) {

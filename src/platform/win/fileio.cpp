@@ -11,6 +11,7 @@
 #include "assert_dbg.h"
 #include "platform.h"
 #include "platform_win.h"
+#include "str_win32.h"
 #include <shlobj.h>
 
 bool CreateDirectoryIfNotExists(const String& DirPath) {
@@ -140,7 +141,8 @@ public:
             default:
                 throw appexception("Invalid file open mode");
         }
-        m_handle = CreateFileA(filename.c_str(), accessMode, shareMode,
+        auto strW = StringU8ToW(filename);
+        m_handle = CreateFileW(strW.c_str(), accessMode, shareMode,
                                nullptr, createFlags, attr, nullptr);
         ThrowLastErrorIf(m_handle == INVALID_HANDLE_VALUE,
                          "CreateFile call failed on file named " + filename);
@@ -268,7 +270,8 @@ public:
         return (int64_t)time;
     }
     explicit Impl(const String& path) {
-        hFile = CreateFile(StringAsCStr(path), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+        auto strW = StringU8ToW(path);
+        hFile = CreateFileW(strW.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
         if (hFile != INVALID_HANDLE_VALUE) {
             ok = GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite);
         }
@@ -341,4 +344,10 @@ void RevealInExplorer(const String& _path) {
     }
     ShellExecuteA(nullptr, "open", "explorer.exe", StringAsCStr("/select," + path), nullptr, SW_SHOWNORMAL);
 }
+
+bool FileExists(const String& Filename) {
+    auto strWide = StringU8ToW(Filename);
+    return _waccess_s(strWide.c_str(), 0) == 0;
+}
+
 #endif // _WIN32

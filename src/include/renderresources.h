@@ -52,10 +52,10 @@ namespace RenderResources {
         String path;
     };
     struct LoadedFont {
-        bool loaded;
-        int nvgId;
-        String name;
         FontDesc font;
+        String name;
+        int nvgId   = -1;
+        bool loaded = false;
     };
     struct NvgImageTexture {
         std::unordered_map<NVGcontext*, int32_t> perContextId;
@@ -67,6 +67,7 @@ namespace RenderResources {
         std::vector<FontDesc> fontsInstalled;
         std::vector<LoadedFont> fontsLoaded;
     };
+    extern LoadedFont emojiFont;
     extern NvgImageTexture imgDashedLine;
     extern NvgImageTexture imgIcons[NUM_IMGS];
     extern std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;

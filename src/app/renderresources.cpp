@@ -54,6 +54,7 @@ namespace RenderResources {
     std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;
     std::vector<FontDesc> fontsInstalled;
     std::unordered_map<String, NvgImageTexture> perContextTextures;
+    LoadedFont emojiFont{};
     namespace {
         void load(NVGcontext* vg, const char* path, ImageBuf& out) {
             try {
@@ -65,6 +66,53 @@ namespace RenderResources {
             }
         }
     } // namespace
+
+    void reloadFonts(NVGcontext* vg) {
+        //TODO: unload loaded fonts
+        emojiFont = {};
+        String emojiFontFile = "EmojiOneBW.otf";
+        auto emojiFontPath = App::Platform::toResourcePath("fonts/gui/" + emojiFontFile);
+        if (FileExists(emojiFontPath)) {
+            emojiFont.nvgId = nvgCreateFont(vg, "emoji", emojiFontPath.c_str());
+            emojiFont.font = { "emoji", emojiFontPath };
+            emojiFont.loaded = emojiFont.nvgId >= 0;
+            emojiFont.name = "emoji";
+        }
+        {
+            NvgFonts fonts;
+            std::vector<FileFound> files;
+            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "ttf", true, files);
+            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "otf", true, files);
+            if (files.empty()) {
+                throw appexception("Please install ttf fonts to fonts/gui");
+            }
+            fonts.fontsInstalled.clear();
+            fonts.fontsInstalled.resize(files.size());
+            for (size_t i = 0; i < files.size(); i++) {
+                fonts.fontsInstalled[i].name = files[i].name;
+                fonts.fontsInstalled[i].path = files[i].path;
+            }
+            if (fontsInstalled.empty()) fontsInstalled = fonts.fontsInstalled;
+            fonts.fontsLoaded.clear();
+            int loaded     = 0;
+            for (size_t i = 0; i < MAX_FONTS && i < files.size(); i++) {
+                LoadedFont lf;
+                lf.loaded    = lf.nvgId >= 0;
+                lf.name      = files[i].name;
+                lf.font.name = files[i].name;
+                lf.font.path = files[i].path;
+                if (lf.loaded) {
+                    loaded++;
+                }
+                fonts.fontsLoaded.push_back(lf);
+            }
+            if (loaded == 0) {
+                log_lf(Log::L_WARN, "No fonts loaded\n");
+            }
+            perContextFonts[vg] = fonts;
+        }
+    }
+
     void initResources(NVGcontext* vg) {
         {
             ImageBuf imgIconsBuf[NUM_IMGS];
@@ -134,48 +182,7 @@ namespace RenderResources {
             nvgImageSize(vg, nvgid, &imgDashedLine.width, &imgDashedLine.height);
             imgDashedLine.perContextId[vg] = nvgid;
         }
-        {
-            NvgFonts fonts;
-            std::vector<FileFound> files;
-            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "ttf", true, files);
-            findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "otf", true, files);
-            if (files.empty()) {
-                throw appexception("Please install ttf fonts to fonts/gui");
-            }
-            fonts.fontsInstalled.clear();
-            fonts.fontsInstalled.resize(files.size());
-            for (size_t i = 0; i < files.size(); i++) {
-                fonts.fontsInstalled[i].name = files[i].name;
-                fonts.fontsInstalled[i].path = files[i].path;
-            }
-            if (fontsInstalled.empty()) fontsInstalled = fonts.fontsInstalled;
-            fonts.fontsLoaded.clear();
-            String fntList;
-            int loaded     = 0;
-            for (size_t i = 0; i < MAX_FONTS && i < files.size(); i++) {
-                String fontPath = (files[i].path);
-                LoadedFont lf;
-                String fntKey = StringFormat("font%zu", i);
-                if (i == 0) {
-                    lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(fontPath));
-                } else {
-                    lf.nvgId = -999;
-                }
-                lf.loaded    = lf.nvgId >= 0;
-                lf.name      = files[i].name;
-                lf.font.name = files[i].name;
-                lf.font.path = files[i].path;
-                if (lf.loaded) {
-                    loaded++;
-                    fntList += fntKey + ":" + lf.name + ",";
-                }
-                fonts.fontsLoaded.push_back(lf);
-            }
-            if (loaded == 0) {
-                log_lf(Log::L_WARN, "No fonts loaded\n");
-            }
-            perContextFonts[vg] = fonts;
-        }
+        reloadFonts(vg);
     }
 
     /** loads texture and store in perContextTextures */

@@ -116,10 +116,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const auto NCHANNELS = meter->getNumChannels();
-    UIFont::font_instance instance    = theme->getFont(UIFont::FONT_DECIMAL);
-    UIFont::bindFont(vg, instance);
-    //  int32_t spacing = CONST_LAYOUT_MARGIN;
-    //  ivec2 inset(spacing);
+    theme->bindFont(vg, UIFont::FONT_DECIMAL);
     vec2 gainPos  = { pos.x, pos.y };
     vec2 gainSize = { size.x, TRACK_HEIGHT_STEP - 2 * CONST_PADDING_TRACK_CONTROLS };
     ivec2 mtrPos  = { pos.x, pos.y + TRACK_HEIGHT_STEP };
@@ -244,8 +241,7 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
     const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const auto NCHANNELS = meter->getNumChannels();
-    UIFont::font_instance instance    = theme->getFont(UIFont::FONT_DECIMAL);
-    UIFont::bindFont(vg, instance);
+    theme->bindFont(vg, UIFont::FONT_DECIMAL);
     auto widthGain = size.x * 0.20f;
     vec2 mtrPos  = pos;
     vec2 mtrSize = {size.x - widthGain - CONST_PADDING_TRACK_CONTROLS, size.y};

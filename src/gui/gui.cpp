@@ -82,8 +82,7 @@ void initColor() {
 
 void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment) {
     nvgFontSize(vg, size);
-    UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-    UIFont::bindFont(vg, instance);
+    theme->bindFont(vg, UIFont::FONT_DEFAULT);
     nvgFillColor(vg, color);
     nvgTextAlign(vg, alignment);
 }
@@ -97,8 +96,7 @@ float determine_string_width::getStringWidth(const String& text, float fontSize,
     NVGcontext* vg = ctrl->vg;
     float fontSizeScaled = fontSize;
     if (theme) {
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        UIFont::bindFont(vg, instance);
+        theme->bindFont(vg, UIFont::FONT_DEFAULT);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
     nvgFontSize(vg, fontSizeScaled);
@@ -114,8 +112,7 @@ float determine_table_string_width::getStringWidth(const String& text) {
     NVGcontext* vg = ctrl->vg;
     float fontSizeScaled = fontSize;
     if (theme) {
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        UIFont::bindFont(vg, instance);
+        theme->bindFont(vg, UIFont::FONT_DEFAULT);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
     nvgFontSize(vg, fontSizeScaled);
@@ -135,8 +132,7 @@ vec2 getTextLabelBounds(NVGcontext* vg,
 
     float fontSizeScaled = fontSize;
     if (theme) {
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        UIFont::bindFont(vg, instance);
+        theme->bindFont(vg, UIFont::FONT_DEFAULT);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
     nvgFontSize(vg, fontSizeScaled);
@@ -158,8 +154,7 @@ float renderTextLabel(NVGcontext* vg,
 
     float fontSizeScaled = fontSize;
     if (theme) {
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        UIFont::bindFont(vg, instance);
+        theme->bindFont(vg, UIFont::FONT_DEFAULT);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
 #if 0
@@ -225,8 +220,7 @@ float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme,
 
     float fontSizeScaled = fontSize;
     if (theme) {
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        UIFont::bindFont(vg, instance);
+        theme->bindFont(vg, UIFont::FONT_DEFAULT);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
     const NVGcolor color = theme->getColor(c);
@@ -867,8 +861,6 @@ void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
         nvgTranslate(vg, mousepos.x, mousepos.y);
         //    drawBackground(vg, theme, pos, size, 0, true, false);
         //    ivec2 inset = { 2, 2 };
-        //    UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        //    UIFont::bindFont(vg, instance);
         //    nvgFillColor(vg, THEMECOL_TEXT);
         //    Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
         render(vg);

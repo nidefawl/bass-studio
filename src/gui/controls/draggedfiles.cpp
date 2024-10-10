@@ -46,8 +46,7 @@ void gui_dragged_files::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 drag
     nvgTranslate(vg, mousepos.x, mousepos.y);
     drawBackground(vg, theme, pos, size, 0, false);
     ivec2 inset                    = { 2, 2 };
-    UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-    UIFont::bindFont(vg, instance);
+    theme->bindFont(vg, UIFont::FONT_DEFAULT);
     nvgFillColor(vg, THEMECOL_TEXT);
     Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
 }

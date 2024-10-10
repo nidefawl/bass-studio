@@ -33,8 +33,7 @@ public:
         auto fs = 64.0f;
         auto fontScale = fs * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
         nvgFontSize(vg, fontScale);
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXTFIELD);
-        UIFont::bindFont(vg, instance);
+        theme->bindFont(vg, UIFont::FONT_TEXTFIELD);
         nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         auto aOrB = (getTimeMillis()/1000) % 3;
         String tmpStr = "";
