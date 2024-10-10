@@ -22,7 +22,7 @@ class gui_scrollbar final : public guibase {
 
 public:
     float scrollOffset;
-    static const int defaultW = 16;
+    static const int defaultW = 12;
     static const int smallW   = 8;
     gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr);
     void render(NVGcontext* vg) override;
