@@ -153,7 +153,7 @@ uint32_t stringToWchar(uint32_t codepage, const char* mbsz, size_t mbsz_len, std
     return ::GetLastError();
 }
 
-String FormatErrorMessage(uint32_t error, const String& msg);
+// String FormatErrorMessage(uint32_t error, const String& msg);
 
 std::basic_string<wchar_t> StringU8ToW(String const& s) {
     if (s.empty()) {
@@ -173,9 +173,9 @@ std::basic_string<wchar_t> StringU8ToW(String const& s) {
             return converted;
         }
     }
-    auto lastError = ::GetLastError();
+    /* auto lastError = ::GetLastError();
     String errMsg = FormatErrorMessage(lastError, "Failed to convert UTF-8 to UTF-16");
-    log_lf(Log::L_ERROR, "%s\n", StringAsCStr(errMsg));
+    log_lf(Log::L_ERROR, "%s\n", StringAsCStr(errMsg)); */
     return {};
 }
 
@@ -197,9 +197,9 @@ String StringWToU8(std::basic_string<wchar_t> const& s) {
             return converted;
         }
     }
-    auto lastError = ::GetLastError();
+    /* auto lastError = ::GetLastError();
     String errMsg = FormatErrorMessage(lastError, "Failed to convert UTF-16 to UTF-8");
-    log_lf(Log::L_ERROR, "%s\n", StringAsCStr(errMsg));
+    log_lf(Log::L_ERROR, "%s\n", StringAsCStr(errMsg)); */
     return {};
 }
 

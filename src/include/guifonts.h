@@ -26,7 +26,5 @@ namespace UIFont {
     extern const font_type_t FONT_TEXTFIELD;
     extern const font_type_t FONT_CONTEXT_MENU;
     extern const font_type_t FONT_DECIMAL;
-    void bindFont(NVGcontext* ctx, UIFont::font_instance& fontToLoad);
-
     String getFontName(int fontInstanceIdx);
 }// namespace UIFont

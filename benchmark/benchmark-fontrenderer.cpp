@@ -3,6 +3,7 @@
 #include "hires_timer.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
+#include "theme.h"
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -140,8 +141,7 @@ int main(int argc, char** argv) {
         }
         nvgShapeAntiAlias(vg, USE_NANOVG_AA);
         RenderResources::initResources(vg);
-        
-        UIFont::font_instance fontInstance{"Roboto-Regular.ttf", -1};
+        guitheme_t theme;
 
         int winwidth = 0, winheight = 0;
         int fbwidth = 0, fbheight = 0;
@@ -178,10 +178,10 @@ int main(int argc, char** argv) {
             nvgTranslate(vg, size.x * 0.5f, size.y * 0.5f);
             nvgRotate(vg, angle);
             nvgTranslate(vg, size.x * -0.5f, size.y * -0.5f);
-            UIFont::bindFont(vg, fontInstance);
             nvgFontSize(vg, fSize);
             nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             nvgFillColor(vg, rgbToNvg(0xffffff));
+            theme.bindFont(vg, UIFont::FONT_DEFAULT);
             nvgText(vg, strPos.x, strPos.y, StringAsCStr(strings[idx]), nullptr);
             nvgRestore(vg);
             nvgEndFrame(vg);
@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
         }
 
 
-        UIFont::bindFont(vg, fontInstance);
+        theme.bindFont(vg, UIFont::FONT_DEFAULT);
         nvgFontSize(vg, fSize);
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgFillColor(vg, rgbToNvg(0xffffff));

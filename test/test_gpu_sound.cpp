@@ -145,7 +145,7 @@ int main(int, char*[]) {
             ctxt.time_seconds = ctxt.time_samples / ctxt.samplerate;
             ctxt.time_beats = ctxt.time_samples / (ctxt.samplerate * 60 / ctxt.bpm);
             DAW::GPU::gpu_program_definitions_t defs = {
-                .blocksize = sampleFormat.blockSize,
+                .blocksize1024Fixed = sampleFormat.blockSize,
                 .channels = channels,
                 .polyVoices = 32,
                 .unisonVoices = 32
