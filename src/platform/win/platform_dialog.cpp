@@ -20,121 +20,28 @@ namespace {
 
 int browseForFolder(const String& title, const String& pathStart, String& _out) {
     HWND hwnd = getMainHWND();
-
-    BROWSEINFO br;
+    auto titleW = StringU8ToW(title);
+    auto pathStartW = StringU8ToW(pathStart);
+    BROWSEINFOW br;
     ZeroMemory(&br, sizeof(BROWSEINFO));
     br.lpfn      = BrowseCallbackProc;
     br.ulFlags   = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
     br.hwndOwner = hwnd;
-    br.lpszTitle = StringAsCStr(title);
-    br.lParam    = (LPARAM) StringAsCStr(pathStart);
+    br.lpszTitle = StringAsCStr(titleW);
+    br.lParam    = (LPARAM) StringAsCStr(pathStartW);
 
-    LPITEMIDLIST pidl = SHBrowseForFolderA(&br);
+    LPITEMIDLIST pidl = SHBrowseForFolderW(&br);
     if (pidl != nullptr) {
-        std::vector<char> localAppData;
+        WString localAppData;
         localAppData.resize(MAX_PATH);
-        if (SHGetPathFromIDListA(pidl, localAppData.data())) {
-            _out = String(localAppData.data());
+        if (SHGetPathFromIDListW(pidl, localAppData.data())) {
+            _out = StringWToU8(localAppData);
             return 0;
         }
     }
     return 1;
 }
-int promptUserFilePathAnsi(window_base* w, int mode, SupportedFileTypes fileTypes, String& _out, String _defaultPath, String _defaultName) {
 
-    std::vector<std::pair<String, String>> filterItems;
-    filterItems.reserve(fileTypes.types.size() + 1);
-    String multiFilter = "";
-    String desc       = "";
-    for (auto& fileType : fileTypes.types) {
-        String wildExt = "*.";
-        wildExt += fileType.ext;
-        String entryName = fileType.desc;
-        entryName += " (" + wildExt + ")";
-        desc += entryName + "|";
-        filterItems.emplace_back(entryName, wildExt);
-        multiFilter += wildExt + ";";
-    }
-    if (fileTypes.types.size() > 1 && multiFilter.size() > 0) {
-        multiFilter.pop_back();
-        desc.pop_back();
-        filterItems.insert(filterItems.begin(), {StringAsCStr(desc), StringAsCStr(multiFilter)});
-    }
-    filterItems.emplace_back( "All Files", "*" );
-    std::vector<char> supportedFiles;
-    // calculate length of null terminated string, so we can allocate the correct amount of memory
-    size_t slen = 0;
-    for (auto& filterItem : filterItems) {
-        slen += filterItem.first.size() + 1;
-        slen += filterItem.second.size() + 1;
-    }
-    slen += 1; // for the last null terminator
-    if (slen >= MAX_PATH - 2) {
-        dbgassert(0);
-        return 1;
-    }
-    supportedFiles.resize(slen);
-    size_t offset = 0;
-    for (auto& filterItem : filterItems) {
-        memcpy(supportedFiles.data() + offset, filterItem.first.c_str(), filterItem.first.size() + 1);
-        offset += filterItem.first.size() + 1;
-        memcpy(supportedFiles.data() + offset, filterItem.second.c_str(), filterItem.second.size() + 1);
-        offset += filterItem.second.size() + 1;
-    }
-    supportedFiles[slen - 1] = 0;
-    // assert that last two bytes are null
-    dbgassert((slen <= 1 || supportedFiles[slen - 2] == 0) && supportedFiles[slen - 1] == 0);
-    const char* filter = supportedFiles.data();
-    if (mode == 0) {
-
-        OPENFILENAME ofn;
-        char szFileName[MAX_PATH] = "";
-
-        ZeroMemory(&ofn, sizeof(ofn));
-
-        ofn.lStructSize = sizeof(ofn);
-        ofn.hwndOwner   = getMainHWND();
-        ofn.lpstrFilter = filter;
-        ofn.lpstrFile   = szFileName;
-        ofn.nMaxFile    = MAX_PATH;
-        ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
-        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext;
-        if (_defaultPath.length())
-            ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
-
-        if (GetOpenFileName(&ofn)) {
-            _out = szFileName;
-            return 1;
-        }
-    }
-    if (mode == 1) {
-
-        OPENFILENAME ofn;
-        char szFileName[MAX_PATH] = "";
-        char szFileTitle[MAX_PATH] = "";
-        safe_strcpy(szFileTitle, _defaultName);
-
-        ZeroMemory(&ofn, sizeof(ofn));
-
-        ofn.lStructSize = sizeof(ofn);
-        ofn.hwndOwner   = getMainHWND();
-        ofn.lpstrFilter = filter;
-        ofn.lpstrFile   = szFileName;
-        ofn.nMaxFile    = MAX_PATH;
-        ofn.Flags       = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
-        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext;
-        if (_defaultPath.length())
-            ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
-        ofn.lpstrFileTitle = szFileTitle;
-
-        if (GetSaveFileName(&ofn)) {
-            _out = szFileName;
-            return 1;
-        }
-    }
-    return 0;
-}
-// same as above, but with unicode support
 int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, String& _out, String _defaultPath, String _defaultName) {
     std::vector<std::pair<WString, WString>> filterItems;
     filterItems.reserve(fileTypes.types.size() + 1);

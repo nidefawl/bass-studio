@@ -1,5 +1,6 @@
 #include "themefile.h"
 #include "fileio.h"
+#include "logging.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "config.h"
@@ -141,14 +142,14 @@ void load(Archive& archive, themefile& m) {
 }
 
 themefile loadTheme(const String& path) {
-    Stringstream ss;
     String pathFile = path + "/" + THEMEFILE_NAME;
     App::Platform::sanitizePathToFile(pathFile);
-    std::ifstream file(pathFile, std::ifstream::in);
-    if (file) {
-        ss << file.rdbuf();
-        std::streampos length = file.tellg();
-        if (length > 10) {
+    if (FileExists(pathFile)) {
+        std::vector<uint8_t> vec;
+        ReadFileVector(pathFile, vec);
+        std::streampos length = vec.size();
+        if (vec.size() > 10) {
+            Stringstream ss(std::string(vec.begin(), vec.end()));
             themefile tmpSettings;
             cereal::JSONInputArchive ar(ss);
             ar(tmpSettings);
@@ -157,13 +158,25 @@ themefile loadTheme(const String& path) {
     }
     throw FileIOException("Failed reading theme file " + pathFile);
 }
-void saveTheme(const String& path, themefile& _settings) {
-    CreateDirectoryIfNotExists(path);
-    String pathFile = path + "/" + THEMEFILE_NAME;
-    App::Platform::sanitizePathToFile(pathFile);
-    std::ofstream file;
-    file.exceptions(~std::ofstream::goodbit);
-    file.open(pathFile, std::ofstream::out);
-    cereal::JSONOutputArchive ar(file);
-    ar(_settings);
+
+bool saveTheme(const String& path, themefile& _settings) {
+    try {
+        String pathSanitized = path;
+        App::Platform::sanitizePathToDirectory(pathSanitized);
+        CreateDirectoryIfNotExists(pathSanitized);
+        String pathFile = pathSanitized + "/" + THEMEFILE_NAME;
+        Stringstream sstream;
+        {
+            JSONOutputArchive ar(sstream);
+            ar(_settings);
+        }
+        sstream.flush();
+        writeStringStream(pathFile, sstream);
+        return true;
+    } catch (const FileIOException& e) {
+        log_lf(Log::L_ERROR, "saveTheme File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+    } catch (const std::exception& e) {
+        log_lf(Log::L_ERROR, "saveTheme exception: %s\n", e.what());
+    }
+    return false;
 }

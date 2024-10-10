@@ -110,7 +110,7 @@ void guitheme_mgr::loadThemes() {
                 themes.push_back(themeFile.theme);
             }
         } catch (std::exception& e) {
-            log_lf(Log::L_DEBUG, "Failed loading theme %s: %s\n", StringAsCStr(file.path), e.what());
+            log_lf(Log::L_ERROR, "Failed loading theme %s: %s\n", StringAsCStr(file.path), e.what());
         }
     }
     setThemeName(selectedTheme);

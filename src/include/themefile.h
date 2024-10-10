@@ -9,4 +9,4 @@ public:
     themefile() = default;
 };
 themefile loadTheme(const String& path);
-void saveTheme(const String& path, themefile& _settings);
+bool saveTheme(const String& path, themefile& _settings);

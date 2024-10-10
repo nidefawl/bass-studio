@@ -14,6 +14,16 @@
 #include "str_win32.h"
 #include <shlobj.h>
 
+
+bool FileExistsWide(const WString& Filename) {
+    return _waccess_s(Filename.c_str(), 0) == 0;
+}
+
+bool FileExists(const String& Filename) {
+    auto strWide = StringU8ToW(Filename);
+    return _waccess_s(strWide.c_str(), 0) == 0;
+}
+
 bool CreateDirectoryIfNotExists(const String& DirPath) {
     String partPath = "";
     do {
@@ -26,7 +36,8 @@ bool CreateDirectoryIfNotExists(const String& DirPath) {
             break;
         }
         if (!FileExists(partPath)) {
-            if (0 == CreateDirectoryA(StringAsCStr(partPath), nullptr)) {
+            auto partPathW = StringU8ToW(partPath);
+            if (0 == CreateDirectoryW(partPathW.c_str(), nullptr)) {
                 return false;
             }
         }
@@ -39,7 +50,9 @@ void LogLastWin32Error(const String& msg) {
 }
 
 bool MoveAbsoluteFile(const String& src, const String& dst) {
-    auto err = MoveFileA(StringAsCStr(src), StringAsCStr(dst));
+    auto srcW = StringU8ToW(src);
+    auto dstW = StringU8ToW(dst);
+    auto err = MoveFileW(srcW.c_str(), dstW.c_str());
     if (err) {
         LogLastWin32Error("MoveFileA failed");
     }
@@ -47,7 +60,8 @@ bool MoveAbsoluteFile(const String& src, const String& dst) {
 }
 
 bool DeleteAbsoluteFile(const String& FilePath) {
-    auto err = DeleteFileA(StringAsCStr(FilePath));
+    auto filePathW = StringU8ToW(FilePath);
+    auto err = DeleteFileW(filePathW.c_str());
     if (err) {
         LogLastWin32Error("DeleteFileA failed");
     }
@@ -55,28 +69,29 @@ bool DeleteAbsoluteFile(const String& FilePath) {
 }
 
 bool PathIsDirectory(const String& path) {
-    DWORD dwAttrib = GetFileAttributesA(StringAsCStr(path));
+    auto filePathW = StringU8ToW(path);
+    DWORD dwAttrib = GetFileAttributesW(StringAsCStr(filePathW));
     return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-bool DeleteDirectory(const String& DirPath, bool bRecursive) {
-    if (!assert_expr(!DirPath.empty())) {
+bool DeleteDirectoryW(const WString& DirPathW, bool bRecursive) {
+    if (!assert_expr(!DirPathW.empty())) {
         return false;
     }
     if (bRecursive) {
-        SHFILEOPSTRUCTA fileOp;
+        SHFILEOPSTRUCTW fileOp;
         fileOp.hwnd   = nullptr;
         fileOp.wFunc  = FO_DELETE;
-        fileOp.pFrom  = StringAsCStr(DirPath + "\\*");
+        fileOp.pFrom  = StringAsCStr(DirPathW + L"\\*");
         fileOp.pTo    = nullptr;
         fileOp.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
         fileOp.fAnyOperationsAborted = FALSE;
         fileOp.lpszProgressTitle     = nullptr;
-        return SHFileOperationA(&fileOp) == 0;
+        return SHFileOperationW(&fileOp) == 0;
     } else {
         // delete contents first
-        WIN32_FIND_DATAA findFileData;
-        HANDLE hFind = FindFirstFileA(StringAsCStr(DirPath + "\\*"), &findFileData);
+        WIN32_FIND_DATAW findFileData;
+        HANDLE hFind = FindFirstFileW(StringAsCStr(DirPathW + L"\\*"), &findFileData);
         if (hFind == INVALID_HANDLE_VALUE) {
             return false;
         }
@@ -84,21 +99,24 @@ bool DeleteDirectory(const String& DirPath, bool bRecursive) {
             if (findFileData.cFileName[0] == '.' && (findFileData.cFileName[1] == 0 || (findFileData.cFileName[1] == '.' && findFileData.cFileName[2] == 0))) {
                 continue;
             }
-            String filePath = DirPath + "\\" + findFileData.cFileName;
+            auto filePath = DirPathW + L"\\" + findFileData.cFileName;
             if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                if (!DeleteDirectory(filePath, true)) {
+                if (!DeleteDirectoryW(filePath, true)) {
                     return false;
                 }
             } else {
-                if (0 == DeleteFileA(StringAsCStr(filePath))) {
+                if (0 == DeleteFileW(StringAsCStr(filePath))) {
                     return false;
                 }
             }
-        } while (FindNextFileA(hFind, &findFileData) != 0);
-        return RemoveDirectoryA(StringAsCStr(DirPath)) != 0;
+        } while (FindNextFileW(hFind, &findFileData) != 0);
+        return RemoveDirectoryW(StringAsCStr(DirPathW)) != 0;
     }
 }
-
+bool DeleteDirectory(const String& DirPath, bool bRecursive) {
+    auto DirPathW = StringU8ToW(DirPath);
+    return DeleteDirectoryW(DirPathW, bRecursive);
+}
 
 void ThrowLastErrorIf(bool expression, const String& msg) {
     if (expression) {
@@ -352,29 +370,24 @@ IOFile* IOFile::openFile(const String& filename, OpenFileMode mode) {
 }
 
 void RevealInExplorer(const String& _path) {
-    String path = _path;
-    App::Platform::sanitizePathToFile(path);
+    WString path = StringU8ToW(_path);
+    App::Platform::sanitizePathToFileWide(path);
     if (path.empty()) {
         return;
     }
     // check if file exists
-    const bool bExists = FileExists(path);
+    const bool bExists = FileExistsWide(path);
     // if not, pick parent folder
     if (!bExists) {
-        String parentPath;
-        SplitPath(path, &parentPath, nullptr, nullptr);
-        if (FileExists(parentPath)) {
+        WString parentPath;
+        SplitPathWide(path, &parentPath, nullptr, nullptr);
+        if (FileExistsWide(parentPath)) {
             path = parentPath;
         } else {
             return;
         }
     }
-    ShellExecuteA(nullptr, "open", "explorer.exe", StringAsCStr("/select," + path), nullptr, SW_SHOWNORMAL);
-}
-
-bool FileExists(const String& Filename) {
-    auto strWide = StringU8ToW(Filename);
-    return _waccess_s(strWide.c_str(), 0) == 0;
+    ShellExecuteW(nullptr, L"open", L"explorer.exe", StringAsCStr(L"/select," + path), nullptr, SW_SHOWNORMAL);
 }
 
 #endif // _WIN32
