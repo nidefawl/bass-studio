@@ -94,20 +94,13 @@ namespace RenderResources {
             }
             if (fontsInstalled.empty()) fontsInstalled = fonts.fontsInstalled;
             fonts.fontsLoaded.clear();
-            int loaded     = 0;
             for (size_t i = 0; i < MAX_FONTS && i < files.size(); i++) {
                 LoadedFont lf;
                 lf.loaded    = lf.nvgId >= 0;
                 lf.name      = files[i].name;
                 lf.font.name = files[i].name;
                 lf.font.path = files[i].path;
-                if (lf.loaded) {
-                    loaded++;
-                }
                 fonts.fontsLoaded.push_back(lf);
-            }
-            if (loaded == 0) {
-                log_lf(Log::L_WARN, "No fonts loaded\n");
             }
             perContextFonts[vg] = fonts;
         }
