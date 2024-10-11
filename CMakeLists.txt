@@ -270,6 +270,9 @@ if (PROJECT_REQUIRE_LIB)
   # define main executable
   if (PROJECT_BUILD_DAW)
     DEFINE_EXECUTABLE(${PROJECT_BINARY_NAME} ${PROJECT_PRODUCT_NAME} "src/host/daw/main_daw.cpp;${RESOURCE_FILES}")
+    if (WIN32 AND NOT MSVC)
+      set_target_properties(${PROJECT_BINARY_NAME} PROPERTIES LINK_FLAGS "-mwindows")
+    endif()
   endif()
 
   if (PROJECT_BUILD_SCANNER)
