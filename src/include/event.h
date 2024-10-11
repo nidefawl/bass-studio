@@ -309,6 +309,7 @@ enum GlobalCommandType {
     CMD_NOTE_ARP_RESET,
     CMD_REVERSE,
     CMD_REVEAL_IN_EXPLORER,
+    CMD_SHOW_CONSOLE,
     NUM_COMMANDS
 };
 

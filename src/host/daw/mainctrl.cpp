@@ -1254,6 +1254,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.views.type  = ngui::menu_type::submenu;
     menus.views.title = "View";
     menus.views.addCommand(this, GlobalCommandType::CMD_OPEN_SECOND_WINDOW);
+    menus.views.addCommand(this, GlobalCommandType::CMD_SHOW_CONSOLE);
     menus.views.addCommand(this, GlobalCommandType::CMD_RESET_UI_DEFAULT_LAYOUT);
     menus.views.addSeperator();
     auto& mapGuiTypeToStr = getContainerRegistry();

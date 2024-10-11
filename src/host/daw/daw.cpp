@@ -719,6 +719,10 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 }
                 return true;
             }
+            case CMD_SHOW_CONSOLE: {
+                showProgramConsole();
+                return true;
+            }
             case CMD_OPEN_SECOND_WINDOW: {
                 if (companionWindows.empty()) {
                     size_t highestIndex = 0;

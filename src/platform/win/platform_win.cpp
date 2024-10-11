@@ -139,14 +139,24 @@ void setMinimumResolutionTimer() {
     }
 }
 
-void allocConsole() {
-#ifndef __MINGW32__
+void showProgramConsole() {
     AllocConsole();
     AttachConsole(GetCurrentProcessId());
     FILE* f;
-    freopen_s(&f, "CON", "w", stdout);
+    errno_t err = freopen_s(&f, "CON", "w", stdout);
+    if (err != 0) {
+        log_lf(Log::L_WARN, "Failed to redirect stdout to console\n");
+    } else {
+        err = freopen_s(&f, "CON", "w", stderr);
+        if (err != 0) {
+            log_lf(Log::L_WARN, "Failed to redirect stderr to console\n");
+        }
+#ifdef _WIN32
+        enableVirtTermProc();
 #endif
+    }
 }
+
 void enableVirtTermProc() {
     // Set output mode to handle virtual terminal sequences
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -154,13 +164,12 @@ void enableVirtTermProc() {
     {
         DWORD dwOriginalOutMode = 0;
         if (GetConsoleMode(hOut, &dwOriginalOutMode)) {
-            if (!SetConsoleMode(hOut, dwOriginalOutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN)
-                && !SetConsoleMode(hOut, dwOriginalOutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+            if (!SetConsoleMode(hOut, dwOriginalOutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
             {
-                log_lf(Log::L_TRACE, "Failed enabling console ENABLE_VIRTUAL_TERMINAL_PROCESSING: SetConsoleMode failed\n");
+                log_lf(Log::L_DEBUG, "Failed enabling console ENABLE_VIRTUAL_TERMINAL_PROCESSING: SetConsoleMode failed\n");
             }
         } else {
-            log_lf(Log::L_TRACE, "Failed enabling console ENABLE_VIRTUAL_TERMINAL_PROCESSING: Not a console\n");
+            log_lf(Log::L_DEBUG, "Failed enabling console ENABLE_VIRTUAL_TERMINAL_PROCESSING: Not a console\n");
         }
     }
 }

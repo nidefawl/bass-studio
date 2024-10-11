@@ -165,6 +165,7 @@ namespace DAW::UI {
         Add(CMD_ABOUT, {"About", "Open the about window", ""}, {});
         Add(CMD_SHOW_DEBUG_WINDOW, {"Debug", "Open the debug window", ""}, {});
         Add(CMD_OPEN_SECOND_WINDOW, {"Open Second Window", "Open a second window", ""}, {});
+        Add(CMD_SHOW_CONSOLE, {"Show Console", "Show the console window", ""}, {});
         Add(CMD_CREATE_VIEW, {"Open View", "Open a new view", ""}, {});
         Add(CMD_MOVE_CURSOR, {"Move cursor", "Move the cursor position", ""}, {});
         Add(CMD_RESET_UI_DEFAULT_LAYOUT, {"Reset UI Layout", "Reset the UI layout to the default layout", ""}, {});

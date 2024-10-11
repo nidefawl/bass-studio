@@ -1868,11 +1868,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         //TODO: fix rpath/dll path to avoid loading unrelated dyn libs
 
         if (openConsole) {
-            allocConsole();
+            showProgramConsole();
         }
-#ifdef _WIN32
-        enableVirtTermProc();
-#endif
+
 #if defined(__linux__) && !defined(BUILD_USE_SANITIZER)
         NFD_Init();
 #endif

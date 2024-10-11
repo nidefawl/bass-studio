@@ -1,8 +1,12 @@
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <wincon.h> // Ensure this is included for WriteConsoleA
+#endif
 #include "str_util.h"
-#include <string_view>
 #include "util/testing_environment.h"
 #include <ctime>
-#include <unordered_map>
 #include <vector>
 #include <mutex>
 #include "logging.h"
@@ -41,30 +45,59 @@ class StdOutLogger final : public Logger {
 public:
     StdOutLogger() noexcept = default;
     ~StdOutLogger() override = default;
+    void write(const char* data, size_t len) {
+#ifdef _WIN32
+        HANDLE stdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (stdOut && stdOut != INVALID_HANDLE_VALUE) {
+            DWORD dwOriginalOutMode = 0;
+            if (GetConsoleMode(stdOut, &dwOriginalOutMode)) {
+                auto codepage = CP_UTF8;
+                int lenWide = MultiByteToWideChar(codepage, 0, data, (int)len, nullptr, 0);
+                if (lenWide  > 0) {
+                    std::basic_string<wchar_t> converted;
+                    converted.reserve(lenWide);
+                    converted.resize(lenWide);
+                    converted.front() = 0;
+                    lenWide  = MultiByteToWideChar(codepage, 0, data, (int)len, converted.data(), (int)converted.size());
+                    if (lenWide > 0) {
+                        DWORD lpNumberOfCharsWritten = 0;
+                        WriteConsoleW(stdOut, converted.data(), lenWide, &lpNumberOfCharsWritten, nullptr);
+                    }
+                }
+            } else {
+                DWORD lpNumberOfCharsWritten = 0;
+                WriteFile(stdOut, data, len, &lpNumberOfCharsWritten, nullptr);
+            }
+        }
+#else
+        fwrite(data, len, 1, stdout);
+#endif
+    }
     void log(Log::Level lvl, const char* data, size_t len) override {
         if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
             return;
         if (lvl >= Log::L_ERROR)
-            fwrite(TERM_COL_RED, 5, 1, stdout);
+            write(TERM_COL_RED, 5);
         else if (lvl >= Log::L_WARN)
-            fwrite(TERM_COL_YELLOW, 5, 1, stdout);
-        fwrite(data, len, 1, stdout);
+            write(TERM_COL_YELLOW, 5);
+        write(data, len);
         if (lvl >= Log::L_WARN)
-            fwrite(TERM_COL_RESET, 4, 1, stdout);
+            write(TERM_COL_RESET, 4);
         fflush(stdout);
     }
     void logStr(Log::Level lvl, String s) override {
         if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
             return;
         if (lvl >= Log::L_ERROR)
-            fwrite(TERM_COL_RED, 5, 1, stdout);
+            write(TERM_COL_RED, 5);
         else if (lvl >= Log::L_WARN)
-            fwrite(TERM_COL_YELLOW, 5, 1, stdout);
+            write(TERM_COL_YELLOW, 5);
         if (s.length() && s.back() != '\n')
             s+='\n';
-        fprintf(stdout, "%s", StringAsCStr(s));
+        const char* str = StringAsCStr(s);
+        write(str, s.length());
         if (lvl >= Log::L_WARN)
-            fwrite(TERM_COL_RESET, 4, 1, stdout);
+            write(TERM_COL_RESET, 4);
         fflush(stdout);
     }
 };
@@ -160,6 +193,15 @@ void closeGlobalLog() {
 }
 void openGlobalLog(const String& logFileName) {
 #ifndef PROJECT_UNITTEST
+    // if logfile exists move it to a backup
+    // if a backup with that name exists, delete it
+    if (FileExists(logFileName)) {
+        String backupName = logFileName + ".bak";
+        if (FileExists(backupName)) {
+            DeleteAbsoluteFile(backupName);
+        }
+        MoveAbsoluteFile(logFileName, backupName);
+    }
     getFileLogger().openFile(logFileName);
     getFileLogger().logStr(Log::L_DEBUG, "Begin of logfile\n");
     getMultiLogger().addLogger(&getFileLogger());

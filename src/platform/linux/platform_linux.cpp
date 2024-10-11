@@ -94,7 +94,7 @@ int64_t getTimeMicros() {
 void setMinimumResolutionTimer() {
 }
 
-void allocConsole() {
+void showProgramConsole() {
 }
 
 void setExceptionHandler() {
