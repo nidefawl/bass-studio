@@ -170,3 +170,18 @@ bool gui_scrollbar::handleMouseScroll(MouseEvent& evt, double xoffset, double yo
     }
     return true;
 }
+
+bool Splitter::contains(ivec2 mpos) const {
+    const auto ext = 8;
+    if (type == 1) {
+        return mpos.x >= pos.x - ext &&
+               mpos.y >= pos.y &&
+               mpos.x < pos.x + size.x + ext &&
+               mpos.y < pos.y + size.y;
+    } else {
+        return mpos.x >= pos.x &&
+               mpos.y >= pos.y - ext &&
+               mpos.x < pos.x + size.x &&
+               mpos.y < pos.y + size.y + ext;
+    }
+}

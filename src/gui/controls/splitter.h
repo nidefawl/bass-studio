@@ -36,6 +36,7 @@ public:
           scaleDefault(_scale),
           scale(_scale) {
         padding = 0;
+        zOrder  = 9001;
     }
 
     void setMinMax(float _min, float _max) {
@@ -60,6 +61,7 @@ public:
         }
         return false;
     }
+    bool contains(ivec2 mpos) const override;
     int32_t leftOrTop(int32_t wh) {
         windowSize = ivec2(wh);
         return math::roundfS32(wh * scale);

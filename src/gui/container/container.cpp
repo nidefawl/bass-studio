@@ -555,3 +555,22 @@ guibase* guictr_base::getFocusedContainer() {
     }
     return this;
 }
+
+void guictr_base::add(guibase* gui) {
+    dbgassert(gui && gui != this);
+    auto it = std::find(guis.begin(), guis.end(), gui);
+    if (it != guis.end()) {
+        throw applogicexception(StringFormat("%s - attempt to add gui twice", StringAsCStr(getClassName())));
+    }
+    guis.push_back(gui);
+    if (sortChildren) {
+        std::sort(guis.begin(), guis.end(), [](guibase* a, guibase* b) {
+            return a->zOrder > b->zOrder;
+        });
+    }
+    gui->setParent(this);
+    auto thisCtrl = getControl();
+    if (thisCtrl)
+        gui->setControl(thisCtrl);
+    gui->onAdded();
+}
