@@ -83,11 +83,11 @@ namespace {
         }
         auto& settings = *tls.settings;
         if (settings.userLibraryPaths.empty()) {
-            String path = App::Platform::toUserdataPath("");
-            if (!FileExists(path)) {
-                CreateDirectoryIfNotExists(path);
+            for (const auto& subdir : { "library", "presets", "samples", "recorded" }) {
+                String subpath = App::Platform::toUserdataPath(subdir);
+                CreateDirectoryIfNotExists(subpath);
+                settings.userLibraryPaths.push_back(subpath);
             }
-            settings.userLibraryPaths.push_back(path);
             saveSettings(settings);
         }
     }
