@@ -2071,8 +2071,8 @@ void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
 }
 
 bool Host::isStreaming() {
-    //watch out for race condition here
-    return impl->audioStream && impl->audioStream->isActive();
+    auto stream = impl->audioStream;
+    return stream && stream->isActive();
 }
 
 /* Function needs to be re-entrant (thread safe) */
