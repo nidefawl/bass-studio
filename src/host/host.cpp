@@ -1374,7 +1374,6 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     int32_t nResampledOutputBlocks = resamplerOutput->numBlocksToPop();
     if (nResampledOutputBlocks > 0 && stream && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
         auto& writePos = ringbuffer.writePos;
-        //TODO: this is incorrect, the resampler should keep track of sample/tick position, but right now these fields are not read on output side
         int64_t time0 = 0;
         int64_t time1 = 0;
         int64_t time2 = 0;
