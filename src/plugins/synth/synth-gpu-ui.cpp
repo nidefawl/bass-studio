@@ -108,7 +108,7 @@ public:
             };
             switch (i) {
                 case 0:
-                    nrInput.setRef(&synth->getOtherParams()[0]);
+                    nrInput.setRef(&synth->getOtherParamsDouble()[0]);
                     nrInput.setLabel("Fade Note Ends");
                     add(&nrInput);
                     break;
@@ -117,8 +117,6 @@ public:
                     break;
             }
         }
-        debugFlags.setLabel("Debug Flags");
-        debugFlags.setRef(&gDebugBenchmarkFlags);
         maxPolyVoices.setLabel("Max Poly Voices");
         maxPolyVoices.setRef(&synth->getRefPolyVoiceCount());
         maxPolyVoices.fnClamp = [](int32_t value) -> int32_t {
@@ -129,9 +127,11 @@ public:
         maxUnisonVoices.fnClamp = [](int32_t value) -> int32_t {
             return math::clamp<int32_t>(value, 1, MAX_UNISON_VOICES);
         };
-        add(&debugFlags);
+        debugFlags.setLabel("Debug Flags");
+        debugFlags.setRef(&gDebugBenchmarkFlags);
         add(&maxPolyVoices);
         add(&maxUnisonVoices);
+        add(&debugFlags);
     }
     ~guicontainer_plugin_synth_other_parameters() override {
         removeGuis();

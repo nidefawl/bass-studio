@@ -215,7 +215,13 @@ private:
         Envelope::EnvelopeTimeRange{ 0.0f, 10000.0f }, // decay
         Envelope::EnvelopeTimeRange{ 0.0f, 10000.0f }, // release
     };
-    std::array<double, 1> otherParams{0.0f};
+    enum SynthConstParam : uint8_t {
+        PARAM_FADE_NOTE_ENDS = 0,
+        PARAM_MAX_POLY_VOICES = 0,
+        PARAM_MAX_UNISON_VOICES = 1,
+    };
+    std::array<double, 1> otherParamsDouble{}; // 0: fade note ends
+    std::array<int32_t, 2> otherParamsInt{}; // 0: max poly voices, 1: max unison voices
     seq_rand synthRand;
     std::vector<std::shared_ptr<PluginViewContainer>> views;
 
@@ -228,8 +234,6 @@ private:
     size_t numActiveVoicesMax = 0;
     int64_t minVoiceIdx = -1;
     int64_t maxVoiceIdx = -1;
-    int32_t userLimitPolyVoices = math::min<int32_t>(MAX_POLY_VOICES, 8);
-    int32_t userLimitUnisonVoices = math::min<int32_t>(MAX_UNISON_VOICES, 8);
     AudioBlock audioOutputBuffer;
     samplecount_t sampleOffsetSubBlock = 0;
     samplecount_t readOffsetSubBlock = 0;
@@ -269,16 +273,20 @@ public:
         return envTimeRanges;
     }
 
-    std::array<double, 1>& getOtherParams() {
-        return otherParams;
+    std::array<double, 1>& getOtherParamsDouble() {
+        return otherParamsDouble;
+    }
+
+    std::array<int32_t, 2>& getOtherParamsInt() {
+        return otherParamsInt;
     }
 
     int32_t& getRefPolyVoiceCount() {
-        return userLimitPolyVoices;
+        return otherParamsInt[PARAM_MAX_POLY_VOICES];
     }
 
     int32_t& getRefUnisonVoiceCount() {
-        return userLimitUnisonVoices;
+        return otherParamsInt[PARAM_MAX_UNISON_VOICES];
     }
 
     DAW::LFO::LFOParameters& getLFOParams(int32_t lfoIdx) {

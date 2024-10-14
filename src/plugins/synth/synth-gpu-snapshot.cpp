@@ -14,6 +14,8 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
     out.write(size_t{snapshot.uiLayout.size()});
     out.write(size_t{snapshot.lfos.size()});
     out.write(size_t{snapshot.adsrs.size()});
+    out.write(size_t{snapshot.constParamsInt.size()});
+    out.write(size_t{snapshot.constParamsDouble.size()});
 
     for (const auto& p : snapshot.params) {
         out.write(p.paramIdx);
@@ -50,6 +52,14 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
         out.write(int32_t{1});
         out.write(adsr.shapingMode);
     }
+    for (const auto& param : snapshot.constParamsInt) {
+        out.write(param.paramIdx);
+        out.write(param.value);
+    }
+    for (const auto& param : snapshot.constParamsDouble) {
+        out.write(param.paramIdx);
+        out.write(param.value);
+    }
     out.setPos(0);
     out.write(size_t(shrdHeapVec->size()));
     return shrdHeapVec;
@@ -73,6 +83,8 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     size_t numUiLayouts = 0;
     size_t numLfos = 0;
     size_t numAdsrs = 0;
+    size_t numConstParamsDouble = 0;
+    size_t numConstParamsInt = 0;
     if (!in.read(numParams) || numParams > 1000)
         return false;
     if (!in.read(numModulations) || numModulations > 1000)
@@ -83,12 +95,21 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
         return false;
     if (!in.read(numAdsrs) || numAdsrs > 1000)
         return false;
+    if (snapshot.version >= 1) {
+        if (!in.read(numConstParamsInt) || numConstParamsInt > 1000)
+            return false;
+        if (!in.read(numConstParamsDouble) || numConstParamsDouble > 1000)
+            return false;
+    }
     snapshot.params.resize(numParams);
     snapshot.uiLayout.resize(numUiLayouts);
     snapshot.modulations.resize(numModulations);
     snapshot.lfos.resize(numLfos);
     snapshot.adsrs.resize(numAdsrs);
-
+    if (snapshot.version >= 1) {
+        snapshot.constParamsInt.resize(numConstParamsInt);
+        snapshot.constParamsDouble.resize(numConstParamsDouble);
+    }
     for (auto& p : snapshot.params) {
         if (!in.read(p.paramIdx))
             return false;
@@ -158,6 +179,21 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
         if (!in.read(adsr.shapingMode))
             return false;
     }
+
+    for (size_t i = 0; i < numConstParamsInt && i < snapshot.constParamsInt.size(); ++i) {
+        if (!in.read(snapshot.constParamsInt[i].paramIdx))
+            return false;
+        if (!in.read(snapshot.constParamsInt[i].value))
+            return false;
+    }
+
+    for (size_t i = 0; i < numConstParamsDouble && i < snapshot.constParamsDouble.size(); ++i) {
+        if (!in.read(snapshot.constParamsDouble[i].paramIdx))
+            return false;
+        if (!in.read(snapshot.constParamsDouble[i].value))
+            return false;
+    }
+
     snapshotOut = std::move(snapshot);
     return true;
 }

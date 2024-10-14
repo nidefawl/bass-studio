@@ -30,6 +30,8 @@ SynthImplGPU::SynthImplGPU(module_synth_template<SynthImplGPU>* module)
     audioOutputBuffer(NUM_AUDIO_CHANNELS, 0)
 {
     initImpl();
+    this->otherParamsInt[PARAM_MAX_POLY_VOICES] = math::min<int32_t>(MAX_POLY_VOICES, 8);
+    this->otherParamsInt[PARAM_MAX_UNISON_VOICES] = math::min<int32_t>(MAX_UNISON_VOICES, 8);;
 }
 
 void SynthImplGPU::init() {
@@ -157,7 +159,7 @@ void SynthImplGPU::initImpl() {
     setParamName(getParam(Parameters::Osc1Gain), "Oscillator 1 Gain", "OSC1 Gain", "Gain", "dB");
     addEnumParam(Parameters::Osc1Waveform)->setRange(0, 3)->setInitialValue(0);
     setParamName(getParam(Parameters::Osc1Waveform), "Oscillator 1 Waveform", "OSC1 Wave", "Wave");
-    addIntParam(Parameters::Osc1UnisonVoiceCount)->setRange(1, userLimitUnisonVoices)->setInitialValue(3);
+    addIntParam(Parameters::Osc1UnisonVoiceCount)->setRange(1, otherParamsInt[PARAM_MAX_UNISON_VOICES])->setInitialValue(3);
     setParamName(getParam(Parameters::Osc1UnisonVoiceCount), "Oscillator 1 Unison Voices", "OSC1 Unison", "Unison", "Voices");
     addFloatParam(Parameters::Osc1UnisonDetune)->setRange(-6.0, 6.0)->setInitialValue(0.0);
     setParamName(getParam(Parameters::Osc1UnisonDetune), "Oscillator 1 Unison Detune", "OSC1 Detune", "Detune", "Semi");
@@ -354,20 +356,41 @@ bool SynthImplGPU::getSnapshot(snapshot_t& snapshot) const {
     for (int32_t i = 0; i < numEnvelopes; ++i) {
         snapshot.adsrs.push_back({ int32_t(tmpVoice.envelopes[i].shaping) });
     }
+    const auto numParamsDouble = CtrSize(otherParamsDouble);
+    snapshot.constParamsDouble.reserve(numParamsDouble);
+    for (int32_t i = 0; i < numParamsDouble; ++i) {
+        snapshot.constParamsDouble.push_back({ i, otherParamsDouble[i] });
+    }
+    const auto numParamsInt = CtrSize(otherParamsInt);
+    snapshot.constParamsInt.reserve(numParamsInt);
+    for (int32_t i = 0; i < numParamsInt; ++i) {
+        snapshot.constParamsInt.push_back({ i, otherParamsInt[i] });
+    }
     return true;
 }
 
 bool SynthImplGPU::setSnapshot(const snapshot_t& snapshot) {
-    if (snapshot.version != SYNTH_GPU_SNAPSHOT_VERSION) {
+    if (snapshot.version < 0) {
         return false;
     }
-    const auto numParams = CtrSize(vecParams);
-
+    const auto numConstParamsDouble = CtrSize(snapshot.constParamsDouble);
+    for (int32_t i = 0; i < numConstParamsDouble; ++i) {
+        if (snapshot.constParamsDouble[i].paramIdx >= 0 && snapshot.constParamsDouble[i].paramIdx < CtrSize(otherParamsDouble)) {
+            otherParamsDouble[snapshot.constParamsDouble[i].paramIdx] = snapshot.constParamsDouble[i].value;
+        }
+    }
+    const auto numConstParamsInt = CtrSize(snapshot.constParamsInt);
+    for (int32_t i = 0; i < numConstParamsInt; ++i) {
+        if (snapshot.constParamsInt[i].paramIdx >= 0 && snapshot.constParamsInt[i].paramIdx < CtrSize(otherParamsInt)) {
+            otherParamsInt[snapshot.constParamsInt[i].paramIdx] = snapshot.constParamsInt[i].value;
+        }
+    }
     for (auto& param : vecParams) {
         if (!param) continue;
         param->resetToInitial();
         dbgassert(param->getAsDouble() >= 0.0 && param->getAsDouble() <= 1.0);
     }
+    const auto numParams = CtrSize(vecParams);
     for (auto& ps : snapshot.params) {
         if (ps.paramIdx >= 0 && ps.paramIdx < numParams) {
             if (!vecParams[ps.paramIdx]) continue;
@@ -425,9 +448,11 @@ bool SynthImplGPU::setSnapshot(const snapshot_t& snapshot) {
         if (!param) continue;
         OnParamChange(Parameters(param->enumParam));
     }
+
     for (auto& v : voices) {
         updateEnvelopeParameters(v);
     }
+
     return true;
 }
 
@@ -447,13 +472,13 @@ void SynthImplGPU::reloadProgram() {
     numActiveVoicesMax = 0;
     GlfwContextSwitch ctxSwitch(window);
     if (!gpuProgram.is_valid()) {
-        reloadShader({ GPU_BLOCK_SIZE, NUM_AUDIO_CHANNELS, userLimitPolyVoices, userLimitUnisonVoices });
+        reloadShader({ GPU_BLOCK_SIZE, NUM_AUDIO_CHANNELS, otherParamsInt[PARAM_MAX_POLY_VOICES], otherParamsInt[PARAM_MAX_UNISON_VOICES] });
         timeCheckShader = getTimeMillis();
     }
-    allocatedVoiceCount = userLimitPolyVoices;
+    allocatedVoiceCount = otherParamsInt[PARAM_MAX_POLY_VOICES];
     audioOutputBuffer.realloc(gpuProgram.blocksize1024Fixed);
     ssboInputSynthState.buffer.resize(gpuProgram.blocksize1024Fixed * size_t(NUM_SYNTH_INPUT_PARAMETERS));
-    ssboInputVoiceStates.buffer.resize(gpuProgram.blocksize1024Fixed * size_t(userLimitPolyVoices) * size_t(NUM_VOICE_INPUT_PARAMETERS));
+    ssboInputVoiceStates.buffer.resize(gpuProgram.blocksize1024Fixed * size_t(otherParamsInt[PARAM_MAX_POLY_VOICES]) * size_t(NUM_VOICE_INPUT_PARAMETERS));
     ssboOutput.buffer.resize(gpuProgram.blocksize1024Fixed * gpuProgram.channels);
     ssboOutputWaveform.buffer.resize(gpuProgram.blocksize1024Fixed);
     GPUAudioProcessor::reallocateSSBOs();
@@ -703,6 +728,9 @@ void SynthImplGPU::ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, co
     // TODO: dispatch is not called if the external blocksize is smaller than the GPU blocksize. don't switch context unless we have to:
     GlfwContextSwitch ctxSwitch(window);
     auto tmNow_ms = getTimeMillis();
+    auto userLimitPolyVoices = this->otherParamsInt[PARAM_MAX_POLY_VOICES];
+    auto userLimitUnisonVoices = this->otherParamsInt[PARAM_MAX_UNISON_VOICES];
+
     if (gpuProgram.polyVoices != userLimitPolyVoices
         || gpuProgram.unisonVoices != userLimitUnisonVoices) {
         GetParamInt(Parameters::Osc1UnisonVoiceCount)->setRange(1, userLimitUnisonVoices);
@@ -815,6 +843,7 @@ void SynthImplGPU::processGpuSynthInput(const DAW::Host::Host* const host, doubl
     }
     size_t numActiveVoicesMax = 0;
     for (samplecount_t s = 0; !bDbgSkipBufferBuild && s < numSamples; s++) {
+        auto userLimitPolyVoices = this->otherParamsInt[PARAM_MAX_POLY_VOICES];
         auto polyCount = size_t(std::count_if(std::cbegin(voices), std::cend(voices), [](auto& v) { return v.bIsActive; }));
         if (polyCount > numActiveVoicesMax) {
             numActiveVoicesMax = polyCount;
@@ -877,8 +906,8 @@ void SynthImplGPU::processGpuSynthInput(const DAW::Host::Host* const host, doubl
                 const auto baseFrequency = v.frequency * v.pitchBend;
                 const auto osc1Frequency = osc1Tune * baseFrequency;
                 double volEnv            = v.GetVolumeEnvelope().value;
-                if (v.noteT.len > 0 && otherParams[0] > 0.0f) {
-                    double noteFade = 1.0 + (modSrcData[14] - 1.0) * otherParams[0];
+                if (v.noteT.len > 0 && otherParamsDouble[0] > 0.0f) {
+                    double noteFade = 1.0 + (modSrcData[14] - 1.0) * otherParamsDouble[0];
                     volEnv *= noteFade;
                 }
                 const double masterVolume = GetParamFloat(Parameters::MasterVolume)->getAsDoubleModulated(v.modValues[ModDestinations::ModDest_MasterVolume]);

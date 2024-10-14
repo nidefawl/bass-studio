@@ -27,9 +27,11 @@ struct snapshot_t {
     std::vector<adsr_snapshot_t> adsrs;
     std::vector<lfo_snapshot_t> lfos;
     std::vector<ui_layout_t> uiLayout;
+    std::vector<PluginSynth::param_float_snapshot_t> constParamsDouble;
+    std::vector<PluginSynth::param_int_snapshot_t> constParamsInt;
 };
 
-static constexpr int32_t SYNTH_GPU_SNAPSHOT_VERSION = 0;
+static constexpr int32_t SYNTH_GPU_SNAPSHOT_VERSION = 1;
 
 std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snapshot);
 bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, snapshot_t& snapshotOut);

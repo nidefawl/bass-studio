@@ -15,7 +15,7 @@ enum {
 
 enum {
     NUM_AUDIO_CHANNELS = 2,
-    MAX_POLY_VOICES    = 32,
+    MAX_POLY_VOICES    = 64,
     MAX_UNISON_VOICES  = 256,
 };
 
