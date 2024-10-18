@@ -136,7 +136,7 @@ struct resampler_t {
         return outputBuffers.back();
     }
 
-    bool push(AudioBlock& block, AudioBufferTimeInfo& timeinfo) {
+    bool push(AudioBlock& block, const AudioBufferTimeInfo& timeinfo) {
         if (numSamplesQueued > out.blockSize * 32) {
             log_lf(Log::L_WARN, "Output queue is not processed, flushing %zd samples. %zu output buffers\n", numSamplesQueued, outputBuffers.size());
             releaseBuffers();
