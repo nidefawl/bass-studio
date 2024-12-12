@@ -8,6 +8,7 @@
 #include "host/clip/clip.h"
 #include "config.h"
 #include "host/plugin/modules.h"
+#include "host/resampler/resampler.h"
 #include "samplerate.h"
 #include "str_util.h"
 #include "seq_time.h"
@@ -33,6 +34,10 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 
 class audiocache;
+
+namespace DAW {
+    class AuxOutputSource;
+};
 
 namespace DAW::Host {
 class Host;
@@ -96,8 +101,15 @@ public:
         uint32_t numBlocksInternal  = 0;
         uint32_t numBlocksExternal  = 0;
     };
+    void addAuxOutput(DAW::AuxOutputSource* source) {
+        outputAuxSources.push_back(source);
+    }
+    void removeAuxOutput(DAW::AuxOutputSource* source) {
+        outputAuxSources.erase(std::remove(outputAuxSources.begin(), outputAuxSources.end(), source), outputAuxSources.end());
+    }
 
 private:
+    std::vector<DAW::AuxOutputSource*> outputAuxSources;
     host_impl* const impl;
 
 public:
@@ -166,6 +178,8 @@ public:
 
     int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
     int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop);
+    void preProcessBlockInternal(int32_t sample, double posDouble, playback_state state, bool inLoop);
+    void postProcessBlockInternal(const std::shared_ptr<resampler_t>& resamplerOutput, const AudioBufferTimeInfo& bufferTimeInfo, int32_t sample, double posDouble, playback_state state);
     int32_t processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
     void processAudio(process_scratch_buf_t& tmp, audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const project_globals_t& globals, const double tickLatencyCompensated, const samplecount_t sampleLatencyCompensated, int32_t numSamples, playback_state state, const effect_processing_graph_t* const processingGraph, IDelayLineStorage* delayLines) const;
 

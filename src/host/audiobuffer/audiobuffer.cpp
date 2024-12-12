@@ -55,6 +55,7 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
     }
 }
 
+/* fillNoise: -6dB white noise */
 template<typename FPType>
 void AudioBlockBase<FPType>::fillNoise(seq_rand& rnd, double gain) {
     for (channelnum_t i = 0; i < channels; i++) {

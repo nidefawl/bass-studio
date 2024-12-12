@@ -963,6 +963,9 @@ void DawInstance::initDaw() {
     initTls.audioCache     = new audiocache(settings.iosettings.samplerate);
     initTls.commandManager = new DAW::UI::CommandManager();
     initTls.host->setTls(initTls);
+#ifndef NDEBUG
+    initTls.host->addAuxOutput(&this->auxSourceNoise);
+#endif
     this->tls = initTls;
 
     setSSEFlushDenormals();

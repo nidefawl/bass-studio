@@ -58,6 +58,7 @@
 #include "host/resampler/resampler.h"
 #include "threads/workerthread.h"
 #include "sse.h"
+#include "aux-source.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -1312,6 +1313,8 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             if (enableProfiling) {
                 timerProfile.reset();
             }
+            preProcessBlockInternal(samplePosProcess, tickPosProcess, state, inLoop);
+
             nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &impl->blockInput, &impl->blockExtOut, samplePosProcess, tickPosProcess, state, inLoop);
 
             if (enableProfiling) {
@@ -1326,11 +1329,12 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             if (enableProfiling) {
                 timeRouting += timerProfile.getTimeReset();
             }
-            impl->meterOutput->update(&impl->blockExtOut, 1.0f);
-            impl->meterOutput->onTick(impl->blockExtOut.samples / double(m_sampleFormatInternal.sampleRate));
             bufferTimeInfo.outputTickPos = tickPosProcess - (ticksLatencyInput + ticksLatencyOutput);
             bufferTimeInfo.bResyncPos = this->bResyncOutputTime;
             this->bResyncOutputTime = false;
+            postProcessBlockInternal(resamplerOutput, bufferTimeInfo, samplePosProcess, tickPosProcess, state);
+            impl->meterOutput->update(&impl->blockExtOut, 1.0f);
+            impl->meterOutput->onTick(impl->blockExtOut.samples / double(m_sampleFormatInternal.sampleRate));
             resamplerOutput->push(impl->blockExtOut, bufferTimeInfo);
             if (enableProfiling) {
                 timeResampleOutput += timerProfile.getTimeReset();
@@ -1475,6 +1479,25 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     }
     return nBlocksProcessed;
 }
+
+void Host::postProcessBlockInternal(const std::shared_ptr<resampler_t>& resamplerOutput, const AudioBufferTimeInfo& bufferTimeInfo, int32_t sample, double posDouble, playback_state state) {
+    // check if output provides enough channels, if only 2 channels are available, we feed them, if the seocnd 2 are available we feed them
+    auto dstChannelOffset = impl->blockExtOut.channels >= 4 ? 2 : 0;
+    auto blockExtSecondPair = impl->blockExtOut.SubChannelsBlock(dstChannelOffset, 2);
+    // copy 
+    for (auto aux : outputAuxSources) {
+        aux->feedTo(blockExtSecondPair);
+    }
+}
+
+void Host::preProcessBlockInternal(int32_t sample, double posDouble, playback_state state, bool inLoop) {
+    // Advice "additional input streams" to produce a block at m_sampleFormatInternal 
+    // this does not have to happen asynchroniously yet
+    for (auto aux : outputAuxSources) {
+        aux->processBlock(m_sampleFormatInternal, sample, posDouble, state, prjGlobals);
+    }
+}
+
 
 int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;

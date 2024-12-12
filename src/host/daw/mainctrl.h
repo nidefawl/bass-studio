@@ -49,6 +49,7 @@
 #include "gui/container/container_dnd_layout.h"
 #include "gui/controls/draggedfiles.hpp"
 #include "buildinfo.h"
+#include "host/aux-source.hpp"
 
 struct automatable_t;
 struct KeyEvent;
@@ -497,7 +498,43 @@ class GrooveLibrary {
         return nullptr;
     }
 };
-
+namespace DAW {
+class AudioPreviewStream : public AuxOutputSource {
+    static constexpr channelnum_t numChannels = 2;
+    audiothread_ringbuffer_t ringbuffer;
+    moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
+    seq_rand rnd;
+public:
+    AudioPreviewStream() {
+        allocRingBuffer(ringbuffer, numChannels);
+    }
+    ~AudioPreviewStream() override {
+        freeRingBuffer(ringbuffer);
+    }
+    bool feedTo(AudioBlock& block) override { 
+        AudioBuffer* buf = nullptr;
+        if (audioQueue.try_dequeue(buf)) {
+            buf->inUse = false;
+            block.addFromOp(buf->output, mix_op::ADD, 0.5);
+            return true;
+        }
+        return false;
+    }
+    void processBlock(const sampleformat_t& sampleFormat, int32_t sample, double posDouble, playback_state state, const project_globals_t& prjGlobals) override {
+        auto& writePos = ringbuffer.writePos;
+        AudioBuffer* bufferWrite = ringbuffer.buffers[writePos];
+        if (!bufferWrite->inUse) {
+            bufferWrite->output->realloc(sampleFormat.blockSize);
+            bufferWrite->output->fillNoise(rnd, dsp_util::fromdBFS(-24.0 + 6.0));
+            bufferWrite->inUse = true;
+            bufferWrite->time.inputTimeSeconds = posDouble;
+            audioQueue.enqueue(bufferWrite);
+            writePos++;
+            writePos &= RING_BUF_MASK;
+        }
+    }
+};
+} // namespace DAW
 class DawInstance final : public project_controller_t, public delete_cb {
     friend class MainCtrl;
     friend class CompanionCtrl;
@@ -554,7 +591,8 @@ public:
 private:
     hires_timer_t timer;
     seq_rand rand;
-    //    int curTooltip = 0;
+    DAW::AuxOutputNoiseSource auxSourceNoise;
+    DAW::AudioPreviewStream auxAudioPreview;
 public:
     DawInstance() : project_controller_t(&project, &projectGlobals) {
         setEmptyClipboard();
