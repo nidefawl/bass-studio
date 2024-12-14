@@ -206,10 +206,15 @@ bool guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
     dbgassert(ctrlParentBar);
     auto* appCtrl = dynamic_cast<AppCtrl*>(ctrlParentBar);
     if (appCtrl) {
-        if (_id > 0) {
-            auto* entry = static_cast<guimenu_ctxtentry*>(e);
-            auto menuCommand = entry->menu->command;
-            appCtrl->menuCommand(menuCommand);//possibly deletes this
+        auto* entry = dynamic_cast<guimenu_ctxtentry*>(e);
+        if (entry) {
+            if (_id > 0) {
+                auto menuCommand = entry->menu->command;
+                appCtrl->menuCommand(menuCommand);//possibly deletes this
+            }
+            if (entry->menu->type == ngui::menu_type::submenu) {
+                return true;
+            }
         }
         appCtrl->closeAllAppMenus();
     }
