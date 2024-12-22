@@ -220,6 +220,7 @@ public:
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_MONO, "Synth Mono", true });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_SHAPER, "Synth Shaper", true });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_GPU, "Synth GPU", true });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_KICKXP, "Kick XP", true });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_VISUALIZER, "Visualizer", false });
         auto daw = dawCtrl->getDaw();
         auto pluginMgr = daw->getPluginManager();

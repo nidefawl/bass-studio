@@ -37,11 +37,15 @@ class module_synth_shaper;
 namespace GPU {
 class module_synth_gpu;
 }
+namespace KickXP {
+class module_synth_kickxp;
+}
 }
 extern template effectbase* makeInstance<PluginSynth::module_synth_unison>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginSynth::Shaper::module_synth_shaper>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginSynth::Mono::module_synth_mono>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginSynth::GPU::module_synth_gpu>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginSynth::KickXP::module_synth_kickxp>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 namespace DAW::Host {
 
 effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
@@ -93,6 +97,9 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
                 break;
             case PLUGIN_TYPE_SYNTH_GPU:
                 effect = makeInstance<PluginSynth::GPU::module_synth_gpu>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
+            case PLUGIN_TYPE_SYNTH_KICKXP:
+                effect = makeInstance<PluginSynth::KickXP::module_synth_kickxp>(getNextGlobalModuleId(globalid), hostcallback);
                 break;
             default:
                 break;

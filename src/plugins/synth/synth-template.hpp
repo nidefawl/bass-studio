@@ -2,6 +2,9 @@
 #include "host/audiobuffer/audioblock.h"
 #include "host/host.h"
 #include "host/plugin/internal/internal-plugin.h"
+#include "logging.h"
+#include "seq_time.h"
+#include "str_util.h"
 #include "synth-types.hpp"
 #include "synth-param.hpp"
 #include "host/plugin/plugin-lockable.h"
@@ -252,6 +255,9 @@ public:
                                         }
                                         return aReleased;
                                     });
+                            // auto voiceIdx = std::distance(std::begin(voices), voice);
+                            // auto tickPosStr = tickAsBeatString(noteDaw.time, false);
+                            // log_lf(Log::L_DEBUG, "Activating voice %lld %s@%s\n", voiceIdx, noteName(noteDaw.pitch), StringAsCStr(tickPosStr));
                             voice->SetNote(noteDaw);
                             voice->seqNr = noteSequenceNr++;
                             meAsDerived.StartVoice(*voice, voiceMode, velocity);
