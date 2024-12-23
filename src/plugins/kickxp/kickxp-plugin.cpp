@@ -113,14 +113,6 @@ namespace PluginSynth::KickXP {
         }
 
         void Start(bool bTriggerMono, double velocity) {
-            // if (bTriggerMono && bIsActive) {
-            //     volEnv.ReStart();
-            // } else if (bTriggerMono && !bIsActive) {
-            //     SetVelocity(velocity);
-            // } else {
-            //     SetVelocity(velocity);
-            //     ResetPitch();
-            // }
             SetVelocity(velocity);
             bIsActive = true;
             this->state = VOICE_HOLD;
@@ -376,7 +368,6 @@ namespace PluginSynth::KickXP {
         }
 
         void StartVoice(VoiceSynth& v, VoiceModes mode, double velocity) {
-            // bool bWasActive = v.bIsActive;
             bool bIsMonoTrigger = false;
             if (mode == VoiceModes::Mono) {
                 bIsMonoTrigger = true;
@@ -567,7 +558,6 @@ namespace PluginSynth::KickXP {
             snapshot.params.reserve(numParams);
             for (int32_t i = 0; i < numParams; ++i) {
                 if (!vecParams[i]) continue;
-                // dbgassert(vecParams[i]->getAsDouble() >= 0.0 && vecParams[i]->getAsDouble() <= 1.0);
                 snapshot.params.push_back({ i, vecParams[i]->getAsDouble() });
             }
             return true;
@@ -710,25 +700,16 @@ namespace PluginSynth::KickXP {
 
     class guicontainer_plugin_kickxp final : public guictr_base {
         module_synth_kickxp* const moduleInstance;
-        guictr_select_enum ctr_phasresetmode;
         seq_rand synthRandUI;
         const int buttonScale = 10;
 
     public:
         explicit guicontainer_plugin_kickxp(module_synth_kickxp* module)
-            : moduleInstance(module),
-              ctr_phasresetmode(2) {
+            : moduleInstance(module)
+        {
             padding = 0;
             margin  = 0;
             setBackgroundRendered(false);
-            for (size_t i = 0; i < 2; ++i) {
-                auto& btn        = ctr_phasresetmode.getButton(i);
-                const auto& name = stringsReset[i];
-                btn.setTooltipText(String("Select ") + name);
-                btn.setText(name);
-                btn.setButtonColor(GuiColor::COL_KNOB);
-            }
-            add(&ctr_phasresetmode);
             setCanMouseHit(true);
         }
         class guictr_module_synth_basic_context_menu final : public guictxtmenu {
@@ -772,8 +753,6 @@ namespace PluginSynth::KickXP {
             auto bWidth            = size.x;
             bWidth                 = math::clamp(bWidth, 64, math::min(256, bHeight * 3));
             bWidth                 = math::min(size.x, bWidth);
-            ctr_phasresetmode.pos  = { 0, 0 };
-            ctr_phasresetmode.size = { bWidth, (bHeight * ctr_phasresetmode.getNumButtons()) / 2 };
         }
         void layout() override {
             layoutImpl(size);
@@ -781,13 +760,9 @@ namespace PluginSynth::KickXP {
         }
 
         void onGuiOpen() {
-            // ctr_waveform.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + ParametersSynthMono::Osc1Wave);
-            // ctr_voicemode.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + ParametersSynthMono::VoiceMode);
-            // ctr_phasresetmode.setAutomationRef(moduleInstance, PARAM_OFFSET_IMPL + ParametersSynthMono::Osc1PhaseResetMode);
         }
 
         void onGuiClose() {
-            ctr_phasresetmode.setAutomationRef(nullptr, -1);
         }
         void setUiLayout(const ui_layout_t& layout) {
         }
