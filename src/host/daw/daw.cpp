@@ -964,7 +964,7 @@ void DawInstance::initDaw() {
     initTls.commandManager = new DAW::UI::CommandManager();
     initTls.host->setTls(initTls);
 #ifndef NDEBUG
-    initTls.host->addAuxOutput(&this->auxSourceNoise);
+    // initTls.host->addAuxOutput(&this->auxSourceNoise);
 #endif
     this->tls = initTls;
 
