@@ -1216,11 +1216,12 @@ void module_synth_gpu::processMidi(midi_data_processing_t& midiEvents) {
         msg.note = evt.note;
     }
     for (auto& evt : *midiEvents.ctrlEvents) {
-        auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples) + currentSampleOffset;
+        auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
         if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
             log_lf(Log::L_WARN, "ctrl event out of range: %d\n", offsetInBlock);
             continue;
         }
+        offsetInBlock += currentSampleOffset;
         messages.push_back(IMidiMsg::FromU32AndTick(evt.message, offsetInBlock));
     }
     if (!messages.empty()) {
