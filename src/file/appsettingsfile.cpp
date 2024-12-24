@@ -162,6 +162,7 @@ void serialize(Archive& ar, app_daw_settings& settings) {
     make_optional_nvp(ar, "uiLayoutLocked", settings.uiLayoutLocked);
     make_optional_nvp(ar, "uiShowSettingsArp", settings.uiShowSettingsArp);
     make_optional_nvp(ar, "uiShowSettingsClip", settings.uiShowSettingsClip);
+    make_optional_nvp(ar, "lowLatencyMode", settings.lowLatencyMode);
 }
 
 template<class Archive>

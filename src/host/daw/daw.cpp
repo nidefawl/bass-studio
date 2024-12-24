@@ -1500,6 +1500,7 @@ void DawInstance::initRealtimeResources() {
         tls.audioHost->initPa();
     }
     tls.midiHost->initPm();
+    tls.host->setLowLatencyMode(tls.settings->dawsettings.lowLatencyMode);
     if (tls.settings->dawsettings.audioEnabled) {
         if (tls.audioHost->startAudio(tls.settings->iosettings)) {
             auto stream = tls.audioHost->getStreamSharedPtr(0);

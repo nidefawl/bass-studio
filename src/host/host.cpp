@@ -419,6 +419,7 @@ public:
 
     channelnum_t inputChannels = 0;
     channelnum_t outputChannels = 0;
+    bool bIsLowLatencyMode = false;
     uint32_t threadsRunningCount = 0;
     uint32_t threadCount = NUM_AUDIOPROCESSING_THREADS_INITIAL;
     uint32_t playThreadId = 0;
@@ -590,6 +591,10 @@ const Host::audiostream_properties_t& Host::getAudioStreamProperties() const {
 Host::audiostream_properties_t& Host::updateAudioStreamProperties() {
     this->audioProperties = getAudioStreamPropertiesForFormat(m_sampleFormatInternal, m_sampleFormatExternal, prjGlobals.tempo100);
     return this->audioProperties;
+}
+
+void Host::setLowLatencyMode(bool bLowLatency) {
+    impl->bIsLowLatencyMode = bLowLatency;
 }
 
 void Host::setSampleFormat(const sampleformat_t& _sampleFormat) {
@@ -1243,7 +1248,8 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
      * Start processing when the output ring buffer is less than half filled.
      * We also have to wait for the input resampler to have enough data to start processing.
      */
-    const bool canProcess = queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
+    const int maxNumBlocks = this->impl->bIsLowLatencyMode ? 1 : RING_BUF_SIZE / 2;
+    const bool canProcess = queueSizeOutput < maxNumBlocks && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
 
     if (enableProfiling) timerProfile.reset();
 

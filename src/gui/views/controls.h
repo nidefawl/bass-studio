@@ -153,7 +153,7 @@ public:
     void showEditField();
 };
 
-class guibutton_audioengine final : public guibuttonstate {
+class guibutton_audioengine : public guibuttonstate {
     host_stats_t stats;
     float cpuUsage = 0.0f;
 
@@ -165,6 +165,15 @@ public:
     void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const override;
     void onTick(AppCtrl* ctrl) override;
 };
+
+class guibutton_audioengine_lowlatency final : public guibutton_audioengine {
+public:
+    guibutton_audioengine_lowlatency() = default;
+    bool getState() const override;
+    void render(NVGcontext* vg) override;
+    void onTick(AppCtrl* ctrl) override;
+};
+
 struct GlobalZoom {
     float zoom = 1.0f;
 };
@@ -257,6 +266,7 @@ class guictr_daw_controls final : public guictr_base {
     gui_timeinput cursorPos;
     gui_timeinput songPos;
     guibutton_audioengine btnAudioOnOff;
+    guibutton_audioengine_lowlatency btnLowLatency;
     guibuttonstate btnRecord;
     guibuttonstate btnPlay;
     guibuttonstate btnStop;

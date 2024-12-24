@@ -36,6 +36,7 @@
 #include <portaudio.h>
 #include <portmidi.h>
 #include "platform.h"
+#include "host/host.h"
 
 
 namespace DAW::DialogSettings {
@@ -504,6 +505,7 @@ class guidialog_audio_io final : public setting_dialog {
     DawInstance* const daw;
     appsettings& settings;
     guibutton_audioengine* audioEngineOn;
+    guibutton_audioengine_lowlatency* audioEngineLowLatency;
     guidropdownbase* audioBlockSize;
     guidropdownbase* audioSampleRate;
     guidropdownbase* audioInternalBlockSize;
@@ -607,6 +609,7 @@ public:
         delete audioSampleRate;
         delete audioBlockSize;
         delete audioEngineOn;
+        delete audioEngineLowLatency;
     }
 
     guidialog_audio_io(DawInstance* _daw)
@@ -614,6 +617,7 @@ public:
           daw(_daw),
           settings(daw_tls::getSettings()),
           audioEngineOn(new guibutton_audioengine{}),
+          audioEngineLowLatency(new guibutton_audioengine_lowlatency{}),
           deviceListInput(new gui_list()),
           deviceListOutput(new gui_list()),
           metersInput(true),
@@ -737,6 +741,7 @@ public:
         selectAPI->setLabel("Audio API");
         asioDevice->setLabel("ASIO Device");
         audioEngineOn->setLabel("Audio Engine");
+        audioEngineLowLatency->setLabel("Low Latency Mode");
         extBlockSize->setLabel("External Blocksize");
         extSampleRate->setLabel("External Samplerate");
         intBlockSize->setLabel("Internal Blocksize");
@@ -759,6 +764,7 @@ public:
         add(deviceListInput);
         add(deviceListOutput);
         add(audioEngineOn);
+        add(audioEngineLowLatency);
         add(extBlockSize);
         add(extSampleRate);
         add(intBlockSize);
@@ -819,8 +825,10 @@ public:
 
         audioEngineOn->size           = ivec2(cs.x - inset * 2, height);
         audioEngineOn->pos            = ivec2(inset, insetY);
+        audioEngineLowLatency->size   = ivec2(cs.x - inset * 2, height);
+        audioEngineLowLatency->pos    = ivec2(inset, audioEngineOn->bottom() + inset);
         audioInternalBlockSize->size  = ivec2(cs.x - inset * 2, height);
-        audioInternalBlockSize->pos   = ivec2(inset, audioEngineOn->bottom() + inset);
+        audioInternalBlockSize->pos   = ivec2(inset, audioEngineLowLatency->bottom() + inset);
         audioInternalSampleRate->size = ivec2(cs.x - inset * 2, height);
         audioInternalSampleRate->pos  = ivec2(inset, audioInternalBlockSize->bottom() + inset);
         audioBlockSize->size          = ivec2(cs.x - inset * 2, height);
@@ -882,6 +890,16 @@ public:
                 settings.dawsettings.audioEnabled = false;
             } else {
                 settings.dawsettings.audioEnabled = true;
+            }
+            return;
+        }
+        if (button == this->audioEngineLowLatency) {
+            settings.dawsettings.lowLatencyMode = !settings.dawsettings.lowLatencyMode;
+            {
+                auto host = daw_tls::getTls().host;
+                if (host) {
+                    host->setLowLatencyMode(settings.dawsettings.lowLatencyMode);
+                }
             }
             return;
         }

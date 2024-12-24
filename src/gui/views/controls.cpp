@@ -346,6 +346,16 @@ void guictr_daw_controls::buttonClicked(guibase* button) {
             settings.dawsettings.audioEnabled = true;
         }
     }
+    if (button == &this->btnLowLatency) {
+        auto& settings = daw_tls::getSettings();
+        settings.dawsettings.lowLatencyMode = !settings.dawsettings.lowLatencyMode;
+        {
+            auto host = daw_tls::getTls().host;
+            if (host) {
+                host->setLowLatencyMode(settings.dawsettings.lowLatencyMode);
+            }
+        }
+    }
     if (button == &this->btnUiLayoutLock) {
         auto& settings = daw_tls::getSettings();
         settings.dawsettings.uiLayoutLocked = !settings.dawsettings.uiLayoutLocked;
@@ -436,6 +446,83 @@ void guibutton_audioengine::renderWidgetBorderPosSize(NVGcontext* vg, int32_t fl
     }
 }
 
+bool guibutton_audioengine::getState() const {
+    auto daw = dawCtrl ? dawCtrl->getDaw() : nullptr;
+    if (!daw)
+        return false;
+    auto host = daw->getHost();
+    if (!host)
+        return false;
+    return host->isStreaming();
+}
+
+void guibutton_audioengine::onTick(AppCtrl* ctrl) {
+    auto ahost = dawCtrl->getDaw()->getAudioHost();
+    if (!ahost || !ahost->isStreaming()) {
+        if (size.x > 100) {
+            setText("Off");
+            setLabel("Audio Enabled");
+        } else {
+            setText("Off");
+            setLabel("Audio");
+        }
+        setTooltipText("Audio Engine is not running");
+    } else {
+        setText(StringFormat("%.0f%%", this->cpuUsage * 100.0));
+        if (size.x > 100) {
+            setLabel("Audio CPU");
+        } else {
+            setLabel("Audio");
+        }
+        setTooltipText("Audio Engine is running");
+    }
+}
+
+void guibutton_audioengine_lowlatency::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
+    if (!dawCtrl)
+        return;
+    int32_t fl = getStateFlags();
+    renderWidgetBorder(vg, fl);
+    if (size.y > 10 && size.x > 10) {
+        nvgSave(vg);
+        setScissorTransform(vg);
+        auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
+        auto posText = vec2(0) + vec2(size.x - 3, size.y * 0.5f);
+        float textWidth = renderTextLabel(vg,
+                        posText,
+                        vec2(size),
+                        str,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(getLabelColor()),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        renderTextLabel(vg,
+                        vec2(0) + vec2(3.0f, size.y * 0.5f),
+                        vec2(size.x - textWidth - 6.0f, size.y),
+                        label,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        nvgRestore(vg);
+    }
+}
+
+
+bool guibutton_audioengine_lowlatency::getState() const {
+    auto& settings = daw_tls::getSettings();
+    return settings.dawsettings.lowLatencyMode;
+}
+
+void guibutton_audioengine_lowlatency::onTick(AppCtrl* ctrl) {
+    auto& settings = daw_tls::getSettings();
+    setText(settings.dawsettings.lowLatencyMode ? "On" : "Off");
+    setTooltipText("Low Latency Mode is " + 
+        String(settings.dawsettings.lowLatencyMode ? "enabled" : "disabled"));
+}
+
 void gui_tempocontrol::buttonClicked(guibase* button) {
     auto field = dynamic_cast<gui_tempocontrol_input*>(button);
     if (field) {
@@ -493,10 +580,6 @@ bool gui_tempocontrol_input::handleKeyInput(KeyEvent& kevt) {
         }
     }
     return handled;
-}
-bool guibutton_audioengine::getState() const {
-    // TODO: get rid of getInstance call (required in settings dialog window)
-    return DAW::Host::getInstance()->isStreaming();
 }
 void gui_signaturecontrol_input::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
@@ -641,6 +724,7 @@ guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t&
     add(&songPos);
     add(&btnUiLayoutLock);
     add(&zoom);
+    add(&btnLowLatency);
     add(&btnAudioOnOff);
     padding = 8;
     zoom.setLabel("Zoom");
@@ -650,6 +734,9 @@ guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t&
     btnStop.setLabel("Stop");
     btnLoop.setLabel("Loop");
     btnAudioOnOff.setLabel("Audio CPU Usage");
+    btnLowLatency.setText("Live");
+    btnLowLatency.setLabel("Live");
+    btnLowLatency.setTooltipText("Toggle Low Latency Mode");
     signature.setLabel("Signature");
     cursorPos.setLabel("Cursor Position");
     songPos.setLabel("Playback Position");
@@ -661,6 +748,7 @@ guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t&
 }
 guictr_daw_controls::~guictr_daw_controls() {
     remove(&btnAudioOnOff);
+    remove(&btnLowLatency);
     remove(&zoom);
     remove(&btnUiLayoutLock);
     remove(&songPos);
@@ -735,12 +823,14 @@ void guictr_daw_controls::layout() {
     }
 
     btnAudioOnOff.size = ivec2(smallHeight*3, smallHeight);
+    btnLowLatency.size = ivec2(smallHeight*2.5, smallHeight);
     zoom.size          = ivec2(smallHeight*3, smallHeight);
     btnUiLayoutLock.size = ivec2(smallHeight, smallHeight);
     layoutSelect.size    = ivec2((smallHeight+5) * layoutSelect.getNumButtons(), smallHeight);
     viewSelect.size      = ivec2((smallHeight+5) * viewSelect.getNumButtons(), smallHeight);
     btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + verticalSpacing, cs.x - 5 - btnAudioOnOff.size.x), (cs.y - btnAudioOnOff.size.y) / 2);
-    zoom.pos = ivec2(btnAudioOnOff.left() - zoom.size.x - spacingCtrls, (cs.y - zoom.size.y) / 2);
+    btnLowLatency.pos  = ivec2(btnAudioOnOff.left() - btnLowLatency.size.x - spacingCtrls, (cs.y - btnLowLatency.size.y) / 2);
+    zoom.pos = ivec2(btnLowLatency.left() - zoom.size.x - spacingCtrls, (cs.y - zoom.size.y) / 2);
     btnUiLayoutLock.pos = ivec2(zoom.left() - btnUiLayoutLock.size.x - spacingCtrls, (cs.y - btnUiLayoutLock.size.y) / 2);
     layoutSelect.pos = ivec2(btnUiLayoutLock.left() - layoutSelect.size.x - spacingCtrls, (cs.y - layoutSelect.size.y) / 2);
     viewSelect.pos = ivec2(layoutSelect.left() - viewSelect.size.x - spacingCtrls, (cs.y - viewSelect.size.y) / 2);
@@ -776,27 +866,7 @@ int32_t gui_timeinput::clampValue(int32_t val) {
     }
     return val;
 }
-void guibutton_audioengine::onTick(AppCtrl* ctrl) {
-    auto ahost = dawCtrl->getDaw()->getAudioHost();
-    if (!ahost || !ahost->isStreaming()) {
-        if (size.x > 100) {
-            setText("Off");
-            setLabel("Audio Enabled");
-        } else {
-            setText("Off");
-            setLabel("Audio");
-        }
-        setTooltipText("Audio Engine is not running");
-    } else {
-        setText(StringFormat("%.0f%%", this->cpuUsage * 100.0));
-        if (size.x > 100) {
-            setLabel("Audio CPU");
-        } else {
-            setLabel("Audio");
-        }
-        setTooltipText("Audio Engine is running");
-    }
-}
+
 void guictr_daw_viewmode_select::buttonClicked(guibase* button) {
     int32_t idx = 0;
     for (auto & btnView : btnViews) {
@@ -809,6 +879,7 @@ void guictr_daw_viewmode_select::buttonClicked(guibase* button) {
         idx++;
     }
 }
+
 void guictr_daw_layout_select::buttonClicked(guibase* button) {
     int32_t idx = 0;
     for (auto & btnView : btnViews) {

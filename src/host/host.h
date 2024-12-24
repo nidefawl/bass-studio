@@ -171,6 +171,7 @@ public:
 
     void setSampleFormat(const sampleformat_t& _sampleFormat);
     void setOutput(std::shared_ptr<AudioIO::AudioStream> stream);
+    void setLowLatencyMode(bool bLowLatency);
     void resetResamplers();
     const audiostream_properties_t& getAudioStreamProperties() const;
     audiostream_properties_t& updateAudioStreamProperties();

@@ -119,6 +119,7 @@ struct app_daw_settings {
     bool uiLayoutLocked = true;
     bool uiShowSettingsClip = true;
     bool uiShowSettingsArp = true;
+    bool lowLatencyMode = false;
 };
 struct appsettings {
     uint32_t fileFmtVersion = 0;
