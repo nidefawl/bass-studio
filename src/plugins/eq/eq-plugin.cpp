@@ -5,7 +5,6 @@
 #include <math.h>
 #include "eq-plugin.h"
 #include "assert_dbg.h"
-#include "guiglobals.h"
 #include "host/audio_analyzer.h"
 #include "host/automation/automation.h"
 #include "dsp_util.h"
@@ -14,14 +13,12 @@
 #include "math/seq_math.h"
 #include "plugins/eq/eq-plugin.h"
 #include "plugins/eq/filter-coeffs.h"
-#include "plugins/plugin-ui.h"
 #include "plugins/plugincontrol.h"
 #include "samplerate.h"
 #include "seq_time.h"
 #include "seq_util.h"
 #include "str_util.h"
 #include "gui/container/container.h"
-#include "gui/controls/knoblabeled.h"
 #include "gui/controls/knobpluginparam.h"
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
@@ -29,10 +26,8 @@
 #include "host/plugin/modules.h"
 #include "host/daw/mainctrl.h"
 #include "host/plugin/internal/internal-plugin.h"
-#include "host/track/track.h"
 #include "host/track/track_impl.h"
 #include "host/audiobuffer/audioblock.h"
-#include "host/meter/meter.h"
 #include "snapshot/snapshot.h"
 #include "types.h"
 #include "window.h"
@@ -48,7 +43,7 @@ namespace DAW {
     extern bool gClapUseSampleAccurateModulation;
 }
 namespace PluginEQ {
-
+namespace  {
     constexpr float F_MIN = 10;
     constexpr float F_MAX = 20000;
     const     float F_SCALE_EXPO = math::calcExponentForScale(0.5f, 500.0f, F_MIN, F_MAX);
@@ -82,7 +77,7 @@ namespace PluginEQ {
         return math::clamp<float>(math::powf(valueMapped, 1.0f/Q_SCALE_EXPO), 0.0f, 1.0f);
     }
 
-    enum BandType {
+    enum BandType : uint8_t {
         BandTypeLowPass,
         BandTypeHighPass,
         BandTypeBandPass,
@@ -125,7 +120,7 @@ namespace PluginEQ {
         "Notch",
     };
 
-    enum SlopeType {
+    enum SlopeType : uint8_t {
         Slope12dB,
         Slope24dB,
         Slope48dB,
@@ -216,19 +211,8 @@ namespace PluginEQ {
         }
         return freqStopPoints;
     }
-    const static FreqPlotStopPoints PlotFrequencies = GetFreqPlotStopPoints();
 
-    struct impl_data_t {
-        DAW::Host::process_scratch_buf_t buf;
-        std::array<std::vector<std::shared_ptr<DAW::Filter>>, defaultBands.size()> filters;
-        std::array<DAW::FilterCoeffs, defaultBands.size()> filterCoeffs;
-        AudioBlock tmpBlock;
-        audioanaylzer audioAnalyzer;
-        audio_spectrum spectrum;
-        std::vector<float> freq{};
-        signalsmith::rates::Oversampler2xFIR<float> oversampler;
-        AudioBlock oversampledBlock;
-    };
+    const static FreqPlotStopPoints PlotFrequencies = GetFreqPlotStopPoints();
 
     float getParamValueApplyModulation(module_eq* moduleEq, int32_t idx, bool bApplyModulations) {
         automatable_param_t* param = moduleEq->getParamUnchecked(idx);
@@ -306,6 +290,19 @@ namespace PluginEQ {
                 return DAW::FilterCoeffs::CalculateNotch(sampleRate, bandParams.freq, bandParams.q);
         }
     }
+} // namespace
+
+    struct impl_data_t {
+        DAW::Host::process_scratch_buf_t buf;
+        std::array<std::vector<std::shared_ptr<DAW::Filter>>, defaultBands.size()> filters;
+        std::array<DAW::FilterCoeffs, defaultBands.size()> filterCoeffs;
+        AudioBlock tmpBlock;
+        audioanaylzer audioAnalyzer;
+        audio_spectrum spectrum;
+        std::vector<float> freq{};
+        signalsmith::rates::Oversampler2xFIR<float> oversampler;
+        AudioBlock oversampledBlock;
+    };
 
     module_eq::module_eq(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("EQ", _projectGlobalId, _hostCallback),
@@ -416,7 +413,7 @@ namespace PluginEQ {
         for (int i = 0; i < numChannels; ++i) {
             channelsOversampler[i] = this->impl->oversampler[i];
         }
-        impl->oversampledBlock = AudioBlock(channelsOversampler, format.blockSize * 2);
+        impl->oversampledBlock = AudioBlock(channelsOversampler, samplecount_t(format.blockSize) * 2);
     }
 
     samplecount_t module_eq::getPluginLatency() {
@@ -428,6 +425,7 @@ namespace PluginEQ {
         impl->audioAnalyzer.onTick();
     }
 
+namespace {
     void MixFFTSpectrumBands(const audio_spectrum* lf, const audio_spectrum* hf, audio_spectrum& out) {
         constexpr float fstep = 0.22f;
         for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
@@ -463,6 +461,7 @@ namespace PluginEQ {
         }
         return coeffs;
     };
+} // namespace
 
     void module_eq::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
@@ -712,7 +711,7 @@ namespace PluginEQ {
         }
     };
     class guicontainer_plugin_eq_editor final : public guictr_base {
-        enum class hittype {
+        enum class hittype : uint8_t {
             HIT_NONE,
             HIT_BAND,
         };
