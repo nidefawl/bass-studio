@@ -625,8 +625,10 @@ void Host::sendNotesOff(effectbase* plugin) {
 
 void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosBlockStart, playback_state state) {
     constexpr bool logProcessedNotes = false;
-    // incoming events are shifted 3 blocks into the future
-    const auto realtimeMidiDelay = audioProperties.ticksPerBlock * 3;
+    const bool bLowLatencyMode = this->impl->bIsLowLatencyMode;
+    // // incoming events are shifted 1 block into the future
+    const auto realtimeMidiDelayTicks = bLowLatencyMode ? 0 : audioProperties.ticksPerBlock;
+
     // incoming events are kept in buffer for 9 blocks
     const auto realtimeMidiTrackingTime = audioProperties.ticksPerBlock * 9;
     const auto msToTicks = secondsToTicks(1.0 / 1000.0, prjGlobals.tempo100);
@@ -640,7 +642,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
         midi_data_t& midiData = midiRealtimeDeviceInputs[device.deviceName];
         for (auto& msg : device.midiMsgs) {
             auto timeUntilStart = (msg.timestamp - midiTimeNow);
-            auto tickEvtDelay = math::rounddS32(dTickPosBlockStart + (timeUntilStart * msToTicks) + realtimeMidiDelay);
+            auto tickEvtDelay = math::rounddS32(dTickPosBlockStart + (timeUntilStart * msToTicks) + realtimeMidiDelayTicks);
             int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
             if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
                 note_miditime_t note;
@@ -1211,6 +1213,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     timerBlock.reset();
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const audiostream_properties_t audioProp = updateAudioStreamProperties();
+    const bool bLowLatencyMode = this->impl->bIsLowLatencyMode && audioProp.numBlocksInternal == 1;
 
     std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, m_sampleFormatExternal, impl->outputChannels, 0);
     std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(m_sampleFormatExternal, sampleFormat, impl->inputChannels, 1);
@@ -1301,6 +1304,16 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
         const auto samplesLatencyOutput = resamplerOutput->getResamplerDelay() + (stream ? stream->getStreamOutputLatency() : 0);
         const auto ticksLatencyOutput = sampleToTickConvert<double, roundmode::none>(samplesLatencyOutput, prjGlobals.tempo100, m_sampleFormatExternal.sampleRate);
         const auto ticksLatencyInput = sampleToTickConvert<double, roundmode::none>(processingGraph->trackGraph->maxLatencySamples, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
+        
+        auto nBlocksToPop = resamplerInput->numBlocksToPop();
+        if (bLowLatencyMode) {
+            AudioBufferTimeInfo bufferTimeInfo{ };
+            // if low latency mode, we drop all resampler outputs but the last one
+            while (nBlocksToPop > audioProp.numBlocksInternal) {
+                resamplerInput->pop(bufferTimeInfo, impl->blockInput);
+                nBlocksToPop--;
+            }
+        }
         for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
             int32_t samplePosProcess = sample + int32_t(sampleFormat.blockSize * i);
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
