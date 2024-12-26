@@ -1143,9 +1143,7 @@ void sortControlEvents(std::vector<midievent_ctrl_t>& ctrlEvents) {
 }
 
 void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const std::map<String, DAW::Host::midi_data_t>& midiRealtimeDeviceInputs, DAW::midichannel_ref_t midiChannel, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
-#ifndef NDEBUG
-    tick_t lastNoteStart = -1;
-#endif
+
     for (auto& device : midiRealtimeDeviceInputs) {
         if (midiChannel.type == midistage_type::INPUT_EXTERNAL_MIDI) {
             if (midiChannel.externalInputIdx != 255) {
@@ -1154,6 +1152,9 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const std::map<String
             }
         }
         const auto& data = device.second;
+#ifndef NDEBUG
+        tick_t lastNoteStart = -1;
+#endif
         for (auto& note : data.notes.m_list) {
 #ifndef NDEBUG
             dbgassert(lastNoteStart == -1 || note.start() >= lastNoteStart);
