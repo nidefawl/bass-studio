@@ -126,8 +126,8 @@ jobs:
         -DPROJECT_BINARY_NAME:STRING="bass"
         -DPRODUCT_HOST_NAME:STRING="bass"
         -DPROJECT_VENDOR_NAME:STRING="Michael Hept"
-        -DPRODUCT_URL_DOCS:STRING="https://github.com/nidefawl/daw-project"
-        -DPRODUCT_URL_VENDOR:STRING="https://github.com/nidefawl/daw-project"
+        -DPRODUCT_URL_DOCS:STRING="https://bass-studio.com/"
+        -DPRODUCT_URL_VENDOR:STRING="https://bass-studio.com/"
         -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF
         -DCMAKE_VERBOSE_MAKEFILE=OFF
         -DCMAKE_UNITY_BUILD=ON
@@ -299,8 +299,8 @@ jobs:
         -DPROJECT_BINARY_NAME:STRING="bass"
         -DPRODUCT_HOST_NAME:STRING="bass"
         -DPROJECT_VENDOR_NAME:STRING="Michael Hept"
-        -DPRODUCT_URL_DOCS:STRING="https://github.com/nidefawl/daw-project"
-        -DPRODUCT_URL_VENDOR:STRING="https://github.com/nidefawl/daw-project"
+        -DPRODUCT_URL_DOCS:STRING="https://bass-studio.com/"
+        -DPRODUCT_URL_VENDOR:STRING="https://bass-studio.com/"
         -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF
         -DCMAKE_VERBOSE_MAKEFILE=OFF
         -DCMAKE_UNITY_BUILD=ON
@@ -332,8 +332,8 @@ jobs:
         -DPROJECT_BINARY_NAME:STRING="bass"
         -DPRODUCT_HOST_NAME:STRING="bass"
         -DPROJECT_VENDOR_NAME:STRING="Michael Hept"
-        -DPRODUCT_URL_DOCS:STRING="https://github.com/nidefawl/daw-project"
-        -DPRODUCT_URL_VENDOR:STRING="https://github.com/nidefawl/daw-project"
+        -DPRODUCT_URL_DOCS:STRING="https://bass-studio.com/"
+        -DPRODUCT_URL_VENDOR:STRING="https://bass-studio.com/"
         -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF
         -DCMAKE_VERBOSE_MAKEFILE=OFF
         -DCMAKE_UNITY_BUILD=ON
@@ -364,7 +364,7 @@ jobs:
         tar -cvjSf ./installer/win32/symbols.tar.bz2 ./build/win32/dist/*.debug
     - name: Prepare linux artifacts
       run: |
-        INSTALLER_FILENAME=$(basename $(ls -AU ./installer/linux/*.tar.gz | head -1))
+        INSTALLER_FILENAME=$(basename $(ls -AU ./installer/linux-no-python/*.tar.gz | head -1))
         INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-7))}
         ARTIFACT_NAME_LINUX="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
         echo "ARTIFACT_NAME_LINUX=${ARTIFACT_NAME_LINUX}" >> $GITHUB_ENV
