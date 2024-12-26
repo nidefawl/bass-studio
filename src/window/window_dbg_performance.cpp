@@ -6,11 +6,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include <utility>
+#include "guifonts.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
 #include "math/mat.h"
 #include "fileio.h"
+#include "theme.h"
 #include "util/profiling.h"
 #include "str_util.h"
 #include "gl/gl_util.h"
@@ -174,6 +176,7 @@ struct gl_shader_perfgraph final : gl_shader_pipeline {
 class window_impl final : public window_abstract_t {
     static constexpr size_t TEXTURE_WIDTH  = DBG_PERF_HIST_SIZE;
     static constexpr size_t TEXTURE_HEIGHT = 16;
+    guitheme_t theme;
     std::vector<float> texData;
     
     int64_t tmLastReload = 0;
@@ -271,7 +274,7 @@ public:
     ~window_impl() {
     }
 
-    int init(NVGcontext*) override {
+    int init(NVGcontext* vg) override {
         tmLastReload = getTimeMillis();
         pipePerfShader = std::make_shared<gl_shader_perfgraph>();
         checkGLError("pipePerfShader reset");
@@ -430,6 +433,7 @@ public:
         //     log_printf("tmEndGraphs %zd\n", tmEndGraphs - tmEndUpload);
         // }
         nvgBeginFrame(vg, fbWidth, fbHeight, pxratio);
+        theme.bindFont(vg, UIFont::FONT_DEFAULT);
 
 
         nvgSave(vg);
@@ -448,6 +452,7 @@ public:
         nvgBatchedRender(vg);
         nvgFillColor(vg, rgbaToNvg(0xFFFFFFFF));
         nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+
         nvgFontSize(vg, FONTSIZE_TITLE);
         for (ProfilingDataRenderInstance& renderInstance : renderInstances) {
             auto titlePos = renderInstance.instancePos + vec2(0, FONTSIZE_TITLE) * 0.5f + grphInset;

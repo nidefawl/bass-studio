@@ -2,6 +2,7 @@
 #include "gui/container/container_builder.h"
 #include "container.h"
 #include "gui/gui.h"
+#include "theme.h"
 #include <memory>
 #include <vector>
 #include <map>
@@ -74,6 +75,7 @@ public:
     int32_t childContainerIndex = -1;
     String label;
     bool bAlwaysShow = false;
+    guitheme_t theme;
     void init() {
         pos = {};
         size = {};

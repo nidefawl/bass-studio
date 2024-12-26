@@ -580,7 +580,7 @@ void DropAreaUILayout::render(NVGcontext* vg) {
                     vec2(pos) + vec2(0, size.y/2.0),
                     vec2(1000, 1000),
                     this->label,
-                    nullptr,
+                    &theme,
                     20,
                     rgbaToNvg(0xff7fff7f),
                     NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
