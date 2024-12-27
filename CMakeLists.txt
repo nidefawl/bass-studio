@@ -612,20 +612,22 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       if(EXISTS "${PATH_RUNTIMES}/libc++.so.1")
         list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.1")
       endif()
-    endif()
 
-    if (NOT LIST_RUNTIMES)
-      message(WARNING "No runtimes found")
-    else()
-      add_custom_target(dist-include-c-cxx-runtimes-linux
-        VERBATIM
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
-        COMMAND ${CMAKE_COMMAND} 
-          -E copy
-          ${LIST_RUNTIMES}
-          "${PATH_DIST}/lib/"
-      )
-      set(DIST_LINUX_INSTALLER_DEPENDS ${DIST_LINUX_INSTALLER_DEPENDS} dist-include-c-cxx-runtimes-linux)
+      if (NOT LIST_RUNTIMES)
+        message(STATUS "No runtimes found in ${PATH_RUNTIMES}")
+      else()
+        #message(STATUS "LIST_RUNTIMES ${LIST_RUNTIMES}")
+        add_custom_target(dist-include-c-cxx-runtimes-linux
+          VERBATIM
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
+          COMMAND ${CMAKE_COMMAND} 
+            -E copy
+            ${LIST_RUNTIMES}
+            "${PATH_DIST}/lib/"
+        )
+        set(DIST_LINUX_INSTALLER_DEPENDS ${DIST_LINUX_INSTALLER_DEPENDS} dist-include-c-cxx-runtimes-linux)
+      endif()
+      
     endif()
 
     set(PROJECT_INSTALLER_OUTPUT "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz")
