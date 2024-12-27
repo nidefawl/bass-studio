@@ -2,6 +2,7 @@
 #include "theme.h"
 #include "str_util.h"
 #include <vector>
+#include <optional>
 
 class BaseCtrl;
 class guitheme_mgr {
