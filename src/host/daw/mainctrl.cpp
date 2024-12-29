@@ -204,6 +204,7 @@ public:
     std::shared_ptr<guictr_layout> ctr_Center;
     std::shared_ptr<guictr_layout> ctr_Right;
     SPLayoutEntry ctrEntryTracks;
+    SPLayoutEntry ctrEntryMixers;
     SPLayoutEntry ctrEntryNodes;
     SPLayoutEntry ctrEntryClipEdit;
     SPLayoutEntry ctrEntryPlugins;
@@ -274,6 +275,7 @@ public:
           ctr_Center(std::make_shared<guictr_layout>()),
           ctr_Right(std::make_shared<guictr_layout>()),
           ctrEntryTracks(createGuiCtrLayoutEntry(std::make_shared<guictr_tracks>(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, dragdropclip))),
+          ctrEntryMixers(createGuiCtrLayoutEntry(std::make_shared<guictr_mixers>(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, dragdropclip))),
           ctrEntryNodes(createGuiCtrLayoutEntry(std::make_shared<guictr_nodes_splitview>(_cursor, _project, dragdropclip))),
           ctrEntryPlugins(createGuiCtrLayoutEntry(std::make_shared<guictr_plugins>(instanceId))),
           ctr_menu(menubar),
@@ -315,6 +317,7 @@ public:
         ctrCtrTop->setEntryTag(GuiContainerTag::TAG_TAB_TOP);
         ctrCtrBottom->setEntryTag(GuiContainerTag::TAG_TAB_BOTTOM);
         ctrEntryTracks->setEntryTag(GuiContainerTag::TAG_TRACKS);
+        ctrEntryMixers->setEntryTag(GuiContainerTag::TAG_MIXERS);
         ctrEntryNodes->setEntryTag(GuiContainerTag::TAG_NODES);
         ctrEntryClipEdit->setEntryTag(GuiContainerTag::TAG_CLIPEDIT);
         ctrEntryPlugins->setEntryTag(GuiContainerTag::TAG_PLUGINS);
@@ -343,6 +346,11 @@ public:
         }
         if (!ctrEntryTracks->getParentContainer()) {
             if (!visitor(ctrEntryTracks)) {
+                return false;
+            }
+        }
+        if (!ctrEntryMixers->getParentContainer()) {
+            if (!visitor(ctrEntryMixers)) {
                 return false;
             }
         }
@@ -423,6 +431,7 @@ public:
 
     void init() {
         ctrEntryTracks->removeEntryFromParent();
+        ctrEntryMixers->removeEntryFromParent();
         ctrEntryNodes->removeEntryFromParent();
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
@@ -450,6 +459,7 @@ public:
         ctr_Center->setHideHandlesWhenLocked(true);
 
         ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryTracks);
+        ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryMixers);
         ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryNodes);
         ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryClipEdit);
         ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryPlugins);
@@ -460,7 +470,10 @@ public:
         setEditAreaType(DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR);
         ctr_Center->postContentChanged();
         auto focusCtr = ctrEntryTracks.get();
-        if (dawCtrl->viewMode == NODE_EDITOR) {
+        if (dawCtrl->viewMode == view_mode_t::MIXER) {
+            focusCtr = ctrEntryMixers.get();
+        }
+        if (dawCtrl->viewMode == view_mode_t::NODE_EDITOR) {
             focusCtr = ctrEntryNodes.get();
         }
         activateEntry(focusCtr);
@@ -487,6 +500,7 @@ public:
             ctrCtrBottom.reset();
         }
         ctrEntryTracks->removeEntryFromParent();
+        ctrEntryMixers->removeEntryFromParent();
         ctrEntryNodes->removeEntryFromParent();
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
@@ -497,6 +511,7 @@ public:
         ctr_Center.reset();
         ctr_Right.reset();
         ctrEntryTracks.reset();
+        ctrEntryMixers.reset();
         ctrEntryNodes.reset();
         ctrEntryClipEdit.reset();
         ctrEntryPlugins.reset();
@@ -518,8 +533,10 @@ public:
         int insertPos = -1;
         switch (mode) {
             case TRACK_TIMELINE:
-            case MIXER:
                 spShowEntry = ctrEntryTracks;
+                break;
+            case MIXER:
+                spShowEntry = ctrEntryMixers;
                 break;
             case NODE_EDITOR:
                 spShowEntry = ctrEntryNodes;
@@ -745,6 +762,7 @@ public:
         dbgassert(ctrEntryNodes->getEntryTag() == GuiContainerTag::TAG_NODES);
         dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
         dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
+        dbgassert(ctrEntryMixers->getEntryTag() == GuiContainerTag::TAG_MIXERS);
         dbgassert(findByTagEntry(GuiContainerTag::TAG_TAB_TOP));
         dbgassert(findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM));
     }
@@ -784,7 +802,9 @@ public:
         dbgassert(ctrEntryNodes->getEntryTag() == GuiContainerTag::TAG_NODES);
         dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
         dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
+        dbgassert(ctrEntryMixers->getEntryTag() == GuiContainerTag::TAG_MIXERS);
         context.entriesPreconstructed[GuiContainerTag::TAG_TRACKS] = { ctrEntryTracks };
+        context.entriesPreconstructed[GuiContainerTag::TAG_MIXERS] = { ctrEntryMixers };
         context.entriesPreconstructed[GuiContainerTag::TAG_NODES] = { ctrEntryNodes };
         context.entriesPreconstructed[GuiContainerTag::TAG_CLIPEDIT] = { ctrEntryClipEdit };
         context.entriesPreconstructed[GuiContainerTag::TAG_PLUGINS] = { ctrEntryPlugins };
@@ -817,8 +837,9 @@ public:
             gui_type type;
             SPLayoutEntry* pSp;
         };
-        const std::array<TagGuiType, 4> tagGuiTypes = {
+        const std::array<TagGuiType, 5> tagGuiTypes = {
             TagGuiType{GuiContainerTag::TAG_TRACKS, gui_type::CTR_TYPE_TRACKS, &ctrEntryTracks},
+            TagGuiType{GuiContainerTag::TAG_MIXERS, gui_type::CTR_TYPE_MIXERS, &ctrEntryMixers},
             TagGuiType{GuiContainerTag::TAG_NODES, gui_type::CTR_TYPE_NODES, &ctrEntryNodes},
             TagGuiType{GuiContainerTag::TAG_CLIPEDIT, gui_type::CTR_TYPE_CLIPEDITOR, &ctrEntryClipEdit},
             TagGuiType{GuiContainerTag::TAG_PLUGINS, gui_type::CTR_TYPE_PLUGINS, &ctrEntryPlugins},
@@ -844,6 +865,8 @@ public:
         ctrEntryPlugins->assertState();
         if (ctrEntryTracks->isVisible()) {
             dawCtrl->viewMode = view_mode_t::TRACK_TIMELINE;
+        } else if (ctrEntryMixers->isVisible()) {
+            dawCtrl->viewMode = view_mode_t::MIXER;
         } else if (ctrEntryNodes->isVisible()) {
             dawCtrl->viewMode = view_mode_t::NODE_EDITOR;
         }
@@ -854,6 +877,7 @@ public:
         dbgassert(ctrEntryNodes->getEntryTag() == GuiContainerTag::TAG_NODES);
         dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
         dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
+        dbgassert(ctrEntryMixers->getEntryTag() == GuiContainerTag::TAG_MIXERS);
         layout.left  = std::make_shared<guictrlayout_entry_snapshot_t>();
         layout.right = std::make_shared<guictrlayout_entry_snapshot_t>();
         layout.center = std::make_shared<guictrlayout_entry_snapshot_t>();
@@ -1500,6 +1524,9 @@ void DawCtrl::addTrackToView(track_t* track, int flags) {
             nTrackViews++;
             guictr_cast<guictr_tracks>(entry)->addTrack(track, flags);
         }
+        if (entry->getType() == gui_type::CTR_TYPE_MIXERS) {
+            guictr_cast<guictr_mixers>(entry)->addTrack(track, flags);
+        }
         if (entry->getType() == gui_type::CTR_TYPE_NODES) {
             guictr_cast<guictr_nodes_splitview>(entry)->refresh();
         }
@@ -1514,6 +1541,9 @@ void DawCtrl::removeTrackFromView(track_t* track, int flags) {
         if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
             nTrackViews++;
             guictr_cast<guictr_tracks>(entry)->removeTrack(track, flags);
+        }
+        if (entry->getType() == gui_type::CTR_TYPE_MIXERS) {
+            guictr_cast<guictr_mixers>(entry)->removeTrack(track, flags);
         }
         if (entry->getType() == gui_type::CTR_TYPE_NODES) {
             guictr_cast<guictr_nodes_splitview>(entry)->refresh();
@@ -1533,6 +1563,10 @@ void DawCtrl::onPostUnloadProject() {
             trackView.iGuiMgr.reset();
             trackCtr->resetView();
         }
+        if (entry->getType() == gui_type::CTR_TYPE_MIXERS) {
+            auto trackMixerCtr = guictr_cast<guictr_mixers>(entry);
+            trackMixerCtr->resetView();
+        }
         return true;
     });
 }
@@ -1547,6 +1581,16 @@ void DawCtrl::updateVisibleTrackContents() {
                 trackCtr->layout();
                 trackCtr->layoutVisibleTracks();
                 trackCtr->scrollToPixelOffset(scrollPixelOffset);
+            }
+        }
+        if (entry->getType() == gui_type::CTR_TYPE_MIXERS) {
+            auto trackMixerCtr = guictr_cast<guictr_mixers>(entry);
+            trackMixerCtr->updateVisibleTracks();
+            if (trackMixerCtr->isVisible()) {
+                double scrollPixelOffset = trackMixerCtr->getScrollOffsetPixels();
+                trackMixerCtr->layout();
+                // trackMixerCtr->layoutVisibleTracks();
+                trackMixerCtr->scrollToPixelOffset(scrollPixelOffset);
             }
         }
         return true;
@@ -1688,6 +1732,11 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
     view->visitEntries([&ctxt, &bHandled](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_TRACKS
             && guictr_cast<guictr_tracks>(entry)->handleEditorCommand(ctxt)) {  
+            bHandled = true;
+            return false;
+        }
+        if (entry->getType() == gui_type::CTR_TYPE_MIXERS
+            && guictr_cast<guictr_mixers>(entry)->handleEditorCommand(ctxt)) {  
             bHandled = true;
             return false;
         }

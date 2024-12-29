@@ -953,10 +953,10 @@ float textlabel_dynamic_t::getScale() const {
 
 void textlabel_dynamic_t::adjustWidth() {
     float delta = size.x - lastRenderWidthLabel;
-    if (math::abs(delta) > 4.0f) {
-        const float FONT_SCALE_MIN = 0.05f;
+    if (math::abs(delta) > 12.0f) {
+        const float FONT_SCALE_MIN = 0.01f;
         const float FONT_SCALE_MAX = 2.0f;
-        const float d = math::clamp(math::abs(delta) / 200.0f, 1.0f/64.0f, 1.0f/8.0f);
+        const float d = math::clamp(math::abs(delta) / 500.0f, 1.0f/64.0f, 1.0f/8.0f);
         if (delta > 0.0f) {
             dynamicFontScale = math::min(FONT_SCALE_MAX, dynamicFontScale + d);
         } else {

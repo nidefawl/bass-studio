@@ -1,4 +1,5 @@
 #pragma once
+#include "gui/container/container.h"
 #include "types.h"
 #include <vector>
 #include <memory>
@@ -31,6 +32,7 @@ struct track_gui_entry_t {
     gui_track_content* trackContent = nullptr;
     guictr_tracks* parent = nullptr;
     gui_track_control* trackControls = nullptr;
+    guictr_base* trackMixers = nullptr;
     int32_t idx = -1;
     tracklayout_settings_t layout;
     tracklayout_state_t state;

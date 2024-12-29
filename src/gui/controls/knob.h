@@ -183,6 +183,7 @@ protected:
     textlabel_dynamic_t m_textLabelParamName;
     textlabel_dynamic_t m_textLabelParamValue;
     bool bRenderAsShaper = false;
+    bool bRenderVerticalSlider = false;
     ivec2 flipAxis{0, 0};
 public:
     gui_slider_textfield() : gui_textfield() {
@@ -190,6 +191,9 @@ public:
         setCanMouseHit(true);
         setAlignment(gui_textfield::Alignment::Center);
         setReturnCommits(true);
+    }
+    void setRenderVerticalSlider(bool b) {
+        bRenderVerticalSlider = b;
     }
     void setRenderAsShaper(bool b, ivec2 flipAxis) {
         bRenderAsShaper = b;

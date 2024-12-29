@@ -751,6 +751,30 @@ static void renderSlider(NVGcontext* vg, const vec2& insetP, const vec2& insetS,
         nvgFill(vg);
     }
 }
+static void renderSliderVertical(NVGcontext* vg, const vec2& insetP, const vec2& insetS, float fRenderValue, bool bIsBipolar, const NVGcolor& color) {
+    float rectHeight = 0;
+    float x         = insetP.x;
+    float y         = insetP.y;
+    if (bIsBipolar) {
+        if (fRenderValue < 0.5f) {
+            y         = insetP.y + insetS.y * fRenderValue;
+            rectHeight = insetS.y * (0.5f - fRenderValue);
+        } else {
+            y         = insetP.y + insetS.y * 0.5f;
+            rectHeight = insetS.y * (fRenderValue - 0.5f);
+        }
+    } else {
+        rectHeight = (fRenderValue) *insetS.y;
+        y += insetS.y - rectHeight;
+    }
+    if (rectHeight > 0.45f) {
+        nvgBeginPath(vg);
+        nvgRect(vg, x, y, insetS.x, rectHeight);
+        nvgFillColor(vg, color);
+        nvgFillCustomPar(vg, -3);
+        nvgFill(vg);
+    }
+}
 static void renderShaper(NVGcontext* vg, guitheme_t* const theme, const vec2& insetP, const vec2& insetS, float fRenderValue, bool bIsBipolar, GuiColor::constant_t col, ivec2 flipAxis) {
     struct static_pt_t {
         vec2 pos;
@@ -800,7 +824,11 @@ void gui_slider_textfield::render(NVGcontext* vg) {
         if (bRenderAsShaper) {
             renderShaper(vg, theme, insetP, insetS, fParam, param->isBiPolar, GuiColor::COL_KNOB, flipAxis);
         } else {
-            renderSlider(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_KNOB));
+            auto fn = renderSlider;
+            if (bRenderVerticalSlider) {
+                fn = renderSliderVertical;
+            }
+            fn(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_KNOB));
         }
         if (autLane && autLane->isActive()) {
             fRenderValue = param->getValueAutomated();
@@ -808,7 +836,11 @@ void gui_slider_textfield::render(NVGcontext* vg) {
             if (bRenderAsShaper) {
                 renderShaper(vg, theme, insetP, insetS, fParam, param->isBiPolar, GuiColor::COL_AUTOMATED, flipAxis);
             } else {
-                renderSlider(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_AUTOMATED));
+                auto fn = renderSlider;
+                if (bRenderVerticalSlider) {
+                    fn = renderSliderVertical;
+                }
+                fn(vg, insetP, insetS, getRenderScaledValue(fParam), param->isBiPolar, theme->getColor(GuiColor::COL_AUTOMATED));
             }
         }
         if (param->isModulated() && !paramAutomatable->isBypassModulation()) {
@@ -831,11 +863,15 @@ void gui_slider_textfield::render(NVGcontext* vg) {
             if (bRenderAsShaper) {
                 renderShaper(vg, theme, insetP, insetS, fScaled, param->isBiPolar, GuiColor::COL_KNOB_MODULATED, flipAxis);
             } else {
-                renderSlider(vg, insetP, insetS, fScaled, param->isBiPolar, theme->getColor(GuiColor::COL_KNOB_MODULATED));
+                auto fn = renderSlider;
+                if (bRenderVerticalSlider) {
+                    fn = renderSliderVertical;
+                }
+                fn(vg, insetP, insetS, fScaled, param->isBiPolar, theme->getColor(GuiColor::COL_KNOB_MODULATED));
             }
         }
         auto modRangesOptional = getKnobModulationRanges();
-        if (!bRenderAsShaper && modRangesOptional && !modRangesOptional.value()->empty() && insetS.y >= 10) {
+        if (!bRenderAsShaper && modRangesOptional && !modRangesOptional.value()->empty() && insetS.y >= 10 && !bRenderVerticalSlider) {
             const auto& modRanges = *modRangesOptional.value();
             const auto numMods = CtrSize(modRanges);
             dbgassert(numMods);

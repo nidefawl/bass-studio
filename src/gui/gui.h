@@ -163,6 +163,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_FILEBROWSER,
     CTR_TYPE_USERLIBRARY_BROWSER_PATH_LIST,
     CTR_TYPE_DRAGGED_FILE,
+    CTR_TYPE_MIXERS,
 };
 
 namespace DebugAlloc {

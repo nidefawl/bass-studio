@@ -35,6 +35,7 @@ enum GuiContainerTag : int32_t {
     TAG_NODES,
     TAG_CLIPEDIT,
     TAG_PLUGINS,
+    TAG_MIXERS,
 };
 
 class guictr_base : public guibase {

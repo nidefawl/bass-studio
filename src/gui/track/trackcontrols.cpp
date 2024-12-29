@@ -2039,6 +2039,236 @@ void InsertTrackContainerOnTrack(DawInstance* daw, trackcontainer_snapshot_t* ct
     daw->onPluginsChanged();
     daw->updateVisibleTrackContents();
 }
+
+class guictr_mixers_mixer : public guictr_base {
+    track_t* const m_track;
+    track_gui_entry_t* const m_trackentry;
+    DAW::rmsmeter m_subMeter;
+    gui_trackmeter m_guiMeter;
+
+
+    gui_slider_gain trackGain;
+    gui_slider_pan trackPanning;
+    guibutton_trackbypass btnBypass;
+    guibutton_track_solo btnSolo;
+    guibutton_track_record_arm btnRecord;
+    guibutton btnActivate;
+    std::vector<gui_slider_gain*> sendGains;
+    std::vector<gui_slider_pan*> sendPans;
+public:
+    void render(NVGcontext* vg) override {
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        auto cs = getSizeContent();
+        auto trackRgb = rgbToNvg(m_track->rgb);
+        nvgBeginPath(vg);
+        nvgRect(vg, 0, 0, cs.x, cs.y);
+        nvgFillColor(vg, trackRgb);
+        nvgFill(vg);
+        for (auto gui : guis) {
+            if (gui->isVisible()) {
+                gui->render(vg);
+            }
+        }
+    }
+    explicit guictr_mixers_mixer(track_gui_entry_t* _entry) 
+        : guictr_base(),
+          m_track(_entry->track),
+          m_trackentry(_entry),
+          m_subMeter(_entry->track->audio->meter.getSubChannelMeter(0, 2)),
+          m_guiMeter(&m_subMeter),
+          btnBypass(_entry),
+          btnSolo(_entry) ,
+          btnRecord(_entry) {
+        (void) m_trackentry;
+        padding = 2;
+        margin  = 2;
+        setBackgroundRendered(true);
+        setCanMouseHit(true);
+        trackGain.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_GAIN);
+        trackPanning.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_PAN);
+        padding            = 0;
+        btnBypass.drawFn   = drawTextureSymbol;
+        btnBypass.drawParm = ICON_BYPASS;
+        btnBypass.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
+        btnActivate.drawFn   = drawTextureSymbol;
+        btnActivate.drawParm = ICON_EFFECT;
+        trackGain.setLabel("Gain Level");
+        trackPanning.setLabel("Pan");
+        btnActivate.setLabel("Load plugins");
+        trackGain.setRenderVerticalSlider(true);
+        add(&btnBypass);
+        add(&btnSolo);
+        add(&btnRecord);
+        add(&btnActivate);
+        add(&trackGain);
+        add(&trackPanning);
+        add(&m_guiMeter);
+        if (m_track->type != TRACK_TYPE_MASTER && m_track->type != TRACK_TYPE_RETURN) {
+            sendGains.resize(MAX_SEND_CHANNELS);
+            sendPans.resize(MAX_SEND_CHANNELS);
+            for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
+                sendGains[i] = new gui_slider_gain();
+                sendGains[i]->setVisible(false);
+                sendGains[i]->setAutomationRef(&m_track->audio->mixer, PARAM_OFFSET_SEND_GAIN + i);
+                sendGains[i]->setLabel(StringFormat("Send %d", i + 1));
+                sendGains[i]->setFlag(FLG_RENDER_LABEL, true);
+                sendPans[i] = new gui_slider_pan();
+                sendPans[i]->setVisible(false);
+                sendPans[i]->setAutomationRef(&m_track->audio->mixer, PARAM_OFFSET_SEND_PAN + i);
+                sendPans[i]->setLabel("Pan");
+                add(sendGains[i]);
+                add(sendPans[i]);
+            }
+        }
+    }
+    ~guictr_mixers_mixer() override {
+        for (auto* sendGainCtrl : sendGains) {
+            remove(sendGainCtrl);
+            delete sendGainCtrl;
+        }
+        for (auto* sendPanCtrl : sendPans) {
+            remove(sendPanCtrl);
+            delete sendPanCtrl;
+        }
+        remove(&m_guiMeter);
+        remove(&trackPanning);
+        remove(&trackGain);
+        remove(&btnActivate);
+        remove(&btnRecord);
+        remove(&btnSolo);
+        remove(&btnBypass);
+    }
+    void buttonClicked(guibase* button) override {
+        auto const daw = dawCtrl->getDaw();
+        ThreadLock lock = daw->lockPlayThread();
+        if (&btnSolo == button) {
+            bool isSolo = (m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
+            if (!isShift(parentCtrl->lastMouseEvent.kbmods)) {
+                daw->unsoloAll();
+            }
+            daw->setSoloState(m_track->audio->toRef(), !isSolo);
+        }
+        if (&btnRecord == button) {
+            bool isArmed = (m_track->audio->flags & audiostageflags_t::RECORD_ARMED) != audiostageflags_t::NONE;
+            daw->setTrackArmed(m_track->audio->toRef(), !isArmed);
+        }
+        if (&btnBypass == button) {
+            track_params_t& trackParams = m_track->audio->mixer;
+            auto fNew = float(!trackParams.isEnabled());
+            auto flags = FLG_PAR_UPDATE_FINISH | FLG_PAR_UPDATE_USER;
+            trackParams.setParamEdit(PARAM_ENABLE, fNew, flags);
+        }
+        if (&btnActivate == button) {
+            auto pluginMgr = daw->getPluginManager();
+            std::vector<effectbase*> effects;
+            m_track->audio->getDeferredEffects(effects);
+            for (auto effect : effects) {
+                pluginMgr->activateDeferred(effect, 0);
+            }
+            daw->onPluginsChanged();
+            onChildLayoutChanged(button);
+
+#ifndef NDEBUG
+            log_printf("deferredEffects post activateDeferred on track %s: %zu\n", m_track->szName, m_track->audio->deferredEffects.size());
+#endif
+        }
+    }
+    void onTick(AppCtrl* ctrl) override {
+        for (guibase* gui : guis) {
+            if (gui->isVisible()) {
+                gui->onTick(ctrl);
+            }
+        }
+    }
+    void layout() override {
+
+        std::vector<effectbase*> effects;
+        dbgassert(m_track->audio);
+        m_track->audio->getDeferredEffects(effects);
+        int nDefEffects = CtrSize(effects);
+        btnActivate.setEnabled(nDefEffects > 0);
+        auto str = nDefEffects > 9 ? "9+" : (StringFormat("%d", nDefEffects));
+        // btnActivate.setText(str);
+        btnActivate.setLabel("Load "+str+" deferred plugins");
+        btnActivate.setVisible(nDefEffects > 0);
+
+        const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
+        const int32_t mW = theme->get(GuiConstant::CONST_METER_WIDTH);
+        const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+
+        int32_t inset = CONST_PADDING_TRACK_CONTROLS;
+        int32_t i2    = inset * 2;
+        m_guiMeter.size = ivec2(mW - i2, size.y - i2);
+        m_guiMeter.pos  = ivec2(size.x - mW + inset, inset);
+
+
+        int32_t heightInner = TRACK_HEIGHT_STEP - i2;
+        int32_t csX      = size.x - mW;
+        int32_t csY      = size.y;
+        int32_t posY = 0;
+        guibase* lastGui = nullptr;
+        if (!sendGains.empty()) {
+            project_t* project = dawCtrl->getDaw()->getProject();
+            dbgassert(project);
+            int32_t numReturnChannels = project->trackReturnCtr.size();
+            float sendGainWidth = (csX-inset*3);
+            for (int32_t i = 0; i < numReturnChannels; ++i) {
+                sendGains[i]->size = ivec2(sendGainWidth*3/5, heightInner);
+                sendGains[i]->pos  = ivec2(inset, posY + inset);
+                sendPans[i]->size = ivec2(sendGainWidth*2/5, heightInner);
+                sendPans[i]->pos  = ivec2(inset + sendGainWidth*3/5, posY + inset);
+                posY += TRACK_HEIGHT_STEP;
+                lastGui = sendGains[i];
+            }
+            for (auto sendGainCtrl : sendGains) {
+                auto idx = sendGainCtrl->getParamIdx() - PARAM_OFFSET_SEND_GAIN;
+                sendGainCtrl->setVisible(idx < numReturnChannels);
+            }
+            for (auto sendPanCtrl : sendPans) {
+                auto idx = sendPanCtrl->getParamIdx() - PARAM_OFFSET_SEND_PAN;
+                sendPanCtrl->setVisible(idx < numReturnChannels);
+            }
+        }
+        int32_t posYGain = posY;
+
+        posY = csY - (btnActivate.isVisible() ? 3 : 2) * TRACK_HEIGHT_STEP;
+
+        auto btnSize = math::ceilfS32((csX-inset*3)/2);
+        btnSolo.pos      = ivec2(inset, posY + inset);
+        btnSolo.size     = ivec2(btnSize, heightInner);
+        btnRecord.pos    = ivec2((csX+inset) / 2, posY + inset);
+        btnRecord.size   = ivec2(btnSize, heightInner);
+        posY += TRACK_HEIGHT_STEP;
+
+        if (btnActivate.isVisible()) {
+            btnActivate.pos    = ivec2(inset, posY + inset);
+            btnActivate.size   = ivec2(csX - i2, heightInner);
+            posY += TRACK_HEIGHT_STEP;
+        }
+
+        btnBypass.size   = ivec2(csX - i2, heightInner);
+        btnBypass.pos    = ivec2(inset, posY + inset);
+
+        trackGain.pos      = ivec2(inset, posYGain + inset);
+        auto lastGuiBottom = lastGui ? lastGui->bottom() : 0;
+        trackGain.size     = ivec2(csX - i2, (btnSolo.top() - lastGuiBottom) - i2 - TRACK_HEIGHT_STEP);
+
+        trackPanning.pos   = ivec2(inset, trackGain.bottom() + i2);
+        trackPanning.size  = ivec2(csX - i2, heightInner);
+
+        for (auto gui : guis) {
+            gui->layout();
+        }
+    }
+};
+}// namespace DAW
+
+namespace DAW {
+guictr_base* createTrackGuiMixer(track_gui_entry_t* entry) {
+    return new guictr_mixers_mixer(entry);
+}
 }// namespace DAW
 
 void gui_track_control::handleDraggedMove(MouseEvent& evt) {

@@ -141,6 +141,7 @@ int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool is
         for (auto t2 : e->subtracks) {
             t2->pos  = ivec2(x2, y2);
             t2->size = ivec2(0, 0);
+            y2 = t2->bottom() + TRACK_HEIGHT_SPACING;
         }
     }
 
@@ -283,6 +284,7 @@ void guictr_tracks::updateVisibleTracks() {
         }
     }
 }
+
 void guictr_tracks::layoutVisibleTracks() {
     track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
     for (track_gui_entry_t* entry : tracks) {
@@ -316,7 +318,6 @@ void guictr_tracks::layout() {
     trackEditor.size     = ivec2(cs.x - trackControlsWidth, cs.y - loophandles.bottom());
     trackTopLeft.size  = ivec2(trackControlsWidth, loophandles.bottom());
     trackControls.size = ivec2(trackControlsWidth, trackEditor.size.y);
-
     loophandles.clipViewSize = ivec2(trackEditor.size.x, trackEditor.size.y + loophandles.size.y);
     m_grid.update(trackEditor.size);
 
@@ -749,8 +750,8 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
     entry->parentCtrl = this->dawCtrl;
     entry->track      = track;
     entry->parent     = this;
-    entry->trackControls      = DAW::createTrackGuiControls(entry, m_grid);
-    entry->trackContent    = DAW::createTrackGui(entry, m_grid);
+    entry->trackControls = DAW::createTrackGuiControls(entry, m_grid);
+    entry->trackContent  = DAW::createTrackGui(entry, m_grid);
 
     guiMgr.addTrack(entry);
     trackControls.addTrackEntry(*entry);
