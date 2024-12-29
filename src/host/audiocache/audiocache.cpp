@@ -535,7 +535,7 @@ bool audiocache::fileloader::loadFileIncremental() {
         auto numSamplesHeader = static_cast<samplecount_t>(perChannel * targetSamplerate / (double) sourceSamplerate + .5);
         if (numSamplesRead < numSamplesHeader) {
 #ifndef NDEBUG
-            log_lf(Log::L_WARN, "File %s: read %lld samples, expected %lld samples\n", StringAsCStr(file->pathLoaded), numSamplesRead, numSamplesHeader);
+            log_lf(Log::L_WARN, "File %s: read %zd samples, expected %zd samples\n", StringAsCStr(file->pathLoaded), numSamplesRead, numSamplesHeader);
 #endif
             // fill with silence
             for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
