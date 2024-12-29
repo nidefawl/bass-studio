@@ -22,19 +22,19 @@ public:
     }
 };
 
-class gui_track_subtrack_mixer;
+class gui_track_subtrack_controls;
 class gui_trackcontrols_title;
 
-class gui_track_controls final : public gui_track_content_base {
+class gui_track_control final : public gui_track_content_base {
     gui_trackcontrols_title* title;
     guictr_base* mixer;
     guictr_base* io;
-    std::vector<gui_track_subtrack_mixer*> automationLaneControls;
+    std::vector<gui_track_subtrack_controls*> automationLaneControls;
     DragModeTrack dragMode = DragModeTrack::DRAG_TRACK_NONE;
 
 public:
-    explicit gui_track_controls(track_gui_entry_t* _entry, scaled_grid& _grid);
-    ~gui_track_controls() override;
+    explicit gui_track_control(track_gui_entry_t* _entry, scaled_grid& _grid);
+    ~gui_track_control() override;
     void addSubtrackMixer(track_gui_entry_t* entry, gui_track_subtrack* al);
     void removeSubtrackMixer(gui_track_subtrack* al);
     void removeAllAutomationLanes(automatable_t* at, int32_t paramIdx);

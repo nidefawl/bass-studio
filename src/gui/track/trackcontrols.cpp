@@ -92,7 +92,7 @@ namespace DAW {
             trackEntry->track->name = str;
             return false;
         };
-        auto title       = trackentry->mixer->getTitle();
+        auto title       = trackentry->trackControls->getTitle();
         auto popupPos    = title->toScreenSpace(ivec2(0));
         OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
     }
@@ -1453,10 +1453,10 @@ public:
         }
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
-        target->trackEntryDragMove(this->m_trackentry->content, toControlsObjectSpace(mousepos, target));
+        target->trackEntryDragMove(this->m_trackentry->trackContent, toControlsObjectSpace(mousepos, target));
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-        target->trackEntryDragRelease(this->m_trackentry->content, toControlsObjectSpace(mousepos, target));
+        target->trackEntryDragRelease(this->m_trackentry->trackContent, toControlsObjectSpace(mousepos, target));
     }
     void handleRightClick(MouseEvent& evt) override {
         parent->handleRightClick(evt);
@@ -1470,7 +1470,7 @@ public:
     }
 };
 
-class gui_track_subtrack_mixer final : public guictr_base {
+class gui_track_subtrack_controls final : public guictr_base {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
 
@@ -1482,7 +1482,7 @@ private:
     DragModeTrack dragMode = DragModeTrack::DRAG_TRACK_NONE;
 
 public:
-    gui_track_subtrack_mixer(track_gui_entry_t* _entry, gui_track_subtrack* _subtrack)
+    gui_track_subtrack_controls(track_gui_entry_t* _entry, gui_track_subtrack* _subtrack)
         : guictr_base(),
           m_track(_entry->track),
           m_trackentry(_entry),
@@ -1492,7 +1492,7 @@ public:
         removeLane.icon = ICON_MINUS;
         add(&removeLane);
     }
-    ~gui_track_subtrack_mixer() override {
+    ~gui_track_subtrack_controls() override {
         remove(&removeLane);
     }
     void layout() override {
@@ -1576,7 +1576,7 @@ public:
         }
     }
 };
-gui_track_controls::gui_track_controls(track_gui_entry_t* _entry, scaled_grid& _grid)
+gui_track_control::gui_track_control(track_gui_entry_t* _entry, scaled_grid& _grid)
     : gui_track_content_base(_entry, _grid),
       title(new gui_trackcontrols_title(_entry)),
       mixer(new gui_trackcontrols_mixer(_entry)),
@@ -1586,8 +1586,8 @@ gui_track_controls::gui_track_controls(track_gui_entry_t* _entry, scaled_grid& _
     add(io);
     padding = 0;
 }
-gui_track_controls::~gui_track_controls() {
-    for (gui_track_subtrack_mixer* ctrl : automationLaneControls) {
+gui_track_control::~gui_track_control() {
+    for (gui_track_subtrack_controls* ctrl : automationLaneControls) {
         remove(ctrl);
         delete ctrl;
     }
@@ -1598,14 +1598,14 @@ gui_track_controls::~gui_track_controls() {
     delete io;
     delete title;
 }
-void gui_track_controls::addSubtrackMixer(track_gui_entry_t* entry, gui_track_subtrack* al) {
-    gui_track_subtrack_mixer* al_ctrl = new gui_track_subtrack_mixer(entry, al);
+void gui_track_control::addSubtrackMixer(track_gui_entry_t* entry, gui_track_subtrack* al) {
+    gui_track_subtrack_controls* al_ctrl = new gui_track_subtrack_controls(entry, al);
     automationLaneControls.push_back(al_ctrl);
     add(al_ctrl);
 }
-void gui_track_controls::removeSubtrackMixer(gui_track_subtrack* al) {
+void gui_track_control::removeSubtrackMixer(gui_track_subtrack* al) {
     auto& ctrls = automationLaneControls;
-    auto it     = std::find_if(ctrls.begin(), ctrls.end(), [al](const gui_track_subtrack_mixer* ref) {
+    auto it     = std::find_if(ctrls.begin(), ctrls.end(), [al](const gui_track_subtrack_controls* ref) {
         return ref->subtrack == al;
         });
     dbgassert(it != ctrls.end());
@@ -1613,9 +1613,9 @@ void gui_track_controls::removeSubtrackMixer(gui_track_subtrack* al) {
     delete (*it);
     ctrls.erase(it);
 }
-void gui_track_controls::removeAllAutomationLanes(automatable_t* at, int32_t paramIdx) {
+void gui_track_control::removeAllAutomationLanes(automatable_t* at, int32_t paramIdx) {
     auto& ctrls = automationLaneControls;
-    auto it     = std::remove_if(ctrls.begin(), ctrls.end(), [this, at, paramIdx](gui_track_subtrack_mixer* ref) {
+    auto it     = std::remove_if(ctrls.begin(), ctrls.end(), [this, at, paramIdx](gui_track_subtrack_controls* ref) {
         if ((at == NULL || ref->subtrack->at == at) && (paramIdx < 0 || ref->subtrack->param == paramIdx)) {
             remove(ref);
             delete ref;
@@ -1625,17 +1625,17 @@ void gui_track_controls::removeAllAutomationLanes(automatable_t* at, int32_t par
         });
     ctrls.erase(it, ctrls.end());
 }
-void gui_track_controls::removeAllAutomationLanes(automatable_t* at) {
+void gui_track_control::removeAllAutomationLanes(automatable_t* at) {
     removeAllAutomationLanes(at, -1);
 }
-void gui_track_controls::removeAllSubtracks() {
+void gui_track_control::removeAllSubtracks() {
     for (auto at : automationLaneControls) {
         remove(at);
         delete at;
     }
     automationLaneControls.clear();
 }
-void gui_track_controls::renderGroupHandle(NVGcontext* vg) {//TODO: make const, have fun
+void gui_track_control::renderGroupHandle(NVGcontext* vg) {//TODO: make const, have fun
     auto lvl = m_track->getChildLvl();
     auto p   = m_track->parent;
     while (p) {
@@ -1650,7 +1650,7 @@ void gui_track_controls::renderGroupHandle(NVGcontext* vg) {//TODO: make const, 
         lvl--;
     }
 }
-void gui_track_controls::render(NVGcontext* vg) {
+void gui_track_control::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
@@ -1690,7 +1690,7 @@ void gui_track_controls::render(NVGcontext* vg) {
         nvgMoveTo(vg, io->right(), 0);
         nvgLineTo(vg, io->right(), size.y);
     }
-    for (gui_track_subtrack_mixer* g : automationLaneControls) {
+    for (gui_track_subtrack_controls* g : automationLaneControls) {
         nvgMoveTo(vg, g->left(), g->top() - TRACK_HEIGHT_SPACING_HALF);
         nvgLineTo(vg, g->right(), g->top() - TRACK_HEIGHT_SPACING_HALF);
     }
@@ -1703,7 +1703,7 @@ bool canResizeTitleBar(const track_gui_entry_t* const m_trackentry) {
     return !m_trackentry->isHidden() && !m_trackentry->layout.hideSubtracks && m_trackentry->subtracks.size();
 }
 
-bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+bool gui_track_control::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     ivec2 local    = this->toContainerSpace(mpos);
     bool contained = contains(mpos);
     if (contained) {
@@ -1744,7 +1744,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return contained;// always need to return true if contained, parent has z-order
 }
 
-void gui_track_controls::handleDragDropHover(MouseHitEvt& mouseHit) {
+void gui_track_control::handleDragDropHover(MouseHitEvt& mouseHit) {
     dawCtrl->setSelectedTrackEntry(m_trackentry);
 }
 
@@ -1753,30 +1753,30 @@ gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry, scaled
     setGuiType(gui_type::CTR_TYPE_TRACKCONTENT);
 }
 
-void gui_track_controls::handleDraggedBegin(MouseEvent& evt) {
+void gui_track_control::handleDraggedBegin(MouseEvent& evt) {
     dawCtrl->setSelectedTrack(m_track);
     if (isResize(evt.relMousepos + this->pos)) {
         dragMode = DragModeTrack::DRAG_TRACK_RESIZE;
     }
 }
 
-void gui_track_controls::handleDraggedRelease(MouseEvent& evt) {
+void gui_track_control::handleDraggedRelease(MouseEvent& evt) {
     dragMode = DragModeTrack::DRAG_TRACK_NONE;
 }
 
-bool gui_track_controls::isResize(ivec2 mpos) {
+bool gui_track_control::isResize(ivec2 mpos) {
     int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
     return mpos.y >= resizeTopOrBottom - DRAG_RANGE/2 && mpos.y < resizeTopOrBottom + DRAG_RANGE/2;
 }
 
-guibase* gui_track_controls::getTitle() {
+guibase* gui_track_control::getTitle() {
     return title;
 }
-String gui_track_controls::getLabel() const {
+String gui_track_control::getLabel() const {
     return m_trackentry->track->name;
 }
 
-void gui_track_controls::layout() {
+void gui_track_control::layout() {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const int32_t TRACK_IO_WIDTH    = theme->get(GuiConstant::CONST_TRACK_IO_WIDTH);
     const int32_t TRACK_MIXER_WIDTH = theme->get(GuiConstant::CONST_MIXER_WIDTH);
@@ -1792,7 +1792,7 @@ void gui_track_controls::layout() {
 
     io->size = ivec2(TRACK_IO_WIDTH - TRACK_HEIGHT_SPACING, size.y);
     io->pos  = ivec2(size.x - TRACK_MIXER_WIDTH - TRACK_IO_WIDTH + TRACK_HEIGHT_SPACING_HALF, 0);
-    for (gui_track_subtrack_mixer* ctrl : automationLaneControls) {
+    for (gui_track_subtrack_controls* ctrl : automationLaneControls) {
         ctrl->pos  = ivec2(title->pos.x, ctrl->subtrack->pos.y - pos.y);
         ctrl->size = ivec2(title->size.x, ctrl->subtrack->size.y);
     }
@@ -1827,8 +1827,8 @@ gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ive
             int32_t slotIdx = static_cast<int32_t>(itcEnd - it - 1);
             track_gui_entry_t* trackEntry = *it;
 
-            auto* gui = trackEntry->mixer;
-            auto* gui2 = trackEntry->mixer;
+            auto* gui = trackEntry->trackControls;
+            auto* gui2 = trackEntry->trackControls;
             dbgassert(gui->isVisible());
             auto distDragPoint = checkDropPoint(gui->pos.y - dropMaxDistance, gui->pos.y + dropMaxDistance, _pos.y);
             if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
@@ -1861,20 +1861,20 @@ gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ive
         }
         auto lastTopTrack = tracksTop.back();
         auto firstBottomTrack = tracksBottom.front();
-        if (lastTopTrack && !firstBottomTrack && _pos.y > lastTopTrack->mixer->pos.y + lastTopTrack->mixer->size.y) {
+        if (lastTopTrack && !firstBottomTrack && _pos.y > lastTopTrack->trackControls->pos.y + lastTopTrack->trackControls->size.y) {
             return minSlot;
         }
-        if (!lastTopTrack && firstBottomTrack && _pos.y < firstBottomTrack->mixer->pos.y) {
+        if (!lastTopTrack && firstBottomTrack && _pos.y < firstBottomTrack->trackControls->pos.y) {
             return minSlot;
         }
-        if (lastTopTrack && firstBottomTrack && _pos.y > lastTopTrack->mixer->pos.y + lastTopTrack->mixer->size.y && _pos.y < firstBottomTrack->mixer->pos.y) {
+        if (lastTopTrack && firstBottomTrack && _pos.y > lastTopTrack->trackControls->pos.y + lastTopTrack->trackControls->size.y && _pos.y < firstBottomTrack->trackControls->pos.y) {
             return minSlot;
         }
 
         for (auto it = itcBegin; it != itcEnd; it++) {
             int32_t slotIdx = static_cast<int32_t>(itcEnd - it - 1);
             track_gui_entry_t* trackEntry = *it;
-            auto* gui = trackEntry->mixer;
+            auto* gui = trackEntry->trackControls;
             dbgassert(gui->isVisible());
             auto distDragPoint = checkDropPoint(gui->pos.y, gui->pos.y + gui->size.y, _pos.y);
             if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
@@ -1926,10 +1926,10 @@ void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepo
     ivec2 dropPos{};
     ivec2 dropSize{};
     if (targetTrack && parent->getTrackEntry(targetTrack, &entry)) {
-        dropTarget = entry->mixer;
+        dropTarget = entry->trackControls;
         trNameDest = entry->track->name;
-        dropPos    = entry->mixer->pos;
-        dropSize   = entry->mixer->size;
+        dropPos    = entry->trackControls->pos;
+        dropSize   = entry->trackControls->size;
     }
     switch (slot.droptype) {
         case drop_type::track_on:
@@ -2041,7 +2041,7 @@ void InsertTrackContainerOnTrack(DawInstance* daw, trackcontainer_snapshot_t* ct
 }
 }// namespace DAW
 
-void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
+void gui_track_control::handleDraggedMove(MouseEvent& evt) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
         auto trackCtr = m_trackentry->parent;
@@ -2184,7 +2184,7 @@ public:
                         .slot = tr->localIdxFlat + 1,
                         .droppedTrack = m_trackentry->track,
                         .droptype =  DAW::gui_track_drop_position_t::drop_type::track_after,
-                        .pos = m_trackentry->mixer->getLeftBottom()
+                        .pos = m_trackentry->trackControls->getLeftBottom()
                     };
                     DAW::MoveTrackToSlot(daw, newTrack, pos);
                     newTrack->loadSnapshot(daw->getHost(), trSnap);
@@ -2194,7 +2194,7 @@ public:
                     dbgassert(daw->getPluginManager()->validateIds());
                     entry->parent->layout();
                     daw->updateVisibleTrackContents();
-                    entry->parent->scrollTo(entry->content);
+                    entry->parent->scrollTo(entry->trackContent);
                 }
             }
         } else if (_id == cmdDeleteTrack->id) {
@@ -2209,7 +2209,7 @@ public:
             daw->updateVisibleTrackContents();
             track_gui_entry_t* entry{};
             if (trackCtr->getTrackEntry(newTrack, &entry)) {
-                trackCtr->scrollTo(entry->content);
+                trackCtr->scrollTo(entry->trackContent);
             }
         } else if (_id == cmdRenameTrack->id) {
             DAW::OpenRenameTrackPopup(dawCtrl, m_trackentry);
@@ -2237,7 +2237,7 @@ public:
     }
 };
 
-void gui_track_controls::handleRightClick(MouseEvent& evt) {
+void gui_track_control::handleRightClick(MouseEvent& evt) {
     m_trackentry->parentCtrl->openContextMenu(new guictxtmenu_track(dawCtrl, this->m_trackentry), evt.mousepos);
 }
 

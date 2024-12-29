@@ -317,14 +317,14 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 };
 
-class gui_track final : public gui_track_content_base {
+class gui_track_content final : public gui_track_content_base {
 protected:
     gui_track_automation automation;
     int subtrackIdx = -1;
 
 public:
-    gui_track(track_gui_entry_t* _entry, scaled_grid& _grid);
-    ~gui_track() override = default;
+    gui_track_content(track_gui_entry_t* _entry, scaled_grid& _grid);
+    ~gui_track_content() override = default;
 
     void handleRightClick(MouseEvent& evt) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;

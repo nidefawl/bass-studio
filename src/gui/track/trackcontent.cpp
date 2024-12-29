@@ -112,14 +112,14 @@ bool getClippedPosSize(const ivec2& parentSize, ivec2& posClipped, ivec2& sizeCl
 }
 
 namespace DAW {
-    gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid& grid) {
-        auto* const guitrack = new gui_track(_entry, grid);
+    gui_track_content* createTrackGui(track_gui_entry_t* _entry, scaled_grid& grid) {
+        auto* const guitrack = new gui_track_content(_entry, grid);
         guitrack->setZOrder(TRACKTYPE_TO_CTR(_entry->track->type) == TRACK_CTR_MIDIAUDIO ? 0 : 1);
         return guitrack;
     }
 
-    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry, scaled_grid& grid) {
-        auto const guicontrols = new gui_track_controls(_entry, grid);
+    gui_track_control* createTrackGuiControls(track_gui_entry_t* _entry, scaled_grid& grid) {
+        auto const guicontrols = new gui_track_control(_entry, grid);
         guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
         return guicontrols;
     }
@@ -551,7 +551,7 @@ void gui_audio_clip::updatePosition(DawInstance* daw, scaled_grid& grid, ivec2& 
     }
 }
 
-void gui_track::prerender(NVGcontext* vg) {
+void gui_track_content::prerender(NVGcontext* vg) {
 	nvgReset(vg);
     nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
     nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
@@ -749,12 +749,12 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
     //!CLIP COULD BE DELETED AT THIS POINT
 }
 
-gui_track::gui_track(track_gui_entry_t* _entry, scaled_grid& _grid)
+gui_track_content::gui_track_content(track_gui_entry_t* _entry, scaled_grid& _grid)
     : gui_track_content_base(_entry, _grid), automation(_entry, _grid, _entry->state.selectedAutomationCtr, _entry->state.selectedAutomationParam, subtrackIdx) {
     padding = 0;
 }
 
-void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
+void gui_track_content::updateVisibleTrackContents(scaled_grid& grid) {
     automation.setData();
     automation.updateVisibleTrackContents(grid);
     auto daw = dawCtrl->getDaw();
@@ -773,7 +773,7 @@ void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
     }
 }
 
-bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+bool gui_track_content::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     bool bContains = this->contains(mpos);
     if (bContains) {
         if (evt.type == MouseHitType::MOUSE_DRAGDROP_HOVER) {
@@ -807,7 +807,7 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 
-void gui_track::handleDragDropHover(MouseHitEvt& mouseHit) {
+void gui_track_content::handleDragDropHover(MouseHitEvt& mouseHit) {
     dawCtrl->setSelectedTrackEntry(m_trackentry);
 }
 
@@ -860,7 +860,7 @@ void gui_track_subtrack::handleRightClick(MouseEvent& evt) {
     }
     parentCtrl->openContextMenu(new guictxtmenu_trackcontent(trackEditor, m_trackentry), evt.mousepos);
 }
-void gui_track::handleRightClick(MouseEvent& evt) {
+void gui_track_content::handleRightClick(MouseEvent& evt) {
     auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
     if (!assert_expr(trackEditor)) {
         return;
@@ -904,7 +904,7 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
         theme, fontSize, theme->getColor(GuiColor::COL_WHITE), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 }
 
-void gui_track::renderTrackFolded(NVGcontext* vg) {
+void gui_track_content::renderTrackFolded(NVGcontext* vg) {
     auto ctrTracks = m_trackentry->parent;
     if (!m_track->children.empty()) {
         static DAW_CXX_CONSTINIT thread_local std::vector<track_gui_entry_t*> children;
@@ -975,7 +975,7 @@ void gui_track::renderTrackFolded(NVGcontext* vg) {
     }
 }
 
-void gui_track::render(NVGcontext* vg) {
+void gui_track_content::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
     if (dawCtrl->getSelectedTrack() == m_track) {
@@ -1000,7 +1000,7 @@ void gui_track::render(NVGcontext* vg) {
     }
 }
 
-void gui_track::renderTrack(NVGcontext* vg) {
+void gui_track_content::renderTrack(NVGcontext* vg) {
     for (auto& entry : m_trackentry->clipsGuis) {
         if (entry.second) {
             entry.second->render(vg);
@@ -1008,7 +1008,7 @@ void gui_track::renderTrack(NVGcontext* vg) {
     }
 }
 
-void gui_track::renderDebugPass(NVGcontext* vg) {
+void gui_track_content::renderDebugPass(NVGcontext* vg) {
     ivec2 posInset  = getPosContent();
     ivec2 sizeInset = getSizeContent();
 
@@ -1038,7 +1038,7 @@ bool gui_track_subtrack::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
         }
         if (evt.type == MouseHitType::MOUSE_RIGHT) {// righclick in selection (create clip etc.)
-            scaled_grid& grid = m_trackentry->content->getGrid();
+            scaled_grid& grid = m_trackentry->trackContent->getGrid();
             tick_t tick       = grid.screenToTickSnap(mpos.x, SNAP_OFF);
             if (m_trackentry->parentCtrl->getCursor().contains(this->m_trackentry->idx, tick)) {
                 evt.requestFocus(this);

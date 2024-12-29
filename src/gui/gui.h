@@ -25,7 +25,7 @@ class guictr_dragged_plugins;
 class guictr_base;
 class gui_pluginlist_entry;
 class gui_clip;
-class gui_track;
+class gui_track_content;
 class scaled_grid;
 struct guitheme_t;
 struct dragdrop_file;
@@ -449,9 +449,9 @@ public:
     }
     virtual void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
     }
-    virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos) {
+    virtual void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) {
     }
-    virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
+    virtual void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) {
     }
     virtual void clipDragMove(gui_clip* g, ivec2 mousepos) {
     }

@@ -35,7 +35,7 @@ struct freeze_track_task_t final : public async_task_t {
                 .slot = track->localIdxFlat + 1,
                 .droppedTrack = entry->track,
                 .droptype =  DAW::gui_track_drop_position_t::drop_type::track_after,
-                .pos = entry->mixer->getLeftBottom()
+                .pos = entry->trackControls->getLeftBottom()
             };
             DAW::MoveTrackToSlot(daw, trackTo, pos);
 

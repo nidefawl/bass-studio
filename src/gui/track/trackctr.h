@@ -64,9 +64,9 @@ namespace DAW {
     track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
     track_gui_entry_t* getTrackFromMouseClosest(track_gui_manager_i& iGuiMgr, ivec2 mouse);
     gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
-    gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
+    gui_track_content* createTrackGui(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
     gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip);
-    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry, scaled_grid&);// trackcontrols.cpp
+    gui_track_control* createTrackGuiControls(track_gui_entry_t* _entry, scaled_grid&);// trackcontrols.cpp
 }
 
 class guitrack_editor final : public guictr_base {
@@ -150,12 +150,12 @@ public:
 };
 
 
-class guitrack_mixers final : public guictr_base {
+class guitrack_controls final : public guictr_base {
     track_gui_manager_i& iGuiMgr;
     project_t& project;
 
 public:
-    guitrack_mixers(track_gui_manager_i& _iGuiMgr, project_t& _project)
+    guitrack_controls(track_gui_manager_i& _iGuiMgr, project_t& _project)
         : guictr_base(),
           iGuiMgr(_iGuiMgr),
           project(_project) {
@@ -605,8 +605,8 @@ public:
     project_globals_t& projectGlobals;
     track_gui_manager_t guiMgr;
     guitrack_topleft trackTopLeft;
-    guitrack_mixers trackControls;
-    guitrack_editor trackView;
+    guitrack_controls trackControls;
+    guitrack_editor trackEditor;
     guitrack_timeline trackTimeline;
     guictr_tracks_loophandles loophandles;
 
@@ -686,8 +686,8 @@ public:
     }
     void resetView();
 
-    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override;
-    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override;
+    void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) override;
+    void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) override;
 
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;

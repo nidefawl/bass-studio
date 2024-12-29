@@ -28,10 +28,10 @@ class track_t;
 struct track_impl_t;
 struct track_clipboard_t;
 class trackdata_clips_t;
-class gui_track;
+class gui_track_content;
 class gui_track_subtrack;
 class gui_track_automationlane;
-class gui_track_controls;
+class gui_track_control;
 class delete_cb;
 namespace DAW::Host {
     struct midievent_ctrl_t;

@@ -612,7 +612,7 @@ void guiknob::setKnobInternalHandlers() {
                 return;
             guiTrackCtr->showAutomationLane(entry, paramAutomatable, paramIdx);
             dawCtrl->updateVisibleTrackContents();
-            guiTrackCtr->scrollTo(entry->content);
+            guiTrackCtr->scrollTo(entry->trackContent);
         }
     };
 #endif

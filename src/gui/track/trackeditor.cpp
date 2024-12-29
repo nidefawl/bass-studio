@@ -145,7 +145,7 @@ namespace DAW {
         const track_gui_vector_td& _tracks = iGuiMgr.getTracksVisibleFlat();
         for (auto it = _tracks.rbegin(); it != _tracks.rend(); ++it) {
             auto tr = *it;
-            if (tr->content->isVisible()) {
+            if (tr->trackContent->isVisible()) {
                 ivec2 topBottom{};
                 getTrackGuiYBounds(tr, topBottom);
                 if (mouse.y >= topBottom.x && mouse.y < topBottom.y) {
@@ -173,7 +173,7 @@ namespace DAW {
         const track_gui_vector_td& _tracks = iGuiMgr.getTracksVisibleFlat();
         for (auto it = _tracks.rbegin(); it != _tracks.rend(); ++it) {
             auto tr = *it;
-            if (tr->content->isVisible() && !tr->clipsGuis.empty()) {
+            if (tr->trackContent->isVisible() && !tr->clipsGuis.empty()) {
                 ivec2 topBottom{};
                 getTrackGuiYBounds(tr, topBottom);
                 if (mouse.y >= topBottom.x && mouse.y < topBottom.y) {
@@ -223,7 +223,7 @@ namespace DAW {
         if (!trackClosest) {
             for (auto it = _tracks.rbegin(); it != _tracks.rend(); ++it) {
                 auto tr = *it;
-                if (!tr->content->isVisible()) {
+                if (!tr->trackContent->isVisible()) {
                     continue;
                 }
                 ivec2 topBottom{};
@@ -258,11 +258,11 @@ namespace DAW {
                     break;
             }
         }
-        if (trFirstReturn && trFirstReturn->content) {
-            return trFirstReturn->content->top() - TRACK_HEIGHT_SPACING_HALF;
+        if (trFirstReturn && trFirstReturn->trackContent) {
+            return trFirstReturn->trackContent->top() - TRACK_HEIGHT_SPACING_HALF;
         }
-        if (trLastVisible && trLastVisible->content) {
-            return trLastVisible->content->bottom() + TRACK_HEIGHT_SPACING_HALF;
+        if (trLastVisible && trLastVisible->trackContent) {
+            return trLastVisible->trackContent->bottom() + TRACK_HEIGHT_SPACING_HALF;
         }
         return 0;
     }
@@ -1219,11 +1219,11 @@ void RenderClipAt(NVGcontext* vg, guitheme_t* theme, DawCtrl* dawCtrl, scaled_gr
 
 void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const entry, clip_t* cl, tick_t offset) {
     ivec2 clipPos     = ivec2();
-    ivec2 scissorSize = entry->content->size;
-    ivec2 clipSize    = entry->content->size;
+    ivec2 scissorSize = entry->trackContent->size;
+    ivec2 clipSize    = entry->trackContent->size;
 
     if (getClipPositionInt(grid, scissorSize, cl, clipPos, clipSize, offset)) {
-        clipPos.y += entry->content->pos.y;
+        clipPos.y += entry->trackContent->pos.y;
         DAW::RenderClipAt(vg, theme, dawCtrl, grid, cl, offset, clipPos, clipSize);
     }
 }
@@ -1242,8 +1242,8 @@ void guitrack_editor::renderDebugPass(NVGcontext* vg) {
     for (track_t* g : project.trackList) {
         track_gui_entry_t* entry{};
         if (iGuiMgr.getPointerEntry(g, &entry)) {
-            if (entry->content->isVisible()) {
-                entry->content->renderDebugPass(vg);
+            if (entry->trackContent->isVisible()) {
+                entry->trackContent->renderDebugPass(vg);
                 for (auto* gSubtrack : entry->subtracks) {
                     gSubtrack->renderDebugPass(vg);
                 }
@@ -1359,11 +1359,11 @@ void guitrack_editor::render(NVGcontext* vg) {
                 continue;
             }
 
-            dbgassert(entry->content->isVisible() == iGuiMgr.isVisible(entry));
+            dbgassert(entry->trackContent->isVisible() == iGuiMgr.isVisible(entry));
 
-            if (entry->content->isVisible()) {
+            if (entry->trackContent->isVisible()) {
                 nvgSave(vg);
-                entry->content->render(vg);
+                entry->trackContent->render(vg);
                 if (action.dragtype) {
                     auto clipboard = action.clipboard.get();
                     if (clipboard) {
@@ -1396,15 +1396,15 @@ void guitrack_editor::render(NVGcontext* vg) {
         for (track_t* t : project.trackMidiAudioCtr.tracksFlat) {
             track_gui_entry_t* entry{};
             always_assert(iGuiMgr.getPointerEntry(t, &entry));
-            dbgassert(entry->content != nullptr);
-            auto totalHeight = entry->content->size.y;
+            dbgassert(entry->trackContent != nullptr);
+            auto totalHeight = entry->trackContent->size.y;
             if (!entry->subtracks.empty()) {
-                totalHeight = entry->subtracks.back()->bottom() - entry->content->top();
+                totalHeight = entry->subtracks.back()->bottom() - entry->trackContent->top();
             }
-            auto contentPos = entry->content->pos.y;
-            if (entry->content->isVisible() && contentPos < ySplit && contentPos + totalHeight > 0) {
+            auto contentPos = entry->trackContent->pos.y;
+            if (entry->trackContent->isVisible() && contentPos < ySplit && contentPos + totalHeight > 0) {
                 nvgSave(vg);
-                entry->content->render(vg);
+                entry->trackContent->render(vg);
                 if (action.dragtype) {
                     auto clipboard = action.clipboard.get();
                     if (clipboard) {
@@ -1451,8 +1451,8 @@ void guitrack_editor::render(NVGcontext* vg) {
             //double tickEndX = min(size.x + 2, (int) grid.tickToScreenD(tickEnd));
             double tickBeginX = grid.tickToScreenD(tickBegin);
             double tickEndX   = grid.tickToScreenD(tickEnd);
-            float trackYMin   = math::min(trBEntry->content->top(), trEEntry->content->top());
-            float trackYMax   = math::max(trBEntry->content->bottom(), trEEntry->content->bottom());
+            float trackYMin   = math::min(trBEntry->trackContent->top(), trEEntry->trackContent->top());
+            float trackYMax   = math::max(trBEntry->trackContent->bottom(), trEEntry->trackContent->bottom());
             if (c.isSubtrackSelection()) {
                 int32_t ssTrIdx = c.getSubTrackBegin();
                 int32_t esTrIdx = c.getSubTrackEnd();
@@ -1484,8 +1484,8 @@ void guitrack_editor::render(NVGcontext* vg) {
         } else {
             float cursorScreenX = (float) grid.tickToScreenD(c.cursorPos);
             if (cursorScreenX >= -2 && cursorScreenX < size.x + 2) {
-                float trackYMin = trEntry->content->top();
-                float trackYMax = trEntry->content->bottom();
+                float trackYMin = trEntry->trackContent->top();
+                float trackYMax = trEntry->trackContent->bottom();
                 if (c.isSubtrackSelection()) {
                     int32_t ssTrIdx = c.getSubTrackBegin();
                     int32_t esTrIdx = c.getSubTrackEnd();

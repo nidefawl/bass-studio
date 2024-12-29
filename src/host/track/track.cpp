@@ -85,7 +85,7 @@ void releaseClipResources(clip_t* cl, delete_cb* cb) {
             if (it != entry->clipsGuis.end()) {
                 auto* pGui = it->second;
                 dbgassert(it->second);
-                entry->content->remove(pGui);
+                entry->trackContent->remove(pGui);
                 delete pGui;
             } else {
                 dbgassert(0);

@@ -189,7 +189,7 @@ namespace DAW {
             case CMD_SHOW: {
                 guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
                 dawCtrl->updateVisibleTrackContents();
-                guiTrackCtr->scrollTo(entry->content);
+                guiTrackCtr->scrollTo(entry->trackContent);
                 return true;
             }
             case CMD_DELETE: {

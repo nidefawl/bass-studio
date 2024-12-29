@@ -11,10 +11,10 @@
 #include "snapshot/track-snapshot.h"
 #include "grid.h"
 
-class gui_track;
+class gui_track_content;
 class guictr_tracks;
 class gui_track_subtrack;
-class gui_track_controls;
+class gui_track_control;
 class effect_deferred;
 class DawCtrl;
 
@@ -28,9 +28,9 @@ struct tracklayout_state_t {
 struct track_gui_entry_t {
     DawCtrl* parentCtrl = nullptr;
     track_t* track = nullptr;
-    gui_track* content = nullptr;
+    gui_track_content* trackContent = nullptr;
     guictr_tracks* parent = nullptr;
-    gui_track_controls* mixer = nullptr;
+    gui_track_control* trackControls = nullptr;
     int32_t idx = -1;
     tracklayout_settings_t layout;
     tracklayout_state_t state;

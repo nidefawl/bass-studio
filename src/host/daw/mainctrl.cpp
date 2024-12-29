@@ -1527,7 +1527,7 @@ void DawCtrl::onPostUnloadProject() {
     view->visitEntries([](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
             auto trackCtr = guictr_cast<guictr_tracks>(entry);
-            auto& trackView = trackCtr->trackView;
+            auto& trackView = trackCtr->trackEditor;
             trackView.m_resizePreModifyState.reset();
             trackView.action.clipboard.reset();
             trackView.iGuiMgr.reset();
