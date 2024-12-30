@@ -84,6 +84,14 @@ namespace Table {
         }
     }
 
+    template<>
+    void cellClicked(const click_ctxt_t& ctxt, const SafeRef<guibase>& obj) {
+        auto* c = safeRefGet(obj);
+        if (c && ctxt.callback) {
+            ctxt.callback->onClick(ctxt, c);
+        }
+    }
+
     template <typename T>
     void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<T>& obj) {
         if (safeRefOk(obj.saferef)) {
