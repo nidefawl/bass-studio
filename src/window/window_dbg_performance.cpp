@@ -7,11 +7,7 @@
 #include <memory>
 #include <utility>
 #include "guifonts.h"
-#include "logging.h"
 #include "math/seq_math.h"
-#include "math/vec.h"
-#include "math/mat.h"
-#include "fileio.h"
 #include "theme.h"
 #include "util/profiling.h"
 #include "str_util.h"
@@ -21,7 +17,6 @@
 #include "gl/gl_tess2d.h"
 #include "gl/gl_shader.h"
 #include "gl/builtin_shaders.h"
-#include "renderresources.h"
 #include "guicolors.h"
 #include "color_util.h"
 #include "rand.h"
@@ -310,8 +305,8 @@ public:
     }
     int render(NVGcontext* vg, int winW, int winH, float pxratio) override {
         float zoom = 1.0f;
-        float fbWidth = winW * zoom;
-        float fbHeight = winH * zoom;
+        int fbWidth = int(winW * zoom);
+        int fbHeight = int(winH * zoom);
         auto tmMillis = getTimeMicros() / 1000UL;
         /* if (tmMillis - tmLastReload >= 1600) {
             if (0 != init(nullptr)) {
@@ -506,6 +501,8 @@ public:
     }
     int destroy(NVGcontext*) override {
         return 0;
+    }
+    void tick() override {
     }
 };
 }// namespace windowdebug_performance

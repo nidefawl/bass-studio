@@ -1251,6 +1251,7 @@ public:
     }
 
     void onTick() override {
+        impl->tick();
     }
 
     bool onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {

@@ -228,15 +228,17 @@ class guictr_daw_viewmode_select final : public guictr_base {
         guibutton_viewmode_select() = default;
         bool getState() const override;
     };
-    std::array<guibutton_viewmode_select, 2> btnViews;
+    std::array<guibutton_viewmode_select, 3> btnViews;
 public:
     guictr_daw_viewmode_select() {
         padding = 0;
         setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
         btnViews[0].setTooltipText("Show Tracks");
-        btnViews[1].setTooltipText("Show Nodes");
+        btnViews[1].setTooltipText("Show Mixers");
+        btnViews[2].setTooltipText("Show Nodes");
         btnViews[0].setText("T");
-        btnViews[1].setText("N");
+        btnViews[1].setText("M");
+        btnViews[2].setText("N");
         for (auto& btn : btnViews) {
             btn.btnIndex = static_cast<int32_t>(&btn - btnViews.data());
             add(&btn);

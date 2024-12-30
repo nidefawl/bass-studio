@@ -1,61 +1,65 @@
 #include "glheaders.h"
 #include <memory>
 #include <nanovg.h>
+#include <array>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "gui/gui.h"
 #include "logging.h"
-#include "math/vec.h"
-#include "math/mat.h"
-#include "fileio.h"
+#include "math/seq_math.h"
+#include "platform.h"
 #include "str_util.h"
 #include "gl/gl_util.h"
 #include "gl/gl_attr.h"
 #include "gl/gl_vbo.h"
 #include "gl/gl_tess2d.h"
-#include "gl/gl_shader.h"
 #include "gl/builtin_shaders.h"
 #include "renderresources.h"
 #include "color_util.h"
 #include "rand.h"
-#include "platform.h"
 #include "guifonts.h"
+#include "theme.h"
 #include "window_impl.h"
 
 namespace windowdebug_dbgnanovg {
 
 class window_impl final : public window_abstract_t {
+    using ImgData = std::shared_ptr<uint8_t>;
     RenderResources::NvgImageTexture imgQuad;
     UIFont::font_instance instance{"jbmononf.ttf", -1};
-    GLuint program2dTexture;
-    GLint u_mvp;
-    GLint u_tex0;
-
+    GLuint program2dTexture{};
+    GLint u_mvp{};
+    GLint u_tex0{};
     float wTexPreview = 1024;
     std::vector<VertexAttr> attributes{
         { "in_position", 2, GL_FLOAT },
         { "in_texcoord", 2, GL_FLOAT },
     };
     DrawVBO vbo;
-    int loadShader() {
-        String srcVertex = TEXTURED_GLSL_VERT;
-        String srcFragment = TEXTURED_GLSL_FRAG;
-        // int64_t ret = ReadFileText("textured.vsh", srcVertex);
-        // if (ret <= 0) {
-        //     log_lf(Log::L_ERROR, "Cannot read file textured.vsh\n");
-        //     return 1;
-        // }
-        // ret = ReadFileText("textured.fsh", srcFragment);
-        // if (ret <= 0) {
-        //     log_lf(Log::L_ERROR, "Cannot read file textured.fsh\n");
-        //     return 1;
-        // }
+    guitheme_t theme;
+    textlabel_dynamic_t m_textLabelParamValue;
 
-        GLuint vertex_shader, fragment_shader;
-        vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
+    int loadShader() {
+        String srcVertex;
+        String srcFragment;
+
+        int64_t ret = ReadFileText("textured.vsh", srcVertex);
+        if (ret <= 0) {
+            log_lf(Log::L_ERROR, "Cannot read file textured.vsh\n");
+            srcVertex = TEXTURED_GLSL_VERT;
+        }
+
+        ret = ReadFileText("textured.fsh", srcFragment);
+        if (ret <= 0) {
+            log_lf(Log::L_ERROR, "Cannot read file textured.fsh\n");
+            srcFragment = TEXTURED_GLSL_FRAG;
+        }
+
+        GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
         if (!vertex_shader) {
             return 1;
         }
-        fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
+        GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
         if (!fragment_shader) {
             return 1;
         }
@@ -86,9 +90,6 @@ class window_impl final : public window_abstract_t {
         return 0;
     }
 
-
-    using ImgData = std::shared_ptr<uint8_t>;
-
     void setColor(uint8_t* b, uint32_t i) {
         b[0] = i & 0xFF;
         i    = i >> 8;
@@ -117,12 +118,9 @@ class window_impl final : public window_abstract_t {
         return imageData;
     }
 public:
-    window_impl() {
-    }
-    ~window_impl() {
-    }
+    window_impl() = default;
 
-    int init(NVGcontext* vg) {
+    int init(NVGcontext* vg) override {
         glBindVertexArray(0);
         int ret = loadShader();
         if (ret)
@@ -151,7 +149,7 @@ public:
         return 0;
     }
 
-    int render(NVGcontext* vg, int winW, int winH, float pxratio) {
+    int render(NVGcontext* vg, int winW, int winH, float pxratio) override {
 
 
         glActiveTexture(GL_TEXTURE0);
@@ -181,6 +179,7 @@ public:
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         nvgBeginFrame(vg, winW, winH, pxratio);
+        theme.bindFont(vg, UIFont::FONT_DEFAULT);
         ivec2 pos  = { 10, 20 };
         ivec2 size = { 300, 40 };
 
@@ -238,7 +237,7 @@ public:
             nvgShapeAntiAlias(vg, pass);
             x        = 0;
             y        = 0;
-            float h  = size.y * 4;
+            int h    = size.y * 4;
             int dir  = 0;
             float x1 = x;
             float y1 = y;
@@ -295,7 +294,7 @@ public:
             y2 += size.y + 10;
             nvgBeginPath(vg);
             nvgMoveTo(vg, x1, y1);
-            nvgLineTo(vg, x2, y1 + (y2 - y1) / 2.0);
+            nvgLineTo(vg, x2, y1 + (y2 - y1) / 2.0f);
             nvgLineTo(vg, x1, y2);
             nvgClosePath(vg);
             nvgFillColor(vg, rgbToNvg(0xFFFF00FF));
@@ -339,11 +338,42 @@ public:
             nvgBatchedRender(vg);
         }
 
+        {
+            std::array strings = {
+                "Hello World",
+                "Debug The Fontrendering",
+                "123"
+            };
+            auto idx = 1;//math::floorfS32(getTimeMillisF() / 1000.0f) % strings.size();
+            auto szStr = strings[idx];
+            auto titlePos = vec2(winW, winH) / 2.0f;
+            auto steppedScaleI = 1;//math::floorfS32(getTimeMillisF() / 777.0f) % 12;
+            // log_printf("%zd %d\n",idx, steppedScaleI);
+            steppedScaleI++;
+            auto steppedScaleF = (steppedScaleI / 32.0f) * 4.0f;
+            m_textLabelParamValue.size = vec2{ 200, 40 } * (steppedScaleF);
+            m_textLabelParamValue.pos = titlePos - m_textLabelParamValue.size / 2.0f;
+            m_textLabelParamValue.fontSize = math::clamp(math::floorfS32(m_textLabelParamValue.size.y * 0.8f), 4, 200);
+            m_textLabelParamValue.alignment = NVG_ALIGN_MIDDLE | NVG_ALIGN_CENTER;
+
+            nvgSave(vg);
+            nvgBeginPath(vg);
+            nvgRect(vg, m_textLabelParamValue.pos.x, m_textLabelParamValue.pos.y, m_textLabelParamValue.size.x, m_textLabelParamValue.size.y);
+            nvgFillColor(vg, rgbaToNvg(0x3f0000FF));
+            nvgFill(vg);
+            m_textLabelParamValue.render(vg, &theme, szStr, rgbaToNvg(0xFFFFFFFF));
+            nvgRestore(vg);
+
+        }
+
         nvgEndFrame(vg);
         return 1;
     }
-    int destroy(NVGcontext*) {
+    int destroy(NVGcontext*) override {
         return 0;
+    }
+    void tick() override {
+        m_textLabelParamValue.adjustWidth();
     }
 };
 

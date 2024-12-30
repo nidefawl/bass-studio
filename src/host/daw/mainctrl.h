@@ -420,8 +420,8 @@ struct Menus {
 
 enum view_mode_t {
     TRACK_TIMELINE,
+    MIXER,
     NODE_EDITOR,
-    MIXER
 };
 namespace DAW {
 enum EditAreaType : uint32_t {

@@ -937,9 +937,15 @@ void gui_slider_textfield::render(NVGcontext* vg) {
             m_textLabelParamValue.alignment = alignment | NVG_ALIGN_MIDDLE;
             m_textLabelParamValue.render(vg, theme, strLvl, theme->getColor(GuiColor::COL_TEXT));
         }
-        if (isFlag(FLG_RENDER_LABEL) && this->label.length()) {
-            m_textLabelParamName.alignment = NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE;
-            m_textLabelParamName.render(vg, theme, label, theme->getColor(GuiColor::COL_LABEL_INACTIVE));
+        if (isFlag(FLG_RENDER_LABEL)) {
+            auto label = getLabel();
+            if (!label.empty()) {
+                m_textLabelParamName.alignment = NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE;
+                if (bRenderVerticalSlider) {
+                    m_textLabelParamName.alignment = NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE;
+                }
+                m_textLabelParamName.render(vg, theme, label, theme->getColor(GuiColor::COL_LABEL_INACTIVE));
+            }
         }
     }
     if (!isTextCommitted()) {

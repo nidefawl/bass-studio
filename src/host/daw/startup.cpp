@@ -268,72 +268,13 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
             mainCtrl->setViewMode(view_mode_t::NODE_EDITOR);
             mainCtrl->showPluginView();
             loadAllInstances(dawMainCtrl, "Macro");
-            //     auto tr = daw->getProject()->trackMidiAudioCtr[1];
-                
-            //     daw->setSelectedTrack(tr);
-            //     auto& clips = tr->getMidi().getClips();
-            //     if (clips.size()) {
-            //         auto clip = clips[0];
-            //         auto mainCtrl = daw->getMainControl();
-            //         track_gui_entry_t* trEntry{};
-            //         auto* trCtr = mainCtrl->getTrackContainer();
-            //         if (trCtr && trCtr->getTrackEntry(tr, &trEntry)) {
-            //             auto* gui = createClipGui(trEntry->parent, trEntry, clip);
-            //             mainCtrl->getTrackEditor().setSelectionRange(clips[0], trEntry);
-            //             daw->setEditClip(gui);
-            //             daw->getMainControl()->showClipEditor();
-            //         }
-            //     }
-            // }
-
-    #if 0
-            const bool loadPlugins = 0;
-            if (loadPlugins) {
-                ThreadLock lock = daw->lockPlayThread();
-                auto* pluginMgr      = daw->getPluginManager();
-                std::vector<effectbase*> pluginsDeferred;
-                pluginMgr->getDeferredEffects(pluginsDeferred);
-                log_printf("loading %d plugins\n", pluginsDeferred.size());
-                for (auto effect : pluginsDeferred) {
-                    log_printf("activate %s\n", StringAsCStr(effect->sName));
-                    pluginMgr->activateDeferred(effect, pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-                }
-                auto& trackList = dawInstance->getProject()->trackList;
-                for (track_t* tr : trackList) {
-                    tr->getStage()->pluginsChanged();
-                }
-                pluginMgr->onTrackLayoutChange();
-                dawInstance->onPluginsChanged();
-
-                //        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
-            }
-    #endif
-
-    #if 0
-            // open subtrack waveview
-            dbgassert(dawInstance->getTracks().size() > 1);
-            auto guiTrackCtr = dawMainCtrl->getGuiTrackCtr();
-            auto track = dawInstance->getTracks()[1];
-            track_gui_entry_t* entry;
-            dbgassert(guiTrackCtr->getTrackEntry(track, &entry));
-
-            track->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT;
-
-            auto gui = makeGuiSubtrack(entry, dawMainCtrl, gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-            MainCtrl::getGuiTrackCtr()->addSubTrack(entry, gui, true);
-            entry->parent->layout();
-            entry->parent->updateVisibleTrackContents();
-            //dawInstance->startPlaying();
-
-            daw_tls::getTls().config->enableClipRendererDebugLayer=true;
-    #endif
-            // openPluginWindows(dawMainCtrl, "OTT");
+            openPluginWindows(dawMainCtrl, "OTT");
         };
 
-    //    dawMainCtrl->setVisible(false);
-       dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
-    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
-       dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
+       dawMainCtrl->setVisible(false);
+    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
+       dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
+    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
     // dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_PREFERENCES, 2));
     // generateDummyProject(dawMainCtrl);
     }

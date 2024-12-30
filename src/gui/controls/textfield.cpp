@@ -126,7 +126,7 @@ void gui_textfield::render(NVGcontext* ctx) {
     }
     this->renderTextField(ctx);
 }
-#define X_SPACING (size.y * 0.3f)
+#define X_SPACING (math::min(size.y, size.x) * 0.3f)
 void gui_textfield::updateTextLayout(NVGcontext* ctx) {
     auto tempU8 = utf::as_str8(mValueTemp);
     nvgTextBounds(ctx, 0, 0, tempU8.c_str(), nullptr, metrics.textBounds);

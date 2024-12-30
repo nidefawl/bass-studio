@@ -749,7 +749,7 @@ public:
     }
     ivec2 getScrollViewSize() const override {
         ivec2 cs = getSizeContent();
-        cs.y     = contentViewSize;
+        cs.x     = contentViewSize;
         return cs;
     }
     void scrollOffsetChanged(int dir, float offset) override;

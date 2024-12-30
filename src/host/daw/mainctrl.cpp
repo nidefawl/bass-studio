@@ -524,8 +524,6 @@ public:
     }
 
     void setViewMode(view_mode_t mode) {
-        if (dawCtrl->viewMode == mode)
-            return;
         dawCtrl->viewMode = mode;
 
         bool bContentChanged = false;
@@ -1709,11 +1707,13 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                 auto newMode = view_mode_t::NODE_EDITOR;
                 if (ctxt.argInt0 < 0) {
                     if (this->viewMode == view_mode_t::TRACK_TIMELINE) {
+                        newMode = view_mode_t::MIXER;
+                    } else if (this->viewMode == view_mode_t::MIXER) {
                         newMode = view_mode_t::NODE_EDITOR;
                     } else {
                         newMode = view_mode_t::TRACK_TIMELINE;
                     }
-                } else {
+                } else if (ctxt.argInt0 >= 0 && ctxt.argInt0 <= static_cast<int>(view_mode_t::NODE_EDITOR)) {
                     newMode = static_cast<view_mode_t>(ctxt.argInt0);
                 }
                 this->setViewMode(newMode);

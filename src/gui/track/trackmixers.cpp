@@ -2,6 +2,7 @@
 #include "assert_dbg.h"
 #include "gui/container/container.h"
 #include "gui/gui.h"
+#include "logging.h"
 #include "trackctr.h"
 #include "trackcontent.h"
 
@@ -162,11 +163,11 @@ void guictr_mixers::layout() {
         }
         itMastersTracks++;
     }
+    scrollbar.setVisible(allTracksWidth >= xPosFirstReturn);
     contentWidth    = allTracksWidth;
     contentViewSize = xPosFirstReturn;
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     contentWidth += TRACK_HEIGHT_STEP * 4;
-    scrollbar.setVisible(contentWidth >= contentViewSize);
     if (scrollbar.isVisible()) {
         trackMixers.size.y -= scrollW;
     }
@@ -306,15 +307,14 @@ void guictr_mixers::addTrack(track_t* track, int flags) {
     entry->parentCtrl = this->dawCtrl;
     entry->track      = track;
     entry->parent     = nullptr;
-    // dbgassert(0);
     entry->trackMixers = DAW::createTrackGuiMixer(entry);
     entry->trackMixers->id = track->localIdxFlat;
+    entry->layout.height = 5;
 
     guiMgr.addTrack(entry);
     trackMixers.addTrackEntry(*entry);
     // track->audio->guiInstances.push_back(entry);
 
-    //TODO: restore subtracks
     if (!(flags & FLG_TRK_CHANGE_LOAD)) {
         updateVisibleTracks();
         layout();

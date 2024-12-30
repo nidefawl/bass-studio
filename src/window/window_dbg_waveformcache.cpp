@@ -20,9 +20,9 @@
 namespace windowdebug_waveformcache {
 
 class window_impl final : public window_abstract_t {
-    GLuint program2dTexture;
-    GLint u_mvp;
-    GLint u_tex0;
+    GLuint program2dTexture{};
+    GLint u_mvp{};
+    GLint u_tex0{};
 
     std::vector<VertexAttr> attributes{
         { "in_position", 2, GL_FLOAT },
@@ -80,13 +80,9 @@ class window_impl final : public window_abstract_t {
         return 0;
     }
 public:
-    window_impl() {
-    }
+    window_impl() = default;
 
-    ~window_impl() {
-    }
-
-    int init(NVGcontext* vg) {
+    int init(NVGcontext* vg) override {
         glBindVertexArray(0);
         int ret = loadShader();
         if (ret)
@@ -109,8 +105,7 @@ public:
         return 0;
     }
 
-
-    int render(NVGcontext* ctx, int winW, int winH, float pxratio) {
+    int render(NVGcontext* ctx, int winW, int winH, float pxratio) override {
         std::vector<TextureAtlas> rendered;
         auto const ctrl = MainCtrl::get();
         if (ctrl) {
@@ -214,8 +209,10 @@ public:
         return 1;
     }
 
-    int destroy(NVGcontext*) {
+    int destroy(NVGcontext*) override {
         return 0;
+    }
+    void tick() override {
     }
 };
 

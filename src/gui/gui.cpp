@@ -365,13 +365,12 @@ void drawCross(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, i
     nvgStroke(vg);
 }
 void drawRecordSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
-    float inset = math::max(2.0f, size.x / 8.0f);
+    float inset = math::max(2.0f, math::min(size.x / 8.0f, size.y / 8.0f));
     auto radius = (int) (size.y - inset * 2.0) / 2.5;
     nvgBeginPath(vg);
-    nvgCircle(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, radius);
+    nvgCircleFast(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, radius);
     nvgClosePath(vg);
     nvgFillColor(vg, !!drawParm2 ? rgbToNvg(0xFFDD3333) : rgbToNvg(0xFF884444));
-    //    nvgSetShapeExtents(vg, pos.x, pos.y, size.x, size.y);
     nvgFill(vg);
 }
 void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth) {
@@ -952,15 +951,17 @@ float textlabel_dynamic_t::getScale() const {
 }
 
 void textlabel_dynamic_t::adjustWidth() {
-    float delta = size.x - lastRenderWidthLabel;
-    if (math::abs(delta) > 12.0f) {
-        const float FONT_SCALE_MIN = 0.01f;
+    if (size.x <= 0 || lastRenderWidthLabel <= 0) {
+        return;
+    }
+    float delta = (size.x / lastRenderWidthLabel) - 1.0f;
+    if (math::abs(size.x-lastRenderWidthLabel) > 6.0f) {
+        const float FONT_SCALE_MIN = 0.05f;
         const float FONT_SCALE_MAX = 2.0f;
-        const float d = math::clamp(math::abs(delta) / 500.0f, 1.0f/64.0f, 1.0f/8.0f);
-        if (delta > 0.0f) {
-            dynamicFontScale = math::min(FONT_SCALE_MAX, dynamicFontScale + d);
-        } else {
-            dynamicFontScale = math::max(FONT_SCALE_MIN, dynamicFontScale - d);
+        if (delta > 0.25f) {
+            dynamicFontScale = math::min(FONT_SCALE_MAX, dynamicFontScale + math::max(delta*0.25f, 0.025f));
+        } else if (delta < -0.10f) {
+            dynamicFontScale = math::max(FONT_SCALE_MIN, dynamicFontScale - math::max(-delta*0.25f, 0.025f));
         }
     }
 }

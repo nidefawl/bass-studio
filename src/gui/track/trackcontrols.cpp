@@ -197,7 +197,7 @@ void resize(track_gui_entry_t* const m_trackentry, T* al, int32_t mouseDragDist,
     }
 }
 
-class gui_slider_gain final : public gui_slider_textfield {
+class gui_slider_gain : public gui_slider_textfield {
 public:
     gui_slider_gain() : gui_slider_textfield() {
     }
@@ -248,6 +248,30 @@ public:
         if (gain < dsp_util::GAIN_DBFLOOR) return "-inf";
         float f = math::min(6.0f, 20.0f * std::log10(gain));
         return StringFormat("%.2f", f);
+    }
+};
+class gui_slider_gain_vertical : public gui_slider_gain {
+    track_t* const m_track;
+public:
+    explicit gui_slider_gain_vertical(track_gui_entry_t* _entry)
+      : gui_slider_gain(),
+        m_track(_entry->track)
+    {
+        setRenderVerticalSlider(true);
+    }
+
+    void layout() override {
+        gui_slider_gain::layout();
+        const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+        setFontSize(TRACK_HEIGHT_STEP);
+        m_textLabelParamName.pos = { pos.x, pos.y };
+        m_textLabelParamName.size = { size.x, TRACK_HEIGHT_STEP };
+        m_textLabelParamValue.pos = { pos.x, pos.y + size.y - TRACK_HEIGHT_STEP };
+        m_textLabelParamValue.size = { size.x, TRACK_HEIGHT_STEP };
+    }
+
+    String getLabel() const override {
+        return m_track->name;
     }
 };
 class gui_slider_pan final : public gui_slider_textfield {
@@ -2045,9 +2069,7 @@ class guictr_mixers_mixer : public guictr_base {
     track_gui_entry_t* const m_trackentry;
     DAW::rmsmeter m_subMeter;
     gui_trackmeter m_guiMeter;
-
-
-    gui_slider_gain trackGain;
+    gui_slider_gain_vertical trackGain;
     gui_slider_pan trackPanning;
     guibutton_trackbypass btnBypass;
     guibutton_track_solo btnSolo;
@@ -2060,12 +2082,12 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-        auto cs = getSizeContent();
-        auto trackRgb = rgbToNvg(m_track->rgb);
-        nvgBeginPath(vg);
-        nvgRect(vg, 0, 0, cs.x, cs.y);
-        nvgFillColor(vg, trackRgb);
-        nvgFill(vg);
+        // auto cs = getSizeContent();
+        // auto trackRgb = rgbToNvg(m_track->rgb);
+        // nvgBeginPath(vg);
+        // nvgRect(vg, 0, 0, cs.x, cs.y);
+        // nvgFillColor(vg, trackRgb);
+        // nvgFill(vg);
         for (auto gui : guis) {
             if (gui->isVisible()) {
                 gui->render(vg);
@@ -2078,6 +2100,7 @@ public:
           m_trackentry(_entry),
           m_subMeter(_entry->track->audio->meter.getSubChannelMeter(0, 2)),
           m_guiMeter(&m_subMeter),
+          trackGain(_entry),
           btnBypass(_entry),
           btnSolo(_entry) ,
           btnRecord(_entry) {
@@ -2097,7 +2120,6 @@ public:
         trackGain.setLabel("Gain Level");
         trackPanning.setLabel("Pan");
         btnActivate.setLabel("Load plugins");
-        trackGain.setRenderVerticalSlider(true);
         add(&btnBypass);
         add(&btnSolo);
         add(&btnRecord);
@@ -2105,6 +2127,7 @@ public:
         add(&trackGain);
         add(&trackPanning);
         add(&m_guiMeter);
+        trackPanning.setFlag(FLG_RENDER_LABEL, false);
         if (m_track->type != TRACK_TYPE_MASTER && m_track->type != TRACK_TYPE_RETURN) {
             sendGains.resize(MAX_SEND_CHANNELS);
             sendPans.resize(MAX_SEND_CHANNELS);
@@ -2118,6 +2141,8 @@ public:
                 sendPans[i]->setVisible(false);
                 sendPans[i]->setAutomationRef(&m_track->audio->mixer, PARAM_OFFSET_SEND_PAN + i);
                 sendPans[i]->setLabel("Pan");
+                sendGains[i]->setFlag(FLG_RENDER_LABEL, false);
+                sendPans[i]->setFlag(FLG_RENDER_LABEL, false);
                 add(sendGains[i]);
                 add(sendPans[i]);
             }
@@ -2213,11 +2238,11 @@ public:
             project_t* project = dawCtrl->getDaw()->getProject();
             dbgassert(project);
             int32_t numReturnChannels = project->trackReturnCtr.size();
-            float sendGainWidth = (csX-inset*3);
+            float sendGainWidth = (csX);
             for (int32_t i = 0; i < numReturnChannels; ++i) {
-                sendGains[i]->size = ivec2(sendGainWidth*3/5, heightInner);
+                sendGains[i]->size = ivec2(sendGainWidth*3/5 - i2, heightInner);
                 sendGains[i]->pos  = ivec2(inset, posY + inset);
-                sendPans[i]->size = ivec2(sendGainWidth*2/5, heightInner);
+                sendPans[i]->size = ivec2(sendGainWidth*2/5 - i2, heightInner);
                 sendPans[i]->pos  = ivec2(inset + sendGainWidth*3/5, posY + inset);
                 posY += TRACK_HEIGHT_STEP;
                 lastGui = sendGains[i];
@@ -2235,11 +2260,12 @@ public:
 
         posY = csY - (btnActivate.isVisible() ? 3 : 2) * TRACK_HEIGHT_STEP;
 
-        auto btnSize = math::ceilfS32((csX-inset*3)/2);
+        auto btnSize = csX/2;
         btnSolo.pos      = ivec2(inset, posY + inset);
-        btnSolo.size     = ivec2(btnSize, heightInner);
-        btnRecord.pos    = ivec2((csX+inset) / 2, posY + inset);
-        btnRecord.size   = ivec2(btnSize, heightInner);
+        btnSolo.size     = ivec2(btnSize - i2, heightInner);
+
+        btnRecord.pos    = ivec2(csX / 2 + inset, posY + inset);
+        btnRecord.size   = ivec2(btnSize - i2, heightInner);
         posY += TRACK_HEIGHT_STEP;
 
         if (btnActivate.isVisible()) {
@@ -2253,7 +2279,7 @@ public:
 
         trackGain.pos      = ivec2(inset, posYGain + inset);
         auto lastGuiBottom = lastGui ? lastGui->bottom() : 0;
-        trackGain.size     = ivec2(csX - i2, (btnSolo.top() - lastGuiBottom) - i2 - TRACK_HEIGHT_STEP);
+        trackGain.size     = ivec2(csX - i2, ((btnSolo.top() - lastGuiBottom) - i2) - i2 - TRACK_HEIGHT_STEP);
 
         trackPanning.pos   = ivec2(inset, trackGain.bottom() + i2);
         trackPanning.size  = ivec2(csX - i2, heightInner);

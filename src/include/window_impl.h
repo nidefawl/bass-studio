@@ -1,7 +1,5 @@
 #pragma once
-#include <memory>
 #include <nanovg_min.h>
-#include <functional>
 
 void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
@@ -13,4 +11,5 @@ public:
     virtual int init(NVGcontext*) = 0;
     virtual int render(NVGcontext*, int, int, float) = 0;
     virtual int destroy(NVGcontext*) = 0;
+    virtual void tick() = 0;
 };
