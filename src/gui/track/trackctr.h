@@ -6,6 +6,7 @@
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
+#include "renderresources.h"
 #include "seq_util.h"
 #include "color_util.h"
 #include "host/track/track.h"
@@ -25,6 +26,8 @@
 #include "host/daw/mainctrl.h"
 #include "host/track/trackctr_types.h"
 #include "types.h"
+
+class guictr_mixers;
 
 void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry);
 struct track_selection_t {
@@ -68,7 +71,6 @@ namespace DAW {
     gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip);
     gui_track_control* createTrackGuiControls(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
     gui_track_control* createTrackGuiControls(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
-    guictr_base* createTrackGuiMixer(track_gui_entry_t* entry);// trackcontrols.cpp
 }
 
 class guitrack_editor final : public guictr_base {
@@ -701,100 +703,3 @@ public:
     bool fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override;
 };
 
-class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
-    friend class guitrack_editor;
-    int32_t trackMixerGlobalIndex = 0;
-
-public:
-
-    class guictr_mixers_content : public guictr_base {
-        public:
-        guictr_mixers_content() : guictr_base() {
-            padding = 0;
-            margin  = 0;
-            setCanMouseHit(false);
-            setBackgroundRendered(false);
-        }
-        void addTrackEntry(track_gui_entry_t& e);
-        
-        void removeTrackEntry(track_gui_entry_t& e);
-    };
-    project_t& project;
-    project_globals_t& projectGlobals;
-    track_gui_manager_t guiMgr;
-    guictr_mixers_content trackMixers;
-
-protected:
-    gui_scrollbar scrollbar;
-    int32_t contentWidth    = 0;
-    int32_t contentViewSize = 0;
-
-public:
-    guictr_mixers(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file& _dragdropclip);
-    ~guictr_mixers() override;
-    int32_t setTrackPosition(track_gui_entry_t* e, int32_t x, bool isBottom);
-    int32_t getTrackTotalWidth(track_gui_entry_t* e);
-    bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
-    void render(NVGcontext* vg) override;
-    void layout() override;
-    void updateVisibleTracks();
-
-
-    void onChildLayoutChanged(guibase* g) override;
-    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
-    ivec2 getScrollTotalSize() const override {
-        ivec2 cs = getSizeContent();
-        cs.x     = contentWidth;
-        return cs;
-    }
-    ivec2 getScrollViewSize() const override {
-        ivec2 cs = getSizeContent();
-        cs.x     = contentViewSize;
-        return cs;
-    }
-    void scrollOffsetChanged(int dir, float offset) override;
-    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
-    void setScrollOffset(float offset) {
-        this->scrollbar.setScrollOffset(offset);
-    }
-    void scrollToPixelOffset(double pixelOffset) {
-        this->scrollbar.scrollTo(pixelOffset);
-    }
-    void scrollTo(guibase* g);
-    float getScrollOffset() const {
-        return this->scrollbar.scrollOffset;
-    }
-    double getScrollOffsetPixels() const {
-        return this->scrollbar.toPixels();
-    }
-    void onRemove() override;
-    void onAdded() override;
-    void removeTrack(track_t* track, int flags);
-    void addTrack(track_t* track, int flags);
-    void removeAllTracks();
-    void addAllTracks();
-   
-    bool getTrackEntry(track_t* t, track_gui_entry_t** out) {
-        return guiMgr.getTrackEntry(t, out);
-    }
-    bool getPointerEntry(track_t* t, track_gui_entry_t** out) {
-        return guiMgr.getPointerEntry(t, out);
-    }
-    bool isTrackEntryVisible(const track_gui_entry_t* entry) {
-        return guiMgr.isVisible(entry);
-    }
-    void resetView();
-     /*void loadTrackLayouts(trackcontainer_snapshot_t& in);
-
-    void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) override;
-    void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) override;
-
-    void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
-    void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
-    void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
-    void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
-
-    bool fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-    bool fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-*/
-};

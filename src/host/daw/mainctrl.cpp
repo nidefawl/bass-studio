@@ -51,6 +51,7 @@
 #include "gui/track/trackcontent.h"
 #include "gui/track/trackctr_nodes.h"
 #include "gui/track/trackctr.h"
+#include "gui/track/trackmixers.h"
 #include "gui/views/controls.h"
 #include "gui/views/debugctr.h"
 #include "gui/views/notify.h"
