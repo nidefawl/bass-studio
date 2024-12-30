@@ -3,6 +3,7 @@
 #include "gui/container/container.h"
 #include "gui/gui.h"
 #include "gui/meter/guimeter.h"
+#include "guiconstant.h"
 #include "logging.h"
 #include "trackctr.h"
 #include "trackcontent.h"
@@ -18,17 +19,16 @@ guictr_mixers::guictr_mixers(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::Track
       project(_project),
       projectGlobals(_projectGlobals),
       guiMgr(),
+      scrollbar(0, 0.0f, *this),
       trackMixers(),
-      mixerOptions(this),
-      scrollbar(0, 0.0f, *this) {
-    padding = 2;
-    margin  = 2;
+      mixerOptions(this)
+{
     setGuiType(gui_type::CTR_TYPE_MIXERS);
+    padding = 0;
+    margin  = 0;
     dawCtrl = _dawCtrl,
     setCanMouseHit(true);
     setBackgroundRendered(true);
-    padding = 0;
-    margin  = 0;
     setCanMouseHit(false);
     setBackgroundRendered(false);
     add(&trackMixers);
@@ -146,9 +146,8 @@ void guictr_mixers::layout() {
     const int32_t trackControlsWidth = theme->get(GuiConstant::CONST_TRACK_CONTROLS_WIDTH);
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
-    int scrollW         = gui_scrollbar::defaultW;
-
-    ivec2 cs       = getSizeContent();
+    int scrollW = gui_scrollbar::defaultW;
+    ivec2 cs    = getSizeContent();
     cs.x = math::max(scrollW+trackControlsWidth+5, cs.x);
     cs.y = math::max(TRACK_HEIGHT_STEP, cs.y);
     scrollbar.pos  = ivec2(0, cs.y - scrollW);
@@ -326,7 +325,7 @@ void guictr_mixers::addTrack(track_t* track, int flags) {
     entry->parent     = nullptr;
     entry->trackMixers = DAW::createTrackGuiMixer(this, entry);
     entry->trackMixers->id = track->localIdxFlat;
-    entry->layout.height = 5;
+    entry->layout.height = bWideLayout ? 10 : 4;
 
     guiMgr.addTrack(entry);
     trackMixers.addTrackEntry(*entry);
@@ -354,6 +353,8 @@ void guictr_mixers::guictr_mixers_content::removeTrackEntry(track_gui_entry_t& e
 }
 
 namespace DAW {
+    guictr_base* createTrackControlsIO(track_gui_entry_t* _entry);
+
     class guictr_mixers_mixer : public guictr_base {
         guictr_mixers* const m_parent;
         track_t* const m_track;
@@ -368,6 +369,7 @@ namespace DAW {
         guibutton btnActivate;
         std::vector<gui_slider_gain*> sendGains;
         std::vector<gui_slider_pan*> sendPans;
+        guictr_base* trackIO;
     public:
         guictr_mixers_mixer(guictr_mixers* _mixer, track_gui_entry_t* _entry) 
             : guictr_base(),
@@ -379,7 +381,9 @@ namespace DAW {
               trackGain(_entry),
               btnBypass(_entry),
               btnSolo(_entry) ,
-              btnRecord(_entry) {
+              btnRecord(_entry),
+              trackIO(createTrackControlsIO(_entry))
+        {
             (void) m_parent;
             (void) m_trackentry;
             padding = 2;
@@ -404,6 +408,7 @@ namespace DAW {
             add(&trackGain);
             add(&trackPanning);
             add(&m_guiMeter);
+            add(trackIO);
             trackPanning.setFlag(FLG_RENDER_LABEL, false);
             if (m_track->type != TRACK_TYPE_MASTER && m_track->type != TRACK_TYPE_RETURN) {
                 sendGains.resize(MAX_SEND_CHANNELS);
@@ -434,6 +439,8 @@ namespace DAW {
                 remove(sendPanCtrl);
                 delete sendPanCtrl;
             }
+            remove(trackIO);
+            delete trackIO;
             remove(&m_guiMeter);
             remove(&trackPanning);
             remove(&trackGain);
@@ -454,7 +461,9 @@ namespace DAW {
             nvgFill(vg);
             for (auto gui : guis) {
                 if (gui->isVisible()) {
+                    nvgSave(vg);
                     gui->render(vg);
+                    nvgRestore(vg);
                 }
             }
         }
@@ -501,7 +510,6 @@ namespace DAW {
             }
         }
         void layout() override {
-    
             std::vector<effectbase*> effects;
             dbgassert(m_track->audio);
             m_track->audio->getDeferredEffects(effects);
@@ -513,8 +521,8 @@ namespace DAW {
             btnActivate.setVisible(nDefEffects > 0);
     
             const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
-            const int32_t mW = theme->get(GuiConstant::CONST_METER_WIDTH);
             const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+            const int32_t mW = m_parent->bWideLayout ? size.x / 2 : 24;
     
             int32_t inset = CONST_PADDING_TRACK_CONTROLS;
             int32_t i2    = inset * 2;
@@ -527,19 +535,32 @@ namespace DAW {
             int32_t csY      = size.y;
             int32_t posY = 0;
             guibase* lastGui = nullptr;
+            if (trackIO) {
+                trackIO->setVisible(m_parent->bShowIO && m_parent->bWideLayout);
+                if (trackIO->isVisible()) {
+                    trackIO->pos = ivec2(inset, posY + inset);
+                    trackIO->size = ivec2(csX - i2, TRACK_HEIGHT_STEP*3 - i2);
+                    posY += TRACK_HEIGHT_STEP*3;
+                    lastGui = trackIO;
+                }
+            }
             if (!sendGains.empty()) {
                 project_t* project = dawCtrl->getDaw()->getProject();
                 dbgassert(project);
                 int32_t numReturnChannels = project->trackReturnCtr.size();
+                bool bShowPan = m_parent->bWideLayout;
                 if (!m_parent->bShowSends) {
                     numReturnChannels = 0;
                 }
                 float sendGainWidth = (csX);
                 for (int32_t i = 0; i < numReturnChannels; ++i) {
-                    sendGains[i]->size = ivec2(sendGainWidth*3/5 - i2, heightInner);
+                    auto wGain = bShowPan ? sendGainWidth*3/5 : sendGainWidth;
+                    sendGains[i]->size = ivec2(wGain - i2, heightInner);
                     sendGains[i]->pos  = ivec2(inset, posY + inset);
-                    sendPans[i]->size = ivec2(sendGainWidth*2/5 - i2, heightInner);
-                    sendPans[i]->pos  = ivec2(inset + sendGainWidth*3/5, posY + inset);
+                    if (bShowPan) {
+                        sendPans[i]->size = ivec2(sendGainWidth*2/5 - i2, heightInner);
+                        sendPans[i]->pos  = ivec2(inset + sendGainWidth*3/5, posY + inset);
+                    }
                     posY += TRACK_HEIGHT_STEP;
                     lastGui = sendGains[i];
                 }
@@ -549,7 +570,7 @@ namespace DAW {
                 }
                 for (auto sendPanCtrl : sendPans) {
                     auto idx = sendPanCtrl->getParamIdx() - PARAM_OFFSET_SEND_PAN;
-                    sendPanCtrl->setVisible(idx < numReturnChannels);
+                    sendPanCtrl->setVisible(bShowPan && idx < numReturnChannels);
                 }
             }
             int32_t posYGain = posY;

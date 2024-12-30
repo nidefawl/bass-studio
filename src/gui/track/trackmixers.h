@@ -1,4 +1,5 @@
 #pragma once
+#include "renderresources.h"
 #include "trackctr.h"
 
 namespace DAW {
@@ -28,7 +29,7 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
                 bIsSelected = b;
             }
         };
-        std::array<guibutton_ctr_mixers_options, 1> btnViews;
+        std::array<guibutton_ctr_mixers_options, 3> btnViews;
     public:
         explicit guictr_mixers_options(guictr_mixers* _parent) : m_parent(_parent) {
             setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
@@ -42,11 +43,16 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
                 String text;
                 switch (btn.btnIndex) {
                     case 0:
+                        text = "Layout Wide/Compact";
+                        btn.drawParm = ICON_ARR_LEFT;
+                        btn.setState(m_parent->bWideLayout);
+                        break;
+                    case 1:
                         text = "Show Sends";
                         btn.drawParm = ICON_MODULATION;
                         btn.setState(m_parent->bShowSends);
                         break;
-                    case 1:
+                    case 2:
                         text = "Show Inputs/Outputs";
                         btn.drawParm = ICON_MIDIPLUG;
                         btn.setState(m_parent->bShowIO);
@@ -67,17 +73,28 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
                 if (&btn == button) {
                     btn.setState(!btn.getState());
                     switch (btn.getIndex()) {
-                        case 0:
-                            m_parent->bShowSends = btn.getState();
-                            break;
-                        case 1:
+                        case 2:
                             m_parent->bShowIO = btn.getState();
+                            btnViews[0].setState(true);
+                            break;
+                        case 0: {
+                            break;
+                        }
+                        case 1:
+                            m_parent->bShowSends = btn.getState();
                             break;
                         default:
                             break;
                     }
+                    m_parent->bWideLayout = btnViews[0].getState();
+                    btnViews[0].drawParm = m_parent->bWideLayout ? ICON_ARR_RIGHT : ICON_ARR_LEFT;
+                    track_gui_vector_td& tracks = m_parent->guiMgr.tracksVisibleFlat;
+                    for (track_gui_entry_t* entry : tracks) {
+                        entry->layout.height = m_parent->bWideLayout ? 10 : 4;
+                    }
                     m_parent->updateVisibleTracks();
                     m_parent->layout();
+                    break;
                 }
             }
             if (parent) {
@@ -97,18 +114,19 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
         
         void removeTrackEntry(track_gui_entry_t& e);
     };
+protected:
+    int32_t contentWidth    = 0;
+    int32_t contentViewSize = 0;
+    bool bWideLayout = false;
+    bool bShowSends = true;
+    bool bShowIO = false;
 public:
     project_t& project;
     project_globals_t& projectGlobals;
     track_gui_manager_t guiMgr;
+    gui_scrollbar scrollbar;
     guictr_mixers_content trackMixers;
     guictr_mixers_options mixerOptions;
-protected:
-    gui_scrollbar scrollbar;
-    int32_t contentWidth    = 0;
-    int32_t contentViewSize = 0;
-    bool bShowSends = true;
-    bool bShowIO = false;
 public:
     guictr_mixers(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file& _dragdropclip);
     ~guictr_mixers() override;

@@ -3,6 +3,7 @@
 #include "assert_dbg.h"
 #include "fileio.h"
 #include "gui/automation/modulation.h"
+#include "gui/container/container.h"
 #include "gui/controls/filebrowser.hpp"
 #include "host/audio_config.h"
 #include "host/clip/clip.h"
@@ -2129,3 +2130,9 @@ void guitooltip<gui_trackcontrols_title>::setContent() {
         table.rows.push_back({ { tblstr{ "sampleRate" }, tblint{ audio->sampleFormat.sampleRate } } });
     }
 }
+
+namespace DAW {
+    guictr_base* createTrackControlsIO(track_gui_entry_t* _entry) {
+        return new gui_trackcontrols_io(_entry);
+    }
+} // namespace DAW
