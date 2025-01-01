@@ -1,5 +1,6 @@
 #include "TestBase.hpp"
 #include "appsettings.h"
+#include "exceptions.h"
 #include "fileio.h"
 #include "gl/gl_shader.h"
 #include "gl/gl_util.h"
@@ -33,6 +34,9 @@
 #include "types.h"
 #include "plugins/synth/synth-gpu-gl.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 
 static GLFWwindow* window = nullptr;
@@ -150,7 +154,13 @@ int main(int, char*[]) {
                 .polyVoices = 32,
                 .unisonVoices = 32
             };
-            auto res = DAW::GPU::loadshader(defs, shader);
+            String filenameShaderToyShader = "shaders/shadertoy_wtdSRN_lullaby.glsl";
+            // String filenameShaderToyShader = "shaders/shadertoy_MdGGWd_fuer_elise.glsl";
+            // String filenameShaderToyShader = "shaders/shadertoy_NddSzl_Synthwave_Song.glsl";
+            // String filenameShaderToyShader = "shaders/athibaul Techno Song.glsl";
+            // String filenameShaderToyShader = "shaders/shadertoy_3sXyDr_riff180320.glsl";
+            // String filenameShaderToyShader = "shaders/shadertoy_test.glsl";
+            auto res = DAW::GPU::loadshader(defs, filenameShaderToyShader, shader);
             if (std::holds_alternative<String>(res)) {
                 log_lf(Log::L_ERROR, "%s\n", std::get<String>(res).c_str());
             } else {
@@ -258,6 +268,10 @@ int main(int, char*[]) {
                     std::cout << ms << " ms (avg: " << tmComputeAvg << " ms)" << std::endl;
                 }
                 tmComputeAvg = 0.9 * tmComputeAvg + 0.1 * ms;
+                if (tmNow_ms - timeRenderStart >= 10.0) {
+                    log_lf(Log::L_INFO, "END: Time: %.3f s, %.3f beats, %.3f samples\n", ctxt.time_seconds, ctxt.time_beats, ctxt.time_samples);
+                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+                }
             }
         }
 

@@ -157,16 +157,10 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
     return result;
 }
 
-inline std::variant<gpu_program, String> loadshader(const gpu_program_definitions_t& defs, gpu_program& previous) {
+inline std::variant<gpu_program, String> loadshader(const gpu_program_definitions_t& defs, const String& filenameShaderToyShader, gpu_program& previous) {
     static int64_t lastModTimeGpuSoundShader = 0;
     static int64_t lastModTimeShaderToyShader = 0;
     String filenameGpuSoundShader = "shaders/gpu_sound.glsl";
-    // String filenameShaderToyShader = "shaders/shadertoy_wtdSRN_lullaby.glsl";
-    // String filenameShaderToyShader = "shaders/shadertoy_MdGGWd_fuer_elise.glsl";
-    // String filenameShaderToyShader = "shaders/shadertoy_NddSzl_Synthwave_Song.glsl";
-    String filenameShaderToyShader = "shaders/athibaul Techno Song.glsl";
-    // String filenameShaderToyShader = "shaders/shadertoy_3sXyDr_riff180320.glsl";
-    // String filenameShaderToyShader = "shaders/shadertoy_test.glsl";
     auto glSourceLoader = std::make_unique<glshader_srcloader>();
     
     // check time of last modification

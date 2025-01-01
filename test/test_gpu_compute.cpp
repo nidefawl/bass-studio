@@ -266,7 +266,8 @@ int main(int, char*[]) {
         GlfwContextSwitch ctxSwitch(window);
         samplecount_t samplePos = 0;
         samplecount_t numIterations = 0;
-        double tStart = getTimeSecondsD();
+        double tmStart = getTimeSecondsD();
+        double tmStats = getTimeSecondsD();
         TEST_ASSERT_THROW(window != nullptr);
         TEST_ASSERT_EQUAL(test.audioOutputBuffer.samples, sampleFormat.blockSize);
         while(window && !glfwWindowShouldClose(window)) {
@@ -276,15 +277,20 @@ int main(int, char*[]) {
             test.processGpuSynth();
             samplePos += sampleFormat.blockSize;
             numIterations++;
+            auto tmNow = getTimeSecondsD();
             if (numIterations >= 22) {
-                double tSince = getTimeSecondsD() - tStart;
+                double tSince = tmNow - tmStats;
                 if (tSince > 1.5) {
-                    tStart = getTimeSecondsD();
+                    tmStats = tmNow;
                     double blocksPerSeconds = numIterations / tSince;
                     double samplesPerSeconds = blocksPerSeconds * sampleFormat.blockSize;
                     log_lf(Log::L_WARN, "gpu_compute_test: %.0f samples/second\n", samplesPerSeconds);
                     numIterations = 0;
                 }
+            }
+            if (tmNow - tmStart >= 10.0) {
+                log_lf(Log::L_INFO, "END: Time: %.3f s\n", tmNow);
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
             }
         }
         test.releaseGlResources();
