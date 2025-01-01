@@ -19,17 +19,18 @@
 
 #ifdef __GNUC__
 #include <cxxabi.h>
+#include <ctime>
+
 String demangleName(const char* to_demangle) {
     constexpr size_t SIZE_TEMP_BUF = 128;
-    char* szTempHeap = static_cast<char*>(malloc(SIZE_TEMP_BUF));
     size_t length = SIZE_TEMP_BUF;
     int status = 0;
-    char * szDemangled = __cxxabiv1::__cxa_demangle(to_demangle, szTempHeap, &length, &status);
+    char * szDemangled = __cxxabiv1::__cxa_demangle(to_demangle, nullptr, &length, &status);
     String demangled;
     if (szDemangled && length && status == 0) {
         demangled = szDemangled;
     }
-    std::free(szDemangled ? szDemangled : szTempHeap);
+    std::free(szDemangled);
     return demangled;
 }
 #else
@@ -38,9 +39,9 @@ String demangleName(const char* to_demangle)
     return to_demangle;
 }
 #endif
-static const char* TERM_COL_YELLOW = "\x1b[93m";
-static const char* TERM_COL_RED = "\x1b[91m";
-static const char* TERM_COL_RESET = "\x1b[0m";
+static const char* const TERM_COL_YELLOW = "\x1b[93m";
+static const char* const TERM_COL_RED = "\x1b[91m";
+static const char* const TERM_COL_RESET = "\x1b[0m";
 class StdOutLogger final : public Logger {
 public:
     StdOutLogger() noexcept = default;
@@ -134,12 +135,14 @@ public:
         if (handle) {
             std::lock_guard<std::recursive_mutex> lockguard(mutex);
             std::time_t t = std::time(nullptr);
+            struct tm tm{};
+            localtime_s(&tm, &t);
             char mbstr[100];
             size_t posDateTime = std::strftime(
                     mbstr,
                     sizeof(mbstr),
                     "%Y-%m-%dT%H:%M:%S ",
-                    std::localtime(&t));
+                    &tm);
             if (posDateTime > 0) {
                 handle->write(mbstr, posDateTime);
             }
@@ -157,9 +160,11 @@ public:
         log(lvl, str, s.length());
     }
 };
+namespace {
 static ThreadSafeFileLogger& getFileLogger() noexcept {
     static ThreadSafeFileLogger gGlobalLogger;
     return gGlobalLogger;
+}
 }
 #endif
 MultiLogger& getMultiLogger() noexcept {
@@ -167,22 +172,17 @@ MultiLogger& getMultiLogger() noexcept {
     static MultiLogger gMultiLogger(&gMultiLoggerStdOutInstance);
     return gMultiLogger;
 }
-static Logger& getExclusiveLoggerInstance() noexcept {
-    static StdOutLogger logger;
-    return logger;
-}
-Logger* getExclusiveLogger() {
-    return &getExclusiveLoggerInstance();
-}
+namespace {
 Logger** getGlobalLoggerRef() noexcept {
     static Logger* globalLogger = &getMultiLogger();
     return &globalLogger;
 }
-Logger* getGlobalLogger() noexcept {
-    return *getGlobalLoggerRef();
 }
 void setGlobalLogger(Logger* logger) noexcept {
     *getGlobalLoggerRef() = logger;
+}
+Logger* getGlobalLogger() noexcept {
+    return *getGlobalLoggerRef();
 }
 void closeGlobalLog() {
 #ifndef PROJECT_UNITTEST
@@ -207,9 +207,13 @@ void openGlobalLog(const String& logFileName) {
     getMultiLogger().addLogger(&getFileLogger());
 #endif
 }
-#define LOG_BUF_SIZE 4096
-#define MAX_LEN_FILENAME 512
+
 namespace Log {
+
+enum : int16_t {
+    LOG_BUF_SIZE = 4096,
+    MAX_LEN_FILENAME = 512
+};
 
 void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
     dbgassert(logger);
@@ -287,10 +291,10 @@ void __attribute__((constructor(1000))) C_logger_init()
 }
 #endif
 
-static bool failedAssert = false;
+static bool g_FailedAssert = false;
 void C_failedAssert(const char* expr, const char* file, int line) noexcept {
-    if (!failedAssert) {
-        failedAssert = true;
+    if (!g_FailedAssert) {
+        g_FailedAssert = true;
         ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
         logStackTrace();
     }
@@ -302,8 +306,8 @@ void CPP_failedAssert(const char* expr, const char* file, int line) {
     if (daw_test::testThrowAssertEnabled) {
         throw daw_test::failed_assert_exception(StringAsCStr(StringFormat("Assertion failed: %s", expr)));
     }
-    if (!failedAssert) {
-        failedAssert = true;
+    if (!g_FailedAssert) {
+        g_FailedAssert = true;
         ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
         logStackTrace();
     }
