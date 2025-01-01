@@ -37,5 +37,6 @@ int main(int argc, char* argv[]) {
     vecArgs.insert(vecArgs.end(), { "--log", "gui.log" });
     // vecArgs.insert(vecArgs.end(), { "--screen", "1" });
     vecArgs.insert(vecArgs.end(), { "--app", "0" });
+    vecArgs.insert(vecArgs.end(), { "--timeout", "10" });
     return startApplication(vecArgs, testAppInstance);
 }

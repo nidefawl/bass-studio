@@ -43,7 +43,9 @@ class TestAppCtrl : public AppCtrl {
     hires_timer_t timer;
     seq_rand rand;
     int32_t preselectedApp = FIXED_APP_TYPE;
+    int64_t appTimeoutSeconds = -1;
     bool bDrawBackbuffer = false;
+    int64_t tmStart = 0;
 public:
     static TestAppCtrl* get();
 

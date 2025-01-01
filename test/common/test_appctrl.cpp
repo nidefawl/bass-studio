@@ -253,6 +253,10 @@ void TestAppCtrl::initApp(const std::vector<String>& args) {
             preselectedApp = atoi(StringAsCStr(args[i + 1]));
             i++;
         }
+        if (args[i] == "--timeout" && i + 1 < args.size()) {
+            appTimeoutSeconds = atoi(StringAsCStr(args[i + 1]));
+            i++;
+        }
     }
     auto& tls = daw_tls::initNewTls();
     loadSettings(*tls.settings);
@@ -290,6 +294,11 @@ void TestAppCtrl::onTick() {
         ctr->onTick(this);
     }
     mainWindow->requestRedraw();
+    if (tmStart == 0) {
+        tmStart = getTimeMillis();
+    } else if (getTimeMillis() - tmStart > appTimeoutSeconds * 1000) {
+        mainWindow->requestClose();
+    }
 }
 
 void TestAppCtrl::relayout(int32_t w, int32_t h) {
