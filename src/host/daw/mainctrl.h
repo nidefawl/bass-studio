@@ -74,6 +74,7 @@ class appwindow_main;
 class DawViewContainers;
 class DawViewContainersMain;
 class track_gui_manager_i;
+class track_gui_manager_t;
 
 enum clip_dragtype_t {
     DRAG_NONE,
@@ -810,6 +811,7 @@ protected:
     std::array<dawview_layout_t, 10> layouts;
     SafeRef<guibase> guiEditModulation;
     size_t statsTickDelay = 0;
+    track_gui_manager_t* trackGuis = nullptr;
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;

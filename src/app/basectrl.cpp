@@ -139,12 +139,19 @@ void BaseCtrl::focusGui(guibase* gui) {
         return;
     }
     guibase* oldFocused = getGuiFocused();
+    guibase* oldFocusedCtr = getGuiCtrFocused();
     guibase* newFocus   = gui != nullptr ? gui->getFocusedControl() : nullptr;
     auto newFocusedCtr  = gui != nullptr ? gui->getFocusedContainer() : nullptr;
-    if (!newFocusedCtr) {
-        guiCtrFocused = {};
-    } else {
-        guiCtrFocused = newFocusedCtr->toRef();
+    if (oldFocusedCtr != newFocusedCtr) {
+        MouseHitEvt evt(MouseHitType::MOUSE_LEFT, KeyboardMods::KB_MODS_NONE);
+        if (oldFocusedCtr) {
+            oldFocusedCtr->focusEvent(evt, false);
+        }
+        if (newFocusedCtr && newFocusedCtr->focusEvent(evt, true)) {
+            guiCtrFocused = newFocusedCtr->toRef();
+        } else if (!newFocus) {
+            guiCtrFocused = {};
+        }
     }
     if (oldFocused != newFocus) {
         MouseHitEvt evt(MouseHitType::MOUSE_LEFT, KeyboardMods::KB_MODS_NONE);
@@ -182,12 +189,19 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool d
     }
 
     guibase* oldFocused = getGuiFocused();
+    guibase* oldFocusedCtr = getGuiCtrFocused();
     guibase* newFocus   = gui != nullptr ? gui->getFocusedControl() : nullptr;
     auto newFocusedCtr  = gui != nullptr ? gui->getFocusedContainer() : nullptr;
-    if (!newFocusedCtr) {
-        guiCtrFocused = {};
-    } else {
-        guiCtrFocused = newFocusedCtr->toRef();
+    if (oldFocusedCtr != newFocusedCtr) {
+        MouseHitEvt evt(MouseHitType::MOUSE_LEFT, KeyboardMods::KB_MODS_NONE);
+        if (oldFocusedCtr) {
+            oldFocusedCtr->focusEvent(evt, false);
+        }
+        if (newFocusedCtr && newFocusedCtr->focusEvent(evt, true)) {
+            guiCtrFocused = newFocusedCtr->toRef();
+        } else if (!newFocus) {
+            guiCtrFocused = {};
+        }
     }
     if (oldFocused != newFocus) {
         if (oldFocused) {

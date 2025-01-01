@@ -351,6 +351,15 @@ public:
         }
         return lvl;
     }
+    bool isChildOf(const track_t* tr) const {
+        auto p = parent;
+        while (p) {
+            if (p == tr)
+                return true;
+            p = p->parent;
+        }
+        return false;
+    }
     void updateAudioClipLengths(int32_t bpm100, samplerate_t oldSampleRate, samplerate_t newSampleRate);
 };
 struct trackcontainer_snapshot_t;

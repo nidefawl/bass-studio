@@ -227,3 +227,19 @@ public:
     void handleRightClick(MouseEvent& evt) override {
     }
 };
+
+class guictxtmenu_track final : public guictxtmenu {
+    track_gui_entry_t* const m_trackentry;
+    ctxtmenu_entry* cmdPickColor;
+    ctxtmenu_entry* cmdDuplicateTrack;
+    ctxtmenu_entry* cmdRenameTrack;
+    ctxtmenu_entry* cmdShowAllAutomation;
+    ctxtmenu_entry* cmdReactivateAutomation;
+    ctxtmenu_entry* cmdShowWaveform;
+    ctxtmenu_entry* cmdAddChildMidiTrack;
+    ctxtmenu_entry* cmdDeleteTrack;
+public:
+    guictxtmenu_track(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry);
+    ~guictxtmenu_track() override = default;
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
+};

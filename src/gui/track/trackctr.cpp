@@ -116,6 +116,9 @@ int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
 }
 
 int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom) {
+    if (!assert_expr(e->trackContent)) {
+        return 0;
+    }
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
     int32_t childTrackInsetX = e->track->getChildLvl() * 8;
@@ -169,12 +172,12 @@ void guictr_tracks::showAutomationLane(track_gui_entry_t* entry, automatable_t* 
 
 void guictr_tracks::addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack, bool insertFront) {
     trackEditor.addSubtrack(entry, subtrack, insertFront);
-    entry->trackControls->addSubtrackMixer(entry, subtrack);
+    if (entry->trackControls) entry->trackControls->addSubtrackMixer(entry, subtrack);
 }
 
 void guictr_tracks::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack) {
     trackEditor.removeSubtrack(entry, subtrack);
-    entry->trackControls->removeSubtrackMixer(subtrack);
+    if (entry->trackControls) entry->trackControls->removeSubtrackMixer(subtrack);
 }
 
 gui_track_automationlane* guictr_tracks::addAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx, bool insertFront) {
@@ -186,22 +189,22 @@ gui_track_automationlane* guictr_tracks::addAutomationLane(track_gui_entry_t* en
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
     track_gui_entry_t* entry = nullptr;
     always_assert(guiMgr.getTrackEntry(al->m_track, &entry));
-    entry->trackControls->removeSubtrackMixer(al);
+    if (entry->trackControls) entry->trackControls->removeSubtrackMixer(al);
     trackEditor.removeSubtrack(entry, al);
 }
 
 void guictr_tracks::removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx) {
-    entry->trackControls->removeAllAutomationLanes(at, paramIdx);
+    if (entry->trackControls) entry->trackControls->removeAllAutomationLanes(at, paramIdx);
     trackEditor.removeAllAutomationLanes(entry, at, paramIdx);
 }
 
 void guictr_tracks::removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at) {
-    entry->trackControls->removeAllAutomationLanes(at);
+    if (entry->trackControls) entry->trackControls->removeAllAutomationLanes(at);
     trackEditor.removeAllAutomationLanes(entry, at);
 }
 
 void guictr_tracks::removeAllSubtracks(track_gui_entry_t* entry) {
-    entry->trackControls->removeAllSubtracks();
+    if (entry->trackControls) entry->trackControls->removeAllSubtracks();
     trackEditor.removeAllSubtracks(entry);
 }
 
@@ -766,11 +769,10 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
 }
 
 void guitrack_controls::handleRightClick(MouseEvent& evt) {
-    auto ctrTracks = guiParentType<guictr_tracks, gui_type::CTR_TYPE_TRACKS>(this->parent);
-    if (!assert_expr(ctrTracks)) {
+    if (!assert_expr(dawCtrl)) {
         return;
     }
-    parentCtrl->openContextMenu(new guictxtmenu_notrack(ctrTracks), evt.mousepos);
+    parentCtrl->openContextMenu(new guictxtmenu_notrack(dawCtrl), evt.mousepos);
 }
 
 void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom) {
@@ -1322,12 +1324,11 @@ bool guictr_tracks::fileDropRelease(dragdrop_file& clip, ivec2 mousepos, Keyboar
     return false;
 }
 
-void guictr_tracks::trackEntryDragMove(gui_track_content* g, ivec2 mousepos) {
-    DAW::SetDragDropTrackInidicatorFromMousePos(this, trackControls.toContainerSpace(mousepos), g->m_trackentry->track->name, true);
+void guictr_tracks::trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) {
+    DAW::SetDragDropTrackInidicatorFromMousePos(this, trackControls.toContainerSpace(mousepos), trackEntry->track->name, true);
 }
 
-void guictr_tracks::trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) {
-    auto trackEntry = g->getTrackEntry();
+void guictr_tracks::trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) {
     DAW::gui_track_drop_position_t slot = DAW::GetTrackSlotFromCoord(this, trackControls.toContainerSpace(mousepos), true);
     DAW::MoveTrackToSlot(parent->dawCtrl->getDaw(), trackEntry->track, slot);
 }

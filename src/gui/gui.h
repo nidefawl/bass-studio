@@ -29,6 +29,7 @@ class gui_track_content;
 class scaled_grid;
 struct guitheme_t;
 struct dragdrop_file;
+struct track_gui_entry_t;
 namespace RenderResources {
     struct NvgImageTexture;
 }
@@ -450,9 +451,9 @@ public:
     }
     virtual void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
     }
-    virtual void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) {
+    virtual void trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) {
     }
-    virtual void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) {
+    virtual void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) {
     }
     virtual void clipDragMove(gui_clip* g, ivec2 mousepos) {
     }

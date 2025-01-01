@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "host/daw/mainctrl.h"
 #include "math/vec.h"
 #include "event.h"
 #include "gui/gui.h"
@@ -33,8 +34,8 @@ public:
 };
 class guictxtmenu_notrack final : public guictxtmenu {
 public:
-    explicit guictxtmenu_notrack(guictr_tracks* const _editor) {
-        dawCtrl = _editor->dawCtrl;
+    explicit guictxtmenu_notrack(DawCtrl* _dawCtrl) {
+        dawCtrl = _dawCtrl;
         this->size.x = 190;
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_INSERT_AUDIO_TRACK));

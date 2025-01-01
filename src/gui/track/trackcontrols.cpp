@@ -93,7 +93,16 @@ namespace DAW {
             trackEntry->track->name = str;
             return false;
         };
-        auto title       = trackentry->trackControls->getTitle();
+        guibase* title = nullptr;
+        if (trackentry->trackControls) {
+            title = trackentry->trackControls->getTitle();
+        }
+        if (trackentry->trackMixerTitle) {
+            title = trackentry->trackMixerTitle;
+        }
+        if (!title) {
+            return;
+        }
         auto popupPos    = title->toScreenSpace(ivec2(0));
         OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
     }
@@ -1113,7 +1122,6 @@ public:
           automationSelectDevice(_entry),
           automationSelectParam(_entry) {
         setGuiType(gui_type::CTR_TYPE_TRACK_TITLE);
-        setDragRendered(true);
         setCanMouseHit(true);
         hideTrack.setRadius(12);
         hideAutomation.setRadius(10);
@@ -1194,8 +1202,7 @@ public:
         }
     }
     bool isResize(ivec2 mpos) {
-        int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
-        return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - DRAG_RANGE/2 && mpos.y < resizeTopOrBottom + DRAG_RANGE/2;
+        return mpos.x >= left() && mpos.x < right() && mpos.y >= bottom() - DRAG_RANGE/2 && mpos.y < bottom() + DRAG_RANGE/2;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (isResize(mpos)) {
@@ -1306,10 +1313,10 @@ public:
         }
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
-        target->trackEntryDragMove(this->m_trackentry->trackContent, toControlsObjectSpace(mousepos, target));
+        target->trackEntryDragMove(this->m_trackentry, toControlsObjectSpace(mousepos, target));
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-        target->trackEntryDragRelease(this->m_trackentry->trackContent, toControlsObjectSpace(mousepos, target));
+        target->trackEntryDragRelease(this->m_trackentry, toControlsObjectSpace(mousepos, target));
     }
     void handleRightClick(MouseEvent& evt) override {
         parent->handleRightClick(evt);
@@ -1488,7 +1495,7 @@ void gui_track_control::removeAllSubtracks() {
     }
     automationLaneControls.clear();
 }
-void gui_track_control::renderGroupHandle(NVGcontext* vg) {//TODO: make const, have fun
+void gui_track_control::renderGroupHandle(NVGcontext* vg) {
     auto lvl = m_track->getChildLvl();
     auto p   = m_track->parent;
     while (p) {
@@ -1507,7 +1514,7 @@ void gui_track_control::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
-    auto bgColor     = theme->getColor(GuiColor::COL_BG_BRT);
+    auto bgColor = theme->getColor(GuiColor::COL_BG_BRT);
     if (dawCtrl->getSelectedTrack() == m_track) {
         bgColor = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK);
     }
@@ -1928,168 +1935,161 @@ void gui_track_control::handleDraggedMove(MouseEvent& evt) {
         }
     }
 }
-class guictxtmenu_track final : public guictxtmenu {
-    track_gui_entry_t* const m_trackentry;
-    ctxtmenu_entry* cmdPickColor;
-    ctxtmenu_entry* cmdDuplicateTrack;
-    ctxtmenu_entry* cmdRenameTrack;
-    ctxtmenu_entry* cmdShowAllAutomation;
-    ctxtmenu_entry* cmdReactivateAutomation;
-    ctxtmenu_entry* cmdShowWaveform;
-    ctxtmenu_entry* cmdAddChildMidiTrack;
-    ctxtmenu_entry* cmdDeleteTrack;
-public:
-    guictxtmenu_track(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry)
-        : guictxtmenu(),
-          m_trackentry(trackentry) {
-        this->size.x  = 260;
-        this->maxHeight = 0;
-        this->dawCtrl = _dawCtrl;
-        addEntry(cmdDuplicateTrack = new ctxtmenu_entry("Duplicate Track", 1));
-        addEntry(cmdRenameTrack = new ctxtmenu_entry("Rename Track", 6));
-        addEntry(cmdDeleteTrack = new ctxtmenu_entry("Delete Track", 2));
-        addEntry(new ctxtmenu_splitter());
-        addEntry(cmdShowAllAutomation = new ctxtmenu_entry("Show all automation", 0));
-        addEntry(cmdShowWaveform = new ctxtmenu_entry("Show waveform", 5));
-        addEntry(cmdReactivateAutomation = new ctxtmenu_entry("Reactivate all automation", 7));
-        addEntry(new ctxtmenu_splitter());
-        addEntry(cmdPickColor = new ctxtmenu_color_select("Pick Color", 100));
-        _dawCtrl->setSelectedTrack(m_trackentry->track);
-        addEntry(new ctxtmenu_splitter());
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_EXPORT_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_IMPORT_TRACK));
-        addEntry(new ctxtmenu_splitter());
-        addEntry(cmdAddChildMidiTrack = new ctxtmenu_entry("Add child MIDI Track", 4));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_AUDIO_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_RETURN_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MASTER_TRACK));
-    }
-    ~guictxtmenu_track() override = default;
-    bool clickedElement(ctxtmenu_entry* e, int _id) override {
-        if (e->commandtype != GlobalCommandType::CMD_NONE) {
-            auto ctxt = DAW::UI::CommandContext{e->commandtype};
-            closeContextMenu();
-            if (m_trackentry->parent->handleEditorCommand(ctxt)) {
-                return true;
-            }
-            dawCtrl->handleGlobalCommand(ctxt);
-            return true;
-        }
-        auto const daw    = dawCtrl->getDaw();
-        ThreadLock lock   = daw->lockPlayThread();
-        track_t* const tr = m_trackentry->track;
-        if (_id >= cmdPickColor->id) {
-            _id -= cmdPickColor->id;
-            if (tr) {
-                tr->rgb = colorPalette[_id];
-                bool bUpdateClips = isShift(parentCtrl->lastMouseEvent.kbmods);
-                if (bUpdateClips) {
-                    for (auto& clip : tr->getClips().getClips()) {
-                        clip->rgb = tr->rgb;
-                    }
-                }
-            }
-        } else if (_id == cmdReactivateAutomation->id) {
-            if (tr) {
-                std::vector<automatable_t*> targets;
-                tr->audio->getAutomatableTrackTargets(targets);
-                for (automatable_t* atl : targets) {
-                    atl->visitAutomatedParams([](auto& param) {
-                        param.src.active = true;
-                    });
-                }
-            }
-        } else if (_id == cmdShowAllAutomation->id) {
-            gui_track_automationlane* gtr_at = nullptr;
-            if (tr) {
-                m_trackentry->layout.hideTrack     = false;
-                m_trackentry->layout.hideSubtracks = false;
-                updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
-                auto trCtr = m_trackentry->parent;
-                trCtr->removeAllSubtracks(m_trackentry);
-                std::vector<automatable_t*> targets;
-                tr->audio->getAutomatableTrackTargets(targets);
-                for (automatable_t* atl : targets) {
-                    std::vector<int32_t> automated;
-                    atl->getAutomated(automated);
-                    for (int32_t param : automated) {
-                        gtr_at = trCtr->addAutomationLane(m_trackentry, atl, param, true);
-                    }
-                }
-            }
-            if (gtr_at) {
-                dawCtrl->updateVisibleTrackContents();
-                m_trackentry->parent->scrollTo(gtr_at);
-            }
-        } else if (_id == cmdDuplicateTrack->id) {
-            if (tr) {
-                track_t* newTrack = daw->createNewTrack(tr->type);
-                String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
-                track_snapshot_t trSnap(tr, tracksnapshot_store_opts_t::All());
-                DAW::assignFreeStageIdsTrackSnapshot(daw->getPluginManager(), trSnap);
-                
-                // trSnap.stageIds.inputStageId = -1;
-                *newTrack                    = trSnap;
-                daw->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER, loadTrackIdSnapshot(trSnap.stageIds));
-                track_gui_entry_t* entry{};
-                if (m_trackentry->parent->getTrackEntry(tr, &entry)) {
-                    auto pos =  DAW::gui_track_drop_position_t{
-                        .slot = tr->localIdxFlat + 1,
-                        .droppedTrack = m_trackentry->track,
-                        .droptype =  DAW::gui_track_drop_position_t::drop_type::track_after,
-                        .pos = m_trackentry->trackControls->getLeftBottom()
-                    };
-                    DAW::MoveTrackToSlot(daw, newTrack, pos);
-                    newTrack->loadSnapshot(daw->getHost(), trSnap);
-                    newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), strNewName);
-                    //ensure unique IDs
-                    daw->onPluginsChanged();
-                    dbgassert(daw->getPluginManager()->validateIds());
-                    entry->parent->layout();
-                    daw->updateVisibleTrackContents();
-                    entry->parent->scrollTo(entry->trackContent);
-                }
-            }
-        } else if (_id == cmdDeleteTrack->id) {
-            daw->removeTrackId(m_trackentry->track->projectIdx);
-            daw->updateVisibleTrackContents();
-        } else if (_id == cmdAddChildMidiTrack->id) {
-            auto trackCtr     = m_trackentry->parent;
-            track_t* newTrack = daw->createNewTrack(tr->type);
-            tr->addChild(newTrack);
-            daw->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
-            newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), tr->name);
-            daw->updateVisibleTrackContents();
-            track_gui_entry_t* entry{};
-            if (trackCtr->getTrackEntry(newTrack, &entry)) {
-                trackCtr->scrollTo(entry->trackContent);
-            }
-        } else if (_id == cmdRenameTrack->id) {
-            DAW::OpenRenameTrackPopup(dawCtrl, m_trackentry);
-            return true;
-        } else if (_id == cmdShowWaveform->id) {
-            auto trackCtr = m_trackentry->parent;
-            bool isShown = (tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE;
-            if (isShown) {
-                tr->audio->flags &= ~(audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT);
-                std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
-                for (auto subtrack : subtracksVecCopy) {
-                    if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
-                        trackCtr->removeSubtrack(m_trackentry, subtrack);
-                    }
-                }
-            } else {
-                tr->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT;
-                auto gui = makeGuiSubtrack(m_trackentry, m_trackentry->parent->getGrid(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-                trackCtr->addSubTrack(m_trackentry, gui, true);
-            }
-            daw->updateVisibleTrackContents();
-        }
+
+bool guictxtmenu_track::clickedElement(ctxtmenu_entry* e, int _id) {
+    if (e->commandtype != GlobalCommandType::CMD_NONE) {
+        auto ctxt = DAW::UI::CommandContext{ e->commandtype };
         closeContextMenu();
+        if (m_trackentry->parent->handleEditorCommand(ctxt)) {
+            return true;
+        }
+        dawCtrl->handleGlobalCommand(ctxt);
         return true;
     }
-};
+    auto const daw    = dawCtrl->getDaw();
+    ThreadLock lock   = daw->lockPlayThread();
+    track_t* const tr = m_trackentry->track;
+    if (_id >= cmdPickColor->id) {
+        _id -= cmdPickColor->id;
+        if (tr) {
+            tr->rgb           = colorPalette[_id];
+            bool bUpdateClips = isShift(parentCtrl->lastMouseEvent.kbmods);
+            if (bUpdateClips) {
+                for (auto& clip : tr->getClips().getClips()) {
+                    clip->rgb = tr->rgb;
+                }
+            }
+        }
+    } else if (_id == cmdReactivateAutomation->id) {
+        if (tr) {
+            std::vector<automatable_t*> targets;
+            tr->audio->getAutomatableTrackTargets(targets);
+            for (automatable_t* atl : targets) {
+                atl->visitAutomatedParams([](auto& param) {
+                    param.src.active = true;
+                });
+            }
+        }
+    } else if (_id == cmdShowAllAutomation->id) {
+        gui_track_automationlane* gtr_at = nullptr;
+        if (tr) {
+            m_trackentry->layout.hideTrack     = false;
+            m_trackentry->layout.hideSubtracks = false;
+            updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
+            auto trCtr = m_trackentry->parent;
+            trCtr->removeAllSubtracks(m_trackentry);
+            std::vector<automatable_t*> targets;
+            tr->audio->getAutomatableTrackTargets(targets);
+            for (automatable_t* atl : targets) {
+                std::vector<int32_t> automated;
+                atl->getAutomated(automated);
+                for (int32_t param : automated) {
+                    gtr_at = trCtr->addAutomationLane(m_trackentry, atl, param, true);
+                }
+            }
+        }
+        if (gtr_at) {
+            dawCtrl->updateVisibleTrackContents();
+            m_trackentry->parent->scrollTo(gtr_at);
+        }
+    } else if (_id == cmdDuplicateTrack->id) {
+        if (tr) {
+            track_t* newTrack = daw->createNewTrack(tr->type);
+            String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
+            track_snapshot_t trSnap(tr, tracksnapshot_store_opts_t::All());
+            DAW::assignFreeStageIdsTrackSnapshot(daw->getPluginManager(), trSnap);
+
+            // trSnap.stageIds.inputStageId = -1;
+            *newTrack = trSnap;
+            daw->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER, loadTrackIdSnapshot(trSnap.stageIds));
+            track_gui_entry_t* entry{};
+            if (m_trackentry->parent->getTrackEntry(tr, &entry)) {
+                auto pos = DAW::gui_track_drop_position_t{
+                    .slot         = tr->localIdxFlat + 1,
+                    .droppedTrack = m_trackentry->track,
+                    .droptype     = DAW::gui_track_drop_position_t::drop_type::track_after,
+                    .pos          = { 0, 0 }
+                };
+                if (m_trackentry->trackControls) {
+                    pos.pos = m_trackentry->trackControls->getLeftBottom();
+                }
+                DAW::MoveTrackToSlot(daw, newTrack, pos);
+                newTrack->loadSnapshot(daw->getHost(), trSnap);
+                newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), strNewName);
+                //ensure unique IDs
+                daw->onPluginsChanged();
+                dbgassert(daw->getPluginManager()->validateIds());
+                entry->parent->layout();
+                daw->updateVisibleTrackContents();
+                entry->parent->scrollTo(entry->trackContent);
+            }
+        }
+    } else if (_id == cmdDeleteTrack->id) {
+        daw->removeTrackId(m_trackentry->track->projectIdx);
+        daw->updateVisibleTrackContents();
+    } else if (_id == cmdAddChildMidiTrack->id) {
+        auto trackCtr     = m_trackentry->parent;
+        track_t* newTrack = daw->createNewTrack(tr->type);
+        tr->addChild(newTrack);
+        daw->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
+        newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), tr->name);
+        daw->updateVisibleTrackContents();
+        track_gui_entry_t* entry{};
+        if (trackCtr->getTrackEntry(newTrack, &entry)) {
+            trackCtr->scrollTo(entry->trackContent);
+        }
+    } else if (_id == cmdRenameTrack->id) {
+        DAW::OpenRenameTrackPopup(dawCtrl, m_trackentry);
+        return true;
+    } else if (_id == cmdShowWaveform->id) {
+        auto trackCtr = m_trackentry->parent;
+        bool isShown  = (tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE;
+        if (isShown) {
+            tr->audio->flags &= ~(audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT);
+            std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
+            for (auto subtrack : subtracksVecCopy) {
+                if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
+                    trackCtr->removeSubtrack(m_trackentry, subtrack);
+                }
+            }
+        } else {
+            tr->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT;
+            auto gui = makeGuiSubtrack(m_trackentry, m_trackentry->parent->getGrid(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+            trackCtr->addSubTrack(m_trackentry, gui, true);
+        }
+        daw->updateVisibleTrackContents();
+    }
+    closeContextMenu();
+    return true;
+}
+
+guictxtmenu_track::guictxtmenu_track(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry)
+    : guictxtmenu(),
+      m_trackentry(trackentry) {
+    this->size.x    = 260;
+    this->maxHeight = 0;
+    this->dawCtrl   = _dawCtrl;
+    addEntry(cmdDuplicateTrack = new ctxtmenu_entry("Duplicate Track", 1));
+    addEntry(cmdRenameTrack = new ctxtmenu_entry("Rename Track", 6));
+    addEntry(cmdDeleteTrack = new ctxtmenu_entry("Delete Track", 2));
+    addEntry(new ctxtmenu_splitter());
+    addEntry(cmdShowAllAutomation = new ctxtmenu_entry("Show all automation", 0));
+    addEntry(cmdShowWaveform = new ctxtmenu_entry("Show waveform", 5));
+    addEntry(cmdReactivateAutomation = new ctxtmenu_entry("Reactivate all automation", 7));
+    addEntry(new ctxtmenu_splitter());
+    addEntry(cmdPickColor = new ctxtmenu_color_select("Pick Color", 100));
+    _dawCtrl->setSelectedTrack(m_trackentry->track);
+    addEntry(new ctxtmenu_splitter());
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_EXPORT_TRACK));
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_IMPORT_TRACK));
+    addEntry(new ctxtmenu_splitter());
+    addEntry(cmdAddChildMidiTrack = new ctxtmenu_entry("Add child MIDI Track", 4));
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_AUDIO_TRACK));
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_RETURN_TRACK));
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MASTER_TRACK));
+}
+
 
 void gui_track_control::handleRightClick(MouseEvent& evt) {
     m_trackentry->parentCtrl->openContextMenu(new guictxtmenu_track(dawCtrl, this->m_trackentry), evt.mousepos);

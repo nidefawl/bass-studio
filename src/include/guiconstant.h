@@ -24,6 +24,7 @@ namespace GuiConstant {
 
     extern constant_t CONST_PLUGIN_TITLE_HEIGHT;
     extern constant_t CONST_TRACK_HEIGHT_STEP;
+    extern constant_t CONST_MIXER_SIZE_STEP;
     extern constant_t CONST_METER_WIDTH;
     extern constant_t CONST_FIXED_TITLE_HEIGHT;
     extern constant_t CONST_FONT_SCALE;

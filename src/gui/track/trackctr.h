@@ -691,8 +691,8 @@ public:
     }
     void resetView();
 
-    void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) override;
-    void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) override;
+    void trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) override;
+    void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override;
 
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;

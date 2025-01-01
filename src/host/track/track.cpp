@@ -374,7 +374,9 @@ void effectbase::breakTrackLink() {
         if (track && track->getStage()) {
             for (auto& trackentry : track->getStage()->guiInstances) {
                 trackentry->state.selectedAutomationCtr = nullptr;
-                trackentry->parent->removeAllAutomationLanes(trackentry, this);
+                if (assert_expr(trackentry->parent)) {
+                    trackentry->parent->removeAllAutomationLanes(trackentry, this);
+                }
             }
         }
     }
@@ -403,7 +405,9 @@ bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase**
             if (stageUI) {
                 for (auto trackentry : stageUI->guiInstances) {
                     trackentry->state.selectedAutomationCtr = nullptr;
-                    trackentry->parent->removeAllAutomationLanes(trackentry, cur);
+                    if (assert_expr(trackentry->parent)) {
+                        trackentry->parent->removeAllAutomationLanes(trackentry, cur);
+                    }
                 }
             }
         }

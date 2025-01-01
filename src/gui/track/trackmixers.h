@@ -182,17 +182,5 @@ public:
         return guiMgr.isVisible(entry);
     }
     void resetView();
-     /*void loadTrackLayouts(trackcontainer_snapshot_t& in);
-
-    void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) override;
-    void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) override;
-
-    void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
-    void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
-    void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
-    void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
-
-    bool fileDropMove(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-    bool fileDropRelease(dragdrop_file& clip, ivec2 mousepos, KeyboardMods kbmods) override;
-*/
+    void handleRightClick(MouseEvent& evt) override;
 };

@@ -216,10 +216,10 @@ public:
         return gui_list_entry::mouseHitTest(mpos, evt);
     }
 
-    void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) override {
+    void trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
     }
-    void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) override;
+    void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override;
     void clipDragMove(gui_clip* g, ivec2 mousepos) override {
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
     }
@@ -270,15 +270,15 @@ public:
         : gui_filebrowser_folder_entry(f, bIsOpened) {
         icon = bIsOpened ? ICON_FOLDER_OPEN : ICON_FOLDER;
     }
-    void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) override {
+    void trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         auto clipboard = dawCtrl->getDaw()->getDragDropClip();
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
         clipboard.isValidTarget = true;
         clipboard.target = makeSafeRef();
     }
-    void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) override {
+    void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         String pathFile;
-        if (ExportTrackToFile(dawCtrl->getDaw(), g->getTrack(), getPathAbs(), pathFile)) {
+        if (ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getPathAbs(), pathFile)) {
             if (!pathFile.empty()) {
                 auto popupPos = this->toScreenSpace(ivec2(0));
                 auto popupSize = this->size;
@@ -409,12 +409,12 @@ public:
         return new gui_filebrowser_file_entry(f);
     }
 
-    void trackEntryDragMove(gui_track_content* g, ivec2 mousepos) override {
+    void trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t::TargetArea(this);
     }
-    void trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) override {
+    void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         String pathFile;
-        if (ExportTrackToFile(dawCtrl->getDaw(), g->getTrack(), getWorkingDirAbsPath(), pathFile)) {
+        if (ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getWorkingDirAbsPath(), pathFile)) {
             if (!pathFile.empty()) {
                 auto popupPos = this->toScreenSpace(ivec2(0));
                 auto popupSize = this->size;
@@ -812,9 +812,9 @@ public:
     }
 };
 
-void gui_userlibrary_list_entry_t::trackEntryDragRelease(gui_track_content* g, ivec2 mousepos) {
+void gui_userlibrary_list_entry_t::trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) {
     String pathFile;
-    if (ExportTrackToFile(dawCtrl->getDaw(), g->getTrack(), getPathAbs(), pathFile)) {
+    if (ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getPathAbs(), pathFile)) {
         if (!pathFile.empty()) {
             auto popupPos = this->toScreenSpace(ivec2(0));
             auto popupSize = this->size;
