@@ -48,7 +48,7 @@ public:
 
     T& push_back(const T& value) {
         const auto moduloSize = m_size % SEGMENT_SIZE;
-        if (moduloSize == 0) {
+        if (m_size == m_segments.size() * SEGMENT_SIZE) {
             m_segments.push_back(new Segment());
         }
         auto& entry = (*m_segments.back())[moduloSize];
