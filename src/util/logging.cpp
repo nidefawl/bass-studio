@@ -205,6 +205,8 @@ void openGlobalLog(const String& logFileName) {
     getFileLogger().openFile(logFileName);
     getFileLogger().logStr(Log::L_DEBUG, "Begin of logfile\n");
     getMultiLogger().addLogger(&getFileLogger());
+#else
+    (void)logFileName;
 #endif
 }
 
