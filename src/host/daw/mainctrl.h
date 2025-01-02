@@ -427,7 +427,8 @@ enum view_mode_t {
 namespace DAW {
 enum EditAreaType : uint32_t {
     EDIT_AREA_CLIP_EDITOR,
-    EDIT_AREA_PLUGIN_CONTAINER
+    EDIT_AREA_PLUGIN_CONTAINER,
+    EDIT_AREA_MIXER,
 };
 enum EditAreaLayout : uint32_t {
     EDIT_AREA_SINGLE = 0,
@@ -951,6 +952,7 @@ public:
     bool isPluginViewVisible();
     void showPluginView();
     void showClipEditor();
+    void showMixer();
     void setAsyncTask(DAW::async_task_t* task);
 
     view_mode_t getViewMode() const;

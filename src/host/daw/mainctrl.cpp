@@ -390,14 +390,14 @@ public:
         }
         return nullptr;
     }
-    SPLayoutEntry findByTagOrGuiType(GuiContainerTag tag, gui_type guitype) {
+    SPLayoutEntry findByTagOrGuiType(GuiContainerTag tag, gui_type guitype, bool bFindHidden = false) {
         SPLayoutEntry entries;
-        visitEntries([&entries, tag, guitype](SPLayoutEntry& entry) {
-            if (entry->getGui()->isVisible() && entry->getEntryTag() == tag) {
+        visitEntries([&entries, tag, guitype, bFindHidden](SPLayoutEntry& entry) {
+            if ((entry->getGui()->isVisible() || bFindHidden) && entry->getEntryTag() == tag) {
                 entries = entry;
                 return false;
             }
-            if (entry->getGui()->isVisible() && entry->getGui()->getGuiType() == guitype) {
+            if ((entry->getGui()->isVisible() || bFindHidden) && entry->getGui()->getGuiType() == guitype) {
                 entries = entry;
                 return false;
             }
@@ -460,9 +460,10 @@ public:
         ctr_Center->setHideHandlesWhenLocked(true);
 
         ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryTracks);
-        ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryMixers);
+        // ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryMixers);
         ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryNodes);
         ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryClipEdit);
+        ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryMixers);
         ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryPlugins);
         ctr_Center->addEntry(ctrCtrTop);
         ctr_Center->addEntry(ctrCtrBottom);
@@ -586,6 +587,11 @@ public:
                             activateEntry(ctrEntryClipEdit.get());
                         }
                         break;
+                    case DAW::EditAreaType::EDIT_AREA_MIXER:
+                        if (ctrEntryMixers->getParentContainer()) {
+                            activateEntry(ctrEntryMixers.get());
+                        }
+                        break;
                 }
                 if (ctrTabBottom) {
                     ctrTabBottom->getAsLayoutCtr()->setLayout(container_layout::TABBED);
@@ -619,6 +625,9 @@ public:
                 break;
             case DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR:
                 spShowEntry = findActiveClipEditor();
+                break;
+            case DAW::EditAreaType::EDIT_AREA_MIXER:
+                spShowEntry = ctrEntryMixers;
                 break;
         }
         if (!spShowEntry)
@@ -937,6 +946,10 @@ void DawCtrl::showPluginView() {
 
 void DawCtrl::showClipEditor() {
     setEditAreaType(DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR);
+}
+
+void DawCtrl::showMixer() {
+    setEditAreaType(DAW::EditAreaType::EDIT_AREA_MIXER);
 }
 
 void DawCtrl::setEditAreaType(DAW::EditAreaType editAreaType) {
@@ -1450,7 +1463,7 @@ void DawCtrl::dragContainerRelayout(drag_ctr_event evt) {
 }
 
 std::shared_ptr<guictr_tracks> DawCtrl::getTrackContainer() {
-    auto entry = view->findByTagOrGuiType(GuiContainerTag::TAG_TRACKS, gui_type::CTR_TYPE_TRACKS);
+    auto entry = view->findByTagOrGuiType(GuiContainerTag::TAG_TRACKS, gui_type::CTR_TYPE_TRACKS, true);
     if (entry) {
         return std::static_pointer_cast<guictr_tracks>(entry->getSharedGui());
     }
