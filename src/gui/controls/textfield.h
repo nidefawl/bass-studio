@@ -1,9 +1,8 @@
 #pragma once
 #include "gui/gui.h"
 #include "guicolors.h"
-#include "theme.h"
-#include <functional>
 #include "assert_dbg.h"
+#include <functional>
 
 class input_filter {
 public:
@@ -56,6 +55,7 @@ public:
 };
 
 class gui_textfield : public guibase {
+    const int32_t TEXT_INSET = 8;
 public:
     enum class Alignment {
         Left,
@@ -176,13 +176,9 @@ public:
     bool handleCharInput(uint32_t codepoint) override;
     bool canHandleCharInput(uint32_t codepoint);
 
-    virtual ivec2 preferredSize(NVGcontext* ctx) const;
-
-
     void beginEdit();
     void endEdit(bool success);
 
-    void layout() override;
     void render(NVGcontext* ctx) override;
     void updateTextLayout(NVGcontext* ctx);
     void renderTextField(NVGcontext* ctx) const;

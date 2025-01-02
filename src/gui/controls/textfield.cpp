@@ -1,11 +1,6 @@
 #include "textfield.h"
-#include <sstream>
-#include <iostream>
-#include <nanovg.h>
-#include <utfconv/utf.hpp>
-
-#include "logging.h"
 #include "math/seq_math.h"
+#include "seq_util.h"
 #include "theme.h"
 #include "str_util.h"
 #include "gui/gui.h"
@@ -15,25 +10,9 @@
 #include "keyboard.h"
 #include "guifonts.h"
 
-#define TEXTFIELD_USE_REGEX_PATTERN 0
-#if TEXTFIELD_USE_REGEX_PATTERN
-#include <regex>
-#endif
+#include <nanovg.h>
+#include <utfconv/utf.hpp>
 
-ivec2 gui_textfield::preferredSize(NVGcontext* ctx) const {
-    auto iH = math::ceilfS32(fontSize());
-    ivec2 size(0, iH);
-
-    float uw = 0;
-    if (!mUnits.empty()) {
-        uw = nvgTextBounds(ctx, 0, 0, mUnits.c_str(), nullptr, nullptr);
-    }
-    float sw = 0;
-
-    float ts = nvgTextBounds(ctx, 0, 0, mValue.c_str(), nullptr, nullptr);
-    size[0]  = size[1] + ts + uw + sw;
-    return size;
-}
 
 bool gui_textfield::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) return false;
@@ -48,8 +27,10 @@ bool gui_textfield::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 bool gui_textfield::handleKeyInput(KeyEvent& kevt) {
     return keyboardEvent(kevt.keyCode, 0, kevt.type, kevt.mods);
 }
+
 void gui_textfield::handleRightClick(MouseEvent& evt) {
 }
+
 void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
     ivec2 local = evt.relMousepos;
     if (editable()) {
@@ -72,37 +53,44 @@ void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
         m_tmLastClick = tmNow;
     }
 }
+
 void gui_textfield::handleDraggedMove(MouseEvent& evt) {
     mMouseDragPos     = evt.relMousepos;
     this->mTextOffset = -123123;
     if (editable() && mFocused) {
     }
 }
+
 void gui_textfield::handleDraggedRelease(MouseEvent& evt) {
     mMouseDownPos = ivec2(-1, -1);
     mMouseDragPos = ivec2(-1, -1);
 }
+
 void gui_textfield::onTextChange() {
     auto tempU8 = utf::as_str8(mValueTemp);
     if (mCallback && !mCallback(tempU8)) {
     }
 }
+
 void gui_textfield::onTextEndEdit() {
     auto tempU8 = utf::as_str8(mValueTemp);
     if (mCallbackEnd && !mCallbackEnd(tempU8)) {
         parentCtrl->closePopup();
     }
 }
-void setTfFont(NVGcontext* vg, const gui_textfield* tf) {
-    auto fs = tf->fontSize();
+
+void gui_textfield::render(NVGcontext* vg) {
+    auto fs = fontSize();
     auto fs2 = fs;
     if (fs2 <= 0.0f) {
-        fs2 = math::clamp(math::min(tf->size.y, tf->size.x), 4, 48) * FONT_AUTOSCALE;
+        fs2 = math::clamp(math::min(size.y, size.x), 4, 48) * FONT_AUTOSCALE;
     }
-    tf->theme->bindFont(vg, UIFont::FONT_TEXTFIELD);
-    auto fontScale = fs2 * tf->theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+    auto fontScale = math::roundfS32(fs2 * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+
+    theme->bindFont(vg, UIFont::FONT_TEXTFIELD);
     nvgFontSize(vg, fontScale);
-    switch (tf->alignment()) {
+
+    switch (alignment()) {
         case gui_textfield::Alignment::Left:
             nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             break;
@@ -113,20 +101,17 @@ void setTfFont(NVGcontext* vg, const gui_textfield* tf) {
             nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             break;
     }
-}
-void gui_textfield::layout() {
-}
-void gui_textfield::render(NVGcontext* ctx) {
+
     //TODO: find a better place to do this: font metrics require nano-vg context but should be calculated in drag/move on the fly
-    setTfFont(ctx, this);
-    updateTextLayout(ctx);
+    updateTextLayout(vg);
+
     if (!mCommitted) {
-        updateCursor(ctx, metrics.textBounds[2]);
+        updateCursor(vg, metrics.textBounds[2]);
         updateShiftCursorVisible();
     }
-    this->renderTextField(ctx);
+    this->renderTextField(vg);
 }
-#define X_SPACING 8.0f
+
 void gui_textfield::updateTextLayout(NVGcontext* ctx) {
     auto tempU8 = utf::as_str8(mValueTemp);
     nvgTextBounds(ctx, 0, 0, tempU8.c_str(), nullptr, metrics.textBounds);
@@ -136,10 +121,10 @@ void gui_textfield::updateTextLayout(NVGcontext* ctx) {
     if (metrics.glyphPositions.size() < mValueTemp.length()) {
         metrics.glyphPositions.resize(mValueTemp.length());
     }
-    metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, tempU8.c_str(), nullptr, metrics.glyphPositions.data(), metrics.glyphPositions.size());
-    metrics.numGlyphs = math::min<int>(metrics.numGlyphs, metrics.glyphPositions.size());
+    metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, tempU8.c_str(), nullptr, metrics.glyphPositions.data(), CtrSize(metrics.glyphPositions));
+    metrics.numGlyphs = math::min<int32_t>(metrics.numGlyphs, CtrSize(metrics.glyphPositions));
     
-    ivec2 insetPos(pos.x, pos.y + size.y * 0.5f + 1);
+    vec2 insetPos(pos.x, pos.y + size.y * 0.5f);
 
 
     float unitWidth = 0;
@@ -148,38 +133,29 @@ void gui_textfield::updateTextLayout(NVGcontext* ctx) {
         unitWidth = nvgTextBounds(ctx, 0, 0, mUnits.c_str(), nullptr, nullptr) + 2;
     }
 
-    float leftInset = 0.f;
     switch (mAlignment) {
         case Alignment::Left:
-            insetPos.x += X_SPACING + leftInset;
+            insetPos.x += TEXT_INSET;
             break;
         case Alignment::Right:
-            insetPos.x += size.x - unitWidth - X_SPACING;
+            insetPos.x += size.x - unitWidth - TEXT_INSET;
             break;
         case Alignment::Center:
             insetPos.x += size.x * 0.5f;
             break;
     }
 
-    drawPos  = insetPos;
-    clipPos  = { pos.x + X_SPACING + leftInset - 1.0f, pos.y + 1.0f };
-    clipSize = { size.x - unitWidth - leftInset - 2 * X_SPACING + 2.0f, size.y - 3.0f };
+    drawPos  = math::roundvecS32(insetPos);
+    clipPos  = { pos.x + TEXT_INSET, pos.y };
+    clipSize = { size.x - unitWidth - 2 * TEXT_INSET, size.y };
 }
+
 void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
     if (size.x * size.y < 10)
         return;
     int32_t fl = getStateFlags();
     renderWidgetBorder(ctx, fl);
-
-    /* nvgBeginPath(ctx);
-    nvgRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2);
-    if (editable() && mFocused)
-        nvgFillColor(ctx, theme->getColor(mValidFormat ? GuiColor::COL_BG_DRK_FOCUSED : GuiColor::COL_INVALID_INPUT));
-    else
-        nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
-    nvgFill(ctx); */
-
 
     // clip visible text area
     if (clipSize.x < 1 || clipSize.y < 1)
@@ -188,7 +164,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
     if (!mUnits.empty()) {
         nvgFillColor(ctx, mTextColorDisabled);
         nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        nvgText(ctx, pos.x + size.x - X_SPACING, drawPos.y, mUnits.c_str(), nullptr);
+        nvgText(ctx, pos.x + size.x - TEXT_INSET, drawPos.y, mUnits.c_str(), nullptr);
     }
     switch (alignment()) {
         case gui_textfield::Alignment::Left:
@@ -208,9 +184,9 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
 
     nvgSave(ctx);
-    nvgIntersectScissor(ctx, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
 
     if (mCommitted) {
+        nvgIntersectScissor(ctx, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
         nvgFillColor(ctx, mColor);
         nvgText(ctx, drawPos.x, drawPos.y, mValue.empty() ? mPlaceholder.c_str() : mValue.c_str(), nullptr);
     } else {
@@ -265,6 +241,7 @@ void gui_textfield::beginEdit() {
     }
     mValidFormat = (mValueTemp.empty()) || checkFormat(utf::as_str8(mValueTemp), mFormat);
 }
+
 void gui_textfield::endEdit(bool success) {
     if (success) {
         mValidFormat = (mValueTemp.empty()) || checkFormat(utf::as_str8(mValueTemp), mFormat);
@@ -285,8 +262,8 @@ void gui_textfield::endEdit(bool success) {
     mSelectionPos = -1;
     mTextOffset   = 0;
 }
+
 bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
-    std::string backup = mValue;
     mFocused           = focused;
     if (fnFocus) {
         fnFocus(evt, focused);
@@ -390,6 +367,7 @@ bool gui_textfield::keyboardEvent(KeyboardKey key, int /* scancode */, KeyboardS
 
     return false;
 }
+
 bool gui_textfield::canHandleCharInput(uint32_t codepoint) {
     if (editable()) {
         const bool bIsGlobalKey = parentCtrl->isGlobalKeybindCodepoint(codepoint);
@@ -450,6 +428,7 @@ bool gui_textfield::handleCharInput(uint32_t codepoint) {
 
     return false;
 }
+
 void gui_textfield::onChange() {
     mValidFormat = mValueTemp.empty() || checkFormat(utf::as_str8(mValueTemp), mFormat);
     if (filter) {
@@ -460,24 +439,9 @@ void gui_textfield::onChange() {
     }
     onTextChange();
 }
+
 bool gui_textfield::checkFormat(const std::string& input, const std::string& format) {
-#if TEXTFIELD_USE_REGEX_PATTERN
-    if (format.empty())
-        return true;
-    try {
-        std::regex regex(format);
-        return regex_match(input, regex);
-    } catch (const std::regex_error&) {
-#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
-        std::cerr << "Warning: cannot validate text field due to lacking regular expression support. please compile with GCC >= 4.9" << std::endl;
-        return true;
-#else
-        throw;
-#endif
-    }
-#else
     return true;
-#endif
 }
 
 bool gui_textfield::copySelectionString(std::string& output) {
@@ -494,6 +458,7 @@ bool gui_textfield::copySelectionString(std::string& output) {
 
     return false;
 }
+
 bool gui_textfield::copySelection() {
     if (mSelectionPos > -1) {
         int begin = mCursorPos;
@@ -516,7 +481,7 @@ void gui_textfield::pasteFromClipboard() {
         String str = parentCtrl->getClipboardText();
         auto u32str = utf::as_u32(str);
         mValueTemp.insert(mCursorPos, u32str);
-        mCursorPos += u32str.length();
+        mCursorPos += int32_t(u32str.length());
         onChange();
     }
 }
@@ -543,46 +508,23 @@ bool gui_textfield::deleteSelection() {
 
     return false;
 }
+
 void gui_textfield::updateShiftCursorVisible() {
-    // compute text offset
     int prevCPos = mCursorPos > 0 ? mCursorPos - 1 : 0;
     int nextCPos = mCursorPos < metrics.numGlyphs ? mCursorPos + 1 : metrics.numGlyphs;
     float prevCX = cursorIndex2Position(prevCPos, metrics.textBounds[2]);
     float nextCX = cursorIndex2Position(nextCPos, metrics.textBounds[2]);
 
-    switch (mAlignment) {
-        case Alignment::Left:
-            nextCX = nextCX + drawPos.x - clipPos.x;
-            prevCX = prevCX + drawPos.x - clipPos.x;
-            break;
-        case Alignment::Center:
-            nextCX = nextCX + drawPos.x - clipPos.x;
-            prevCX = prevCX + drawPos.x - clipPos.x;
-            break;
-        case Alignment::Right:
-            nextCX = nextCX + drawPos.x - clipPos.x;
-            prevCX = prevCX + drawPos.x - clipPos.x;
-            break;
-    }
+    nextCX = nextCX + drawPos.x - clipPos.x;
+    prevCX = prevCX + drawPos.x - clipPos.x;
     float mTextOffset = 0;
     if (nextCX > clipSize.x)
         mTextOffset -= nextCX - clipSize.x + 1;
     if (prevCX < 0)
         mTextOffset += 0 - prevCX + 1;
-    /* if (this->mTextOffset != mTextOffset) {
-        if (nextCX > clipSize.x)
-            log_printf("nextCX > clipSize.x %f > %f\n", nextCX, clipSize.x);
-        if (prevCX < 0)
-            log_printf("prevCX < 0 %f\n", prevCX);
-        log_printf("prevCPos %d\n", prevCPos);
-        log_printf("metrics.textBounds[2] %f\n", metrics.textBounds[2]);
-        log_printf("pos.x %f\n", (float) pos.x);
-        log_printf("drawPos.x %f\n", (float) drawPos.x);
-        log_printf("drawPos.x-pos.x %f\n", (float) (drawPos.x - pos.x));
-        log_printf("clipPos.x %f\n", (float) clipPos.x);
-    } */
     this->mTextOffset = mTextOffset;
 }
+
 void gui_textfield::updateCursor(NVGcontext*, float lastx) {
     // handle mouse cursor events
     if (mMouseDownPos.x != -1) {
@@ -632,6 +574,7 @@ int gui_textfield::position2CursorIndex(float posx, float lastx) const {
 
     return mCursorId;
 }
+
 std::string gui_textfield::getEditValue() const {
     if (!mCommitted) {
         return utf::as_str8(mValueTemp);
