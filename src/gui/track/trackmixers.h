@@ -90,7 +90,7 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
                     btnViews[0].drawParm = m_parent->bWideLayout ? ICON_ARR_RIGHT : ICON_ARR_LEFT;
                     track_gui_vector_td& tracks = m_parent->guiMgr.tracksVisibleFlat;
                     for (track_gui_entry_t* entry : tracks) {
-                        entry->layout.height = m_parent->bWideLayout ? 10 : 4;
+                        entry->layout.height = m_parent->bWideLayout ? 6 : 4;
                     }
                     m_parent->updateVisibleTracks();
                     m_parent->layout();

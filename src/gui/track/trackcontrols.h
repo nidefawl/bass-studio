@@ -1,4 +1,5 @@
 #pragma once
+#include "math/seq_math.h"
 #include "types.h"
 #include "gui/container/container.h"
 #include "host/track/track.h"
@@ -119,15 +120,7 @@ public:
         setRenderVerticalSlider(true);
     }
 
-    void layout() override {
-        gui_slider_gain::layout();
-        const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        setFontSize(TRACK_HEIGHT_STEP);
-        m_textLabelParamName.pos = { pos.x, pos.y };
-        m_textLabelParamName.size = { size.x, TRACK_HEIGHT_STEP };
-        m_textLabelParamValue.pos = { pos.x, pos.y + size.y - TRACK_HEIGHT_STEP };
-        m_textLabelParamValue.size = { size.x, TRACK_HEIGHT_STEP };
-    }
+    void layout() override;
 
     String getLabel() const override {
         return m_track->name;

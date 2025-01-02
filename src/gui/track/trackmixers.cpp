@@ -6,6 +6,7 @@
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "logging.h"
+#include "math/seq_math.h"
 #include "math/vec.h"
 #include "trackctr.h"
 #include "trackcontent.h"
@@ -367,7 +368,7 @@ void guictr_mixers::addTrack(track_t* track, int flags) {
     entry->trackMixerTitle = DAW::createTrackGuiMixerTitle(this, entry);
     entry->trackMixer->id = track->localIdxFlat;
     entry->trackMixerTitle->id = track->localIdxFlat;
-    entry->layout.height = bWideLayout ? 10 : 4;
+    entry->layout.height = bWideLayout ? 6 : 4;
 
     guiMgr.addTrack(entry);
     trackMixers.addTrackEntry(*entry);
@@ -538,16 +539,9 @@ namespace DAW {
             if (isBackgroundRendered()) {
                 renderBackground(vg);
             }
-            // renderGroupHandles(vg);
             if (!setScissorTransform(vg)) {
                 return;
             }
-            // auto cs = getSizeContent();
-            // auto trackRgb = rgbToNvg(m_track->rgb);
-            // nvgBeginPath(vg);
-            // nvgRect(vg, 0, 0, cs.x, cs.y);
-            // nvgFillColor(vg, trackRgb);
-            // nvgFill(vg);
             for (auto gui : guis) {
                 if (gui->isVisible()) {
                     nvgSave(vg);
@@ -633,38 +627,43 @@ namespace DAW {
                 project_t* project = dawCtrl->getDaw()->getProject();
                 dbgassert(project);
                 int32_t numReturnChannels = project->trackReturnCtr.size();
-                bool bShowPan = m_parent->bWideLayout;
+                bool bShowPan = m_trackentry->layout.height > 3;
                 if (!m_parent->bShowSends) {
                     numReturnChannels = 0;
                 }
                 float sendGainWidth = (csX);
                 for (int32_t i = 0; i < numReturnChannels; ++i) {
-                    auto wGain = bShowPan ? sendGainWidth*3/5 : sendGainWidth;
+                    auto wGain = bShowPan ? sendGainWidth*3/4 : sendGainWidth;
                     sendGains[i]->size = ivec2(wGain - i2, heightInner);
                     sendGains[i]->pos  = ivec2(inset, posY + inset);
                     if (bShowPan) {
-                        sendPans[i]->size = ivec2(sendGainWidth*2/5 - i2, heightInner);
-                        sendPans[i]->pos  = ivec2(inset + sendGainWidth*3/5, posY + inset);
+                        sendPans[i]->size = ivec2(sendGainWidth*1/4 - i2, heightInner);
+                        sendPans[i]->pos  = ivec2(inset + sendGainWidth*3/4, posY + inset);
                     }
                     posY += MIXER_SIZE_STEP;
                     lastGui = sendGains[i];
                 }
                 for (auto sendGainCtrl : sendGains) {
                     auto idx = sendGainCtrl->getParamIdx() - PARAM_OFFSET_SEND_GAIN;
-                    sendGainCtrl->setFlag(FLG_RENDER_LABEL, m_parent->bWideLayout);
+                    sendGainCtrl->setFlag(FLG_RENDER_LABEL, m_trackentry->layout.height > 4);
                     sendGainCtrl->setVisible(idx < numReturnChannels);
                 }
                 for (auto sendPanCtrl : sendPans) {
                     auto idx = sendPanCtrl->getParamIdx() - PARAM_OFFSET_SEND_PAN;
-                    sendPanCtrl->setFlag(FLG_RENDER_LABEL, m_parent->bWideLayout);
+                    sendPanCtrl->setFlag(FLG_RENDER_LABEL, m_trackentry->layout.height > 4);
                     sendPanCtrl->setVisible(bShowPan && idx < numReturnChannels);
                 }
             }
-            int32_t posYGain = posY;
     
-            posY = csY - (btnActivate.isVisible() ? 3 : 2) * MIXER_SIZE_STEP;
+            posY = csY - (btnActivate.isVisible() ? 4 : 3) * MIXER_SIZE_STEP;
     
             auto btnSize = csX/2;
+            trackPanning.pos   = ivec2(inset, posY + inset);
+            trackPanning.size  = ivec2(csX - i2, heightInner);
+            trackPanning.setFlag(FLG_RENDER_LABEL, m_trackentry->layout.height > 4);
+            posY += MIXER_SIZE_STEP;
+
+
             btnSolo.pos      = ivec2(inset, posY + inset);
             btnSolo.size     = ivec2(btnSize - i2, heightInner);
     
@@ -681,25 +680,21 @@ namespace DAW {
             btnBypass.size   = ivec2(csX - i2, heightInner);
             btnBypass.pos    = ivec2(inset, posY + inset);
     
-            trackGain.pos      = ivec2(inset, posYGain + inset);
+            auto trackGainWidth = csX * 1 / 2;
             auto lastGuiBottom = lastGui ? lastGui->bottom() : 0;
-            trackGain.size     = ivec2(csX - i2, ((btnSolo.top() - lastGuiBottom) - i2) - i2 - MIXER_SIZE_STEP);
-            trackPanning.pos   = ivec2(inset, trackGain.bottom() + i2);
-            trackPanning.size  = ivec2(csX - i2, heightInner);
-            trackPanning.setFlag(FLG_RENDER_LABEL, m_parent->bWideLayout);
-            if (trackGain.size.y > MIXER_SIZE_STEP) {
-                trackGain.size.y -= MIXER_SIZE_STEP;
-                trackGain.pos.y += MIXER_SIZE_STEP / 2;
+            trackGain.pos.x = 0;
+            trackGain.pos.y = lastGuiBottom;
+            trackGain.size     = ivec2(trackGainWidth, ((trackPanning.top() - lastGuiBottom) - i2));
+            auto maxWidth = math::roundfS32((m_trackentry->getHeight() * 0.5f * MIXER_SIZE_STEP) * 0.8f);
+            if (trackGainWidth > maxWidth) {
+                trackGain.pos.x = (trackGain.size.x - maxWidth) / 2;
+                trackGain.size.x = maxWidth;
             }
-            auto half = trackGain.size.x / 2;
-            if (half > 16) {
-                trackGain.size.x = half;
-                trackGain.pos.x += half / 4;
-            }
+            trackGain.pos.y += i2;
+            trackGain.size.y -= i2;
             m_guiMeter.size = trackGain.size;
-            m_guiMeter.pos  = ivec2(trackGain.right() + half / 4, trackGain.pos.y);
-            m_guiMeter.size.x = csX - m_guiMeter.left() - half/4;
-
+            m_guiMeter.pos.y = trackGain.pos.y;
+            m_guiMeter.pos.x = trackGainWidth + ((csX - trackGainWidth) - m_guiMeter.size.x) / 2;
     
             for (auto gui : guis) {
                 gui->layout();
@@ -862,7 +857,7 @@ namespace DAW {
                             titleSize,
                             m_track->name,
                             theme,
-                            titleHeight - 4,
+                            titleHeight - 2,
                             getContrastFontColorNvg(color),
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 

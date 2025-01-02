@@ -1330,6 +1330,17 @@ public:
     }
 };
 
+void gui_slider_gain_vertical::layout() {
+    const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+    setFontSize(TRACK_HEIGHT_STEP - 4);
+    m_textLabelParamName.pos   = { pos.x, pos.y };
+    m_textLabelParamName.size  = { size.x, TRACK_HEIGHT_STEP };
+    m_textLabelParamValue.pos  = { pos.x, pos.y + size.y - TRACK_HEIGHT_STEP };
+    m_textLabelParamValue.size = { size.x, TRACK_HEIGHT_STEP };
+    m_textLabelParamValue.fontSize = fontSize();
+    m_textLabelParamName.fontSize = fontSize();
+}
+
 class gui_track_subtrack_controls final : public guictr_base {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;

@@ -124,7 +124,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 
     bool hasLegend = false;
     float lW       = mtrSize.x * 0.15f;
-    hasLegend      = lW > 10;
+    hasLegend      = lW > 7;
     if (hasLegend) {
         mtrSize.x -= lW;
     }
@@ -216,7 +216,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 
             String strLevel = ".";
             strLevel = StringFormat("%.0f", lvlStop);
-            nvgText(vg, x2 + lW * 7.8f / 8.0f, y, StringAsCStr(strLevel), NULL);
+            nvgText(vg, x2 + lW * 8.8f / 8.0f, y, StringAsCStr(strLevel), NULL);
         }
     }
 
