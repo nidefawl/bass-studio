@@ -955,12 +955,13 @@ void textlabel_dynamic_t::adjustWidth() {
         return;
     }
     float delta = (size.x / lastRenderWidthLabel) - 1.0f;
-    if (math::abs(size.x-lastRenderWidthLabel) > 6.0f) {
+    float diff  = size.x - lastRenderWidthLabel;
+    if (diff < 2.0f || diff > 7.0f) {
         const float FONT_SCALE_MIN = 0.05f;
         const float FONT_SCALE_MAX = 2.0f;
-        if (delta > 0.25f) {
+        if (delta > 0.05f) {
             dynamicFontScale = math::min(FONT_SCALE_MAX, dynamicFontScale + math::max(delta*0.25f, 0.025f));
-        } else if (delta < -0.10f) {
+        } else if (delta < -0.05f) {
             dynamicFontScale = math::max(FONT_SCALE_MIN, dynamicFontScale - math::max(-delta*0.25f, 0.025f));
         }
     }
@@ -970,6 +971,7 @@ void textlabel_dynamic_t::render(NVGcontext* vg, guitheme_t* theme, const String
     if (size.x > 0 && size.y > 0) {
         float fontSize = getScale();
         if (fontSize >= 1.0) {
+            fontSize = math::floorf(fontSize * 4.0f) / 4.0f;
             auto offsetPos = pos;
             if (alignment & NVG_ALIGN_CENTER) {
                 offsetPos.x += size.x * 0.5f;
