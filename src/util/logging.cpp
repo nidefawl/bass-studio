@@ -136,7 +136,11 @@ public:
             std::lock_guard<std::recursive_mutex> lockguard(mutex);
             std::time_t t = std::time(nullptr);
             struct tm tm{};
+#ifdef _WIN32
             localtime_s(&tm, &t);
+#else
+            localtime_r(&t, &tm);
+#endif
             char mbstr[100];
             size_t posDateTime = std::strftime(
                     mbstr,
