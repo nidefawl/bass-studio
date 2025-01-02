@@ -1054,7 +1054,7 @@ public:
     }
 
     void getSizeScale(int& w, int& h) {
-        auto size = ivec2(128);
+        auto size = ivec2(1560, 730);
         w = size.x;
         h = size.y;
     }
@@ -1143,8 +1143,6 @@ public:
     }
     void getFixedSize(int32_t* w, int32_t* h) override {
         ctr_main.getSizeScale(*w, *h);
-        *w = *h = 128;
-        *w = math::roundfS32(*h * 2.5f);
     }
     bool isViewSupported(int32_t uiId) const override {
         return uiId != UID_VIEW_CTR_NODES;
