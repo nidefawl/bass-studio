@@ -331,6 +331,7 @@ void guictr_mixers::addAllTracks() {
     for (track_t* tr : project.trackList) {
         addTrack(tr, FLG_TRK_CHANGE_LOAD);
     }
+    updateVisibleTracks();
 }
 
 void guictr_mixers::removeAllTracks() {
@@ -338,6 +339,7 @@ void guictr_mixers::removeAllTracks() {
     for (auto* entry : tracksCopy) {
         removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
     }
+    updateVisibleTracks();
 }
 
 void guictr_mixers::removeTrack(track_t* track, int flags) {
