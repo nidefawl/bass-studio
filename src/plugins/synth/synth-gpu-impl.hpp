@@ -408,6 +408,14 @@ public:
                 v.lfos[i].setRandomMode(lfoParams.randomModeId);
             }
         }
+        auto userLimitPolyVoices = this->otherParamsInt[PARAM_MAX_POLY_VOICES];
+        auto userLimitUnisonVoices = this->otherParamsInt[PARAM_MAX_UNISON_VOICES];
+        GetParamInt(Parameters::Osc1UnisonVoiceCount)->setRange(1, userLimitUnisonVoices);
+        for (size_t i = userLimitPolyVoices; i < voices.size(); i++) {
+            voices[i].Release();
+        }
+        gpuProgram.destroy();
+        reloadProgram();
     }
 };
 
