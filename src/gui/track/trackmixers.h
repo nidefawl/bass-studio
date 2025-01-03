@@ -109,6 +109,7 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
             margin  = 0;
             setCanMouseHit(false);
             setBackgroundRendered(false);
+            sortChildren = true;
         }
         void addTrackEntry(track_gui_entry_t& e);
         
@@ -183,4 +184,11 @@ public:
     }
     void resetView();
     void handleRightClick(MouseEvent& evt) override;
+    void trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) override;
+    void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override;
+
+    void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
+    void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
+    void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
+    void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
 };

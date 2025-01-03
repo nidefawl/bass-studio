@@ -16,8 +16,13 @@ class gui_track_content;
 class guictr_tracks;
 class gui_track_subtrack;
 class gui_track_control;
+class gui_track_control;
 class effect_deferred;
 class DawCtrl;
+namespace DAW {
+    class guictr_mixers_mixer;
+    class guictr_mixertitle;
+}// namespace DAW
 
 struct tracklayout_state_t {
     automatable_t* selectedAutomationCtr = nullptr;
@@ -32,8 +37,8 @@ struct track_gui_entry_t {
     gui_track_content* trackContent = nullptr;
     guictr_tracks* parent = nullptr;
     gui_track_control* trackControls = nullptr;
-    guictr_base* trackMixer = nullptr;
-    guictr_base* trackMixerTitle = nullptr;
+    DAW::guictr_mixers_mixer* trackMixer = nullptr;
+    DAW::guictr_mixertitle* trackMixerTitle = nullptr;
     int32_t idx = -1;
     tracklayout_settings_t layout;
     tracklayout_state_t state;

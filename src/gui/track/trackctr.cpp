@@ -60,13 +60,11 @@ void guitrack_controls::render(NVGcontext* vg) {
     }
 
     for (track_t* g : project.tracksBottom) {
-
-        track_gui_entry_t* entry;
+        track_gui_entry_t* entry = nullptr;
         if (!iGuiMgr.getPointerEntry(g, &entry)) {
             dbgassert(0);
             continue;
         }
-        dbgassert(entry->trackControls->isVisible() == iGuiMgr.isVisible(entry));
         if (entry->trackControls->isVisible()) {
             nvgSave(vg);
             entry->trackControls->renderGroupHandle(vg);
@@ -78,7 +76,6 @@ void guitrack_controls::render(NVGcontext* vg) {
     if (ySplit > 0) {
         nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
         for (track_gui_entry_t* entry : iGuiMgr.getTracksVisibleFlat()) {
-            dbgassert(entry->trackControls->isVisible() == iGuiMgr.isVisible(entry));
             auto& mixer = entry->trackControls;
             if (mixer->isVisible() && mixer->pos.y < ySplit && mixer->bottom() > 0) {
                 nvgSave(vg);

@@ -88,24 +88,7 @@ namespace DAW {
         field->setSelectionRange(-1, -1);
         field->parentCtrl->focusGui(field);
     }
-    void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry) {
-        auto cb = [trackEntry = trackentry](const String& str) {
-            trackEntry->track->name = str;
-            return false;
-        };
-        guibase* title = nullptr;
-        if (trackentry->trackControls) {
-            title = trackentry->trackControls->getTitle();
-        }
-        if (trackentry->trackMixerTitle) {
-            title = trackentry->trackMixerTitle;
-        }
-        if (!title) {
-            return;
-        }
-        auto popupPos    = title->toScreenSpace(ivec2(0));
-        OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
-    }
+    void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
     bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs, std::function<bool(const String& str)> callback) {
         if (pathAbs.empty()) {
             return false;
@@ -1211,17 +1194,7 @@ public:
                 evt.requestCursor(CURSOR_RESIZE_V);
             return true;
         }
-        if (contains(mpos)) {
-            ivec2 local = this->toContainerSpace(mpos);
-            for (guibase* gui : guis) {
-                if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
-                    return true;
-                }
-            }
-            evt.requestFocus(this);
-            return true;// always need to return true if contained, parent has z-order
-        }
-        return false;
+        return guictr_base::mouseHitTest(mpos, evt);
     }
     void handleDraggedBegin(MouseEvent& evt) override {
         dragMode = DragModeTrack::DRAG_TRACK_NONE;
@@ -1549,7 +1522,9 @@ void gui_track_control::render(NVGcontext* vg) {
     }
 
     for (guibase* g : guis) {
-        //content
+        if (!g->isVisible()) {
+            continue;
+        }
         nvgSave(vg);
         g->render(vg);
         nvgRestore(vg);
@@ -1814,7 +1789,7 @@ void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepo
             break;
         case drop_type::none:
             // new track
-            target = { dragdrop_target_indicator_t::target_area, treeIdx, parent->toRef(), parent->pos + parent->size / 2, "Insert " + clipboardName + " on new track" };
+            target = { dragdrop_target_indicator_t::target_area, treeIdx, parent->toRef(), parent->pos + parent->size / 2, "Move '" + clipboardName + "' here" };
             break;
         default:
             dbgassert(0);
@@ -1830,7 +1805,10 @@ void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t
     dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
     switch (slot.droptype) {
         case drop_type::none:
-            return;
+            // insert at end of top tracks (midi/audio)
+            targetTrack = slot.droppedTrack;
+            treeIdx = int32_t(daw->getTracks().getMidiAudioTracksFlatVec().size());
+            break;
         case drop_type::track_on:
             //insert into slot.droppedTrack at end
             targetTrack = slot.droppedTrack;
@@ -1844,22 +1822,18 @@ void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t
         case drop_type::track_after:
             //insert into slot.droppedTrack->parent after slot.droppedTrack
             targetTrack = slot.droppedTrack->parent;
-            {
-                int idx = slot.droppedTrack->childIdxTree + 1;
-                // auto* p = slot.droppedTrack->parent;
-                // while (p && idx == CtrSize(p->track->children)) {
-                //     idx = p->track->childIdxTree + 1;
-                //     p   = getParentOf(p);
-                // }
-                // targetTrack = p;
-                treeIdx     = idx;
-            }
+            treeIdx = slot.droppedTrack->childIdxTree + 1;
             break;
         default:
             dbgassert(0);
             return;
     }
-    if (TRACKTYPE_TO_CTR(slot.droppedTrack->type) != TRACKTYPE_TO_CTR(track->type)) {
+    if (targetTrack && TRACKTYPE_TO_CTR(targetTrack->type) != TRACKTYPE_TO_CTR(track->type)) {
+        log_printf("Cannot move there\n");
+        return;
+    }
+    // don't move master and return to top tracks
+    if (!targetTrack && TRACKTYPE_TO_CTR(track->type) != TRACK_CTR_MIDIAUDIO) {
         log_printf("Cannot move there\n");
         return;
     }

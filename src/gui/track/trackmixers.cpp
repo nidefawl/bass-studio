@@ -11,11 +11,8 @@
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "trackmixers.h"
-
-namespace DAW {
-    guictr_base* createTrackGuiMixer(guictr_mixers* mixer, track_gui_entry_t* entry);
-    guictr_base* createTrackGuiMixerTitle(guictr_mixers* mixer, track_gui_entry_t* entry);
-}
+#include "gui/views/pluginlist.h"
+#include "gui/plugin/pluginctr.h"
 
 namespace
 {
@@ -23,392 +20,12 @@ namespace
     constexpr int32_t TRACK_MIXER_TITLE_HEIGHT = 24;
 }
 
-guictr_mixers::guictr_mixers(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file& _dragdropclip)
-    : guictr_base(),
-      trackMixerGlobalIndex(_dawCtrl->getDawWindowIndex()),
-      project(_project),
-      projectGlobals(_projectGlobals),
-      guiMgr(),
-      scrollbar(0, 0.0f, *this),
-      trackMixers(),
-      mixerOptions(this)
-{
-    setGuiType(gui_type::CTR_TYPE_MIXERS);
-    padding = 0;
-    margin  = 0;
-    dawCtrl = _dawCtrl,
-    setCanMouseHit(true);
-    setBackgroundRendered(true);
-    add(&trackMixers);
-    add(&mixerOptions);
-    add(&scrollbar);
-}
-
-guictr_mixers::~guictr_mixers() {
-    remove(&scrollbar);
-    remove(&mixerOptions);
-    remove(&trackMixers);
-}
-
-int32_t guictr_mixers::getTrackTotalWidth(track_gui_entry_t* e) {
-    const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
-    int32_t trH = e->getHeight();
-    int32_t totalHeight = trH * MIXER_SIZE_STEP;
-    return totalHeight;
-}
-
-int32_t guictr_mixers::setTrackPosition(track_gui_entry_t* e, int32_t x, bool isBottom) {
-    int32_t childTrackInsetY = (e->track->getChildLvl() + 1) * TRACK_MIXER_TITLE_HEIGHT;
-    const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
-    int32_t trH      = e->getHeight();
-    e->trackMixer->size = ivec2(trH * MIXER_SIZE_STEP, trackMixers.size.y);
-    if (isBottom) {
-        e->trackMixer->pos  = ivec2(x - e->trackMixer->size.x , 0);
-    } else {
-        e->trackMixer->pos  = ivec2(x, 0);
-    }
-    e->trackMixer->pos.y += childTrackInsetY;
-    e->trackMixer->size.y -= childTrackInsetY;
-    e->trackMixerTitle->pos = e->trackMixer->pos - ivec2(0, TRACK_MIXER_TITLE_HEIGHT);
-    e->trackMixerTitle->size = ivec2(e->trackMixer->size.x, TRACK_MIXER_TITLE_HEIGHT);
-    return e->trackMixer->size.x;
-}
-
-bool guictr_mixers::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-    bool bContains = this->contains(mpos);
-    if (bContains) {
-        ivec2 localMouse = this->toContainerSpace(mpos);
-        // iterate over guis vector in reverse
-        for (auto it = guis.rbegin(); it != guis.rend(); ++it) {
-            auto gui = *it;
-            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-                return true;
-            }
-        }
-        if (evt.type == MouseHitType::MOUSE_SCROLL) {
-            evt.requestFocus(this);
-            return true;
-        }
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing()) {
-            auto type = evt.getDraggedThing()->getGuiType();
-            switch (type) {
-                case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
-                case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
-                case gui_type::CTR_TYPE_TRACK_TITLE:
-                    evt.requestFocus(this);
-                    return true;
-                default:
-                    break;
-            }
-            return false;
-        }
-        if (evt.type == MOUSE_DRAGDROP_FILE) {
-            auto clipboard = dawCtrl->getDaw()->getDragDropClip();
-            switch (clipboard.type) {
-                case dragdrop_file::TYPE_PLUGIN_PRESET:
-                case dragdrop_file::TYPE_TRACK_CONTAINER:
-                    evt.requestFocus(this);
-                    return true;
-                default:
-                    break;
-            }
-        }
-        if (canMouseHit()) {
-            evt.requestFocus(this);
-            return true;
-        }
-    }
-    return false;
-}
-
-
-void guictr_mixers::render(NVGcontext* vg) {
-    if (isBackgroundRendered()) {
-        renderBackground(vg);
-    }
-    ivec2 cs = getSizeContent();
-    ivec2 cp = getPosContent();
-    if (cs.y <= 0 || cs.x <= 0) {
-        return;
-    }
-
-    if (mixerOptions.isVisible()) {
-        nvgSave(vg);
-        nvgTranslate(vg, cp.x, cp.y);
-        mixerOptions.render(vg);
-        nvgRestore(vg);
-    }
-
-    if (trackMixers.isVisible()) {
-        nvgSave(vg);
-        nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
-        nvgTranslate(vg, cp.x, cp.y);
-        trackMixers.render(vg);
-        nvgRestore(vg);
-    }
-
-    if (scrollbar.isVisible()) {
-        nvgSave(vg);
-        nvgTranslate(vg, cp.x, cp.y);
-        scrollbar.render(vg);
-        nvgRestore(vg);
-    }
-}
-
-void guictr_mixers::layout() {
-    const int32_t trackControlsWidth = theme->get(GuiConstant::CONST_TRACK_CONTROLS_WIDTH);
-    const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
-
-    int scrollW = gui_scrollbar::defaultW;
-    ivec2 cs    = getSizeContent();
-    cs.x = math::max(scrollW+trackControlsWidth+5, cs.x);
-    cs.y = math::max(MIXER_SIZE_STEP, cs.y);
-    scrollbar.pos  = ivec2(0, cs.y - scrollW);
-    scrollbar.size = ivec2(cs.x, scrollW);
-    mixerOptions.size = ivec2(MIXER_SIZE_STEP, cs.y);
-    mixerOptions.pos  = ivec2(cs.x - mixerOptions.size.x, 0);
-    trackMixers.size = cs - ivec2(mixerOptions.size.x, 0);
-    trackMixers.pos  = ivec2(0, 0);
-
-    ivec2 csTrackView = trackMixers.getSizeContent();
-
-    // Calculate the combined width of all top tracks
-    int32_t allTracksWidth = 0;
-    for (auto* entry : guiMgr.trackEntriesTop) {
-        if (guiMgr.isVisible(entry)) {
-            allTracksWidth += getTrackTotalWidth(entry);
-            allTracksWidth += TRACK_MIXER_SPACING;
-        }
-    }
-
-    // Calculate the x position of the first return
-    int32_t xPosFirstReturn = csTrackView.x - TRACK_MIXER_SPACING;
-    auto itMastersTracks    = guiMgr.trackEntriesBottom.rbegin();
-    auto itMastersEnd       = guiMgr.trackEntriesBottom.rend();
-    while (itMastersTracks != itMastersEnd) {
-        auto& entry = *itMastersTracks;
-        if (guiMgr.isVisible(entry)) {
-            xPosFirstReturn -= getTrackTotalWidth(entry);
-            xPosFirstReturn -= TRACK_MIXER_SPACING;
-        }
-        itMastersTracks++;
-    }
-    scrollbar.setVisible(allTracksWidth >= xPosFirstReturn);
-    contentWidth    = allTracksWidth;
-    contentViewSize = xPosFirstReturn;
-    contentWidth += MIXER_SIZE_STEP * 4;
-    if (scrollbar.isVisible()) {
-        trackMixers.size.y -= scrollW;
-    }
-
-    int32_t scrOffset = math::max(0.0f, getScrollOffset() * (allTracksWidth - contentViewSize));
-
-    int x = TRACK_MIXER_SPACING - scrOffset;
-    for (auto* entry : guiMgr.trackEntriesTop) {
-        if (guiMgr.isVisible(entry)) {
-            int32_t w = setTrackPosition(entry, x, false);
-            x += w + TRACK_MIXER_SPACING;
-        } else {
-            dbgassert(0);
-        }
-    }
-
-
-    x = csTrackView.x - TRACK_MIXER_SPACING;
-
-    itMastersTracks = guiMgr.trackEntriesBottom.rbegin();
-    itMastersEnd    = guiMgr.trackEntriesBottom.rend();
-    while (itMastersTracks != itMastersEnd) {
-        auto& entry = *itMastersTracks;
-        if (!assert_expr(entry->trackMixer)) {
-            continue;
-        }
-        if (guiMgr.isVisible(entry)) {
-            int32_t w = setTrackPosition(entry, x, true);
-            x -= w;
-            x -= TRACK_MIXER_SPACING;
-        } else {
-            dbgassert(0);
-        }
-        itMastersTracks++;
-    }
-    auto itAll = guiMgr.tracksVisibleFlat.begin();
-    auto itEnd = guiMgr.tracksVisibleFlat.end();
-    for (; itAll != itEnd; ++itAll) {
-        auto* entry = *itAll;
-        auto itNext = itAll;
-        for (++itNext; itNext != itEnd; ++itNext) {
-            auto* entryNext = *itNext;
-            if (!entryNext->track->isChildOf(entry->track)) {
-                break;
-            }
-            entry->trackMixerTitle->size.x = entryNext->trackMixerTitle->right() - entry->trackMixerTitle->left();
-        }
-    }
-
-    for (guibase* gui : guis) {
-        gui->layout();
-    }
-}
-
-void guictr_mixers::updateVisibleTracks() {
-    guiMgr.updateVisibleTracks(project.trackList);
-
-    track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
-    for (track_t* tr : project.trackList) {
-        track_gui_entry_t* entry = nullptr;
-        if (!(guiMgr.getPointerEntry(tr, &entry))) {
-            continue;
-        }
-        if (!assert_expr(entry->trackMixer)) {
-            continue;
-        }
-        const bool bVisible = STL_CONTAINS(tracks, entry);
-        entry->trackMixer->setVisible(bVisible);
-    }
-}
-
-void guictr_mixers::onChildLayoutChanged(guibase* g) {
-    layout();
-}
-
-bool guictr_mixers::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
-    // return trackMixers.handleEditorCommand(ctxt);
-    return false;
-}
-
-void guictr_mixers::scrollOffsetChanged(int dir, float offset) {
-    int32_t scrOffset = math::max(0.0f, offset * (contentWidth - contentViewSize));
-
-    int x = TRACK_MIXER_SPACING - scrOffset;
-    for (auto* entry : guiMgr.trackEntriesTop) {
-        if (guiMgr.isVisible(entry)) {
-            int32_t w = setTrackPosition(entry, x, false);
-            x += w + TRACK_MIXER_SPACING;
-        }
-    }
-    auto itAll = guiMgr.tracksVisibleFlat.begin();
-    auto itEnd = guiMgr.tracksVisibleFlat.end();
-    for (; itAll != itEnd; ++itAll) {
-        auto* entry = *itAll;
-        auto itNext = itAll;
-        for (++itNext; itNext != itEnd; ++itNext) {
-            auto* entryNext = *itNext;
-            if (!entryNext->track->isChildOf(entry->track)) {
-                break;
-            }
-            entry->trackMixerTitle->size.x = entryNext->trackMixerTitle->right() - entry->trackMixerTitle->left();
-        }
-    }
-}
-
-bool guictr_mixers::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-    return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
-}
-
-void guictr_mixers::scrollTo(guibase* g) {
-    int32_t scrOffset = math::max(0.0f, scrollbar.scrollOffset * (contentWidth - contentViewSize));
-
-    int32_t x = g->pos.x;
-    scrollbar.scrollVisible(x + scrOffset, g->size.y);
-}
-
-void guictr_mixers::onAdded() {
-    guictr_base::onAdded();
-    removeAllTracks();
-    for (track_t* tr : project.trackList) {
-        removeTrack(tr, FLG_TRK_CHANGE_LOAD);
-    }
-    addAllTracks();
-}
-
-void guictr_mixers::onRemove() {
-    removeAllTracks();
-    guictr_base::onRemove();
-}
-
-void guictr_mixers::addAllTracks() {
-    for (track_t* tr : project.trackList) {
-        addTrack(tr, FLG_TRK_CHANGE_LOAD);
-    }
-    updateVisibleTracks();
-}
-
-void guictr_mixers::removeAllTracks() {
-    track_gui_vector_td tracksCopy = guiMgr.getTracksVisibleFlat();
-    for (auto* entry : tracksCopy) {
-        removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
-    }
-    updateVisibleTracks();
-}
-
-void guictr_mixers::removeTrack(track_t* track, int flags) {
-    track_gui_entry_t* entry = nullptr;
-    if (!guiMgr.getPointerEntry(track, &entry)) {
-        return;
-    }
-    dbgassert(track->audio);
-    trackMixers.removeTrackEntry(*entry);
-    // removeEntry(track->audio->guiInstances, entry);
-    dbgassert(entry->trackMixer);
-    delete entry->trackMixer;
-    entry->trackMixer = nullptr;
-    dbgassert(entry->trackMixerTitle);
-    delete entry->trackMixerTitle;
-    entry->trackMixerTitle = nullptr;
-    guiMgr.removeTrack(*entry); // does delete entry
-}
-
-void guictr_mixers::addTrack(track_t* track, int flags) {
-    dbgassert(track->audio);
-    auto* entry = new track_gui_entry_t{};
-
-    entry->parentCtrl = this->dawCtrl;
-    entry->track      = track;
-    entry->parent = dawCtrl->getTrackContainer().get();
-    entry->trackMixer = DAW::createTrackGuiMixer(this, entry);
-    entry->trackMixerTitle = DAW::createTrackGuiMixerTitle(this, entry);
-    entry->trackMixer->id = track->localIdxFlat;
-    entry->trackMixerTitle->id = track->localIdxFlat;
-    entry->layout.height = bWideLayout ? 6 : 4;
-
-    guiMgr.addTrack(entry);
-    trackMixers.addTrackEntry(*entry);
-    // track->audio->guiInstances.push_back(entry);
-
-    if (!(flags & FLG_TRK_CHANGE_LOAD)) {
-        updateVisibleTracks();
-        layout();
-    }
-}
-
-void guictr_mixers::resetView() {
-    guiMgr.reset();
-}
-
-void guictr_mixers::guictr_mixers_content::addTrackEntry(track_gui_entry_t& e) {
-    this->add(e.trackMixer);
-    this->add(e.trackMixerTitle);
-}
-
-void guictr_mixers::guictr_mixers_content::removeTrackEntry(track_gui_entry_t& e) {
-    this->remove(e.trackMixer);
-    this->remove(e.trackMixerTitle);
-    if (dawCtrl) {
-        dawCtrl->onTrackMixerRemoved(e);
-    }
-}
-void guictr_mixers::handleRightClick(MouseEvent& evt) {
-    if (!assert_expr(dawCtrl)) {
-        return;
-    }
-    parentCtrl->openContextMenu(new guictxtmenu_notrack(dawCtrl), evt.mousepos);
-}
-
 namespace DAW {
     guictr_base* createTrackControlsIO(track_gui_entry_t* _entry);
 
     class guictr_mixers_mixer : public guictr_base {
+        friend class ::guictr_mixers;
+        friend class guictr_mixertitle;
         guictr_mixers* const m_parent;
         track_t* const m_track;
         track_gui_entry_t* const m_trackentry;
@@ -423,6 +40,7 @@ namespace DAW {
         std::vector<gui_slider_gain*> sendGains;
         std::vector<gui_slider_pan*> sendPans;
         guictr_base* trackIO;
+        int32_t childMixerWidthSteps = 0;
     public:
         guictr_mixers_mixer(guictr_mixers* _mixer, track_gui_entry_t* _entry) 
             : guictr_base(),
@@ -738,7 +356,7 @@ namespace DAW {
         }
     };
 
-    guictr_base* createTrackGuiMixer(guictr_mixers* mixer, track_gui_entry_t* entry) {
+    guictr_mixers_mixer* createTrackGuiMixer(guictr_mixers* mixer, track_gui_entry_t* entry) {
         return new guictr_mixers_mixer(mixer, entry);
     }
 
@@ -776,17 +394,7 @@ namespace DAW {
                     evt.requestCursor(CURSOR_RESIZE_H);
                 return true;
             }
-            if (contains(mpos)) {
-                ivec2 local = this->toContainerSpace(mpos);
-                for (guibase* gui : guis) {
-                    if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
-                        return true;
-                    }
-                }
-                evt.requestFocus(this);
-                return true;// always need to return true if contained, parent has z-order
-            }
-            return false;
+            return guictr_base::mouseHitTest(mpos, evt);
         }
         void handleDraggedBegin(MouseEvent& evt) override {
             dragMode = DragModeTrack::DRAG_TRACK_NONE;
@@ -801,20 +409,9 @@ namespace DAW {
                 dragMode = DragModeTrack::DRAG_TRACK_RESIZE;
             }
         }
-    
-        void handleDraggedMove(MouseEvent& evt) override {
-            if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
-                int32_t mouseDragDist = evt.relMousepos.x;
-                const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
-                parent->onChildLayoutChanged(this);
-                auto newHeight = math::min(TRACK_MAX_HEIGHT, math::max(TRACK_MIN_HEIGHT, (mouseDragDist) /  MIXER_SIZE_STEP));
-                m_trackentry->layout.height = newHeight;
-                dawCtrl->updateVisibleTrackContents();
-            } else {
-                parentCtrl->objectDragMove(this, evt);
-            }
-        }
-    
+
+        void handleDraggedMove(MouseEvent& evt) override;
+
         void handleDraggedRelease(MouseEvent& evt) override {
             if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
     
@@ -824,9 +421,24 @@ namespace DAW {
             dragMode = DragModeTrack::DRAG_TRACK_NONE;
         }
         void render(NVGcontext* vg) override {
-            if (!setScissorTransform(vg)) {
+            if (!isRenderableSizeAndContext(vg)) {
                 return;
             }
+            ivec2 posInset  = getPosContent();
+            ivec2 sizeInset = getSizeContent();
+            if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+                return;
+            }
+            int expand = 1;
+            nvgIntersectScissor(vg, posInset.x - expand, posInset.y - expand, sizeInset.x + expand * 2, sizeInset.y + expand * 2);
+            if (dawCtrl && safeRefGet(dawCtrl->getDragDropTarget().target) == m_trackentry->trackMixer) {
+                nvgBeginPath(vg);
+                nvgRect(vg, pos.x, pos.y, size.x, size.y); 
+                nvgFillColor(vg, rgbaToNvg(0x3fdddd33));
+                nvgFill(vg);
+            }
+            nvgTranslate(vg, posInset.x, posInset.y);
+            nvgTranslateZ(vg, -4.0f);
             auto cs               = getSizeContent();
             NVGcolor color        = rgbToNvg(m_track->rgb);
             const int titleHeight = TRACK_MIXER_TITLE_HEIGHT;
@@ -890,11 +502,709 @@ namespace DAW {
             return nullptr;
         }
     };
-    
-    guictr_base* createTrackGuiMixerTitle(guictr_mixers* mixer, track_gui_entry_t* entry) {
+
+    guictr_mixertitle* createTrackGuiMixerTitle(guictr_mixers* mixer, track_gui_entry_t* entry) {
         return new guictr_mixertitle(mixer, entry);
     }
 }// namespace DAW
+
+
+guictr_mixers::guictr_mixers(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file& _dragdropclip)
+    : guictr_base(),
+      trackMixerGlobalIndex(_dawCtrl->getDawWindowIndex()),
+      project(_project),
+      projectGlobals(_projectGlobals),
+      guiMgr(),
+      scrollbar(0, 0.0f, *this),
+      trackMixers(),
+      mixerOptions(this)
+{
+    setGuiType(gui_type::CTR_TYPE_MIXERS);
+    padding = 0;
+    margin  = 0;
+    dawCtrl = _dawCtrl,
+    setCanMouseHit(true);
+    setBackgroundRendered(true);
+    add(&trackMixers);
+    add(&mixerOptions);
+    add(&scrollbar);
+}
+
+guictr_mixers::~guictr_mixers() {
+    remove(&scrollbar);
+    remove(&mixerOptions);
+    remove(&trackMixers);
+}
+
+int32_t guictr_mixers::getTrackTotalWidth(track_gui_entry_t* e) {
+    const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
+    int32_t trH = e->getHeight();
+    int32_t totalHeight = trH * MIXER_SIZE_STEP;
+    return totalHeight;
+}
+
+int32_t guictr_mixers::setTrackPosition(track_gui_entry_t* e, int32_t x, bool isBottom) {
+    int32_t childTrackInsetY = (e->track->getChildLvl() + 1) * TRACK_MIXER_TITLE_HEIGHT;
+    const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
+    int32_t trH      = e->getHeight();
+    e->trackMixer->size = ivec2(trH * MIXER_SIZE_STEP, trackMixers.size.y);
+    if (isBottom) {
+        e->trackMixer->pos  = ivec2(x - e->trackMixer->size.x , 0);
+    } else {
+        e->trackMixer->pos  = ivec2(x, 0);
+    }
+    e->trackMixer->pos.y += childTrackInsetY;
+    e->trackMixer->size.y -= childTrackInsetY;
+    e->trackMixerTitle->pos = e->trackMixer->pos - ivec2(0, TRACK_MIXER_TITLE_HEIGHT);
+    e->trackMixerTitle->size = ivec2(e->trackMixer->size.x, TRACK_MIXER_TITLE_HEIGHT);
+    return e->trackMixer->size.x;
+}
+
+bool guictr_mixers::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    bool bContains = this->contains(mpos);
+    if (bContains) {
+        ivec2 localMouse = this->toContainerSpace(mpos);
+        // iterate over guis vector in reverse
+        for (auto it = guis.rbegin(); it != guis.rend(); ++it) {
+            auto gui = *it;
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
+                return true;
+            }
+        }
+        if (evt.type == MouseHitType::MOUSE_SCROLL) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT && evt.getDraggedThing()) {
+            auto type = evt.getDraggedThing()->getGuiType();
+            switch (type) {
+                case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
+                case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
+                case gui_type::CTR_TYPE_TRACK_TITLE:
+                    evt.requestFocus(this);
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+        if (evt.type == MOUSE_DRAGDROP_FILE) {
+            auto clipboard = dawCtrl->getDaw()->getDragDropClip();
+            switch (clipboard.type) {
+                case dragdrop_file::TYPE_PLUGIN_PRESET:
+                case dragdrop_file::TYPE_TRACK_CONTAINER:
+                    evt.requestFocus(this);
+                    return true;
+                default:
+                    break;
+            }
+        }
+        if (canMouseHit()) {
+            evt.requestFocus(this);
+            return true;
+        }
+    }
+    return false;
+}
+
+namespace DAW {
+    int32_t getPosXFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat) {
+        track_gui_entry_t* trLastVisible = nullptr;
+        track_gui_entry_t* trFirstReturn = nullptr;
+        for (track_gui_entry_t* trEntry : tracksVisibleFlat) {
+            auto trackTypeContainer = TRACKTYPE_TO_CTR(trEntry->track->type);
+            switch (trackTypeContainer) {
+                case TRACK_CTR_MIDIAUDIO:
+                    trLastVisible = trEntry;
+                    break;
+                case TRACK_CTR_RETURN:
+                case TRACK_CTR_MASTER:
+                    if (!trFirstReturn) {
+                        trFirstReturn = trEntry;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (trFirstReturn && trFirstReturn->trackMixer) {
+            return trFirstReturn->trackMixer->left() - TRACK_HEIGHT_SPACING_HALF;
+        }
+        if (trLastVisible && trLastVisible->trackMixer) {
+            return trLastVisible->trackMixer->right() + TRACK_HEIGHT_SPACING_HALF;
+        }
+        return 0;
+    }
+}
+
+void verticalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posVL) {
+    nvgLineCap(vg, NVGlineCap::NVG_ROUND);
+    nvgBeginPath(vg);
+    nvgMoveTo(vg, posVL.x, 4);
+    int32_t height = gui->getSizeContent().y;
+    nvgLineTo(vg, posVL.x, height - 4);
+    nvgStrokeColor(vg, gui->theme->getColor(GuiColor::COL_DRAGDROPMOVE_HIGHLIGHT));
+    nvgStrokeWidth(vg, 4.0);
+    nvgStroke(vg);
+    nvgLineCap(vg, NVGlineCap::NVG_BUTT);
+}
+
+void guictr_mixers::render(NVGcontext* vg) {
+    if (isBackgroundRendered()) {
+        renderBackground(vg);
+    }
+    ivec2 cs = getSizeContent();
+    ivec2 cp = getPosContent();
+    if (cs.y <= 0 || cs.x <= 0) {
+        return;
+    }
+
+    if (mixerOptions.isVisible()) {
+        nvgSave(vg);
+        nvgTranslate(vg, cp.x, cp.y);
+        mixerOptions.render(vg);
+        nvgRestore(vg);
+    }
+
+    if (trackMixers.isVisible()) {
+        nvgSave(vg);
+        nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
+        nvgTranslate(vg, cp.x, cp.y);
+        trackMixers.render(vg);
+        nvgRestore(vg);
+    }
+
+    dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
+    const auto dragdropTargetGui = safeRefGet(dragDropTarget.target);
+    if (dragdropTargetGui && (dragdropTargetGui == this || dragdropTargetGui->parent == this || dragdropTargetGui->parent == &this->trackMixers)) {
+        const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
+        track_gui_entry_t* lastEntry = guiMgr.trackEntriesTop.empty() ? nullptr : guiMgr.trackEntriesTop.back();
+        int xSplit = DAW::getPosXFirstReturnTrack(guiMgr.tracksVisibleFlat);
+        nvgSave(vg);
+        // nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
+        nvgTranslate(vg, cp.x, cp.y);
+        // nvgTranslate(vg, 0, trackMixers.top());
+        int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+        auto bgPos  = ivec2(n);
+        auto bgSize = this->getSizeContent() - ivec2(n * 2);
+        if (bgSize.x > 0 && bgSize.y > 0) {
+            nvgGlobalAlpha(vg, 0.5f);
+            nvgBeginPath(vg);
+            nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+            if (dragdrop_target_indicator_t::target_area == dragDropTarget.type) {
+                nvgPathWinding(vg, NVGwinding::NVG_CW);
+                if (dragDropTarget.slotIdx == -2) {
+                    // render at end of tracks 
+                    if (xSplit > 0) {
+                        auto lastEntryRight = lastEntry ? lastEntry->trackMixer->right() : 0;
+                        auto mixerDefaultWidth = 4;
+                        const auto mixerWidth = mixerDefaultWidth * MIXER_SIZE_STEP;
+                        nvgRect(vg,
+                            lastEntryRight + TRACK_HEIGHT_SPACING_HALF*2.0f,
+                            bgPos.y,
+                            mixerWidth,
+                            bgSize.y
+                        );
+                        dragDropTarget.targetPos = ivec2(lastEntryRight + TRACK_HEIGHT_SPACING_HALF*2.0f + mixerWidth * 0.5f, 0);
+                    }
+                } else {
+                    nvgRect(vg, dragdropTargetGui->pos.x, dragdropTargetGui->pos.y, dragdropTargetGui->size.x, dragdropTargetGui->size.y);
+                }
+                nvgPathWinding(vg, NVGwinding::NVG_CCW);
+            }
+            nvgFillColor(vg, theme->getColor(getBackgroundColor()));
+            nvgFill(vg);
+            nvgGlobalAlpha(vg, 1.0f);
+        }
+        ivec2 indicatorPos    = dragDropTarget.targetPos;
+        verticalLineAt(this, vg, indicatorPos);
+
+        int fontScale = MIXER_SIZE_STEP;
+        auto desc = dragDropTarget.desc;
+        if (desc.empty()) {
+            desc = "Drop here";
+        }
+        auto textHintFrameWidth = ivec2(MIXER_SIZE_STEP * 8, size.y);
+        // move text to the left if it is too close to the right edge
+        if (indicatorPos.x + textHintFrameWidth.x > cs.x) {
+            indicatorPos.x -= textHintFrameWidth.x;
+        }
+        renderCenteredMultilineText(vg, theme, desc, fontScale, getLabelColor(), indicatorPos, textHintFrameWidth);
+
+        nvgRestore(vg);
+    }
+
+    if (scrollbar.isVisible()) {
+        nvgSave(vg);
+        nvgTranslate(vg, cp.x, cp.y);
+        scrollbar.render(vg);
+        nvgRestore(vg);
+    }
+}
+
+void guictr_mixers::updateVisibleTracks() {
+    guiMgr.updateVisibleTracks(project.trackList);
+
+    track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
+    for (track_t* tr : project.trackList) {
+        track_gui_entry_t* entry = nullptr;
+        if (!(guiMgr.getPointerEntry(tr, &entry))) {
+            continue;
+        }
+        if (!assert_expr(entry->trackMixer)) {
+            continue;
+        }
+        const bool bVisible = STL_CONTAINS(tracks, entry);
+        entry->trackMixer->setVisible(bVisible);
+    }
+}
+
+void guictr_mixers::onChildLayoutChanged(guibase* g) {
+    layout();
+}
+
+bool guictr_mixers::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+    // return trackMixers.handleEditorCommand(ctxt);
+    return false;
+}
+
+bool guictr_mixers::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
+}
+
+void guictr_mixers::scrollTo(guibase* g) {
+    int32_t scrOffset = math::max(0.0f, scrollbar.scrollOffset * (contentWidth - contentViewSize));
+
+    int32_t x = g->pos.x;
+    scrollbar.scrollVisible(x + scrOffset, g->size.y);
+}
+
+void guictr_mixers::onAdded() {
+    guictr_base::onAdded();
+    removeAllTracks();
+    for (track_t* tr : project.trackList) {
+        removeTrack(tr, FLG_TRK_CHANGE_LOAD);
+    }
+    addAllTracks();
+}
+
+void guictr_mixers::onRemove() {
+    removeAllTracks();
+    guictr_base::onRemove();
+}
+
+void guictr_mixers::addAllTracks() {
+    for (track_t* tr : project.trackList) {
+        addTrack(tr, FLG_TRK_CHANGE_LOAD);
+    }
+    updateVisibleTracks();
+}
+
+void guictr_mixers::removeAllTracks() {
+    track_gui_vector_td tracksCopy = guiMgr.getTracksVisibleFlat();
+    for (auto* entry : tracksCopy) {
+        removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
+    }
+    updateVisibleTracks();
+}
+
+void guictr_mixers::removeTrack(track_t* track, int flags) {
+    track_gui_entry_t* entry = nullptr;
+    if (!guiMgr.getPointerEntry(track, &entry)) {
+        return;
+    }
+    dbgassert(track->audio);
+    trackMixers.removeTrackEntry(*entry);
+    // removeEntry(track->audio->guiInstances, entry);
+    dbgassert(entry->trackMixer);
+    delete entry->trackMixer;
+    entry->trackMixer = nullptr;
+    dbgassert(entry->trackMixerTitle);
+    delete entry->trackMixerTitle;
+    entry->trackMixerTitle = nullptr;
+    guiMgr.removeTrack(*entry); // does delete entry
+}
+
+void guictr_mixers::addTrack(track_t* track, int flags) {
+    dbgassert(track->audio);
+    auto* entry = new track_gui_entry_t{};
+
+    entry->parentCtrl = this->dawCtrl;
+    entry->track      = track;
+    entry->parent = dawCtrl->getTrackContainer().get();
+    entry->trackMixer = DAW::createTrackGuiMixer(this, entry);
+    entry->trackMixerTitle = DAW::createTrackGuiMixerTitle(this, entry);
+    entry->trackMixer->id = track->localIdxFlat;
+    entry->trackMixerTitle->id = track->localIdxFlat;
+    entry->trackMixer->zOrder = track->localIdxFlat;
+    entry->trackMixerTitle->zOrder = track->localIdxFlat;
+    entry->layout.height = bWideLayout ? 6 : 4;
+
+    guiMgr.addTrack(entry);
+    trackMixers.addTrackEntry(*entry);
+    // track->audio->guiInstances.push_back(entry);
+
+    if (!(flags & FLG_TRK_CHANGE_LOAD)) {
+        updateVisibleTracks();
+        layout();
+    }
+}
+
+void guictr_mixers::resetView() {
+    guiMgr.reset();
+}
+
+void guictr_mixers::guictr_mixers_content::addTrackEntry(track_gui_entry_t& e) {
+    this->add(e.trackMixer);
+    this->add(e.trackMixerTitle);
+}
+
+void guictr_mixers::guictr_mixers_content::removeTrackEntry(track_gui_entry_t& e) {
+    this->remove(e.trackMixer);
+    this->remove(e.trackMixerTitle);
+    if (dawCtrl) {
+        dawCtrl->onTrackMixerRemoved(e);
+    }
+}
+void guictr_mixers::handleRightClick(MouseEvent& evt) {
+    if (!assert_expr(dawCtrl)) {
+        return;
+    }
+    parentCtrl->openContextMenu(new guictxtmenu_notrack(dawCtrl), evt.mousepos);
+}
+
+namespace DAW {
+
+gui_track_drop_position_t GetTrackMixerSlotFromCoord(guictr_mixers* parent, const ivec2 _pos, bool bIncludeBeforeAfter) {
+    const int dropMaxDistance = 32;
+
+    using drop_type = gui_track_drop_position_t::drop_type;
+
+    auto& trackList      = parent->guiMgr.getTracksVisibleFlat();
+    int minDistDragPoint = std::numeric_limits<int32_t>::max();
+    gui_track_drop_position_t minSlot{ 0, nullptr, drop_type::none, { 0, 0 } };
+    const auto itcBegin = trackList.crbegin();
+    const auto itcEnd   = trackList.crend();
+
+
+    if (bIncludeBeforeAfter) {
+        auto checkDropPoint = [](int32_t posMin, int32_t posMax, int posMouse) -> int32_t {
+            if (posMouse >= posMin && posMouse < posMax) {
+                return math::abs(posMin + (posMax - posMin) / 2 - posMouse);
+            }
+            return -1;
+        };
+
+        for (auto it = itcBegin; it != itcEnd; it++) {
+            int32_t slotIdx = static_cast<int32_t>(itcEnd - it - 1);
+            track_gui_entry_t* trackEntry = *it;
+
+            auto* gui = trackEntry->trackMixer;
+            auto* gui2 = trackEntry->trackMixer;
+            dbgassert(gui->isVisible());
+            auto distDragPoint = checkDropPoint(gui->pos.x - dropMaxDistance, gui->pos.x + dropMaxDistance, _pos.x);
+            if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
+                minDistDragPoint = distDragPoint;
+                minSlot          = { slotIdx, trackEntry->track, drop_type::track_before, { gui->pos.x, gui->pos.y } };
+            }
+            if (trackEntry->track->children.empty()) {
+                distDragPoint = checkDropPoint(gui->pos.x + gui->size.x - dropMaxDistance, gui->pos.x + gui->size.x + dropMaxDistance, _pos.x);
+                if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
+                    minDistDragPoint = distDragPoint;
+                    minSlot          = { slotIdx, trackEntry->track, drop_type::track_after, { gui->pos.x + gui->size.x, gui->pos.y } };
+                }
+            }
+            distDragPoint = checkDropPoint(gui2->pos.x + dropMaxDistance, gui2->pos.x + gui2->size.x - dropMaxDistance, _pos.x);
+            if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
+                minDistDragPoint = distDragPoint;
+                minSlot          = { slotIdx, trackEntry->track, drop_type::track_on, { gui2->pos.x + gui->size.x, gui2->pos.y } };
+            }
+        }
+    } else {
+        auto checkDropPoint = [](int32_t posMin, int32_t posMax, int posMouse) -> int32_t {
+            return math::abs(posMin + (posMax - posMin) / 2 - posMouse);
+        };
+
+        // check if we're below last top track and before first bottom track
+        auto& tracksTop = parent->guiMgr.getTracksTopFlat();
+        auto& tracksBottom = parent->guiMgr.getTracksBottomFlat();
+        if (tracksTop.empty() && tracksBottom.empty()) {
+            return minSlot;
+        }
+        auto lastTopTrack = tracksTop.back();
+        auto firstBottomTrack = tracksBottom.front();
+        if (lastTopTrack && !firstBottomTrack && _pos.x > lastTopTrack->trackMixer->pos.x + lastTopTrack->trackMixer->size.x) {
+            return minSlot;
+        }
+        if (!lastTopTrack && firstBottomTrack && _pos.x < firstBottomTrack->trackMixer->pos.x) {
+            return minSlot;
+        }
+        if (lastTopTrack && firstBottomTrack && _pos.x > lastTopTrack->trackMixer->pos.x + lastTopTrack->trackMixer->size.x && _pos.x < firstBottomTrack->trackMixer->pos.x) {
+            return minSlot;
+        }
+
+        for (auto it = itcBegin; it != itcEnd; it++) {
+            int32_t slotIdx = static_cast<int32_t>(itcEnd - it - 1);
+            track_gui_entry_t* trackEntry = *it;
+            auto* gui = trackEntry->trackMixer;
+            dbgassert(gui->isVisible());
+            auto distDragPoint = checkDropPoint(gui->pos.x, gui->pos.x + gui->size.x, _pos.x);
+            if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
+                minDistDragPoint = distDragPoint;
+                minSlot          = { slotIdx, trackEntry->track, drop_type::track_on, { gui->pos.x + gui->size.x / 2, gui->pos.y } };
+            }
+        }
+    }
+    return minSlot;
+}
+
+void SetDragDropTrackMixerInidicatorFromMousePos(guictr_mixers* parent, ivec2 mousepos, const String& clipboardName, bool bIncludeBeforeAfter) {
+    using drop_type = gui_track_drop_position_t::drop_type;
+    parent->dawCtrl->getDragDropTarget().reset();
+    gui_track_drop_position_t slot = GetTrackMixerSlotFromCoord(parent, mousepos, bIncludeBeforeAfter);
+
+    dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
+    int32_t treeIdx = 0;
+    track_t* targetTrack = slot.droppedTrack;
+    switch (slot.droptype) {
+        case drop_type::none:
+            if (!bIncludeBeforeAfter) {
+                GetTrackMixerSlotFromCoord(parent, mousepos, bIncludeBeforeAfter);
+            }
+            treeIdx = -2;
+            break;
+        case drop_type::track_on:
+            //insert into slot.droppedTrack at end
+            treeIdx     = !slot.droppedTrack->children.empty() ? slot.droppedTrack->children.back()->childIdxTree : 0;
+            break;
+        case drop_type::track_before:
+            //insert into slot.droppedTrack->parent before slot.droppedTrack
+            treeIdx     = slot.droppedTrack->childIdxTree;
+
+            break;
+        case drop_type::track_after:
+            //insert into slot.droppedTrack->parent after slot.droppedTrack
+            treeIdx     = slot.droppedTrack->childIdxTree + 1;
+            break;
+        default:
+            dbgassert(0);
+            return;
+    }
+
+    dragdrop_target_indicator_t target;
+    guibase* dropTarget = parent;
+    String trNameDest = "";
+    track_gui_entry_t* entry{};
+    ivec2 dropPos{};
+    ivec2 dropSize{};
+    if (targetTrack && parent->getTrackEntry(targetTrack, &entry)) {
+        dropTarget = entry->trackMixer;
+        trNameDest = entry->track->name;
+        dropPos    = entry->trackMixer->pos;
+        dropSize   = entry->trackMixer->size;
+    }
+    switch (slot.droptype) {
+        case drop_type::track_on:
+            target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget->toRef(), dropPos + ivec2(dropSize.x / 2, 0), "Move '" + clipboardName + "' to '" + trNameDest + "'" };
+            break;
+        case drop_type::track_before:
+            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget->toRef(), dropPos + ivec2(0, 2), "Move '" + clipboardName + "' here" };
+            break;
+        case drop_type::track_after:
+            target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget->toRef(), dropPos + ivec2(dropSize.x - 2, 0), "Move '" + clipboardName + "' here" };
+            break;
+        case drop_type::none:
+            // new track
+            target = { dragdrop_target_indicator_t::target_area, treeIdx, parent->toRef(), parent->pos + parent->size / 2, "Move '" + clipboardName + "' here" };
+            break;
+        default:
+            dbgassert(0);
+            return;
+    }
+    parent->dawCtrl->getDragDropTarget() = target;
+}
+
+void InsertDraggedPluginsOnTrack(DawInstance* daw, track_t* track, guictr_dragged_plugins* g);
+void InsertPluginOnTrack(DawInstance* daw, track_t* track, effectbase* effect);
+} // namespace DAW
+
+void guictr_mixers::trackEntryDragMove(track_gui_entry_t* trackEntry, ivec2 mousepos) {
+    DAW::SetDragDropTrackMixerInidicatorFromMousePos(this, mousepos, trackEntry->track->name, true);
+}
+
+void guictr_mixers::trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) {
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackMixerSlotFromCoord(this, mousepos, true);
+    DAW::MoveTrackToSlot(parent->dawCtrl->getDaw(), trackEntry->track, slot);
+}
+
+void guictr_mixers::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
+    String clipboardDescription = StringFormat("%d Plugins", CtrSize(g->effects));
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackMixerSlotFromCoord(this, mousepos, false);
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+            dragdrop_target_indicator_t::target_area,
+            -2,
+            toRef(),
+            this->pos + this->size/2,
+            "Move " + clipboardDescription + " to new track"
+        };
+        return;
+    }
+
+    dawCtrl->getDragDropTarget().reset();
+
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
+        return;
+    }
+
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+
+    audio_stage_t* srcStage = g->getTrackLink();
+    audio_stage_t* dstStage = dstTrack->getStage();
+    int highlightSlot = CtrSize(dstStage->effects);
+
+    if (dstStage == srcStage) {
+        int first = g->effects.front()->getSlot();
+        int last  = g->effects.back()->getSlot();
+        if (highlightSlot >= first && highlightSlot <= last) {
+            return;
+        }
+    } else {
+        // prevent dragging onto if any of the effects is parent of this
+        audio_stage_t* p = dstStage;
+        while (p) {
+            if (p->owner && std::find(g->effects.begin(), g->effects.end(), p->owner) != g->effects.end()) {
+                // NOTE: I think this can never happen here, because we're dragging from a track to another track
+                return;
+            }
+            p = p->parent;
+        }
+    }
+
+    track_gui_entry_t* dstTrackEntry = nullptr;
+    if (!this->guiMgr.getTrackEntry(dstTrack, &dstTrackEntry))
+        return;
+
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+        dragdrop_target_indicator_t::target_area,
+        highlightSlot,
+        dstTrackEntry->trackMixer->toRef(),
+        slot.pos, 
+        "Move " + clipboardDescription + " to " + dstTrack->name
+    };
+}
+
+void guictr_mixers::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
+    String clipboardDescription = g->getLabel();
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackMixerSlotFromCoord(this, mousepos, false);
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+            dragdrop_target_indicator_t::target_area,
+            -2,
+            toRef(),
+            this->pos + this->size/2,
+            "Insert " + clipboardDescription + " on new track"
+        };
+        return;
+    }
+
+    dawCtrl->getDragDropTarget().reset();
+
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
+        return;
+    }
+
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+
+    audio_stage_t* dstStage = dstTrack->getStage();
+    int highlightSlot = CtrSize(dstStage->effects);
+
+    track_gui_entry_t* dstTrackEntry = nullptr;
+    if (!this->guiMgr.getTrackEntry(dstTrack, &dstTrackEntry))
+        return;
+
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+        dragdrop_target_indicator_t::target_area,
+        highlightSlot,
+        dstTrackEntry->trackMixer->toRef(),
+        slot.pos, 
+        "Insert " + clipboardDescription + " on " + dstTrack->name
+    };
+}
+
+void guictr_mixers::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
+    auto daw = dawCtrl->getDaw();
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackMixerSlotFromCoord(this, mousepos, false);
+
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        ThreadLock lock = daw->lockPlayThread();
+        auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
+        if (!track)
+            return;
+        track_gui_entry_t* entry = nullptr;
+        if (!this->guiMgr.getTrackEntry(track, &entry))
+            return;
+        dawCtrl->setSelectedTrackEntry(entry);
+        dawCtrl->showPluginView();
+        dawCtrl->getDragDropTarget().reset();
+        auto effect = g->makeInstance();
+        if (effect) {
+            DAW::InsertPluginOnTrack(daw, track, effect);
+            track->name = effect->getName();
+        }
+        return;
+    }
+
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
+        return;
+    }
+
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+
+    auto effect = g->makeInstance();
+    if (effect) {
+        ThreadLock lock = daw->lockPlayThread();
+        DAW::InsertPluginOnTrack(daw, dstTrack, effect);
+    }
+}
+
+void guictr_mixers::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
+    auto daw = dawCtrl->getDaw();
+    DAW::gui_track_drop_position_t slot = DAW::GetTrackMixerSlotFromCoord(this, mousepos, false);
+    if (slot.droptype == DAW::gui_track_drop_position_t::none) {
+        ThreadLock lock = daw->lockPlayThread();
+        auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
+        if (!track)
+            return;
+        track_gui_entry_t* entry = nullptr;
+        if (!this->guiMgr.getTrackEntry(track, &entry))
+            return;
+        dawCtrl->setSelectedTrackEntry(entry);
+        dawCtrl->showPluginView();
+        dawCtrl->getDragDropTarget().reset();
+        DAW::InsertDraggedPluginsOnTrack(daw, track, g);
+        return;
+    }
+    if (slot.droptype != DAW::gui_track_drop_position_t::track_on) {
+        return;
+    }
+    auto dstTrack = slot.droppedTrack;
+    if (!dstTrack)
+        return;
+    audio_stage_t* srcStage = g->getTrackLink();
+    audio_stage_t* dstStage = dstTrack->getStage();
+    if (dstStage == srcStage) {
+        return;
+    }
+    ThreadLock lock = daw->lockPlayThread();
+    DAW::InsertDraggedPluginsOnTrack(daw, dstTrack, g);
+}
 
 template<>
 void guitooltip<DAW::guictr_mixertitle>::setContent() {
@@ -931,3 +1241,166 @@ void guitooltip<DAW::guictr_mixertitle>::setContent() {
         table.rows.push_back({ { tblstr{ "sampleRate" }, tblint{ audio->sampleFormat.sampleRate } } });
     }
 }
+
+void guictr_mixers::layout() {
+    const int32_t trackControlsWidth = theme->get(GuiConstant::CONST_TRACK_CONTROLS_WIDTH);
+    const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
+
+    int scrollW = gui_scrollbar::defaultW;
+    ivec2 cs    = getSizeContent();
+    cs.x = math::max(scrollW+trackControlsWidth+5, cs.x);
+    cs.y = math::max(MIXER_SIZE_STEP, cs.y);
+    scrollbar.pos  = ivec2(0, cs.y - scrollW);
+    scrollbar.size = ivec2(cs.x, scrollW);
+    mixerOptions.size = ivec2(MIXER_SIZE_STEP, cs.y);
+    mixerOptions.pos  = ivec2(cs.x - mixerOptions.size.x, 0);
+    trackMixers.size = cs - ivec2(mixerOptions.size.x, 0);
+    trackMixers.pos  = ivec2(0, 0);
+
+    ivec2 csTrackView = trackMixers.getSizeContent();
+
+    // Calculate the combined width of all top tracks
+    int32_t allTracksWidth = 0;
+    for (auto* entry : guiMgr.trackEntriesTop) {
+        if (guiMgr.isVisible(entry)) {
+            allTracksWidth += getTrackTotalWidth(entry);
+            allTracksWidth += TRACK_MIXER_SPACING;
+        }
+    }
+
+    // Calculate the x position of the first return
+    int32_t xPosFirstReturn = csTrackView.x - TRACK_MIXER_SPACING;
+    auto itMastersTracks    = guiMgr.trackEntriesBottom.rbegin();
+    auto itMastersEnd       = guiMgr.trackEntriesBottom.rend();
+    while (itMastersTracks != itMastersEnd) {
+        auto& entry = *itMastersTracks;
+        if (guiMgr.isVisible(entry)) {
+            xPosFirstReturn -= getTrackTotalWidth(entry);
+            xPosFirstReturn -= TRACK_MIXER_SPACING;
+        }
+        itMastersTracks++;
+    }
+    scrollbar.setVisible(allTracksWidth >= xPosFirstReturn);
+    contentWidth    = allTracksWidth;
+    contentViewSize = xPosFirstReturn;
+    contentWidth += MIXER_SIZE_STEP * 4;
+    if (scrollbar.isVisible()) {
+        trackMixers.size.y -= scrollW;
+    }
+
+    int32_t scrOffset = math::max(0.0f, getScrollOffset() * (allTracksWidth - contentViewSize));
+
+    int x = TRACK_MIXER_SPACING - scrOffset;
+    for (auto* entry : guiMgr.trackEntriesTop) {
+        if (guiMgr.isVisible(entry)) {
+            int32_t w = setTrackPosition(entry, x, false);
+            x += w + TRACK_MIXER_SPACING;
+        } else {
+            dbgassert(0);
+        }
+    }
+
+
+    x = csTrackView.x - TRACK_MIXER_SPACING;
+
+    itMastersTracks = guiMgr.trackEntriesBottom.rbegin();
+    itMastersEnd    = guiMgr.trackEntriesBottom.rend();
+    while (itMastersTracks != itMastersEnd) {
+        auto& entry = *itMastersTracks;
+        if (!assert_expr(entry->trackMixer)) {
+            continue;
+        }
+        if (guiMgr.isVisible(entry)) {
+            int32_t w = setTrackPosition(entry, x, true);
+            x -= w;
+            x -= TRACK_MIXER_SPACING;
+        } else {
+            dbgassert(0);
+        }
+        itMastersTracks++;
+    }
+    auto itAll = guiMgr.tracksVisibleFlat.begin();
+    auto itEnd = guiMgr.tracksVisibleFlat.end();
+    for (; itAll != itEnd; ++itAll) {
+        auto* entry = *itAll;
+        auto itNext = itAll;
+        int32_t childMixerWidthSteps = 0;
+        for (++itNext; itNext != itEnd; ++itNext) {
+            auto* entryNext = *itNext;
+            if (!entryNext->track->isChildOf(entry->track)) {
+                break;
+            }
+            entry->trackMixerTitle->size.x = entryNext->trackMixerTitle->right() - entry->trackMixerTitle->left();
+            childMixerWidthSteps += entryNext->layout.height;
+        }
+        entry->trackMixer->childMixerWidthSteps = childMixerWidthSteps;
+    }
+
+    for (guibase* gui : guis) {
+        gui->layout();
+    }
+}
+
+void guictr_mixers::scrollOffsetChanged(int dir, float offset) {
+    int32_t scrOffset = math::max(0.0f, offset * (contentWidth - contentViewSize));
+
+    int x = TRACK_MIXER_SPACING - scrOffset;
+    for (auto* entry : guiMgr.trackEntriesTop) {
+        if (guiMgr.isVisible(entry)) {
+            int32_t w = setTrackPosition(entry, x, false);
+            x += w + TRACK_MIXER_SPACING;
+        }
+    }
+    auto itAll = guiMgr.tracksVisibleFlat.begin();
+    auto itEnd = guiMgr.tracksVisibleFlat.end();
+    for (; itAll != itEnd; ++itAll) {
+        auto* entry = *itAll;
+        auto itNext = itAll;
+        int32_t childMixerWidthSteps = 0;
+        for (++itNext; itNext != itEnd; ++itNext) {
+            auto* entryNext = *itNext;
+            if (!entryNext->track->isChildOf(entry->track)) {
+                break;
+            }
+            
+            entry->trackMixerTitle->size.x = entryNext->trackMixerTitle->right() - entry->trackMixerTitle->left();
+            childMixerWidthSteps += entryNext->layout.height;
+        }
+        entry->trackMixer->childMixerWidthSteps = childMixerWidthSteps;
+    }
+}
+
+namespace DAW {
+    void guictr_mixertitle::handleDraggedMove(MouseEvent& evt) {
+        if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
+            int32_t mouseDragDist         = evt.relMousepos.x;
+            const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
+            parent->onChildLayoutChanged(this);
+            auto newHeight = math::min(TRACK_MAX_HEIGHT, math::max(TRACK_MIN_HEIGHT, (mouseDragDist) / MIXER_SIZE_STEP));
+            newHeight -= m_trackentry->trackMixer->childMixerWidthSteps;
+            m_trackentry->layout.height = math::clamp(newHeight, 2, 10);
+            dawCtrl->updateVisibleTrackContents();
+        } else {
+            parentCtrl->objectDragMove(this, evt);
+        }
+    }
+
+    void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry) {
+        auto cb = [trackEntry = trackentry](const String& str) {
+            trackEntry->track->name = str;
+            return false;
+        };
+        guibase* title = nullptr;
+        if (trackentry->trackControls) {
+            title = trackentry->trackControls->getTitle();
+        }
+        if (trackentry->trackMixerTitle) {
+            title = trackentry->trackMixerTitle;
+        }
+        if (!title) {
+            return;
+        }
+        auto popupPos    = title->toScreenSpace(ivec2(0));
+        OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
+    }
+} // namespace DAW
