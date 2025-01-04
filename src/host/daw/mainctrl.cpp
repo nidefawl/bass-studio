@@ -212,8 +212,8 @@ public:
     std::vector<std::shared_ptr<guictr_clipeditor>> vecClipEditors;
 
     guictr_menubar ctr_menu;
-    guictr_daw_controls ctr_tempo;
-    gui_statusbar statusbar;
+    guictr_daw_controls ctr_dawcontrols;
+    gui_statusbar ctr_statusbar;
     guictr_pluginview ctr_pluginview;
     guictr_clipeditorview ctr_clipeditorview;
     std::vector<std::shared_ptr<Splitter>> splitters;
@@ -280,7 +280,7 @@ public:
           ctrEntryNodes(createGuiCtrLayoutEntry(std::make_shared<guictr_nodes_splitview>(_cursor, _project, dragdropclip))),
           ctrEntryPlugins(createGuiCtrLayoutEntry(std::make_shared<guictr_plugins>(instanceId))),
           ctr_menu(menubar),
-          ctr_tempo(_project, _projectGlobals),
+          ctr_dawcontrols(_project, _projectGlobals),
           ctr_pluginview(),
           ctr_clipeditorview()
     {
@@ -324,8 +324,8 @@ public:
         ctrEntryPlugins->setEntryTag(GuiContainerTag::TAG_PLUGINS);
 
 
-        ctr_tempo.setSnapSides(ivec4(0, 0, 0, 1));
-        statusbar.setSnapSides(ivec4(0, 1, 0, 1));
+        ctr_dawcontrols.setSnapSides(ivec4(0, 0, 0, 1));
+        ctr_statusbar.setSnapSides(ivec4(0, 1, 0, 1));
         ctr_clipeditorview.setSnapSides(ivec4(0, 1, 0, 0));
         ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
         // ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
@@ -706,7 +706,7 @@ public:
         } else if (rightSplitter->getScale() > rightSplitter->getMax()) {
             rightSplitter->setScale(rightSplitter->getDefault());
         }
-        int hTopControls     = 48;
+        int hTopControls     = 42;
         int heightViewSelect = 60;
         int heightStatusBar = 16;
         int hCenter      = winH - hTopControls - heightViewSelect - heightStatusBar;
@@ -717,11 +717,11 @@ public:
 
         ctr_Center->size = vec2(widthCenter, hCenter);
         ctr_Center->pos  = vec2(widthLeft, winY + hTopControls);
-        ctr_tempo.size          = { winW, hTopControls };
+        ctr_dawcontrols.size   = { winW, hTopControls };
         ctr_clipeditorview.size = { widthCenter/2, heightViewSelect };
-        statusbar.size = { winW, heightStatusBar };
-        ctr_tempo.pos          = { winX, winY };
-        statusbar.pos          = { winX, winBottom - heightStatusBar };
+        ctr_statusbar.size = { winW, heightStatusBar };
+        ctr_dawcontrols.pos    = { winX, winY };
+        ctr_statusbar.pos      = { winX, winBottom - heightStatusBar };
         ctr_Left->pos          = { winX, winY + hTopControls };
         ctr_Left->size         = { widthLeft, hContent };
 
@@ -739,20 +739,20 @@ public:
 
         ctr_clipeditorview.pos = { widthLeft, winBottom - heightViewSelect - heightStatusBar };
         ctr_pluginview.pos     = { ctr_clipeditorview.right(), winBottom - heightViewSelect - heightStatusBar };
-        ctr_pluginview.size     = { ctr_Center->right()-ctr_pluginview.left(), heightViewSelect };
+        ctr_pluginview.size    = { ctr_Center->right()-ctr_pluginview.left(), heightViewSelect };
     }
 
     void addTo(std::vector<guictr_base*>& v) override {
         for (auto& s : splitters)
             v.push_back(s.get());
-        v.push_back(&ctr_tempo);
+        v.push_back(&ctr_dawcontrols);
         v.push_back(&ctr_pluginview);
         v.push_back(&ctr_clipeditorview);
         visitLayoutContainers([&](std::shared_ptr<guictr_layout>& ctr) {
             v.push_back(ctr.get());
             return true;
         });
-        v.push_back(&statusbar);
+        v.push_back(&ctr_statusbar);
 #if USE_GUI_MENU
         v.push_back(&ctr_menu);
 #endif
@@ -1147,7 +1147,7 @@ bool DawCtrl::menuCommand(const menucmd_t& command) {
 }
 
 void MainCtrl::startApp() {
-    statusbarLogger = std::make_shared<MainCtrlErrorStatusBarLogger>(&view->statusbar);
+    statusbarLogger = std::make_shared<MainCtrlErrorStatusBarLogger>(&view->ctr_statusbar);
     statusbarLogger->setLevel(Log::L_WARN);
     getMultiLogger().addLogger(statusbarLogger.get());
     Profiling::profilingRegisterEntry<prof_stats_render_t>(this, {"Main Render Stats", -10});
@@ -1849,11 +1849,11 @@ DAW::Cursor& MainCtrl::getCursor() {
 }
 
 void MainCtrl::setStatusText(const String& s, GuiColor::constant_t color) {
-    view->statusbar.setTitle(s, color);
+    view->ctr_statusbar.setTitle(s, color);
 }
 
 void MainCtrl::setStatusText(String s) {
-    view->statusbar.setTitle(s);
+    view->ctr_statusbar.setTitle(s);
 }
 
 void DawCtrl::setSingleClip(clip_t* clip) {
@@ -2129,7 +2129,7 @@ void DawCtrl::loadTrackLayouts(const std::shared_ptr<project_file>& file) {
 void DawCtrl::updateZoomLevel(float f) {
     AppCtrl::updateZoomLevel(f);
     if (view) {
-        view->ctr_tempo.onGlobalZoomChanged();
+        view->ctr_dawcontrols.onGlobalZoomChanged();
         while (daw.tls.settings->windowSettings.size() <= dawCtrlWindowIndex) {
             daw.tls.settings->windowSettings.emplace_back();
         }

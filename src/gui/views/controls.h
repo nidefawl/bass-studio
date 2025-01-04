@@ -280,6 +280,16 @@ class guictr_daw_controls final : public guictr_base {
     guibuttonstate btnUiLayoutLock;
     guictr_daw_layout_select layoutSelect;
     guictr_daw_viewmode_select viewSelect;
+    class guictr_controls_group : public guictr_base {
+    public:
+        guictr_controls_group();
+        ~guictr_controls_group() override {
+            removeGuis();
+        }
+    };
+    guictr_controls_group ctrLeft;
+    guictr_controls_group ctrCenter;
+    guictr_controls_group ctrRight;
 public:
     guictr_daw_controls(project_t& _project, project_globals_t& _projectGlobals);
     ~guictr_daw_controls() override;

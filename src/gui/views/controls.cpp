@@ -1,7 +1,9 @@
 #include "controls.h"
 
 #include "gui/dialog/dialog_io.h"
+#include "guiconstant.h"
 #include "keyboard.h"
+#include "logging.h"
 #include "seq_time.h"
 #include "tls.h"
 #include "types.h"
@@ -676,6 +678,12 @@ void gui_signaturecontrol::render(NVGcontext* vg) {
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
 }
+
+guictr_daw_controls::guictr_controls_group::guictr_controls_group() {
+    padding = 0;
+    margin  = 0;
+}
+
 guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t& _projectGlobals)
     : guictr_base(),
       projectGlobals(_projectGlobals),
@@ -684,6 +692,8 @@ guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t&
       loopPos(false),
       loopLen(true),
       zoom(&globalZoom) {
+    padding = 0;
+    margin = 0;
     cursorPos.setRef(toRef(), &projectGlobals.cursor.cursorPos);
     songPos.setRef(toRef(), &projectGlobals.playbackPos);
     loopPos.setRef(toRef(), &projectGlobals.loopStart);
@@ -710,23 +720,22 @@ guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t&
     btnUiLayoutLock.drawParm = ICON_OPT_LOCKED;
     btnRecord.setStateRef(&projectGlobals.recordArmed);
     btnRecord.setButtonColor(GuiColor::COL_BTN_RECORD_ARM_BG);
-    add(&loopLen);
-    add(&loopPos);
-    add(&tempo);
-    add(&signature);
-    add(&cursorPos);
-    add(&layoutSelect);
-    add(&viewSelect);
-    add(&btnLoop);
-    add(&btnStop);
-    add(&btnPlay);
-    add(&btnRecord);
-    add(&songPos);
-    add(&btnUiLayoutLock);
-    add(&zoom);
-    add(&btnLowLatency);
-    add(&btnAudioOnOff);
-    padding = 8;
+    ctrCenter.add(&loopLen);
+    ctrCenter.add(&loopPos);
+    ctrLeft.add(&tempo);
+    ctrLeft.add(&signature);
+    ctrLeft.add(&cursorPos);
+    ctrRight.add(&layoutSelect);
+    ctrRight.add(&viewSelect);
+    ctrCenter.add(&btnLoop);
+    ctrCenter.add(&btnStop);
+    ctrCenter.add(&btnPlay);
+    ctrCenter.add(&btnRecord);
+    ctrCenter.add(&songPos);
+    ctrRight.add(&btnUiLayoutLock);
+    ctrRight.add(&zoom);
+    ctrRight.add(&btnLowLatency);
+    ctrRight.add(&btnAudioOnOff);
     zoom.setLabel("Zoom");
     tempo.setLabel("Tempo");
     btnRecord.setLabel("Record (Arm)");
@@ -745,24 +754,14 @@ guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t&
     btnUiLayoutLock.setLabel("Lock UI Layout");
     layoutSelect.setLabel("Select View");
     viewSelect.setLabel("Switch between Tracks / Nodes View");
+    add(&ctrLeft);
+    add(&ctrCenter);
+    add(&ctrRight); 
 }
 guictr_daw_controls::~guictr_daw_controls() {
-    remove(&btnAudioOnOff);
-    remove(&btnLowLatency);
-    remove(&zoom);
-    remove(&btnUiLayoutLock);
-    remove(&songPos);
-    remove(&btnRecord);
-    remove(&btnPlay);
-    remove(&btnStop);
-    remove(&btnLoop);
-    remove(&viewSelect);
-    remove(&layoutSelect);
-    remove(&cursorPos);
-    remove(&signature);
-    remove(&tempo);
-    remove(&loopPos);
-    remove(&loopLen);
+    remove(&ctrLeft);
+    remove(&ctrCenter);
+    remove(&ctrRight);
 }
 template<>
 String gui_numberinput_field_generic<GlobalZoom>::valueToStringLiteral(GlobalZoom val) {
@@ -786,54 +785,78 @@ void gui_numberinput_field_generic<GlobalZoom>::onKeyInputChangeValue(ivec2 dire
     }
 }
 void guictr_daw_controls::layout() {
-    ivec2 cs        = getSizeContent();
-    int32_t verticalSpacing = 10;
-    int32_t smallHeight = 28;
-    int32_t bigHeight = 32;
+    const auto  cs = getSizeContent();
+    const int32_t inset = 4;
+    const int32_t bigHeight = cs.y - 2 * inset;
+    const int32_t smallHeight = bigHeight - 4;
+    ctrLeft.pos = ctrCenter.pos = ctrRight.pos = ivec2(0);
+    ctrLeft.size = ctrCenter.size = ctrRight.size = ivec2(cs.x, cs.y);
+    int32_t posX = 0;
+    for (guictr_controls_group* ctr : {&ctrLeft, &ctrCenter, &ctrRight}) {
+        auto thirdWidth = cs.x / 3;
+        ctr->size.x = thirdWidth;
+        ctr->pos.x = posX;
+        posX += thirdWidth;
+    }
+
+    auto csSubCtr = ctrLeft.getSizeContent();
+    posX = inset >> 1;
+    int32_t posY = (csSubCtr.y - smallHeight) / 2;
     tempo.size      = ivec2(bigHeight * 3, smallHeight);
     signature.size  = ivec2(bigHeight * 3, smallHeight);
     cursorPos.size  = ivec2(bigHeight * 3, smallHeight);
-    tempo.pos       = ivec2(verticalSpacing >> 1, (cs.y - tempo.size.y) / 2);
-    signature.pos   = ivec2(tempo.right() + verticalSpacing, (cs.y - signature.size.y) / 2);
-    cursorPos.pos   = ivec2(signature.right() + verticalSpacing, (cs.y - cursorPos.size.y) / 2);
+    tempo.pos = ivec2(posX, posY);      posX += bigHeight * 3 + inset;
+    signature.pos = ivec2(posX, posY);  posX += bigHeight * 3 + inset;
+    cursorPos.pos = ivec2(posX, posY);  posX += bigHeight * 3 + inset;
+    ctrLeft.size.x = posX;
 
-
-    int32_t spacingCtrls = 5;
-    btnRecord.size = btnLoop.size = btnStop.size = btnPlay.size = ivec2(bigHeight, bigHeight);
-
-    btnLoop.size.x = bigHeight + (bigHeight >> 1);
+    csSubCtr = ctrCenter.getSizeContent();
+    posX = inset >> 1;
+    posY = (csSubCtr.y - bigHeight) / 2;
+    btnRecord.size = btnStop.size = btnPlay.size = ivec2(bigHeight, bigHeight);
+    songPos.size   = ivec2(bigHeight * 4, bigHeight);
+    btnLoop.size = ivec2(bigHeight + (bigHeight >> 1), bigHeight);
     loopPos.size   = ivec2(bigHeight * 3, bigHeight);
     loopLen.size   = ivec2(bigHeight * 3, bigHeight);
-    songPos.size   = ivec2(bigHeight * 4, bigHeight);
+    btnRecord.pos = ivec2(posX, posY);  posX += bigHeight + inset;
+    btnPlay.pos = ivec2(posX, posY);    posX += bigHeight + inset;
+    btnStop.pos = ivec2(posX, posY);    posX += bigHeight + inset;
+    songPos.pos = ivec2(posX, posY);    posX += songPos.size.x + inset;
+    btnLoop.pos = ivec2(posX, posY);    posX += btnLoop.size.x + inset;
+    loopPos.pos = ivec2(posX, posY);    posX += loopPos.size.x + inset;
+    loopLen.pos = ivec2(posX, posY);    posX += loopLen.size.x + inset;
+    ctrCenter.size.x = posX;
 
-    int32_t transportWidth = btnPlay.size.x + spacingCtrls + btnStop.size.x + spacingCtrls + songPos.size.x;
-    int32_t transportCtrls = math::max(cs.x / 2 - transportWidth / 2, cursorPos.right() + verticalSpacing);
-
-    std::vector<guibase*> playbackControls{ &btnRecord, &btnPlay, &btnStop, &songPos };
-    std::vector<guibase*> loopControls{ &btnLoop, &loopPos, &loopLen };
-    int posX = transportCtrls;
-    for (auto el : playbackControls) {
-        el->pos = ivec2(posX, (cs.y - el->size.y) / 2);
-        posX    = el->right() + spacingCtrls;
-    }
-    posX += spacingCtrls * 3;
-    for (auto el : loopControls) {
-        el->pos = ivec2(posX, (cs.y - el->size.y) / 2);
-        posX    = el->right() + spacingCtrls;
-    }
-
-    btnAudioOnOff.size = ivec2(smallHeight*3, smallHeight);
-    btnLowLatency.size = ivec2(smallHeight*2.5, smallHeight);
-    zoom.size          = ivec2(smallHeight*3, smallHeight);
+    csSubCtr = ctrRight.getSizeContent();
+    posX = inset >> 1;
+    posY = (csSubCtr.y - smallHeight) / 2;
+    viewSelect.size     = ivec2((smallHeight + 5) * viewSelect.getNumButtons(), smallHeight);
+    layoutSelect.size   = ivec2((smallHeight + 5) * layoutSelect.getNumButtons(), smallHeight);
     btnUiLayoutLock.size = ivec2(smallHeight, smallHeight);
-    layoutSelect.size    = ivec2((smallHeight+5) * layoutSelect.getNumButtons(), smallHeight);
-    viewSelect.size      = ivec2((smallHeight+5) * viewSelect.getNumButtons(), smallHeight);
-    btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + verticalSpacing, cs.x - 5 - btnAudioOnOff.size.x), (cs.y - btnAudioOnOff.size.y) / 2);
-    btnLowLatency.pos  = ivec2(btnAudioOnOff.left() - btnLowLatency.size.x - spacingCtrls, (cs.y - btnLowLatency.size.y) / 2);
-    zoom.pos = ivec2(btnLowLatency.left() - zoom.size.x - spacingCtrls, (cs.y - zoom.size.y) / 2);
-    btnUiLayoutLock.pos = ivec2(zoom.left() - btnUiLayoutLock.size.x - spacingCtrls, (cs.y - btnUiLayoutLock.size.y) / 2);
-    layoutSelect.pos = ivec2(btnUiLayoutLock.left() - layoutSelect.size.x - spacingCtrls, (cs.y - layoutSelect.size.y) / 2);
-    viewSelect.pos = ivec2(layoutSelect.left() - viewSelect.size.x - spacingCtrls, (cs.y - viewSelect.size.y) / 2);
+    zoom.size           = ivec2(smallHeight * 3, smallHeight);
+    btnLowLatency.size  = ivec2(smallHeight * 2.5, smallHeight);
+    btnAudioOnOff.size  = ivec2(smallHeight * 3, smallHeight);
+    viewSelect.pos = ivec2(posX, posY);      posX += viewSelect.size.x + inset;
+    layoutSelect.pos = ivec2(posX, posY);    posX += layoutSelect.size.x + inset;
+    btnUiLayoutLock.pos = ivec2(posX, posY); posX += btnUiLayoutLock.size.x + inset;
+    zoom.pos = ivec2(posX, posY);            posX += zoom.size.x + inset;
+    btnLowLatency.pos = ivec2(posX, posY);    posX += btnLowLatency.size.x + inset;
+    btnAudioOnOff.pos = ivec2(posX, posY);    posX += btnAudioOnOff.size.x + inset;
+    ctrRight.size.x = posX;
+
+    // center the middle container
+    ctrCenter.pos.x = (cs.x - ctrCenter.size.x) / 2;
+    // right align the right container
+    ctrRight.pos.x = cs.x - ctrRight.size.x;
+
+    // move center to the left if it's too far to the right
+    int32_t spaceBetweenCR = ctrRight.left() - ctrCenter.right();
+    if (spaceBetweenCR < 0) {
+        int32_t spaceBetweenLC = ctrCenter.left() - ctrLeft.right();
+        if (spaceBetweenLC > 0) {
+            ctrCenter.pos.x -= math::min(-spaceBetweenCR, spaceBetweenLC);
+        }
+    }
 
     for (guibase* gui : guis) {
         gui->layout();

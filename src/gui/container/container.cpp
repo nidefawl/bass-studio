@@ -100,15 +100,16 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
 void guictr_base::renderBackground(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
-    // dbgassert(isBackgroundRendered());
-    // bool focused = parentCtrl->isCtrOrChildFocused(this);
     drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, isBackgroundRenderedInset());
     renderContainerLabel(vg);
     /* render debug background if gui flag 1<<16 is set */
     if ((this->id & (1 << 16)) && size.x > 0 && size.y > 0) {
+        auto colDbgIdx = this->id % dbgcolorsArraySize;
+        auto colDbg = dbgcolorsArray[colDbgIdx];
+        colDbg.a = 0.5f;
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
-        nvgFillColor(vg, rgbaToNvg(0x7fff00ff));
+        nvgFillColor(vg, colDbg);
         nvgFill(vg);
     }
     if (dawCtrl && safeRefGet(dawCtrl->getDragDropTarget().target) == this) {
