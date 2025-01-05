@@ -222,6 +222,12 @@ public:
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_GPU, "Synth GPU", true });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_SYNTH_KICKXP, "Kick XP", true });
         effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_VISUALIZER, "Visualizer", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_TAPE_DELAY, "Tape Delay", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_AIRWINDOWS_GALACTIC_1, "Galactic 1 Reverb", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_AIRWINDOWS_GALACTIC_2, "Galactic 2 Reverb", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_AIRWINDOWS_GALACTIC_3, "Galactic 3 Reverb", false });
+        effectEntries.push_back(module_desc_t{ MODULE_TYPE_INTERNAL_EFFECT, PLUGIN_TYPE_AIRWINDOWS_MATRIXVERB, "MatrixVerb", false });
+
         auto daw = dawCtrl->getDaw();
         auto pluginMgr = daw->getPluginManager();
         std::vector<DAW::Host::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();

@@ -11,9 +11,9 @@
 #include "plugins/sampledelay/sampledelay-plugin.h"
 #include "plugins/stereowidth/stereowidth-plugin.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/modules.h"
 #include "plugins/visualizer/visualizer-plugin.h"
+#include "plugins/tapedelay/tapedelay-plugin.hpp"
 
 extern template effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<module_group>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
@@ -25,6 +25,7 @@ extern template effectbase* makeInstance<PluginStereoWidth::module_stereowidth>(
 extern template effectbase* makeInstance<PluginMacros::module_macros>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginLFO::module_lfo>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginEQ::module_eq>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginDelay::module_delay>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
 namespace PluginSynth {
 class module_synth_unison;
@@ -40,6 +41,10 @@ class module_synth_gpu;
 namespace KickXP {
 class module_synth_kickxp;
 }
+}
+namespace PluginAirWindows {
+class module_airwindows;
+effectbase* makeModuleAirWindowsInstance(PluginType type, int32_t globalid, IHostCallback* hostcallback);
 }
 extern template effectbase* makeInstance<PluginSynth::module_synth_unison>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginSynth::Shaper::module_synth_shaper>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
@@ -101,8 +106,14 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
             case PLUGIN_TYPE_SYNTH_KICKXP:
                 effect = makeInstance<PluginSynth::KickXP::module_synth_kickxp>(getNextGlobalModuleId(globalid), hostcallback);
                 break;
+            case PLUGIN_TYPE_TAPE_DELAY:
+                effect = makeInstance<PluginDelay::module_delay>(getNextGlobalModuleId(globalid), hostcallback);
+                break;
             default:
                 break;
+        }
+        if (moduleId > PLUGIN_TYPE_AIRWINDOWS_NONE && moduleId < PLUGIN_TYPE_AIRWINDOWS_MAX) {
+            effect = PluginAirWindows::makeModuleAirWindowsInstance(static_cast<PluginType>(moduleId), getNextGlobalModuleId(globalid), hostcallback);
         }
         if (effect) {
             effect->load(this);

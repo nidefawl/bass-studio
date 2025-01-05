@@ -249,16 +249,6 @@ namespace PluginSynth::KickXP {
                 addParam(param, enumParam);
                 return param;
             };
-            auto addIntParam = [&addParam](Parameters enumParam) -> SynthParam_Int* {
-                SynthParam_Int* param = new SynthParam_Int(enumParam);
-                addParam(param, enumParam);
-                return param;
-            };
-            auto addEnumParam = [&addParam](Parameters enumParam) -> SynthParam_Enum* {
-                SynthParam_Enum* param = new SynthParam_Enum(enumParam);
-                addParam(param, enumParam);
-                return param;
-            };
             auto setParamName = [](SynthParamBase* p, String name, String shortName = "", String hierarchicalName = "", String unit = "", String format = "") {
                 if (shortName.empty()) {
                     p->shortName = name;
@@ -342,29 +332,6 @@ namespace PluginSynth::KickXP {
         }
 
         void OnParamChange(Parameters parameter) override {
-            double value                         = 0.0;
-            auto paramInstance                   = getParam(parameter);
-            SynthParam_Float* paramFloatOptional = nullptr;
-            SynthParam_Int* paramIntOptional     = nullptr;
-            SynthParam_Enum* paramEnumOptional   = nullptr;
-            switch (paramInstance->getType()) {
-                case SynthParam::ParamType::FLOAT:
-                    paramFloatOptional = static_cast<SynthParam_Float*>(paramInstance);
-                    value              = paramFloatOptional->Value();
-                    break;
-                case SynthParam::ParamType::INT:
-                    paramIntOptional = static_cast<SynthParam_Int*>(paramInstance);
-                    value            = paramIntOptional->Value();
-                    break;
-                case SynthParam::ParamType::ENUM:
-                    paramEnumOptional = static_cast<SynthParam_Enum*>(paramInstance);
-                    value             = paramEnumOptional->Value();
-                    break;
-            }
-            switch (parameter) {
-                default:
-                    break;
-            }
         }
 
         void StartVoice(VoiceSynth& v, VoiceModes mode, double velocity) {
