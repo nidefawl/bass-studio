@@ -296,7 +296,7 @@ void TestAppCtrl::onTick() {
     mainWindow->requestRedraw();
     if (tmStart == 0) {
         tmStart = getTimeMillis();
-    } else if (getTimeMillis() - tmStart > appTimeoutSeconds * 1000) {
+    } else if (appTimeoutSeconds >= 0 && getTimeMillis() - tmStart > appTimeoutSeconds * 1000) {
         mainWindow->requestClose();
     }
 }

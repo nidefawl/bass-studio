@@ -181,11 +181,11 @@ public:
                     offsetPosMultiline.y += sizeMultiLineBox.y;
                 }      
                 if (quadrant == 3) {
-                    auto sizeMultiLineBox = vec2(sizeRender.x*(0.2f+0.8f*i/20.0f), fontsize*2.0f + 4.0f);
-                    auto posFixed = vec2(20.0f, i*70.f);
-                    if (i > 5) posFixed.x = sizeRender.x*0.33f;
-                    renderCenteredMultilineText(vg, getTheme(), strings[i == 0 ? 0 : strings.size() - 1 - i], 
-                            23.0f, GuiColor::COL_LABEL_ACTIVE, posFixed, sizeMultiLineBox);
+                    auto sizeMultiLineBox = vec2(breakRowWidth, fontsize*2.0f + 4.0f);
+                    offsetPosMultiline.x = (sizeRender.x-sizeMultiLineBox.x)*0.5f * i/20.0f;
+                    renderCenteredMultilineText(vg, getTheme(), strings[noffset+i], 
+                            fontsize, GuiColor::COL_LABEL_ACTIVE, offsetPosMultiline, sizeMultiLineBox);
+                    offsetPosMultiline.y += sizeMultiLineBox.y;
                 }      
                 offsetPos.y += fontsize;
             }
@@ -217,7 +217,9 @@ public:
 
 }// namespace test_fontrenderer
 
+extern bool g_debugTextRenderLayout;
 int main(int argc, char* argv[]) {
+    g_debugTextRenderLayout = true;
     test_fontrenderer::Instance instService;
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
     daw_tls::initNewTls();

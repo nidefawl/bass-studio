@@ -28,7 +28,7 @@
 #include "host/daw/mainctrl.h"
 
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
-
+bool g_debugTextRenderLayout = false;
 
 const NVGcolor dbgcolorsArray[8] = {
         nvgRGBA(255, 0, 0, 55),
@@ -157,27 +157,27 @@ float renderTextLabel(NVGcontext* vg,
         theme->bindFont(vg, UIFont::FONT_DEFAULT);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
-#if 0
-    auto col = getContrastFontColorNvg(color);
-    col.a *= 0.3f;
-    nvgBeginPath(vg);
-    vec2 offsetPos = pos;
-    if (alignment&NVG_ALIGN_CENTER) {
-        offsetPos.x -= bounds.x * 0.5f;
+    if (g_debugTextRenderLayout) {
+        auto col = getContrastFontColorNvg(color);
+        col.a *= 0.3f;
+        nvgBeginPath(vg);
+        vec2 offsetPos = pos;
+        if (alignment&NVG_ALIGN_CENTER) {
+            offsetPos.x -= bounds.x * 0.5f;
+        }
+        if (alignment&NVG_ALIGN_RIGHT) {
+            offsetPos.x -= bounds.x * 1.0f;
+        }
+        if (alignment&NVG_ALIGN_MIDDLE) {
+            offsetPos.y -= bounds.y * 0.5f;
+        }
+        if (alignment&NVG_ALIGN_BOTTOM) {
+            offsetPos.y -= bounds.y * 1.0f;
+        }
+        nvgRect(vg, offsetPos.x, offsetPos.y, bounds.x, bounds.y);
+        nvgFillColor(vg, col);
+        nvgFill(vg);
     }
-    if (alignment&NVG_ALIGN_RIGHT) {
-        offsetPos.x -= bounds.x * 1.0f;
-    }
-    if (alignment&NVG_ALIGN_MIDDLE) {
-        offsetPos.y -= bounds.y * 0.5f;
-    }
-    if (alignment&NVG_ALIGN_BOTTOM) {
-        offsetPos.y -= bounds.y * 1.0f;
-    }
-    nvgRect(vg, offsetPos.x, offsetPos.y, bounds.x, bounds.y);
-    nvgFillColor(vg, col);
-    nvgFill(vg);
-#endif
     nvgTranslateZ(vg, -2.0f);
     nvgFontSize(vg, fontSizeScaled);
     nvgFillColor(vg, color);
@@ -226,15 +226,15 @@ float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme,
     const NVGcolor color = theme->getColor(c);
     const auto alignment = NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE;
 
-#if 0
-    auto col = getContrastFontColorNvg(color);
-    col.a *= 0.3f;
-    col.r = 1.0f;
-    nvgBeginPath(vg);
-    nvgRect(vg, pos.x, pos.y, bounds.x, bounds.y);
-    nvgFillColor(vg, col);
-    nvgFill(vg);
-#endif
+    if (g_debugTextRenderLayout) {
+        auto col = getContrastFontColorNvg(color);
+        col.a *= 0.3f;
+        col.r = 1.0f;
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y, bounds.x, bounds.y);
+        nvgFillColor(vg, col);
+        nvgFill(vg);
+    }
 
     nvgFontSize(vg, fontSizeScaled);
     nvgFillColor(vg, color);
