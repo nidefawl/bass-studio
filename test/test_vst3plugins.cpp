@@ -1,3 +1,4 @@
+#include "rand.h"
 #include <public.sdk/source/vst/hosting/hostclasses.h>
 #include <public.sdk/source/vst/hosting/module.h>
 #include <public.sdk/samples/vst-hosting/editorhost/source/platform/iplatform.h>
@@ -404,10 +405,10 @@ int main(int, char*[]) {
     auto pList = VST3::Hosting::Module::getModulePaths();
     std::set<std::string> uniqueClasses;
     std::set<std::string> uniqueCategories;
-    srand(time(0));
-    auto randomIndex = rand() % pList.size();
+    seq_rand rand;
+    auto randomIndex = rand.rng_bits(32) % pList.size();
     for (size_t i = 0; i < pList.size(); i++) {
-        auto path = pList[i];
+        auto& path = pList[i];
         std::string error;
         auto module = Module::create (path, error);
         if (!module)
@@ -417,8 +418,7 @@ int main(int, char*[]) {
             reason += "\nError: ";
             reason += error;
         } else {
-            int32_t classCount = 0;
-            for (auto classInfo : module->getFactory().classInfos()) {
+            for (auto& classInfo : module->getFactory().classInfos()) {
                 uniqueClasses.insert(classInfo.name());
                 if (classInfo.name().find("Diva") != std::string::npos) {
                     testVst3(path, uid, flags);
@@ -427,16 +427,15 @@ int main(int, char*[]) {
                 for (auto& subCategory : classInfo.subCategories()) {
                     uniqueCategories.insert(subCategory);
                 }
-                classCount++;
             }
             if (i == randomIndex) {
                 // testVst3(path, uid, flags);
             }
         }
-        std::printf("Scanning VST3 plugins: %d/%d\n", i, pList.size());
+        std::printf("Scanning VST3 plugins: %zu/%zu\n", i, pList.size());
     }
     pluginContext = nullptr;
-    std::printf("%d unique classes, %d unique categories\n",
+    std::printf("%zu unique classes, %zu unique categories\n",
         uniqueClasses.size(), uniqueCategories.size());
     for (auto& className : uniqueClasses) {
         std::printf("Class: %s\n", className.c_str());

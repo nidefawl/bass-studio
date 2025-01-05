@@ -28,7 +28,7 @@ namespace TestVector {
         DAW::SegmentedVector<LargeStruct, SEGMENT_SIZE> vec;
         vec.push_back(LargeStruct());
         LargeStruct* ptr = &vec[0];
-        for (int i = 0; i < SEGMENT_SIZE; ++i) {
+        for (size_t i = 0; i < SEGMENT_SIZE; ++i) {
             TEST_ASSERT_EQUAL(ptr, &vec[0]);
             vec.push_back(LargeStruct());
         }

@@ -174,7 +174,7 @@ int main(int, char*[]) {
             while(window && !glfwWindowShouldClose(window)) {
                 glfwPollEvents();
                 do {
-                    if (stream->getOutputQueueSize() < LOCAL_RING_BUF_SIZE / 2)
+                    if (stream->getOutputQueueSize() < int32_t(LOCAL_RING_BUF_SIZE / 2))
                         break;
                     seqthreads::threadSleepMicros(200);
                 } while(true);
@@ -244,7 +244,7 @@ int main(int, char*[]) {
                 }
                 if (warmupBlocks >= 0) {
                     warmupBlocks++;
-                    if (warmupBlocks >= LOCAL_RING_BUF_SIZE/4) {
+                    if (warmupBlocks >= int32_t(LOCAL_RING_BUF_SIZE/4)) {
                         for (int i = 0; i < warmupBlocks; i++) {
                             auto ringBufIdx = ringbuffer.writePos - warmupBlocks + i;
                             stream->enqueue(ringbuffer.buffers[ringBufIdx%LOCAL_RING_BUF_SIZE]);

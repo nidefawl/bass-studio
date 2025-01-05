@@ -60,7 +60,7 @@ struct waveform_test {
         std::vector<waveform_test_entry> vec;
         std::vector<FileFound> files;
         findFilesWithExt(TEST_PATH("samples"), "wav", true, files);
-        log_printf("findFilesWithExt %d\n", files.size());
+        log_printf("findFilesWithExt %zu\n", files.size());
         for (auto i = 0u; i < files.size() && vec.size() < 8; i++) {
             size_t filesize = GetFileSizeSafe(files[i].path);
             if (filesize > 1024 * 1024 * 32) {

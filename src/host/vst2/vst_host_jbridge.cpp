@@ -72,7 +72,7 @@ int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& fi
     }
 
     // Get entry point
-    PFNBRIDGEMAIN pfnBridgeMain = (PFNBRIDGEMAIN) GetProcAddress(hModuleProxy, "BridgeMain");
+    PFNBRIDGEMAIN pfnBridgeMain = (PFNBRIDGEMAIN) (void*) GetProcAddress(hModuleProxy, "BridgeMain");
     if (!pfnBridgeMain) {
         FreeLibrary(hModuleProxy);
         MessageBox(GetActiveWindow(), "BridgeMain entry point not found", "JBridge", MB_OK | MB_ICONHAND);

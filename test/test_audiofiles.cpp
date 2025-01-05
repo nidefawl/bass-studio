@@ -100,7 +100,7 @@ namespace TestAudiofiles {
         while (samplesWritten < numSamplesToWrite) {
             auto samplesToWrite = std::min(chunkSize, numSamplesToWrite - samplesWritten);
             auto writeLenBytes  = size_t(samplesToWrite) * 8;
-            dbgassert(bufferBytes >= writeLenBytes);
+            TEST_ASSERT_THROW(bufferBytes >= writeLenBytes);
             auto wrote = samplecount_t(drwav_write_pcm_frames(&wav, samplesToWrite, buffer.data()));
             samplesWritten += wrote;
         }
@@ -146,7 +146,7 @@ namespace TestAudiofiles {
         while (samplesWritten < numSamplesToWrite) {
             auto samplesToWrite = std::min(chunkSize, numSamplesToWrite - samplesWritten);
             auto writeLenBytes  = size_t(samplesToWrite) * 8;
-            dbgassert(bufferBytes >= writeLenBytes);
+            TEST_ASSERT_THROW(bufferBytes >= writeLenBytes);
             auto wrote = samplecount_t(drwav_write_pcm_frames(&wav, samplesToWrite, buffer.data()));
             samplesWritten += wrote;
         }

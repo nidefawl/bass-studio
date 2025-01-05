@@ -103,16 +103,12 @@ namespace {
                 // find closest color in palette
                 glm::vec3 closestHSL = hsv;
                 double closestDistance = -1.0;
-                int32_t idx = 0;
-                int32_t idxSel = 0;
                 for (auto& cVI : colorPalette) {
-                    idx++;
                     auto delta = cVI - hsvI;
                     auto d = sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
                     if (closestDistance < 0 || d < closestDistance) {
                         closestDistance = d;
                         closestHSL = glm::vec3(cVI.x / 255.0f, cVI.y / 255.0f, cVI.z / 255.0f);
-                        idxSel = idx;
                     }
                 }
                 dbgassert(!fp_math::isNanOrInfd(closestHSL.x));
@@ -129,15 +125,17 @@ namespace {
                 // v.r = fmod((v.r + 180.0f), 360.0f);
                 // v.r = fmod((v.r + 180.0f), 360.0f);
                 auto rgb = glm::rgbColor(closestHSL);
-                int chR  = rgb.r * 255.0f;
+#ifndef NDEBUG
+                int chR  = uint8_t(rgb.r * 255.0f);
                 dbgassert(chR >= 0 && chR <= 255);
-                chR = rgb.g * 255.0f;
+                chR = uint8_t(rgb.g * 255.0f);
                 dbgassert(chR >= 0 && chR <= 255);
-                chR = rgb.b * 255.0f;
+                chR = uint8_t(rgb.b * 255.0f);
                 dbgassert(chR >= 0 && chR <= 255);
-                r = rgb.r * 255.0f;
-                g = rgb.g * 255.0f;
-                b = rgb.b * 255.0f;
+#endif
+                r = uint8_t(rgb.r * 255.0f);
+                g = uint8_t(rgb.g * 255.0f);
+                b = uint8_t(rgb.b * 255.0f);
             }
         }
 

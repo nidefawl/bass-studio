@@ -89,12 +89,12 @@ public:
         int x = 5;
 
         setFont(vg, 14, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-        float lineh;
+        float lineh = 0.0f;
         nvgTextMetrics(vg, NULL, NULL, &lineh);
 
 
         nvgText(vg, x, 0, StringAsCStr(label), NULL);
-        int y = lineh;
+        auto y = lineh;
         for (String& s : strings) {
             nvgText(vg, x, y, StringAsCStr(s), NULL);
             y += lineh;

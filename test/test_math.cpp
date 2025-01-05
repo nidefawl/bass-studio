@@ -319,22 +319,22 @@ namespace test_math {
 
     void testFloorU32() {
         using ::math::floorfU32;
-        TEST_ASSERT_EQUAL(floorfU32(0.0f), 0);
-        TEST_ASSERT_EQUAL(floorfU32(0.5f), 0);
-        TEST_ASSERT_EQUAL(floorfU32(1.0f), 1);
-        TEST_ASSERT_EQUAL(floorfU32(1.5f), 1);
-        TEST_ASSERT_EQUAL(floorfU32(2.0f), 2);
-        TEST_ASSERT_EQUAL(floorfU32(-0.0f), 0);
-        TEST_ASSERT_EQUAL(floorfU32(-0.25f), 0);
-        TEST_ASSERT_EQUAL(floorfU32(-0.5f), 0);
-        TEST_ASSERT_EQUAL(floorfU32(-1.0f), 0);
-        TEST_ASSERT_EQUAL(floorfU32(-1.5f), 0);
-        TEST_ASSERT_EQUAL(floorfU32(-2.0f), 0);
+        TEST_ASSERT_EQUAL(floorfU32(0.0f), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(0.5f), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(1.0f), 1U);
+        TEST_ASSERT_EQUAL(floorfU32(1.5f), 1U);
+        TEST_ASSERT_EQUAL(floorfU32(2.0f), 2U);
+        TEST_ASSERT_EQUAL(floorfU32(-0.0f), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(-0.25f), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(-0.5f), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(-1.0f), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(-1.5f), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(-2.0f), 0U);
 
         TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::max()), std::numeric_limits<uint32_t>::max());
         TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::lowest()), std::numeric_limits<uint32_t>::min());
-        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::min()), 0);
-        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::denorm_min()), 0);
+        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::min()), 0U);
+        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::denorm_min()), 0U);
         TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::infinity()), std::numeric_limits<uint32_t>::max());
         TEST_ASSERT_EQUAL(floorfU32(-std::numeric_limits<float>::infinity()), std::numeric_limits<uint32_t>::min());
         TEST_ASSERT_EQUAL(floorfU32(INFINITY), std::numeric_limits<uint32_t>::max());
@@ -403,6 +403,7 @@ namespace test_math {
 #if defined(__clang__)
         /* TODO: Clang: test result of floored float maximum */
         // TEST_ASSERT_EQUAL(maxS64PosValuePlus1Floord, std::numeric_limits<int64_t>::max());
+        (void)maxS64PosValuePlus1Floord;
 #else
         TEST_ASSERT_EQUAL(maxS64PosValuePlus1Floord, std::numeric_limits<int64_t>::max());
 #endif
@@ -688,10 +689,10 @@ namespace test_math {
             TEST_ASSERT_THROW(rand.rng_double() < 1.0);
         }
         for (size_t i = 0; i < 10; i++) {
-            log_lf(Log::L_INFO, "%d: rng_double %f %f %f %f\n", i, rand.rng_double(), rand.rng_double(), rand.rng_double(), rand.rng_double());
+            log_lf(Log::L_INFO, "%zu: rng_double %f %f %f %f\n", i, rand.rng_double(), rand.rng_double(), rand.rng_double(), rand.rng_double());
         }
         for (size_t i = 0; i < 10; i++) {
-            log_lf(Log::L_INFO, "%d: rng_rand %08X %08X\n", i, rand.rng_rand(), rand.rng_rand());
+            log_lf(Log::L_INFO, "%zu: rng_rand %08X %08X\n", i, rand.rng_rand(), rand.rng_rand());
         }
 
         TEST_END();
@@ -702,7 +703,7 @@ namespace test_math {
         for (size_t i = 0; i < 16; i++) {
             rand.rng_seed(i);
             double d = rand.rng_double();
-            log_lf(Log::L_INFO, "Seed %d: rng_double %f\n", i, d);
+            log_lf(Log::L_INFO, "Seed %zu: rng_double %f\n", i, d);
         }
         TEST_END();
     }
@@ -717,8 +718,8 @@ int main() {
         // Print for reference
         auto largeInt    = test_math::getS64AboveS32();
         auto aboveS32Max = static_cast<float>(largeInt);
-        log_printf("roundF32toS32 float(%012X) = %012X\n", largeInt, (int32_t)math::roundfS32((float)aboveS32Max));
-        log_printf("roundF32toS64 float(%012X) = %012X\n", largeInt, math::roundfS64(aboveS32Max));
+        log_printf("roundF32toS32 float(%012zX) = %012X\n", largeInt, (int32_t)math::roundfS32((float)aboveS32Max));
+        log_printf("roundF32toS64 float(%012zX) = %012zX\n", largeInt, math::roundfS64(aboveS32Max));
         log_printf("sint64 max = %zd\n", 1ULL << 63);
         log_printf("floorS64(std::numeric_limits<float>::infinity()) = %zd\n", math::floorfS64(std::numeric_limits<float>::infinity()));
         log_printf("floorS64(std::numeric_limits<float>::max()) = %zd\n", math::floorfS64(std::numeric_limits<float>::max()));

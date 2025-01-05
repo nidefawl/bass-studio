@@ -111,7 +111,7 @@ struct gui_select_entry_t {
     String name;
 };
 class guidialog_select_app : public guidialog_base {
-    const float heightTitle = 0.2;
+    const float heightTitle = 0.2f;
 
     String message;
     std::function<void(gui_select_entry_t&)> cb;

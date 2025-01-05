@@ -13,7 +13,7 @@ void test_libarchive(String outName = "test_libarchive.zip") {
     TEST_BEGIN("write zip file");
     String textContentFile1 = "This is just some text content for file 1";
     std::vector<std::byte> binaryContentFile2_256(1024LL*1024*32);
-    for (int i = 0; i < binaryContentFile2_256.size(); ++i) {
+    for (size_t i = 0; i < binaryContentFile2_256.size(); ++i) {
         binaryContentFile2_256[i] = std::byte(((i+i%10) % 256));
     }
     /* create a new gzip archive file on disk containing 3 files:
@@ -33,7 +33,7 @@ void test_libarchive(String outName = "test_libarchive.zip") {
     struct archive_entry* entry = archive_entry_new();
 	TEST_ASSERT_THROW(!!entry);
     archive_entry_set_pathname(entry, "file1.txt");
-    archive_entry_set_size(entry, textContentFile1.size());
+    archive_entry_set_size(entry, ssize_t(textContentFile1.size()));
     archive_entry_set_filetype(entry, AE_IFREG);
     archive_entry_set_perm(entry, 0644);
 	TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_write_header(a, entry));
@@ -94,14 +94,14 @@ void test_libarchive(String outName = "test_libarchive.zip") {
             auto buffer = std::shared_ptr<std::byte[]>(new std::byte[size]);
             auto readsize = archive_read_data(a, buffer.get(), size);
             if (pathNameStr == "file1.txt") {
-                TEST_ASSERT_THROW(readsize == textContentFile1.size());
+                TEST_ASSERT_THROW(readsize == ssize_t(textContentFile1.size()));
                 String fileContent = String((char*)buffer.get(), readsize);
                 TEST_ASSERT_THROW(fileContent == textContentFile1);
             } else if (pathNameStr == "file2.bin") {
-                TEST_ASSERT_THROW(readsize == binaryContentFile2_256.size());
+                TEST_ASSERT_THROW(readsize == ssize_t(binaryContentFile2_256.size()));
                 TEST_ASSERT_THROW(buffer[64] == std::byte(0x12));
             } else if (pathNameStr == "file3.bin") {
-                TEST_ASSERT_THROW(readsize == binaryContentFile2_256.size());
+                TEST_ASSERT_THROW(readsize == ssize_t(binaryContentFile2_256.size()));
                 TEST_ASSERT_THROW(buffer[64] == std::byte(0x13));
             } else {
                 TEST_ASSERT_THROW(false);

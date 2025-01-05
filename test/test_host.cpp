@@ -113,7 +113,7 @@ namespace test_host {
                     float valAbsDiff = math::abs(blockChannel[pos] - expected[ch]);
                     maxErrorClip = math::max(maxErrorClip, valAbsDiff);
                     if ((iClip==0&&ch==0&&pos<10) || pos == block.samples>>1 || valAbsDiff >= maxError*0.7f) {
-                        log_out("channel %u pos %u: expected %f, actual %f, diff %f\n", ch, pos, expected[ch], blockChannel[pos], valAbsDiff);
+                        log_out("channel %u pos %zd: expected %f, actual %f, diff %f\n", ch, pos, expected[ch], blockChannel[pos], valAbsDiff);
                     }
                     TEST_ASSERT_THROW(valAbsDiff < maxError);
                 }
@@ -152,7 +152,6 @@ namespace test_host {
         auto audioClip = createClipFromSample(tickPosClip, prjGlobals, samplefile);
         audioClip->len /= 2;
         audioClip->offsetStart = audioClip->len/3;
-        auto off = tickToSampleConvert<samplecount_t, roundmode::floor>(audioClip->offsetStart, prjGlobals.tempo100, sf.sampleRate);
         clips.push_back(audioClip);
         auto block = AudioBlock(numChannels, sampleLenClip*3);
         block.clear();

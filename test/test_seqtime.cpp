@@ -14,9 +14,7 @@ namespace {
         TEST_BEGIN("testTickConversions");
         project_globals_t project;
         samplerate_t samplerate = 44100;
-        int32_t blocksize       = 512;
         int32_t tempo100        = 12800;
-        tick_t tick = 0;
         tickToSampleConvert<double, roundmode::none>(0, tempo100, samplerate);
         tickToSampleConvert<double, roundmode::floor>(0, tempo100, samplerate);
         tickToSampleConvert<double, roundmode::floorclamp>(0, tempo100, samplerate);
@@ -192,8 +190,6 @@ namespace {
         {
             tick_t tick = -1 - TICKS_BAR;
             auto timeBeat = tickToBarBeat16th(tick, signatureNum, signatureDenomBits, isRelative);
-            auto timeBeat3 = tickToBarBeat16th(-1, signatureNum, signatureDenomBits, isRelative);
-            auto timeBeat2 = tickToBarBeat16th(-1 - TICKS_BAR*2, signatureNum, signatureDenomBits, isRelative);
             TEST_ASSERT_THROW(timeBeat.bar == -2);
             TEST_ASSERT_THROW(timeBeat.beat == 0);
             TEST_ASSERT_THROW(timeBeat.th == 0);
@@ -304,8 +300,6 @@ namespace {
 
     void test_beatBarNthToString() {
         TEST_BEGIN("test_beatBarNthToString");
-        uint32_t signatureNum   = 4;
-        uint32_t signatureDenomBits = 2; // exponent of 2
         {
             const bool isRelative = true;
             TEST_ASSERT_EQUAL(beatBarNthToString(beatbar16th_t{-2, 1, 1, 1}, isRelative), "-1.1.1.1");

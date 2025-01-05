@@ -41,14 +41,13 @@ namespace {
     void TickTest() {
         static LoadResultPluginImpl res{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
         static int currentTimerTick = 0;
-        static int numPluginsTested = 0;
         auto* host = daw_tls::getTls().host;
         if (res.plugin == nullptr || res.vstPlugin == nullptr) {
             if (currentFileIdx >= dllFilesToTest.size()) {
                 PostQuitMessage(exitStatusCode);
                 return;
             }
-            TestCaseEntry testCase = dllFilesToTest[currentFileIdx++];
+            const TestCaseEntry& testCase = dllFilesToTest[currentFileIdx++];
             auto loadresult = host->loadPlugin(testCase.pathToDll, 0);
             res = *loadresult;
             if (res.library.state != testCase.expectedState || res.library.type != testCase.expectedType) {
@@ -72,7 +71,6 @@ namespace {
                 host->unloadPlugin(res.plugin);
                 res = LoadResultPluginImpl{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
                 currentTimerTick = -1;
-                numPluginsTested++;
             } else {
                 host->onTick();
                 res.plugin->updateFromMainThread();

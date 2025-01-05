@@ -22,10 +22,10 @@ namespace dsp_util {
     float GAIN_DBFLOOR = math::powf(10.0f, DBFS_FLOOR / 20.0f);
     float GAIN_DBINF   = math::powf(10.0f, DBFS_INF_POS / 20.0f);
     float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL; */
-    constexpr float GAIN_DB30    = 31.62277660168379331999;
-    constexpr float GAIN_DB6     = 1.99526231496887960135;
-    constexpr float GAIN_DBFLOOR = 0.0001;
-    constexpr float GAIN_DBINF   = 0.00001;
+    constexpr float GAIN_DB30    = 31.62277660168379331999f;
+    constexpr float GAIN_DB6     = 1.99526231496887960135f;
+    constexpr float GAIN_DBFLOOR = 0.0001f;
+    constexpr float GAIN_DBINF   = 0.00001f;
     constexpr float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
     constexpr float GAIN_SCALE_EXP    = 2.0f;
 

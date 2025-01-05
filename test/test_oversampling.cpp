@@ -145,7 +145,7 @@ namespace {
                         for (channelnum_t c = 0; c < sampleIn->nChannels; c++) {
                             channelsOut[c] = sampleOut->getSample()->samples[c].data() + outputOffset;
                         }
-                        oversampler.down(channelsOut, numSamplesCopy / 2);
+                        oversampler.down(channelsOut, int32_t(numSamplesCopy / 2));
                         outputOffset += numSamplesCopy / 2;
                         inputOffset += format.blockSize;
                     }
@@ -156,7 +156,7 @@ namespace {
                         //resize to actual size
                         sampleOut->getSample()->samples[c].resize(sampleOut->getSample()->nSamples - latency);
                     }
-                    sampleOut->getSample()->nSamples -= latency * 1.5;
+                    sampleOut->getSample()->nSamples -= samplecount_t(latency * 1.5);
                     cache.saveSamples({sampleOut->id});
                     cache.unloadSampleId(sampleOut->id);
                 }
@@ -182,7 +182,7 @@ namespace {
             }
             for (samplecount_t i = 0; i < blockSizeUp; i++) {
                 for (channelnum_t c = 0; c < numChannels; c++) {
-                    inputs[c][i] = fmod(i / double(blockSizeUp) + 0.5 , 1.0) * 2.0 - 1.0;
+                    inputs[c][i] = float(fmod(i / double(blockSizeUp) + 0.5 , 1.0) * 2.0 - 1.0);
                 }
             }
             float* outputs[numChannels] = {};
