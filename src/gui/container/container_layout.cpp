@@ -221,8 +221,6 @@ void guictr_stacked::updateSplitterPositions() {
         entrySplitter.setMin(scalePrev);
         entrySplitter.setMax(scaleNext);
         entrySplitter.setScale(entrySplitter.getScaleClamped());
-        auto scale = entries[i]->splitter.getScale();
-        dbgassert(scalePrev <= scale && scale <= scaleNext);
     }
 }
 

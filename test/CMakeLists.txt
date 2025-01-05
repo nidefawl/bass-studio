@@ -21,6 +21,7 @@ else()
   list(APPEND TC_WARNING_FLAGS -Wno-implicit-int-conversion)
   list(APPEND TC_WARNING_FLAGS -Wno-sign-conversion)
   list(APPEND TC_WARNING_FLAGS -Wno-implicit-int-float-conversion)
+  list(APPEND TC_WARNING_FLAGS -Wno-unused-parameter)
 endif()
 
 message(STATUS "TESTS WARNINGS ${TC_WARNING_FLAGS}")
@@ -100,6 +101,9 @@ DEFINE_TEST(
   ../src/util/testing_environment.cpp
   ../src/util/str_util.cpp
   ../src/threads/thread.cpp
+)
+set_source_files_properties(test_strings.cpp PROPERTIES
+  COMPILE_OPTIONS "-fno-finite-math-only"
 )
 
 DEFINE_TEST(

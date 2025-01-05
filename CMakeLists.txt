@@ -229,7 +229,7 @@ if (PROJECT_REQUIRE_LIB)
   set_property(TARGET ${LINK_TARGET} PROPERTY DEBUG_POSTFIX d)
 else()
   set(LINK_TARGET ${PROJECT_NAME})
-  # define main exectuable
+  # define main executable
   add_executable(${PROJECT_NAME} "src/host/daw/main_daw.cpp"
                 ${RESOURCE_FILES} 
                 ${CPP_SRC_FILES} 

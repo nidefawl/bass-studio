@@ -49,8 +49,8 @@ namespace {
     void test_append() {
         TEST_BEGIN("test_append");
         String str = "###\n";
-        str.insert(0, StringFormat("#define B %zu.0\n", 123));
-        str.insert(0, StringFormat("#define A %zu.0\n", 123));
+        str.insert(0, StringFormat("#define B %d.0\n", 123));
+        str.insert(0, StringFormat("#define A %d.0\n", 123));
         str.insert(0, "#version 1\n");
         TEST_ASSERT_EQUAL(str, "#version 1\n#define A 123.0\n#define B 123.0\n###\n");
         TEST_END();

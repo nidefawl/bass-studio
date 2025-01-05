@@ -826,7 +826,9 @@ void SynthImplGPU::ProcessSynth(AudioBlock* in, AudioBlock* out, int nFrames, co
     }
 }
 void SynthImplGPU::processGpuSynthInput(const DAW::Host::Host* const host, double tick, double samplePos, samplecount_t sampleOffsetInt, samplecount_t sampleOffsetExt, samplecount_t numSamples, DAW::Host::ProcessingQuality quality, playback_state state) {
+#ifndef NDEBUG
     const bool bIsBenchmark        = gDebugBenchmarkFlags & 1;
+#endif
     const bool bDbgSkipBufferBuild = gDebugBenchmarkFlags & 2;
 
     const int nOversample         = 1;
@@ -1050,9 +1052,9 @@ void SynthImplGPU::dispatchGpuSynth() {
     if (bIsBenchmark) {
         return;
     }
-    auto tmNow_ms = getTimeMillis();
     auto tmTotal_ms = perfTimer.getTimeDoubleReset() * 1000.0;
 #ifndef NDEBUG
+    auto tmNow_ms = getTimeMillis();
     if (tmNow_ms - timePerfLog >= 10000 || tmTotal_ms > timeComputeAvg * 10.0) {
         if (timeComputeAvg < 0.0) {
             if (tmNow_ms - timePerfLog > 1500)
