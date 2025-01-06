@@ -1,29 +1,16 @@
-#include "glheaders.h"
-#include <nanovg.h>
-#include <vector>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
+
+#include "math/seq_math.h"
 #include "math/vec.h"
-#include "math/mat.h"
 #include "str_util.h"
-#include "basectrl.h"
-#include "platform.h"
 #include "gui/container/container.h"
-#include "gui/controls/knob.h"
 #include "gui/controls/inputfield.h"
-#include "gui/controls/colorpick.h"
-#include "gl/gl_util.h"
-#include "gl/gl_tess2d.h"
-#include "gl/gl_framebuffer.h"
-#include "gl/gl_shader.h"
-#include "gl/gl_util.h"
 
 
 template<typename T>
 class gui_float_editor_numberinput_field : public gui_numberinput_field_generic<T> {
 protected:
 public:
-    gui_float_editor_numberinput_field(T* const _number) : gui_numberinput_field_generic<T>(_number) {
+    explicit gui_float_editor_numberinput_field(T* const _number) : gui_numberinput_field_generic<T>(_number) {
     }
     T parseLiteral(const char* szNumber) override = 0;
     String valueToStringLiteral(T val) override   = 0;
@@ -35,7 +22,7 @@ private:
 };
 class float_repr_textfield_hex : public gui_float_editor_numberinput_field<float> {
 public:
-    float_repr_textfield_hex(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
+    explicit float_repr_textfield_hex(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
     }
     float parseLiteral(const char* szNumber) override {
         String input          = String(szNumber);
@@ -56,7 +43,7 @@ public:
 };
 class float_repr_textfield_binary : public gui_float_editor_numberinput_field<float> {
 public:
-    float_repr_textfield_binary(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
+    explicit float_repr_textfield_binary(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
     }
     float parseLiteral(const char* szNumber) override {
         String input = String(szNumber);
@@ -84,10 +71,10 @@ public:
 };
 class float_repr_textfield_dec_long : public gui_float_editor_numberinput_field<float> {
 public:
-    float_repr_textfield_dec_long(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
+    explicit float_repr_textfield_dec_long(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
     }
     float parseLiteral(const char* szNumber) override {
-        return atof(szNumber);
+        return float(atof(szNumber));
     }
     String valueToStringLiteral(float val) override {
         return StringFormat("%0.32f", val);
@@ -95,10 +82,10 @@ public:
 };
 class float_repr_textfield_dec_short : public gui_float_editor_numberinput_field<float> {
 public:
-    float_repr_textfield_dec_short(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
+    explicit float_repr_textfield_dec_short(float* const _ptrF) : gui_float_editor_numberinput_field<float>(_ptrF) {
     }
     float parseLiteral(const char* szNumber) override {
-        return atof(szNumber);
+        return float(atof(szNumber));
     }
     String valueToStringLiteral(float val) override {
         return StringFormat("%.32e", val);
@@ -106,10 +93,10 @@ public:
 };
 class float_repr_textfield_dec_signed : public gui_float_editor_numberinput_field<int32_t> {
 public:
-    float_repr_textfield_dec_signed(int32_t* const _ptrF) : gui_float_editor_numberinput_field<int32_t>(_ptrF) {
+    explicit float_repr_textfield_dec_signed(int32_t* const _ptrF) : gui_float_editor_numberinput_field<int32_t>(_ptrF) {
     }
     int32_t parseLiteral(const char* szNumber) override {
-        return atoi(szNumber);
+        return math::floordS32(atof(szNumber));
     }
     String valueToStringLiteral(int32_t val) override {
         return StringFormat("%d", val);
@@ -180,8 +167,10 @@ template<>
 uint32_t getMantissaBits(float f) {
     return (*reinterpret_cast<uint32_t*>(&f)) & getTypeManitssaMask<float>();
 }
+
+namespace {
 template<typename T>
-static T getFloatMantissa(T f) {
+T getFloatMantissa(T f) {
     uint32_t mnts_u32 = getMantissaBits(f);
     T fMantissa       = 1.0;
     for (uint8_t bit = 0; bit < getTypeManitssaSize<T>(); bit++) {
@@ -191,28 +180,28 @@ static T getFloatMantissa(T f) {
     return fMantissa;
 }
 template<typename T>
-static uint32_t getExponentBits(T f) {
+uint32_t getExponentBits(T f) {
     uint32_t float_as_u32  = *reinterpret_cast<uint32_t*>(&f);
     uint32_t float_shifted = (float_as_u32 >> getTypeManitssaSize<T>());
     return float_shifted & getTypeExponentMask<T>();
 }
 template<typename T>
-static int32_t getExponentBitsSigned(T f) {
+int32_t getExponentBitsSigned(T f) {
     uint32_t float_as_u32 = *reinterpret_cast<uint32_t*>(&f);
     uint32_t exponent_u32 = (float_as_u32 >> getTypeManitssaSize<T>()) & getTypeExponentMask<T>();
     //TODO: this needs to be handled left aligned to work with 11 bit exponent sign
     int8_t exponent_s32 = *reinterpret_cast<int8_t*>(&exponent_u32);
     return exponent_s32;
 }
-
+}
 template<typename T>
 class float_repr_textfield_exp_dec_unsigned : public gui_float_editor_numberinput_field<uint32_t> {
-    uint32_t edit;
+    uint32_t edit = 0;
     T* const number;
     bool hexFmt = false;
 
 public:
-    float_repr_textfield_exp_dec_unsigned(T* const _ptrF) : gui_float_editor_numberinput_field<uint32_t>(&edit), number(_ptrF) {
+    explicit float_repr_textfield_exp_dec_unsigned(T* const _ptrF) : gui_float_editor_numberinput_field<uint32_t>(&edit), number(_ptrF) {
     }
     void setHexFmt(bool b) {
         hexFmt = b;
@@ -254,12 +243,12 @@ public:
 };
 template<typename T>
 class float_repr_textfield_mantissa_dec_unsigned : public gui_float_editor_numberinput_field<uint32_t> {
-    uint32_t edit;
+    uint32_t edit = 0;
     T* const number;
     bool hexFmt = false;
 
 public:
-    float_repr_textfield_mantissa_dec_unsigned(T* const _ptrF) : gui_float_editor_numberinput_field<uint32_t>(&edit), number(_ptrF) {
+    explicit float_repr_textfield_mantissa_dec_unsigned(T* const _ptrF) : gui_float_editor_numberinput_field<uint32_t>(&edit), number(_ptrF) {
     }
     void setHexFmt(bool b) {
         hexFmt = b;
@@ -334,7 +323,7 @@ class guictr_edit_ieee_float : public guictr_base {
         "Mantissa",
     };
     static constexpr uint32_t colorGrp[NUM_GRPS] = { 0xffd2d2e7, 0xffc0ddc2, 0xffddd0c4 };
-    float textSize                               = 32.0f;
+    int32_t textSize = 32;
 
     float xGrps         = 0.0f;
     float yGrps         = 0.0f;
@@ -405,16 +394,16 @@ public:
         ivec2 cs               = getSizeContent();
         sizeView               = cs - INSET_OUTER * 2;
         sizeViewInner          = sizeView - INSET_INNER * 2;
-        heightGrp              = math::max((textSize + grpInset) * 7, sizeViewInner.y / 2 - grpInset * 2);
+        heightGrp              = math::max((textSize + grpInset) * 7.0f, sizeViewInner.y / 2.0f - grpInset * 2.0f);
         float aspectX          = sizeViewInner.x / (float) sizeViewInner.y;
         aspectView             = vec2(aspectX < 1.0f ? 1.0f : sizeViewInner.y / (float) sizeViewInner.x, aspectX < 1.0f ? aspectX : 1.0f);
         float posXFields       = INSET_OUTER + INSET_INNER;
-        float heightFields     = (sizeViewInner.y / 3) / (textFields.size() + 1.0);
+        float heightFields     = (sizeViewInner.y / 3.0f) / (textFields.size() + 1.0f);
         const float posYFields = INSET_OUTER + INSET_INNER + sizeViewInner.y - heightFields * (textFields.size() + 1);
-        float posYFieldsOffset = posYFields + heightFields / 2.0;
+        float posYFieldsOffset = posYFields + heightFields / 2.0f;
         float spacingYFields   = 5;
         for (auto pTextfield : textFields) {
-            pTextfield->pos  = { math::floorfS32(posXFields), math::floorfS32(posYFieldsOffset + spacingYFields / 2.0) };
+            pTextfield->pos  = { math::floorfS32(posXFields), math::floorfS32(posYFieldsOffset + spacingYFields / 2.0f) };
             pTextfield->size = { math::floorfS32(sizeViewInner.x), math::floorfS32(heightFields - spacingYFields) };
             posYFieldsOffset += heightFields;
         }
@@ -428,7 +417,7 @@ public:
         //        const float bitRectWidth = math::floorfS32(math::max(1.0f, widthBit-4.0f));
         xGrps         = x;
         yGrps         = grpInset;
-        yText         = yGrps + textSize / 2;
+        yText         = yGrps + textSize / 2.0f;
         yTextVal      = yGrps + textSize + grpInset + textSize;
         yTextEnc      = yGrps + textSize + grpInset + textSize + grpInset + textSize;
         yFields       = yGrps + textSize + grpInset + textSize + grpInset + textSize + grpInset + textSize;
@@ -575,12 +564,12 @@ public:
                 auto& fldExp2 = textFld_floatExponent_unsignedH;
                 fldExp2.size  = { textSize * 2, textSize };
                 fldExp2.pos   = { xPosCenterText, yFields };
-                fldExp2.pos.x += textSize * 1.5;
+                fldExp2.pos.x += int32_t(textSize * 1.5f);
                 fldExp2.layout();
                 nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
                 nvgFillColor(vg, (theme->getColor(GuiColor::COL_LABEL_INACTIVE)));
-                nvgText(vg, fldExp.pos.x - textSize * 1.8, fldExp.pos.y + fldExp.size.y / 2, "Dec", nullptr);
-                nvgText(vg, fldExp2.pos.x - textSize * 1.8, fldExp2.pos.y + fldExp2.size.y / 2, "Hex", nullptr);
+                nvgText(vg, fldExp.pos.x - textSize * 1.8f, fldExp.pos.y + fldExp.size.y / 2.0f, "Dec", nullptr);
+                nvgText(vg, fldExp2.pos.x - textSize * 1.8f, fldExp2.pos.y + fldExp2.size.y / 2.0f, "Hex", nullptr);
             }
             if (grp == 2) {
                 str          = StringFormat("%d", getMantissaBits<T>(this->number));
@@ -593,12 +582,12 @@ public:
                 auto& fldExpH = textFld_floatMantissa_unsignedH;
                 fldExpH.size  = { textSize * 5, textSize };
                 fldExpH.pos   = { xPosCenterText, yFields };
-                fldExpH.pos.x += textSize * 1.5;
+                fldExpH.pos.x += int32_t(textSize * 1.5f);
                 fldExpH.layout();
                 nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
                 nvgFillColor(vg, (theme->getColor(GuiColor::COL_LABEL_INACTIVE)));
-                nvgText(vg, fldExp.pos.x - textSize * 1.8, fldExp.pos.y + fldExp.size.y / 2, "Dec", nullptr);
-                nvgText(vg, fldExpH.pos.x - textSize * 1.8, fldExpH.pos.y + fldExpH.size.y / 2, "Hex", nullptr);
+                nvgText(vg, fldExp.pos.x - textSize * 1.8f, fldExp.pos.y + fldExp.size.y / 2.0f, "Dec", nullptr);
+                nvgText(vg, fldExpH.pos.x - textSize * 1.8f, fldExpH.pos.y + fldExpH.size.y / 2.0f, "Hex", nullptr);
             }
             nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             nvgFillColor(vg, G_BLACK);
