@@ -346,10 +346,10 @@ namespace test_math {
         /* we can't test for result of floored NaN */
         /* as this is undefined behavior on clang with -ffast-math */
 #else
-        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::quiet_NaN()), 0);
+        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::quiet_NaN()), 0U);
 #endif
 #else
-        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::quiet_NaN()), 0);
+        TEST_ASSERT_EQUAL(floorfU32(std::numeric_limits<float>::quiet_NaN()), 0U);
 #endif
     }
 
