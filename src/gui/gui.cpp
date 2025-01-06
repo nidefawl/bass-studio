@@ -173,6 +173,12 @@ float renderTextLabel(NVGcontext* vg,
         if (alignment&NVG_ALIGN_BOTTOM) {
             offsetPos.y -= bounds.y * 1.0f;
         }
+        if (alignment&NVG_ALIGN_BASELINE) {
+            offsetPos.y -= bounds.y * 0.75f;
+        }
+        if (alignment&NVG_ALIGN_MIDDLE_DESCENDER) {
+            offsetPos.y -= bounds.y * 0.55f;
+        }
         if (bounds.x >= 0 && bounds.y >= 0) {
             nvgBeginPath(vg);
             nvgRect(vg, offsetPos.x, offsetPos.y, bounds.x, bounds.y);

@@ -120,7 +120,7 @@ public:
         nvgBeginFrame(vg, w, h, pixelRatio);
         nvgScale(vg, m_scale, m_scale);
         size_t noffset = strings.empty() ? 0 : (getTimeMillis()/200L) % strings.size();
-        for (int quadrant = 3; quadrant < 4; ++quadrant) {
+        for (int quadrant = 0; quadrant < 4; ++quadrant) {
             numFrames++;
             vec2 sizeRender = vec2(w, h) * 0.5f;
             vec2 posRender = sizeRender * vec2(quadrant%2, quadrant/2);
@@ -143,7 +143,6 @@ public:
                 auto fontList = RenderResources::fontsInstalled;
                 seq_rand rand;
                 rand.rng_seed(math::floorfS32(getTimeMillisF()/333));
-                // auto fontIdx = (numFrames/30) % fontList.size();
                 auto fontIdx = rand.rng_rand() % fontList.size();
                 auto& customFont = fontList[fontIdx];
                 auto fontsize = 20.0f;
