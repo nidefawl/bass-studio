@@ -25,7 +25,9 @@ namespace daw_tls {
             localTls.tlsInitialized = true;
             localTls.runtime = new appruntime{};
             localTls.settings = new appsettings{};
+            localTls.commandManager = new DAW::UI::CommandManager();
             daw_tls::setTls(localTls);
+            localTls.commandManager->init();
         }
         return tls;
     }

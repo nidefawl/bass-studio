@@ -194,7 +194,7 @@ namespace DAW {
                 return;
             }
             std::vector<FileFound> files;
-            listDirectoryFiles(path, fileExtensions, files);
+            listFilesystemNonRecursive(path, fileExtensions, files);
             for (auto& f : files) {
                 auto fClone = f;
                 // fClone.depth = depth;

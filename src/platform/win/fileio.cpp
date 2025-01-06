@@ -1,4 +1,5 @@
 #include "logging.h"
+#include <cstdint>
 #ifdef _WIN32
 #include "str_util.h"
 #include "fileio.h"
@@ -228,9 +229,11 @@ bool DirectoryHasOneOrMoreFiles(const WString& dirPath) {
 void findFilesWithExtRecursive(
         const WString& strPath,
         const std::vector<WString>& vecExt,
-        const bool bRecursive, const bool bIncludeDirs,
+        int32_t flags,
         std::vector<FileFound>& _out, int depth) {
-    const bool bIncludeEmptyDirs = false;
+    const bool bRecursive = flags & LIST_DIR_RECURSIVE;
+    const bool bIncludeDirs = flags & LIST_DIR_DIRS;
+    const bool bIncludeEmptyDirs = flags & LIST_DIR_EMPTY_DIRS;
     WIN32_FIND_DATAW file;
 
     WString strSearchPath = strPath;
@@ -273,7 +276,7 @@ void findFilesWithExtRecursive(
 
         if (!subDirs.empty()) {
             for (auto& s : subDirs) {
-                findFilesWithExtRecursive(s, vecExt, bRecursive, bIncludeDirs, _out, depth + 1);
+                findFilesWithExtRecursive(s, vecExt, flags, _out, depth + 1);
             }
         }
     }
@@ -284,9 +287,11 @@ void findFilesWithExt(
         const String& strExt,
         bool bRecursive,
         std::vector<FileFound>& _out) {
-    findFilesWithExtRecursive(StringU8ToW(strPath), {StringU8ToW(strExt)}, bRecursive, false, _out, 0);
+    int32_t flags = bRecursive ? LIST_DIR_RECURSIVE : 0;
+    findFilesWithExtRecursive(StringU8ToW(strPath), {StringU8ToW(strExt)}, flags, _out, 0);
 }
-void listDirectoryFiles(
+
+void listFilesystemNonRecursive(
         const String& strPath,
         const std::vector<String>& vecExt,
         std::vector<FileFound>& _out) {
@@ -295,7 +300,8 @@ void listDirectoryFiles(
     for (const auto& ext : vecExt) {
         vecExtW.push_back(StringU8ToW(ext));
     }
-    findFilesWithExtRecursive(StringU8ToW(strPath), vecExtW, false, true, _out, 0);
+    int32_t flags = LIST_DIR_DIRS | LIST_DIR_EMPTY_DIRS;
+    findFilesWithExtRecursive(StringU8ToW(strPath), vecExtW, flags, _out, 0);
 }
 
 class FileTimeGetter::Impl {

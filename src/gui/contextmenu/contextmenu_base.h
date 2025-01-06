@@ -36,7 +36,7 @@ public:
     {
     }
 
-    ctxtmenu_entry(AppCtrl* ctrl, GlobalCommandType _type);
+    ctxtmenu_entry(BaseCtrl* ctrl, GlobalCommandType _type);
 
     virtual ~ctxtmenu_entry() = default;
 

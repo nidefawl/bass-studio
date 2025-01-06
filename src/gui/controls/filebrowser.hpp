@@ -23,20 +23,22 @@ class guictxtmenu_filebrowser_base final : public guictxtmenu {
     const String path;
 
 public:
-    explicit guictxtmenu_filebrowser_base(DawCtrl* _dawCtrl, String _path)
+    explicit guictxtmenu_filebrowser_base(BaseCtrl* _parentCtrl, String _path)
         : guictxtmenu(), path(std::move(_path)) {
         this->size.x    = 260;
         this->maxHeight = 0;
-        this->dawCtrl   = _dawCtrl;
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_REVEAL_IN_EXPLORER));
+        this->parentCtrl = _parentCtrl;
+        this->dawCtrl   = dynamic_cast<DawCtrl*>(_parentCtrl);
+        addEntry(new ctxtmenu_entry(this->parentCtrl, GlobalCommandType::CMD_REVEAL_IN_EXPLORER));
     }
     ~guictxtmenu_filebrowser_base() override = default;
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
         if (e && e->commandtype == GlobalCommandType::CMD_REVEAL_IN_EXPLORER) {
             auto ctxt    = DAW::UI::CommandContext{ e->commandtype };
             ctxt.argStr0 = path;
+            auto parent = parentCtrl;
             closeContextMenu();
-            dawCtrl->handleGlobalCommand(ctxt);
+            parent->handleGlobalCommand(ctxt);
             return true;
         }
         return false;
@@ -62,10 +64,8 @@ public:
         return pathAbs;
     }
     void handleRightClick(MouseEvent& evt) override {
-        if (dawCtrl) {
-            auto ctxt = new guictxtmenu_filebrowser_base(dawCtrl, pathAbs);
-            parentCtrl->openContextMenu(ctxt, evt.mousepos);
-        }
+        auto ctxt = new guictxtmenu_filebrowser_base(parentCtrl, pathAbs);
+        parentCtrl->openContextMenu(ctxt, evt.mousepos);
     }
 };
 
@@ -107,21 +107,24 @@ public:
     }
 
     void handleDraggedMove(MouseEvent& evt) override {
-        auto daw        = dawCtrl->getDaw();
-        auto& clipboard = daw->getDragDropClip();
         bool bDragging  = glm::length(vec2(*evt.dragDistance)) > 2.0f;
         if (!bTriedLoading && bDragging) {
             bTriedLoading = true;
-            if (clipboard.state == dragdrop_file::STATE_NONE) {
-                dawCtrl->filesDropBegin({ getPathAbs() }, evt.mousepos, evt.kbmods, false);
-                // after this point the mouse events are delegated to gui_dragged_files
+            if (dawCtrl) {
+                auto daw        = dawCtrl->getDaw();
+                auto& clipboard = daw->getDragDropClip();
+                if (clipboard.state == dragdrop_file::STATE_NONE) {
+                    dawCtrl->filesDropBegin({ getPathAbs() }, evt.mousepos, evt.kbmods, false);
+                    // after this point the mouse events are delegated to gui_dragged_files
+                }
             }
         }
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
         bTriedLoading = false;
-        dawCtrl->getDaw()->resetDragDropClipboards();
+        if (dawCtrl)
+            dawCtrl->getDaw()->resetDragDropClipboards();
     }
 
     void handleDraggedRelease(MouseEvent& evt) override {
@@ -139,6 +142,7 @@ protected:
     std::vector<String> fileExtensions;
     std::vector<String> openedFoldersAbsPaths;
 
+    void updateListRecursive(const String& path, const std::vector<String>& fileExtensions, std::vector<String>& dirsVisited, int32_t depth, std::vector<FileFound>& outFiles);
 public:
     guictr_filebrowser() : gui_list() {
         setGuiType(gui_type::CTR_TYPE_FILEBROWSER);
@@ -156,71 +160,9 @@ public:
     String getWorkingDirAbsPath() const {
         return workingDirAbsPath;
     }
-    void buttonClicked(guibase* button) override {
-        gui_list::buttonClicked(button);
-        selectedFileAbsPath   = "";
-        selectedFolderAbsPath = "";
-        auto folder           = gui_cast<gui_filebrowser_folder_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FOLDER>(button);
-        if (folder) {
-            bool bIsOpened = !folder->isOpened();
-            folder->setIsOpened(bIsOpened);
-            openedFoldersAbsPaths.erase(std::remove(openedFoldersAbsPaths.begin(), openedFoldersAbsPaths.end(), folder->getPathAbs()), openedFoldersAbsPaths.end());
-            if (bIsOpened) {
-                openedFoldersAbsPaths.push_back(folder->getPathAbs());
-            }
-            selectedFolderAbsPath = folder->getPathAbs();
-            updateList();
-        } else {
-            auto file = gui_cast<gui_filebrowser_file_entry, gui_type::GUI_TYPE_LIST_USER_LIBRARY_FILE>(button);
-            if (file) {
-                selectedFileAbsPath = file->getPathAbs();
-            }
-        }
-    }
+    void buttonClicked(guibase* button) override;
 
-    void updateList() {
-        std::vector<gui_list_entry*> _newList;
-        std::vector<String> dirsVisited;// to avoid infinite recursion
-        std::vector<FileFound> files;
-        dirsVisited.push_back(workingDirAbsPath);
-        updateListRecursive(workingDirAbsPath, fileExtensions, dirsVisited, 0, files);
-
-        // store selected entry, so we can restore it after updating the list
-        // TODO: restoring the focused entry should be handled by the list internally
-        String pathAbsSelectedEntry;
-        bool bRestoreFocused = false;
-        auto entry = getSelectedEntry();
-        if (entry) {
-            pathAbsSelectedEntry = static_cast<gui_filebrowser_entry_base*>(entry)->getPathAbs();
-            auto focusedGui = parentCtrl->getGuiFocused();
-            if (focusedGui == entry) {
-                bRestoreFocused = true;
-            }
-        }
-        for (auto& f : files) {
-            if (f.bIsDir) {
-                auto isOpenFolder = std::find(openedFoldersAbsPaths.cbegin(), openedFoldersAbsPaths.cend(), f.path) != openedFoldersAbsPaths.cend();
-                _newList.push_back(createFileBrowserFolderEntry(f, isOpenFolder));
-            } else {
-                _newList.push_back(createFileBrowserFileEntry(f));
-            }
-            _newList.back()->setDepth(f.depth);
-            _newList.back()->setTooltipText(f.path);
-        }
-        setList(_newList);
-        if (!pathAbsSelectedEntry.empty()) {
-            auto it = std::find_if(_newList.begin(), _newList.end(), [pathAbsSelectedEntry](gui_list_entry* e) {
-                return static_cast<gui_filebrowser_entry_base*>(e)->getPathAbs() == pathAbsSelectedEntry;
-            });
-            if (it != _newList.end()) {
-                auto idx = int32_t(it - _newList.begin());
-                setSelectedIdx(idx);
-                if (bRestoreFocused) {
-                    parentCtrl->focusGui(*it);
-                }
-            }
-        }
-    }
+    void updateList();
 
     virtual gui_filebrowser_folder_entry* createFileBrowserFolderEntry(const FileFound& f, bool bIsOpened) {
         return new gui_filebrowser_folder_entry(f, bIsOpened);
@@ -229,27 +171,7 @@ public:
     virtual gui_filebrowser_file_entry* createFileBrowserFileEntry(const FileFound& f) {
         return new gui_filebrowser_file_entry(f);
     }
-
-    void updateListRecursive(const String& path, const std::vector<String>& fileExtensions, std::vector<String>& dirsVisited, int32_t depth, std::vector<FileFound>& outFiles) {
-        std::vector<FileFound> files;
-        listDirectoryFiles(path, fileExtensions, files);
-        for (auto& f : files) {
-            auto fClone  = f;
-            fClone.depth = depth;
-            if (fClone.bIsDir) {
-                if (std::find(dirsVisited.cbegin(), dirsVisited.cend(), fClone.path) == dirsVisited.cend()) {
-                    dirsVisited.push_back(fClone.path);
-                    auto isOpenFolder = std::find(openedFoldersAbsPaths.cbegin(), openedFoldersAbsPaths.cend(), fClone.path) != openedFoldersAbsPaths.cend();
-                    outFiles.push_back(fClone);
-                    if (isOpenFolder) {
-                        updateListRecursive(fClone.path, fileExtensions, dirsVisited, depth + 1, outFiles);
-                    }
-                }
-            } else {
-                outFiles.push_back(fClone);
-            }
-        }
-    }
+    void handleRightClick(MouseEvent& evt) override;
 };
 
 class guictr_filesearch final : public gui_list {

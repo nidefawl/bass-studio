@@ -3,7 +3,7 @@
 #include "window.h"
 #include "renderresources.h"
 
-ctxtmenu_entry::ctxtmenu_entry(AppCtrl* ctrl, GlobalCommandType _type) 
+ctxtmenu_entry::ctxtmenu_entry(BaseCtrl* ctrl, GlobalCommandType _type) 
     : commandtype(_type)
 {
     dbgassert(ctrl->getCommandManager());

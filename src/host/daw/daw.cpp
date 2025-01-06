@@ -961,7 +961,6 @@ void DawInstance::initDaw() {
     initTls.midiHost       = new midihost();
     initTls.pluginDatabase = &plugindb;
     initTls.audioCache     = new audiocache(settings.iosettings.samplerate);
-    initTls.commandManager = new DAW::UI::CommandManager();
     initTls.host->setTls(initTls);
 #ifndef NDEBUG
     // initTls.host->addAuxOutput(&this->auxSourceNoise);
@@ -974,7 +973,6 @@ void DawInstance::initDaw() {
         settings.iosettings.internalBlocksize,
         sampleformat_bits_t::FLOAT_32
     });
-    initTls.commandManager->init();
 }
 
 void DawInstance::updateClipViews(clip_t* notifyClip) {

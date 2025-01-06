@@ -167,7 +167,7 @@ void findFilesWithExt(
     findFilesWithExtList(strPath, { strExt }, bRecursive, false, _out);
 }
 
-void listDirectoryFiles(
+void listFilesystemTree(
         const String& strPath,
         const std::vector<String>& vecExt,
         std::vector<FileFound>& _out) {

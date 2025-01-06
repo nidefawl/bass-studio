@@ -180,7 +180,13 @@ inline String FileNameFromPath(const String& in) {
     return fileName;
 }
 
-void listDirectoryFiles(
+enum list_dir_flags_e {
+    LIST_DIR_RECURSIVE = 1 << 0,
+    LIST_DIR_DIRS = 1 << 1,
+    LIST_DIR_EMPTY_DIRS = 1 << 2,
+};
+
+void listFilesystemNonRecursive(
         const String& strPath,
         const std::vector<String>& vecExt,
         std::vector<FileFound>& _out);

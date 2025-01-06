@@ -12,7 +12,7 @@
 struct grid_div {
     tick_t time;
     beatbar16th_t pos;
-    double screenpos;
+    float screenpos;
     int8_t color;
     float thickness;
     double width;

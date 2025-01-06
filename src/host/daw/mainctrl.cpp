@@ -1671,13 +1671,6 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
             }
             return true;
         }
-        case CMD_REVEAL_IN_EXPLORER: {
-            String path = ctxt.argStr0;
-            if (!path.empty()) {
-                RevealInExplorer(path);
-            }
-            return true;
-        }
         case CMD_SOLO: {
             auto selTrack = getSelectedTrack();
             if (selTrack && selTrack->audio && kevt.type == KeyboardState::K_PRESS) {
@@ -1764,7 +1757,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
     if (bHandled) {
         return true;
     }
-    return false;
+    return AppCtrl::handleGlobalCommand(ctxt);
 }
 
 bool DawCtrl::processGlobalKeyevent(const KeyEvent& kevt) {

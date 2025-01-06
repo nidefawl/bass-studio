@@ -12,6 +12,7 @@
 #include "gui/container/container_builder.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/controls/button.h"
+#include "gui/controls/filebrowser.hpp"
 #include "gui/dialog/dialogs.h"
 #include "gui/gui.h"
 #include "gui/views/pluginlist.h"
@@ -148,7 +149,7 @@ class guictr_bgimage : public guictr_base {
 };
 
 class guictr_testgui : public guictr_base {
-    static constexpr int64_t numKnobs = 220;
+    static constexpr int64_t numKnobs = 25;
     std::array<guiknob*, numKnobs> knobs{};
     std::array<float, numKnobs> knobVals{};
     std::array<float, numKnobs> knobValsNext{};
@@ -188,139 +189,40 @@ public:
     }
 };
 
-class gui_list_file_entry final : public gui_list_entry {
-    const String string;
-public:
-    gui_list_file_entry(const String&& str) : gui_list_entry(), string(str) {
-        label = string;
-        setBackgroundRendered(true);
-        icon = ICON_FILE;
-        setDragRendered(true);
-    }
-    String getText() override {
-        return string;
-    }
-    void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override {
-        //        mousepos += dragOffset;
-        // // mousepos -= pos;
-        // mousepos.x -= size.x / 2;
-        nvgTranslate(vg, mousepos.x+20, mousepos.y+20);
-        ivec2 inset                    = { 2, 2 };
-        theme->bindFont(vg, UIFont::FONT_DEFAULT);
-        nvgFillColor(vg, THEMECOL_TEXT);
-        auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
-        String text = "Insert " + label;
-        float w = renderTextLabel(vg,
-                        vec2(3.0f, size.y * 0.5f),
-                        vec2(size.x - 6.0f, size.y),
-                        text,
-                        theme,
-                        fontSizeScaled,
-                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
-                        NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        auto bgSize = ivec2(w+12, size.y);
-        drawBackground(vg, theme, -ivec2(bgSize.x/2, 0), bgSize, 0, false);
-        w = renderTextLabel(vg,
-                        vec2(3.0f, size.y * 0.5f),
-                        vec2(size.x - 6.0f, size.y),
-                        text,
-                        theme,
-                        fontSizeScaled,
-                        theme->getColor(GuiColor::COL_LABEL_ACTIVE),
-                        NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-    }
-    void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) {
-        posInset -= ivec2(margin);
-        sizeInset += ivec2(margin) * 2;
-        if (sizeInset.y > 0 && sizeInset.x > 0) {
-            auto stateflags = getStateFlags();
-            nvgTranslateZ(vg, -2.0f);
-            nvgShapeAntiAlias(vg, 0);
-            nvgBeginPath(vg);
-            nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-            NVGcolor bg = theme->getColor(getBackgroundColorFromState(stateflags));
-            nvgFillColor(vg, bg);
-            nvgFill(vg);
-            nvgShapeAntiAlias(vg, USE_NANOVG_AA);
-            nvgTranslateZ(vg, -2.0f);
-            nvgTranslateZ(vg, 3.0f);
-        }
-    }
-};
-
 guictr_base* makeCtrTheme();
 class guictr_tabbed_test : public guictr_tabbed {
 public:
-    gui_list* const ctr_list;
+    guictr_filebrowser ctr_filebrowser;
     guictr_base* const ctr_properties;
     guictr_base* const ctr_theme;
-    struct folder_list {
-        gui_list_folder_entry folder;
-        std::vector<gui_list_entry *> entries;
-    };
-    std::vector<folder_list*> folders;
 
     guictr_tabbed_test() 
         : guictr_tabbed(),
-          ctr_list(new gui_list()),
           ctr_properties(DAW::UI::makeGuiObjectProperties({nullptr})), 
           ctr_theme(DAW::UI::makeGuiThemeEditor({nullptr})) {
-        ctr_list->setOwnsListEntries(false);
-        ctr_list->setLabel("List");
+        ctr_filebrowser.setLabel("Filebrowser");
         ctr_properties->setLabel("Properties");
         ctr_theme->setLabel("Theme");
-        addEntry(ctr_list, ctr_list->label);
+        addEntry(&ctr_filebrowser, ctr_filebrowser.label);
         addEntry(ctr_theme, ctr_theme->label);
         addEntry(ctr_properties, ctr_properties->label);
         setActiveEntry(0);
-        folders.push_back(new folder_list{ gui_list_folder_entry("Folder A"), {} });
-        folders.push_back(new folder_list{ gui_list_folder_entry("Folder B"), {} });
-        folders.push_back(new folder_list{ gui_list_folder_entry("Folder C"), {} });
-        for (auto* folder : folders) {
-            for (int i = 0; i < 10; i++) {
-                auto entry = new gui_list_file_entry(folder->folder.getLabel() + " / " + StringFormat("Entry %d", i));
-                folder->entries.push_back(entry);
-            }
-        }
+        ctr_filebrowser.setWorkingDir(TEST_PATH("filebrowser"));
     }
     ~guictr_tabbed_test() override {
         removeGuis();
         delete ctr_properties;
         delete ctr_theme;
-        delete ctr_list;
-        for (auto* folder : folders) {
-            for (auto* entry : folder->entries) {
-                delete entry;
-            }
-            folder->entries.clear();
-            delete folder;
-        }
     }
     void setControl(BaseCtrl* parentCtrl) override {
         guictr_tabbed::setControl(parentCtrl);
-        updateListEntries();
+        ctr_filebrowser.updateList();
     }
     void buttonClicked(guibase* button) override {
         guictr_tabbed::buttonClicked(button);
-        if (button->parent == ctr_list) {
+        if (button->parent == &ctr_filebrowser) {
             log_printf("Selected %s\n", StringAsCStr(button->getLabel()));
-            auto gui = gui_cast<gui_list_folder_entry, gui_type::GUI_TYPE_LIST_FOLDER>(button);
-            if (gui) {
-                bool bIsOpened = gui->isOpened();
-                gui->setIsOpened(!bIsOpened);
-                updateListEntries();
-            }
         }
-    }
-    void updateListEntries() {
-        std::vector<gui_list_entry *> entries;
-        for (auto* folder : folders) {
-            entries.push_back(&folder->folder);
-            if (folder->folder.isOpened()) {
-                entries.insert(entries.end(), folder->entries.begin(), folder->entries.end());
-            }
-        }
-        ctr_list->setList(entries);
     }
 };
 

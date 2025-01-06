@@ -534,7 +534,7 @@ String BaseCtrl::getClipboardText() {
     return this->window->getClipboardText();
 }
 void BaseCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
-    delete b;// TODO: defer delete
+    dbgassert(0);
 }
 void BaseCtrl::closeDialogs() {
 }
@@ -1105,4 +1105,19 @@ SafeRefStorage<guibase>& BaseCtrl::getRefStorage() {
         return runtime->safeRefs;
     }
     return localRefs;
+}
+
+bool BaseCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
+    switch (ctxt.type) {
+        case CMD_REVEAL_IN_EXPLORER: {
+            String path = ctxt.argStr0;
+            if (!path.empty()) {
+                RevealInExplorer(path);
+            }
+            return true;
+        }
+        default:
+            break;
+    }
+    return false;
 }
