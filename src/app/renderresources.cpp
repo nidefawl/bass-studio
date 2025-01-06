@@ -68,7 +68,6 @@ namespace RenderResources {
     } // namespace
 
     void reloadFonts(NVGcontext* vg) {
-        //TODO: unload loaded fonts
         emojiFont = {};
         String emojiFontFile = "EmojiOneBW.otf";
         auto emojiFontPath = App::Platform::toResourcePath("fonts/gui/" + emojiFontFile);
@@ -92,7 +91,7 @@ namespace RenderResources {
                 fonts.fontsInstalled[i].name = files[i].name;
                 fonts.fontsInstalled[i].path = files[i].path;
             }
-            if (fontsInstalled.empty()) fontsInstalled = fonts.fontsInstalled;
+            fontsInstalled = fonts.fontsInstalled;
             fonts.fontsLoaded.clear();
             for (size_t i = 0; i < MAX_FONTS && i < files.size(); i++) {
                 LoadedFont lf;

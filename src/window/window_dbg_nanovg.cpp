@@ -26,7 +26,6 @@ namespace windowdebug_dbgnanovg {
 class window_impl final : public window_abstract_t {
     using ImgData = std::shared_ptr<uint8_t>;
     RenderResources::NvgImageTexture imgQuad;
-    UIFont::font_instance instance{"jbmononf.ttf", -1};
     GLuint program2dTexture{};
     GLint u_mvp{};
     GLint u_tex0{};

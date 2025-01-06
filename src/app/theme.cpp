@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <nanovg.h>
 #include <vector>
 #include "theme.h"
@@ -176,17 +177,34 @@ void guitheme_t::bindFont(NVGcontext* ctx, UIFont::font_type_t _fonttype) const 
     if (font.fontInstanceIdx >= 0) {
         auto& bindFont = fonts.fontsLoaded[font.fontInstanceIdx];
         if (bindFont.nvgId < 0) {
-            auto fontPath = App::Platform::toResourcePath("fonts/gui/" + font.name);
-            bindFont.nvgId = nvgCreateFont(ctx, StringAsCStr(font.name), StringAsCStr(fontPath));
-            if (bindFont.nvgId >= 0) {
-                if (RenderResources::emojiFont.nvgId >= 0) {
-                    nvgAddFallbackFontId(ctx, bindFont.nvgId, RenderResources::emojiFont.nvgId);
-                }
-            } else {
+            auto& fontsInstalled = RenderResources::fontsInstalled;
+            auto itFont = std::find_if(fontsInstalled.begin(), fontsInstalled.end(), [&font](const auto& f) {
+                return f.name == font.name;
+            });
+            if (itFont == fontsInstalled.end()) {
+                log_lf(Log::L_WARN, "Font '%s' not found\n", StringAsCStr(font.name));
                 // try binding second font if loaded
                 if (fonts.fontsLoaded.size() > 1) {
                     bindFont.nvgId = fonts.fontsLoaded[1].nvgId;
                 }
+                nvgFontFaceId(ctx, bindFont.nvgId);
+                return;
+            }
+            const String& fontPath = itFont->path;
+            bindFont.nvgId = nvgCreateFont(ctx, StringAsCStr(font.name), StringAsCStr(fontPath));
+            if (bindFont.nvgId < 0) {
+                log_lf(Log::L_WARN, "Failed to load font '%s' from '%s'\n", StringAsCStr(font.name), StringAsCStr(fontPath));
+                // try binding second font if loaded
+                if (fonts.fontsLoaded.size() > 1) {
+                    bindFont.nvgId = fonts.fontsLoaded[1].nvgId;
+                } else {
+                    font.fontInstanceIdx = -2;
+                }
+                nvgFontFaceId(ctx, bindFont.nvgId);
+                return;
+            }
+            if (RenderResources::emojiFont.nvgId >= 0) {
+                nvgAddFallbackFontId(ctx, bindFont.nvgId, RenderResources::emojiFont.nvgId);
             }
         }
         nvgFontFaceId(ctx, bindFont.nvgId);

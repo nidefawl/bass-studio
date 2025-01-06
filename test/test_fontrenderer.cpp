@@ -8,7 +8,10 @@
 #include <GLFW/glfw3.h>
 
 #include "appconfig.h"
+#include "guifonts.h"
 #include "math/seq_math.h"
+#include "rand.h"
+#include "renderresources.h"
 #include "window.h"
 #include "platform.h"
 #include "fileio.h"
@@ -117,7 +120,8 @@ public:
         nvgBeginFrame(vg, w, h, pixelRatio);
         nvgScale(vg, m_scale, m_scale);
         size_t noffset = strings.empty() ? 0 : (getTimeMillis()/200L) % strings.size();
-        for (int quadrant = 0; quadrant < 4; ++quadrant) {
+        for (int quadrant = 3; quadrant < 4; ++quadrant) {
+            numFrames++;
             vec2 sizeRender = vec2(w, h) * 0.5f;
             vec2 posRender = sizeRender * vec2(quadrant%2, quadrant/2);
             nvgBeginPath(vg);
@@ -128,20 +132,39 @@ public:
             float mInner = 0.8f;
             posRender += sizeRender * (1.0f-mInner) * 0.5f;
             sizeRender *= mInner;
-            nvgSave(vg);
-            nvgTranslate(vg, posRender.x, posRender.y);
-            nvgIntersectScissor(vg, 0, 0, sizeRender.x, sizeRender.y);
-            vec2 offsetPos(0);
-            vec2 offsetPosMultiline(0);
-            
             if (fmodf(getTimeMillisF(),7777.0f)/7777.f > 0.2f) {
                 fTime = getTimeMillisF();
             }
+            nvgSave(vg);
+            nvgTranslate(vg, posRender.x, posRender.y);
+            nvgIntersectScissor(vg, 0, 0, sizeRender.x, sizeRender.y);
+            if (quadrant == 3) {
+                // try loading custom fonts and displaying them in the lower right quadrant
+                auto fontList = RenderResources::fontsInstalled;
+                seq_rand rand;
+                rand.rng_seed(math::floorfS32(getTimeMillisF()/333));
+                // auto fontIdx = (numFrames/30) % fontList.size();
+                auto fontIdx = rand.rng_rand() % fontList.size();
+                auto& customFont = fontList[fontIdx];
+                auto fontsize = 20.0f;
+                String desc = "Fonts installed: " + std::to_string(fontList.size());
+                UTIL_setFont(vg, getTheme(), fontsize, rgbaToNvg(0xffffffff), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                nvgTextBox(vg, 0, 20, sizeRender.x - 20, StringAsCStr(desc), nullptr);
+                desc = StringFormat("font[%zu]: %s", fontIdx, customFont.name.c_str());
+                nvgTextBox(vg, 0, 50, sizeRender.x - 20, StringAsCStr(desc), nullptr);
+                getTheme()->setFont(UIFont::FONT_TEST, customFont.name);
+                getTheme()->bindFont(vg, UIFont::FONT_TEST);
+                nvgTextBox(vg, 0, 80, sizeRender.x - 20, "The quick brown fox jumps over the lazy dog", nullptr);
+                nvgRestore(vg); 
+                continue;
+            }
+            vec2 offsetPos(0);
+            vec2 offsetPosMultiline(0);
+            
 
             float fProgress = fmodf(fTime,12000.0f)/12000.f;
             fProgress = math::abs(fProgress * 2.f - 1.f) * 1.2f - 0.1f;
             float breakRowWidth = math::clamp(sizeRender.x * fProgress, 0.0f, sizeRender.x);
-            numFrames++;
             if (numFrames < 400)
                 breakRowWidth = 10000.0f;
             if (numFrames < 300)
@@ -179,14 +202,7 @@ public:
                     renderCenteredMultilineText(vg, getTheme(), strings[noffset+i], 
                             fontsize, GuiColor::COL_LABEL_ACTIVE, offsetPosMultiline, sizeMultiLineBox);
                     offsetPosMultiline.y += sizeMultiLineBox.y;
-                }      
-                if (quadrant == 3) {
-                    auto sizeMultiLineBox = vec2(breakRowWidth, fontsize*2.0f + 4.0f);
-                    offsetPosMultiline.x = (sizeRender.x-sizeMultiLineBox.x)*0.5f * i/20.0f;
-                    renderCenteredMultilineText(vg, getTheme(), strings[noffset+i], 
-                            fontsize, GuiColor::COL_LABEL_ACTIVE, offsetPosMultiline, sizeMultiLineBox);
-                    offsetPosMultiline.y += sizeMultiLineBox.y;
-                }      
+                }
                 offsetPos.y += fontsize;
             }
             nvgRestore(vg); 

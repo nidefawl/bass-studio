@@ -8,7 +8,7 @@ struct guitheme_t;
 
 namespace UIFont {
     struct font_instance {
-        String name         = "";
+        String name = "";
         int fontInstanceIdx = -1;
     };
     struct font_type_t {
@@ -26,5 +26,6 @@ namespace UIFont {
     extern const font_type_t FONT_TEXTFIELD;
     extern const font_type_t FONT_CONTEXT_MENU;
     extern const font_type_t FONT_DECIMAL;
+    extern const font_type_t FONT_TEST;
     String getFontName(int fontInstanceIdx);
 }// namespace UIFont
