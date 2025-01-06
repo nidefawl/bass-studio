@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-          "type": "lldb-vscode",
+          "type": "lldb-dap",
           "request": "launch",
           "name": "lldb-vscode",
           "program": "${command:cmake.launchTargetPath}",
-          "args": [],
+            "args": ["--no-python"],
           "env": [],
           "cwd": "${workspaceFolder}/run",
           "stopOnEntry": false
