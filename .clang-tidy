@@ -41,6 +41,7 @@ Checks: >
     -fuchsia-*,
     -modernize-use-designated-initializers,
     -misc-use-internal-linkage,
+    -cert-err34-c,
 
 # DisabledChecks: >
 #     clang-analyzer-optin.cplusplus.*,
