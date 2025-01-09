@@ -27,11 +27,22 @@ namespace Table {
         if ((int) table.colSizes.size() != maxCols) {
             table.colSizes.resize(maxCols);
         }
-        if (maxCols > nDefined) {
+        if (maxCols > nDefined && table.tableWidth - fDefinedWidth > 0) {
             float fLeftWidth = table.tableWidth - fDefinedWidth;
             int colWidth = math::roundfS32(fLeftWidth / (float) (maxCols-nDefined));
             for (int i = nDefined; i < maxCols; i++) {
                 table.colSizes[i] = colWidth;
+            }
+            fDefinedWidth = 0;
+            for (int i = 0; i < nDefined; i++) {
+                fDefinedWidth += table.colSizes[i];
+            }
+        }
+        if (fDefinedWidth > table.tableWidth) {
+            // rescale all columns
+            float fScale = table.tableWidth / fDefinedWidth;
+            for (int i = 0; i < maxCols; i++) {
+                table.colSizes[i] = math::roundfS32(table.colSizes[i] * fScale);
             }
         }
     }
