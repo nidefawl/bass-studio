@@ -340,18 +340,21 @@ public:
         using namespace Steinberg;
         using namespace Steinberg::Vst;
         this->programNames.resize(0);
+        constexpr bool bDebugPrintPrograms = false;
         if (unitInfo) {
             auto unitCount = unitInfo->getUnitCount();
             auto programListCount = unitInfo->getProgramListCount();
             auto selectedUnit = unitInfo->getSelectedUnit();
             auto selectedProgramListId = int32_t(-1);
-            log_lf(Log::L_DEBUG, "%s: UnitInfo: %d units, %d program lists\n", StringAsCStr(sName), unitCount, programListCount);
+            if constexpr(bDebugPrintPrograms) 
+                log_lf(Log::L_DEBUG, "%s: UnitInfo: %d units, %d program lists\n", StringAsCStr(sName), unitCount, programListCount);
             for (int i = 0; i < unitCount; ++i) {
                 UnitInfo info{};
                 if (unitInfo->getUnitInfo(i, info) == kResultOk) {
-                    auto cxxName = VST3::StringConvert::convert(info.name);
-                    log_lf(Log::L_DEBUG, "Unit %d: id=%d, parentId=%d, name=%s, programListId=%d\n",
-                        i, info.id, info.parentUnitId, StringAsCStr(cxxName), info.programListId);
+                    if constexpr(bDebugPrintPrograms) {
+                        auto cxxName = VST3::StringConvert::convert(info.name);
+                        log_lf(Log::L_DEBUG, "Unit %d: id=%d, parentId=%d, name=%s, programListId=%d\n", i, info.id, info.parentUnitId, StringAsCStr(cxxName), info.programListId);
+                    }
                     if (info.id == selectedUnit) {
                         selectedProgramListId = info.programListId;
                     }
@@ -362,15 +365,18 @@ public:
                 ProgramListInfo info{};
                 if (unitInfo->getProgramListInfo(i, info) == kResultOk) {
                     if (info.id == selectedProgramListId) {
-                        auto cxxName = VST3::StringConvert::convert(info.name);
-                        log_lf(Log::L_DEBUG, "ProgramList %d: id=%d, name=%s, programCount=%d\n",
-                            i, info.id, StringAsCStr(cxxName), info.programCount);
+                        if constexpr(bDebugPrintPrograms) {
+                            auto cxxName = VST3::StringConvert::convert(info.name);
+                            log_lf(Log::L_DEBUG, "ProgramList %d: id=%d, name=%s, programCount=%d\n", i, info.id, StringAsCStr(cxxName), info.programCount);
+                        }
                         for (int j = 0; info.programCount > 1 && j < info.programCount; ++j) {
                             String128 name{};
                             if (unitInfo->getProgramName(info.id, j, name) == kResultOk) {
-                                bool bHasPitchNames = unitInfo->hasProgramPitchNames(info.id, j) == kResultTrue;
                                 auto cxxName = VST3::StringConvert::convert(name);
-                                log_lf(Log::L_DEBUG, "Program %d: name=%s, hasPitchNames=%d\n", j, StringAsCStr(cxxName), bHasPitchNames);
+                                if constexpr(bDebugPrintPrograms) {
+                                    bool bHasPitchNames = unitInfo->hasProgramPitchNames(info.id, j) == kResultTrue;
+                                    log_lf(Log::L_DEBUG, "Program %d: name=%s, hasPitchNames=%d\n", j, StringAsCStr(cxxName), bHasPitchNames);
+                                }
                                 this->programNames.push_back(cxxName);
                                 if (bFirst) {
                                     bFirst = false;
