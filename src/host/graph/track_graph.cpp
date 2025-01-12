@@ -88,8 +88,7 @@ namespace DAW {
             if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
                 int32_t idx = outputChannel.externalInputIdx;
                 String name = "External " + AudioIO::getExternalIOName(outputChannel.externalInputType, idx, stage_bufferpoint::OUTPUT_POST);
-
-                trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.srcChannelOffset, name, outputChannel.externalInputType);
+                trackImpl->outputChannel = ChannelAudioOutput(idx, outputChannel.dstChannelOffset, name, outputChannel.externalInputType);
             } else if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
                 if (!stage) {

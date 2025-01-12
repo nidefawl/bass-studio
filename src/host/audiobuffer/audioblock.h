@@ -193,7 +193,10 @@ struct alignas(16) AudioBlockBase {
         if (this->channels < numChannels && channelOffset == 0) {
             return AudioBlockBase(*this, 0, this->channels, 0, this->samples);
         }
-        dbgassert(channelOffset + numChannels <= this->channels);
+        if (!assert_expr(channelOffset + numChannels <= this->channels)){
+            return AudioBlockBase(*this, 0, this->channels, 0, this->samples);
+        }
+
         return AudioBlockBase(*this, channelOffset, numChannels, 0, this->samples);
     }
 

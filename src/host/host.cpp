@@ -928,21 +928,7 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                  * sends are with track gain applied (post-mixer)
                  *
                  */
-                /* compensate at input stage */
-                /* figure out max latency of all inputs */
-                /* delay signal by max_child_input_latency - src_output_latency */
-                /* Compensate audio midi track to pre-return latency */
-                dbgassert(trackNodeInputLatency >= tracksrc.latency);
-                samplecount_t delayToMaxInputLatency = trackNodeInputLatency - tracksrc.latency;
 
-                AudioBlock srcBlock = src.toAudioBlock();
-                DelayLine* delayLine = nullptr;
-                if (delayToMaxInputLatency > 0) {
-                    delayLine = delayLines->getProcessingDelayLine(tracksrc.trackEdgeId);
-                    delayLine->write(&srcBlock, delayToMaxInputLatency);
-                }
-                auto autParGain = GetParameterModulationFromRouting(host, tracksrc.gainAutomation);
-                auto autParPan = GetParameterModulationFromRouting(host, tracksrc.panAutomation);
                 channelnum_t dstChannelCount = ptrBlockMixDst->channels;
                 if (node.type == DAW::track_node_type_t::EFFECT) {
                     for (auto& desc : node.effectOptional->inputChannelsDesc) {
@@ -955,6 +941,23 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                 if (node.type == DAW::track_node_type_t::TRACK) {
                     dstChannelCount = AudioIO::getNumChannelsFromTrackType(AudioIO::getTrackTypeFromNumChannels(ptrBlockMixDst->channels));
                 }
+                if (ptrBlockMixDst->channels < tracksrc.channel.dstChannelOffset + dstChannelCount) {
+                    log_lf(Log::L_WARN, "%s: Invalid channel range %d-%d on output with channel count %d\n",
+                        StringAsCStr(tracksrc.channel.name),
+                        tracksrc.channel.dstChannelOffset, tracksrc.channel.dstChannelOffset + dstChannelCount, ptrBlockMixDst->channels);
+                    continue;
+                }
+                dbgassert(trackNodeInputLatency >= tracksrc.latency);
+                AudioBlock srcBlock = src.toAudioBlock();
+                /* delay signal by max_child_input_latency - src_output_latency */
+                samplecount_t delayToMaxInputLatency = trackNodeInputLatency - tracksrc.latency;
+                DelayLine* delayLine = nullptr;
+                if (delayToMaxInputLatency > 0) {
+                    delayLine = delayLines->getProcessingDelayLine(tracksrc.trackEdgeId);
+                    delayLine->write(&srcBlock, delayToMaxInputLatency);
+                }
+                auto autParGain = GetParameterModulationFromRouting(host, tracksrc.gainAutomation);
+                auto autParPan = GetParameterModulationFromRouting(host, tracksrc.panAutomation);
                 auto mixWithAutomation = [&](auto* blockMixToOffset) {
                     if (autParGain.type <= automation_routing_type::ROUTING_CONSTANT 
                         && (autParPan.type == automation_routing_type::ROUTING_NONE 
@@ -994,6 +997,8 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                     mixWithAutomation(&blockMixToOffset);
                 }
                 numMixed++;
+            } else {
+                log_lf(Log::L_DEBUG, "Channel not connected %d\n", tracksrc.channel.srcChannelOffset);
             }
         }
     }
@@ -2089,8 +2094,8 @@ void Host::resetResamplers() {
 void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     impl->audioStream = std::move(stream);
     if (impl->audioStream) {
-        const auto numInputChannels = math::max<channelnum_t>(impl->audioStream->getNumInputChannels(), impl->inputChannels);
-        const auto numOutputChannels = math::max<channelnum_t>(impl->audioStream->getNumOutputChannels(), impl->outputChannels);
+        const auto numInputChannels = math::max<channelnum_t>(impl->audioStream->getNumInputChannels(), 2);
+        const auto numOutputChannels = math::max<channelnum_t>(impl->audioStream->getNumOutputChannels(), 2);
 
         if (numInputChannels != impl->inputChannels || numOutputChannels != impl->outputChannels) {
             impl->destroyResamplers();
