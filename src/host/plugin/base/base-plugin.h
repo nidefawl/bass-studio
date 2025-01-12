@@ -100,7 +100,7 @@ public:
     std::vector<String> programNames;
     std::vector<DAW::channel_desc> inputChannelsDesc;
     std::vector<DAW::channel_desc> outputChannelsDesc;
-
+    std::map<int32_t, String> programPitchNames;
 protected:
     void initDefaultIODesc();
     virtual void initBuffers();
@@ -218,6 +218,7 @@ public:
     virtual bool getNumberOfPrograms(uint32_t& index) {
         return false;
     }
+    const std::map<int32_t, String>& getProgramPitchNames() const { return programPitchNames; }
     bool hasTrackLink() const {
         return trackImpl != nullptr;
     }

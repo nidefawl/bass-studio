@@ -1241,6 +1241,7 @@ int32_t guictr_audioeditor::getTotalWidth() {
 
 void guictr_noteeditor::layout() {
     ivec2 cs = getSizeContent();
+    pianoWidth = piano.hasNotePitchNames() ? 160 : 100;
     timeline.pos       = ivec2(pianoWidth, 0);
     timeline.size      = ivec2(cs.x - pianoWidth, heightTimeLine);
     guictr_editor_base::layout();

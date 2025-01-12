@@ -19,6 +19,7 @@
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include <pluginterfaces/vst/ivsteditcontroller.h>
 #include <pluginterfaces/vst/ivstmidicontrollers.h>
+#include "pluginterfaces/vst/ivstunits.h"
 #include "pluginterfaces/vst/vsttypes.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
 #include "public.sdk/source/vst/hosting/parameterchanges.h"
@@ -61,6 +62,7 @@ class vst3plugin final : public effectbase {
     Steinberg::Vst::IAudioProcessor* vst3AudioProcessor = nullptr;
     Steinberg::Vst::IMidiMapping* vst3MidiMapping = nullptr;
     Steinberg::Vst::IEditController* editController = nullptr;
+    Steinberg::Vst::IUnitInfo* unitInfo = nullptr;
     Steinberg::Vst::IEditControllerHostEditing* editControllerHostEditing = nullptr;
     Steinberg::Vst::HostProcessData processData = {};
 	Steinberg::Vst::ProcessContext processContext = {};
@@ -68,6 +70,7 @@ class vst3plugin final : public effectbase {
     int32_t numOutputEventBuses = 0;
 	Steinberg::IPtr<Steinberg::IPlugView> view = nullptr;
     Steinberg::Vst::ParameterInfo programChangeParameter{};
+    bool bHasProgramChangeParameter = false;
     bool bIsPostInit       = false;
     bool bIsLoadingProgram = false;
     bool bIsInSuspend      = true;
@@ -278,8 +281,10 @@ public:
         }
         vst3MidiMapping = FUnknownPtr<IMidiMapping>(vst3Component);
         editController = pluginProvider->getController();
-        if (editController)
+        if (editController) {
             editController->setComponentHandler(&componentHandler);
+            unitInfo = FUnknownPtr<IUnitInfo>(editController);
+        }
 
         editControllerHostEditing = FUnknownPtr<IEditControllerHostEditing>(editController);
 
@@ -328,6 +333,130 @@ public:
                 return false;
         }
         scanParams();
+        recvProgramListUpdate();
+        return true;
+    }
+    void recvProgramListUpdate() {
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        this->programNames.resize(0);
+        if (unitInfo) {
+            auto unitCount = unitInfo->getUnitCount();
+            auto programListCount = unitInfo->getProgramListCount();
+            auto selectedUnit = unitInfo->getSelectedUnit();
+            auto selectedProgramListId = int32_t(-1);
+            log_lf(Log::L_DEBUG, "%s: UnitInfo: %d units, %d program lists\n", StringAsCStr(sName), unitCount, programListCount);
+            for (int i = 0; i < unitCount; ++i) {
+                UnitInfo info{};
+                if (unitInfo->getUnitInfo(i, info) == kResultOk) {
+                    auto cxxName = VST3::StringConvert::convert(info.name);
+                    log_lf(Log::L_DEBUG, "Unit %d: id=%d, parentId=%d, name=%s, programListId=%d\n",
+                        i, info.id, info.parentUnitId, StringAsCStr(cxxName), info.programListId);
+                    if (info.id == selectedUnit) {
+                        selectedProgramListId = info.programListId;
+                    }
+                }
+            }
+            bool bFirst = true;
+            for (int i = 0; i < programListCount; ++i) {
+                ProgramListInfo info{};
+                if (unitInfo->getProgramListInfo(i, info) == kResultOk) {
+                    if (info.id == selectedProgramListId) {
+                        auto cxxName = VST3::StringConvert::convert(info.name);
+                        log_lf(Log::L_DEBUG, "ProgramList %d: id=%d, name=%s, programCount=%d\n",
+                            i, info.id, StringAsCStr(cxxName), info.programCount);
+                        for (int j = 0; info.programCount > 1 && j < info.programCount; ++j) {
+                            String128 name{};
+                            if (unitInfo->getProgramName(info.id, j, name) == kResultOk) {
+                                bool bHasPitchNames = unitInfo->hasProgramPitchNames(info.id, j) == kResultTrue;
+                                auto cxxName = VST3::StringConvert::convert(name);
+                                log_lf(Log::L_DEBUG, "Program %d: name=%s, hasPitchNames=%d\n", j, StringAsCStr(cxxName), bHasPitchNames);
+                                this->programNames.push_back(cxxName);
+                                if (bFirst) {
+                                    bFirst = false;
+                                    this->currentProgramNameStr = cxxName;
+                                    this->currentProgramNameSet = true;
+                                    updateProgramPitchNames();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void updateProgramPitchNames() {
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        programPitchNames.clear();
+        auto unitCount = unitInfo->getUnitCount();
+        auto selectedUnit = unitInfo->getSelectedUnit();
+        auto selectedProgramListId = int32_t(-1);
+        for (int i = 0; i < unitCount; ++i) {
+            UnitInfo info{};
+            if (unitInfo->getUnitInfo(i, info) == kResultOk) {
+                if (info.id == selectedUnit) {
+                    selectedProgramListId = info.programListId;
+                }
+            }
+        }
+        for (int i = 0; i < unitCount; ++i) {
+            ProgramListInfo info{};
+            if (unitInfo->getProgramListInfo(i, info) == kResultOk) {
+                if (info.id == selectedProgramListId) {
+                    for (int j = 0; info.programCount > 1 && j < info.programCount; ++j) {
+                        String128 name{};
+                        if (unitInfo->getProgramName(info.id, j, name) == kResultOk && 
+                            VST3::StringConvert::convert(name) == this->currentProgramNameStr) {
+                            bool bHasPitchNames = unitInfo->hasProgramPitchNames(info.id, j) == kResultTrue;
+                            if (bHasPitchNames) {
+                                for (int16 k = 0; k < 128; ++k) {
+                                    String128 pitchName{};
+                                    if (unitInfo->getProgramPitchName(info.id, j, k, pitchName) == kResultOk) {
+                                        auto cxxPitchName = VST3::StringConvert::convert(pitchName);
+                                        programPitchNames[k] = cxxPitchName;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    bool getCurrentProgramName(String& out) override {
+        out = this->currentProgramNameStr;
+        return this->currentProgramNameSet;
+    }
+
+    bool setCurrentProgram(uint32_t idx) override {
+        using namespace Steinberg;
+        using namespace Steinberg::Vst;
+        if (!editController) {
+            return false;
+        }
+        if (!bHasProgramChangeParameter) {
+            return false;
+        }
+        if (programChangeParameter.id == kNoParamId) {
+            return false;
+        }
+        if (programChangeParameter.stepCount < 1) {
+            return false;
+        }
+        if (int32(idx) > programChangeParameter.stepCount || idx < 0 || idx >= this->programNames.size()) {
+            log_lf(Log::L_ERROR, "%s: Invalid program index %d\n", StringAsCStr(sName), idx);
+            return false;
+        }
+        ParamValue normalized = (ParamValue)idx / (ParamValue)programChangeParameter.stepCount;
+        if (editController->setParamNormalized(programChangeParameter.id, normalized) != kResultOk) {
+            log_lf(Log::L_ERROR, "%s: Failed to set program\n", StringAsCStr(sName));
+            return false;
+        }
+        // set program name from local list
+        this->currentProgramNameStr = this->programNames[idx];
         return true;
     }
 
@@ -440,6 +569,7 @@ private:
             automatable_param_t* param = registerParam(paramIdentifier);
             if (info.flags & ParameterInfo::kIsProgramChange) {
                 programChangeParameter = info;
+                bHasProgramChangeParameter = true;
                 param->isHidden = false;
             }
             else if (info.flags & ParameterInfo::kIsHidden) {
@@ -463,6 +593,7 @@ private:
             param->paramDisplayValState = PARAM_FLAG_SET;
             param->paramValueState = PARAM_FLAG_SET;
             param->unit = VST3::StringConvert::convert(info.units);
+            param->vst3UnitId = info.unitId;
             param->quantizationSteps = info.stepCount;
             String128 paramValueStr{};
             if (kResultOk != editController->getParamStringByValue(info.id, info.defaultNormalizedValue, paramValueStr)) {

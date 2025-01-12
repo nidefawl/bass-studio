@@ -3,6 +3,8 @@
 #include "guicolors.h"
 #include "host/track/track.h"
 #include "host/track/track_impl.h"
+#include "host/plugin/base/base-plugin.h"
+#include "math/seq_math.h"
 #include "note.h"
 #include "seq_time.h"
 #include "cursor.h"
@@ -133,7 +135,7 @@ vec2 gui_pianoroll::getNoteFromPos(vec2 localPos) {
 }
 
 void gui_pianoroll::layout() {
-    keysX     = size.x / 2;
+    keysX     = size.x > 100 ? size.x * 0.3f : size.x * 0.5f;
     widthKeys = size.x - keysX;
 }
 void gui_pianoroll::render(NVGcontext* vg) {
@@ -409,7 +411,8 @@ void gui_pianoroll::render(NVGcontext* vg) {
             firstKey = 0;
         }
         nvgRestore(vg);
-        setFont(vg, 24, labelColor, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+        int32_t fontSizeOctaveNames = math::clamp(math::roundfS32(scale*0.75f), 4, 64);
+        setFont(vg, fontSizeOctaveNames, labelColor, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
         char buf[5];
         for (int32_t octave = 0; octave < MAX_OCTAVES; octave++) {
             float y     = scale * octave * 12;
@@ -421,6 +424,43 @@ void gui_pianoroll::render(NVGcontext* vg) {
             snprintf(buf, sizeof(buf), "C%d", octave - 2);
             nvgText(vg, 4, textY, buf, NULL);
         }
+
+        // render every single notes name
+        int32_t fontSizePitchNames = math::clamp(math::roundfS32(scale-2), 4, 20);
+        setFont(vg, fontSizePitchNames, labelColor, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        auto firstEffectWithPitchNames = [track]() -> effectbase* {
+            if (!track || !track->audio) {
+                return nullptr;
+            }
+            for (auto& effect : track->audio->effects) {
+                if (!effect->getProgramPitchNames().empty()) {
+                    return effect;
+                }
+            }
+            return nullptr;
+        }();
+        auto* pitchNames = firstEffectWithPitchNames ? &firstEffectWithPitchNames->getProgramPitchNames() : nullptr;
+        auto nvgColBrt = theme->getColor(GuiColor::COL_PIANOROLL_WHITE);
+        auto nvgColDrk = theme->getColor(GuiColor::COL_PIANOROLL_BLACK);
+        for (int32_t octave = 0; octave < MAX_OCTAVES; octave++) {
+            for (int32_t i = 0; i < 12; i++) {
+                bool bIsSharp = isSharp(i);
+                int32_t pitch = octave * 12 + i;
+                float y       = scale * (octave * 12 + i) + scale * 0.5f;
+                float textY   = h - y + offset;
+                if (textY > size.y + scale + 20 || textY < -20) {
+                    continue;
+                }
+                nvgFillColor(vg, bIsSharp ? nvgColBrt : nvgColDrk);
+                const auto* nameStr = buf;
+                if (pitchNames && pitchNames->count(pitch)) {
+                    nameStr = pitchNames->at(pitch).c_str();
+                } else {
+                    snprintf(buf, sizeof(buf), "%s", noteName(pitch));
+                }
+                nvgText(vg, keysX+4, textY, nameStr, NULL);
+            }
+        }
     }
     nvgBeginPath(vg);
     nvgMoveTo(vg, keysX + widthKeys, 0);
@@ -428,4 +468,16 @@ void gui_pianoroll::render(NVGcontext* vg) {
     nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
     nvgStroke(vg);
+}
+
+bool gui_pianoroll::hasNotePitchNames() const {
+    auto track = this->view.track();
+    if (track) {
+        for (auto& effect : track->audio->effects) {
+            if (!effect->getProgramPitchNames().empty()) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

@@ -402,6 +402,7 @@ public:
     gui_pianoroll(clip_view_t& _view, layout_pianoroll_t& _layout);
     ~gui_pianoroll() override = default;
     void render(NVGcontext* vg) override;
+    bool hasNotePitchNames() const;
 
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
@@ -957,7 +958,7 @@ public:
     guidropdown_midi_control_data dropdownSelectControlData;
     Splitter splitterVel;
     int32_t velHeight = 120;
-    int32_t pianoWidth = 100;
+    int32_t pianoWidth = 160;
     ivec2 posContentArea{ 0, 0 };
     ivec2 sizeContentArea{ 0, 0 };
     std::array<guibase*, 5> buttonList = { &btnShowClipSettings, &btnShowArp, &btnShowVelocities, &btnShowControlData, &btnToggleFold };

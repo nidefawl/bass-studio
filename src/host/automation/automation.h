@@ -250,7 +250,8 @@ struct automatable_param_properties_t {
     DAW::modulation_scaling_t automationScale{0.0f, 1.0f, DAW::ModulationMode::REPLACE, false};
     int32_t quantizationSteps = 0;
     int32_t displayIndex = 0;
-    int32_t flags      = 0;
+    int32_t flags        = 0;
+    int32_t vst3UnitId   = 0;
     String extensiveName = ""; // optional
     String name;
     String unit;

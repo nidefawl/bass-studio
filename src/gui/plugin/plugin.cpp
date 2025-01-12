@@ -401,7 +401,7 @@ void effectbase::addPropertiesParameterList(Table::tbl& table) {
     std::vector<tbl_row_t>& rows = table.rows;
     std::vector<automatable_param_t*> sortedParams;
     this->getSortedParams(sortedParams);
-    rows.push_back({{tblString{"Name"}, tblString{"Unit"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"},  tblString{"Step"}}});
+    rows.push_back({{tblString{"Name"}, tblString{"Unit"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"},  tblString{"Step"},  tblString{"UnitId"}}});
     for (automatable_param_t* param : sortedParams) {
         tbl_row_t row;
         row.cols.push_back(tblString{getParamName(param->idx)});
@@ -411,6 +411,7 @@ void effectbase::addPropertiesParameterList(Table::tbl& table) {
         row.cols.push_back(tblint{param->internalIdx});
         row.cols.push_back(tblint{param->flags});
         row.cols.push_back(tblint{param->quantizationSteps});
+        row.cols.push_back(tblint{param->vst3UnitId+1});
         rows.push_back(row);
     }
 }
