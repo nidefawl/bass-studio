@@ -1,4 +1,5 @@
 #pragma once
+#include "types.h"
 #include "grid_constants.h"
 
 struct layout_pianoroll_t {
@@ -21,7 +22,7 @@ struct layout_pianoroll_t {
     }
 };
 struct layout_grid_t {
-    int offset  = 0;
+    double offset  = 0;
     double zoom = DEFAULT_ZOOM;
 };
 struct clip_editor_layout_t {

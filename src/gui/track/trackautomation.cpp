@@ -706,8 +706,8 @@ void gui_track_automation::render(NVGcontext* vg) {
             nvgStrokeWidth(vg, lineWidth);
         }
         RenderResources::NvgImageTexture& image = RenderResources::imgDashedLine;
-        uint32_t texOffsetX = image.width - (grid.getOffset() % image.width);
-        NVGpaint paintDown  = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, (float) (M_PI * 0.5f), image.perContextId[vg], 0.6f);
+        auto texOffsetX = image.width - fmod(grid.getOffset(), image.width);
+        NVGpaint paintDown  = nvgImagePattern(vg, float(texOffsetX), 0, image.width, image.height, (float) (M_PI * 0.5f), image.perContextId[vg], 0.6f);
         nvgStrokePaint(vg, paintDown);
         nvgStroke(vg);
     }

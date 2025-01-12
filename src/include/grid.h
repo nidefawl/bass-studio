@@ -12,7 +12,7 @@
 struct grid_div {
     tick_t time;
     beatbar16th_t pos;
-    float screenpos;
+    double screenpos;
     int8_t color;
     float thickness;
     double width;
@@ -78,14 +78,14 @@ public:
     }
     tick_t getTickLength() const;
     void notifyChange();
-    int32_t getOffset() const {
+    double getOffset() const {
         return this->offset;
     }
     double getZoom() const {
         return this->zoom;
     }
     void setZoom(double zoom);
-    void setOffset(int newOffset);
+    void setOffset(double newOffset);
     double toObjSpace(double screenx) const {
         return toObjSpace(screenx, this->zoom, this->offset);
     }

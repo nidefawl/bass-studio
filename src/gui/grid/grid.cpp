@@ -40,9 +40,9 @@ tick_t scaled_grid::getTickLength() const {
     auto second = this->gridList[1];
     return second.time - first.time;
 }
-void scaled_grid::setOffset(int newOffset) {
+void scaled_grid::setOffset(double newOffset) {
     newOffset = newOffset < 0 ? 0 : newOffset;
-    this->offset = (int) newOffset;
+    this->offset = newOffset;
 }
 tick_t scaled_grid::next(tick_t tick) const {
     tick_t len = getTickLength();
@@ -83,20 +83,20 @@ tick_t scaled_grid::tickSnapExact(tick_t tick, int snap) const {
 tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) const {
     return screenToTickSnapExact(x, snap);
 }
-using float_type = double;
 
 void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
+    using float_type = decltype(grid_div::screenpos);
     gridList.clear();
     gridList.reserve(100);
     const float_type stepSize = fzoom * 128;
-    const float_type scale    = 1024.0f;
+    const float_type scale    = 1024.0;
     const float_type barSize  = scale / stepSize;
     //bg
     {
         float_type steps_bg = stepSize;
         float_type incr     = scale / steps_bg;
-        float_type minW     = 256.0f;
-        float_type maxW     = minW * 2.0f;
+        float_type minW     = 256.0;
+        float_type maxW     = minW * 2.0;
         while (incr < minW) {
             steps_bg /= 4;
             incr = scale / steps_bg;

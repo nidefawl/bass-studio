@@ -3131,7 +3131,7 @@ void guictr_clipeditorview::getFrameBounds(vec2& posFrame, vec2& sizeFrame) {
     float scaleXSS = getScreenSpaceScaleX();
     ivec2 posContents = this->getPosContent();
     ivec2 sizeContents = this->getSizeContent();
-    float offset = static_cast<float>(grid.getOffset()) * scaleX/scaleXSS;
+    float offset = grid.getOffset() * scaleX/scaleXSS;
     auto rightBottom = vec2(posContents + sizeContents);
     posFrame = vec2(math::min<float>(posContents.x + offset, rightBottom.x), posContents.y);
     sizeFrame = vec2(math::min<float>(sizeContents.x * scaleX, rightBottom.x - posFrame.x), sizeContents.y);
@@ -3234,8 +3234,8 @@ void guictr_clipeditorview::handleDraggedMove(MouseEvent& evt) {
 
     if (evt.guiDragged == this) {
         auto& grid = getGrid();
-        float scaleX   = getScaleX();
-        float scaleXSS = getScreenSpaceScaleX();
+        auto scaleX   = getScaleX();
+        auto scaleXSS = getScreenSpaceScaleX();
         bool bChanged  = false;
         if (math::abs(evt.dragDistance->x) > 3) {
             auto newOffset      = grid.offset + evt.dragDistance->x * 1.0 / scaleX;
@@ -3248,7 +3248,7 @@ void guictr_clipeditorview::handleDraggedMove(MouseEvent& evt) {
         if (math::abs(evt.dragDistance->y) > 3) {
             auto disty            = 1.0f + evt.dragDistance->y * -0.01f;
             evt.dragDistance->y   = 0;
-            float anchor_dragposx = math::max(0.0f, evt.relMousepos.x * (scaleXSS / scaleX) - grid.getOffset());
+            auto anchor_dragposx = math::max(0.0, evt.relMousepos.x * (scaleXSS / scaleX) - grid.getOffset());
             auto dragPosObjSpace  = grid.toObjSpace(anchor_dragposx);
             grid.setZoom(grid.zoom * disty);
             auto newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
