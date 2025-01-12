@@ -795,7 +795,6 @@ void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& 
         io_configuration_snapshot_t cfg = i == 0 ? snapshot.input : snapshot.output;
         loadDawChannelRefSnapshot(cfg, channel);
     }
-    // loadMidiChannelRefSnapshot(snapshot.midiInput, midiChannel);
     midiInputChannels.clear();
     midiInputChannels.resize(snapshot.midiInputs.size());
     auto numInputs = midiInputChannels.size();
@@ -1056,7 +1055,7 @@ track_impl_t::track_impl_t(DAW::Host::PluginManager* const _host, audio_stage_id
       outputChannel(DAW::ChannelDefaultNone()),
       midiValidation(new clip_notes_t())
 {
-    //   midiInputChannels.push_back(_track->type == TRACK_TYPE_MIDI ? DAW::MidiChannelDefault() : DAW::MidiChannelNone());
+      midiInputChannels.push_back(_track->type == TRACK_TYPE_MIDI ? DAW::MidiChannelDefault() : DAW::MidiChannelNone());
 }
 
 const std::vector<DAW::arp_note_t>& track_impl_t::getArpHeldNotes() {
