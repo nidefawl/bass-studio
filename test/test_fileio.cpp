@@ -35,9 +35,13 @@ void test_listFilesystemNonRecursive() {
   TEST_BEGIN("test_listFilesystemNonRecursive");
   std::vector<FileFound> files;
   std::vector<String> fileExtensions;
-  auto resPath = TEST_PATH("filesystem");
+  auto resPath = TEST_PATH("filebrowser");
   listFilesystemNonRecursive(resPath, fileExtensions, files);
   TEST_ASSERT_EQUAL(files.size(), 3U);
+  for (auto& file : files) {
+    log_lf(Log::L_INFO, "%s\n", StringAsCStr(file.path));
+    TEST_ASSERT_EQUAL(file.bIsDir, true);
+  }
   TEST_END();
 }
 
