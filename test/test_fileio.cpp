@@ -39,8 +39,26 @@ void test_listFilesystemNonRecursive() {
   listFilesystemNonRecursive(resPath, fileExtensions, files);
   TEST_ASSERT_EQUAL(files.size(), 3U);
   for (auto& file : files) {
-    log_lf(Log::L_INFO, "%s\n", StringAsCStr(file.path));
     TEST_ASSERT_EQUAL(file.bIsDir, true);
+    std::vector<FileFound> filesSub;
+    listFilesystemNonRecursive(file.path, fileExtensions, filesSub);
+    if ("1file" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 1U);
+      for (auto& fileSub : filesSub) {
+        TEST_ASSERT_EQUAL(fileSub.bIsDir, false);
+      }
+    } else if ("2files" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 2U);
+      for (auto& fileSub : filesSub) {
+        TEST_ASSERT_EQUAL(fileSub.bIsDir, false);
+      }
+    } else if ("3files-nested" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 3U);
+      for (auto& fileSub : files) {
+        TEST_ASSERT_EQUAL(fileSub.bIsDir, true);
+      }
+    }
+    log_lf(Log::L_INFO, "%s OK\n", StringAsCStr(file.path));
   }
   TEST_END();
 }
