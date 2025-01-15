@@ -31,11 +31,22 @@ void test_findFilesWithExt_non_recursive() {
   TEST_END();
 }
 
+void test_listFilesystemNonRecursive() {
+  TEST_BEGIN("test_listFilesystemNonRecursive");
+  std::vector<FileFound> files;
+  std::vector<String> fileExtensions;
+  auto resPath = TEST_PATH("filesystem");
+  listFilesystemNonRecursive(resPath, fileExtensions, files);
+  TEST_ASSERT_EQUAL(files.size(), 3U);
+  TEST_END();
+}
+
 } // namespace
 
 int main() {
   App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
   test_findFilesWithExt_recursive();
   test_findFilesWithExt_non_recursive();
+  test_listFilesystemNonRecursive();
   return 0;
 }

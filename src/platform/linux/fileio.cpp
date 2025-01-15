@@ -131,8 +131,8 @@ void findFilesWithExtList(
             break;
         if (!(fs_entry->fts_info & FTS_D))
             continue;
-        if (bIncludeDirs) {
-            String path = String(fs_entry->fts_path) + fs_entry->fts_name;
+        if (bRecursive && bIncludeDirs) {
+            String path = String(fs_entry->fts_path);
             App::Platform::sanitizePathToDirectory(path);
             const FileFound f = { std::move(path), fs_entry->fts_name, "", true };
             _out.push_back(f);
@@ -145,7 +145,7 @@ void findFilesWithExtList(
                 if (vecExt.empty() || std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
                     String path = String(child->fts_path) + child->fts_name;
                     App::Platform::sanitizePathToFile(path);
-                    const FileFound f = { std::move(path), child->fts_name, ext, false };
+                    const FileFound f = { std::move(path), child->fts_name, ext, bool(child->fts_info & FTS_D) };
                     _out.push_back(f);
                 }
             }
@@ -167,7 +167,7 @@ void findFilesWithExt(
     findFilesWithExtList(strPath, { strExt }, bRecursive, false, _out);
 }
 
-void listFilesystemTree(
+void listFilesystemNonRecursive(
         const String& strPath,
         const std::vector<String>& vecExt,
         std::vector<FileFound>& _out) {
