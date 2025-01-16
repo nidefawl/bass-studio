@@ -173,13 +173,13 @@ namespace PluginAirWindows {
             parameterTypes.push_back({ 6, "Dry/Wet", "%", 0.5f });
         }
         void setParameters(internalplugin* plugin) override {
-            A = plugin->getParam(PARAM_OFFSET_IMPL + 0)->getValue();
-            B = plugin->getParam(PARAM_OFFSET_IMPL + 1)->getValue();
-            C = plugin->getParam(PARAM_OFFSET_IMPL + 2)->getValue();
-            D = plugin->getParam(PARAM_OFFSET_IMPL + 3)->getValue();
-            E = plugin->getParam(PARAM_OFFSET_IMPL + 4)->getValue();
-            F = plugin->getParam(PARAM_OFFSET_IMPL + 5)->getValue();
-            G = plugin->getParam(PARAM_OFFSET_IMPL + 6)->getValue();
+            A = plugin->getParamValue(PARAM_OFFSET_IMPL + 0);
+            B = plugin->getParamValue(PARAM_OFFSET_IMPL + 1);
+            C = plugin->getParamValue(PARAM_OFFSET_IMPL + 2);
+            D = plugin->getParamValue(PARAM_OFFSET_IMPL + 3);
+            E = plugin->getParamValue(PARAM_OFFSET_IMPL + 4);
+            F = plugin->getParamValue(PARAM_OFFSET_IMPL + 5);
+            G = plugin->getParamValue(PARAM_OFFSET_IMPL + 6);
         }
         void processReplacing(float** inputs, float** outputs, samplecount_t sampleFrames, samplerate_t sampleRate) override {
             float* in1  = inputs[0];
