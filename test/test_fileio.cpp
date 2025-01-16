@@ -14,10 +14,13 @@ void test_findFilesWithExt_recursive() {
   auto resPath = TEST_PATH("findfiles");
   findFilesWithExt(resPath, "txt", true, files);
   log_lf(Log::L_INFO, "findFilesWithExt %zu\n", files.size());
-  TEST_ASSERT_EQUAL(files.size(), 4U);
   for (auto &file : files) {
+    auto path = file.path;
+    auto bExists = FileExists(path);
+    TEST_ASSERT_EQUAL(bExists, true);
     log_lf(Log::L_INFO, "%s\n", StringAsCStr(file.path));
   }
+  TEST_ASSERT_EQUAL(files.size(), 4U);
   TEST_END();
 }
 
@@ -37,12 +40,14 @@ void test_listFilesystemNonRecursive() {
   std::vector<String> fileExtensions;
   auto resPath = TEST_PATH("filebrowser");
   listFilesystemNonRecursive(resPath, fileExtensions, files);
-  TEST_ASSERT_EQUAL(files.size(), 3U);
+  TEST_ASSERT_EQUAL(files.size(), 4U);
   for (auto& file : files) {
     TEST_ASSERT_EQUAL(file.bIsDir, true);
     std::vector<FileFound> filesSub;
     listFilesystemNonRecursive(file.path, fileExtensions, filesSub);
-    if ("1file" == file.name) {
+    if ("0files" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 0U);
+    } else if ("1file" == file.name) {
       TEST_ASSERT_EQUAL(filesSub.size(), 1U);
       for (auto& fileSub : filesSub) {
         TEST_ASSERT_EQUAL(fileSub.bIsDir, false);
@@ -55,6 +60,34 @@ void test_listFilesystemNonRecursive() {
     } else if ("3files-nested" == file.name) {
       TEST_ASSERT_EQUAL(filesSub.size(), 3U);
       for (auto& fileSub : files) {
+        TEST_ASSERT_EQUAL(fileSub.bIsDir, true);
+      }
+    }
+    log_lf(Log::L_INFO, "%s OK\n", StringAsCStr(file.path));
+  }
+  fileExtensions.emplace_back("preset");
+  files.clear();
+  listFilesystemNonRecursive(resPath, fileExtensions, files);
+  TEST_ASSERT_EQUAL(files.size(), 4U);
+  for (auto& file : files) {
+    TEST_ASSERT_EQUAL(file.bIsDir, true);
+    std::vector<FileFound> filesSub;
+    listFilesystemNonRecursive(file.path, fileExtensions, filesSub);
+    if ("0files" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 0U);
+    } else if ("1file" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 0U);
+      for (auto& fileSub : filesSub) {
+        TEST_ASSERT_EQUAL(fileSub.bIsDir, false);
+      }
+    } else if ("2files" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 0U);
+      for (auto& fileSub : filesSub) {
+        TEST_ASSERT_EQUAL(fileSub.bIsDir, false);
+      }
+    } else if ("3files-nested" == file.name) {
+      TEST_ASSERT_EQUAL(filesSub.size(), 3U);
+      for (auto& fileSub : filesSub) {
         TEST_ASSERT_EQUAL(fileSub.bIsDir, true);
       }
     }

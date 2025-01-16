@@ -112,8 +112,11 @@ void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
 void findFilesWithExtList(
         const String& strPath,
         const std::vector<String>& vecExt,
-        const bool bRecursive, const bool bIncludeDirs,
+        const int32_t flags,
         std::vector<FileFound>& _out) {
+    const bool bRecursive = flags & LIST_DIR_RECURSIVE;
+    const bool bIncludeDirs = flags & LIST_DIR_DIRS;
+    // const bool bIncludeEmptyDirs = flags & LIST_DIR_EMPTY_DIRS;
     FTS* file_system = nullptr;
     const char* ptr  = StringAsCStr(strPath);
     char* args[2]    = { (char*) ptr, nullptr };
@@ -164,14 +167,42 @@ void findFilesWithExt(
         const String& strExt,
         bool bRecursive,
         std::vector<FileFound>& _out) {
-    findFilesWithExtList(strPath, { strExt }, bRecursive, false, _out);
+    int32_t flags = bRecursive ? LIST_DIR_RECURSIVE : 0;
+    findFilesWithExtList(strPath, { strExt }, flags, _out);
 }
 
 void listFilesystemNonRecursive(
         const String& strPath,
         const std::vector<String>& vecExt,
         std::vector<FileFound>& _out) {
-    findFilesWithExtList(strPath, vecExt, false, true, _out);
+    auto path = strPath;
+    App::Platform::sanitizePathToDirectory(path);
+    DIR* d = opendir(path.c_str());
+    if (d == NULL) {
+        log_lf(Log::L_WARN, "Could not open directory: %s\n", StringAsCStr(path));
+        return;
+    }
+    struct dirent* fs_entry = nullptr;
+    while ((fs_entry = readdir(d))) {
+        bool bIsDir  = fs_entry->d_type == DT_DIR;
+        bool bIsFile = fs_entry->d_type == DT_REG;
+        if (bIsDir && fs_entry->d_name[0] != '.') {
+            auto pathDir = path + fs_entry->d_name;
+            App::Platform::sanitizePathToDirectory(pathDir);
+            const FileFound f = { std::move(pathDir), fs_entry->d_name, "", true };
+            _out.push_back(f);
+        } else if (bIsFile) {
+            String ext;
+            SplitPath(fs_entry->d_name, nullptr, nullptr, &ext, nullptr);
+            if (vecExt.empty() || std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
+                auto pathFile = path + fs_entry->d_name;
+                App::Platform::sanitizePathToFile(pathFile);
+                const FileFound f = { std::move(pathFile), fs_entry->d_name, ext, false };
+                _out.push_back(f);
+            }
+        }
+    }
+    closedir(d);// finally close the directory
 }
 
 class FileTimeGetter::Impl {
