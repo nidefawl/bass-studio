@@ -183,60 +183,18 @@ void save(Archive& ar, appsettings const& settings, const std::uint32_t version)
 template<class Archive>
 void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
     settings.fileFmtVersion = version;
-    if (version < 2) {
-        bool bAudioEnabled = false;
-        bool bVMMode = false;
+    ar(
+        make_nvp("dawsettings", settings.dawsettings),
+        make_nvp("autosave", settings.autosave),
+        make_nvp("pluginsettings", settings.pluginsettings),
+        make_nvp("iosettings", settings.iosettings),
+        make_nvp("pathmapping", settings.pathmapping),
+        make_nvp("recentfiles", settings.recentfiles),
+        make_nvp("windowSettings", settings.windowSettings),
+        make_nvp("theme", settings.selectedTheme)
+    );
+    if (version >= 5) {
         ar(
-            // make_nvp("window.main", settings.wndMain), 
-            // make_nvp("window.companion", settings.wndCompanion),
-            make_nvp("io", settings.iosettings),
-            make_nvp("startengine", bAudioEnabled),
-            make_nvp("plugins", settings.pluginsettings),
-            make_nvp("vmmode", bVMMode),
-            make_nvp("recentfiles", settings.recentfiles)
-        );
-        bool bShaderDebug = false;
-        make_optional_nvp(ar, "pathmapping", settings.pathmapping);
-        make_optional_nvp(ar, "shaderDebug", bShaderDebug);
-        make_optional_nvp(ar, "autosave", settings.autosave);
-        settings.dawsettings.shaderDebug = bShaderDebug;
-        settings.dawsettings.audioEnabled = bAudioEnabled;
-    } else if (version < 3) {
-        ar(
-            make_nvp("dawsettings", settings.dawsettings),
-            make_nvp("autosave", settings.autosave),
-            make_nvp("pluginsettings", settings.pluginsettings),
-            make_nvp("iosettings", settings.iosettings),
-            make_nvp("pathmapping", settings.pathmapping),
-            make_nvp("recentfiles", settings.recentfiles)
-            // make_nvp("wndMain", settings.wndMain),
-            // make_nvp("wndCompanion", settings.wndCompanion)
-        );
-    } else if (version < 5) {
-        ar(
-            make_nvp("dawsettings", settings.dawsettings),
-            make_nvp("autosave", settings.autosave),
-            make_nvp("pluginsettings", settings.pluginsettings),
-            make_nvp("iosettings", settings.iosettings),
-            make_nvp("pathmapping", settings.pathmapping),
-            make_nvp("recentfiles", settings.recentfiles),
-            make_nvp("windowSettings", settings.windowSettings)
-        );
-        if (version > 3) {
-            ar(
-                make_nvp("theme", settings.selectedTheme)
-            );
-        }
-    } else {
-        ar(
-            make_nvp("dawsettings", settings.dawsettings),
-            make_nvp("autosave", settings.autosave),
-            make_nvp("pluginsettings", settings.pluginsettings),
-            make_nvp("iosettings", settings.iosettings),
-            make_nvp("pathmapping", settings.pathmapping),
-            make_nvp("recentfiles", settings.recentfiles),
-            make_nvp("windowSettings", settings.windowSettings),
-            make_nvp("theme", settings.selectedTheme),
             make_nvp("userlibraries", settings.userLibraryPaths)
         );
     }
