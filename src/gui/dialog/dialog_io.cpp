@@ -671,7 +671,7 @@ public:
         intSampleRate->fnGetCurrentIdx = [this]() -> uint32_t {
             return indexOfCtr(IntSamplerates, settings.iosettings.internalSamplerate);
         };
-        static constexpr blocksize_t BLOCK_SIZE_BITS = 10;
+        static constexpr blocksize_t BLOCK_SIZE_BITS = 9;
         for (auto i = 0U; i < BLOCK_SIZE_BITS; i++) {
             blocksize_t blockSize = 1U << (4U + i);
             extBlockSize->options.push_back(StringFormat("%u", blockSize));
