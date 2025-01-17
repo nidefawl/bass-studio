@@ -53,20 +53,20 @@ void LogLastWin32Error(const String& msg) {
 bool MoveAbsoluteFile(const String& src, const String& dst) {
     auto srcW = StringU8ToW(src);
     auto dstW = StringU8ToW(dst);
-    auto err = MoveFileW(srcW.c_str(), dstW.c_str());
-    if (err) {
+    auto ret = MoveFileW(srcW.c_str(), dstW.c_str());
+    if (ret == 0) {
         LogLastWin32Error("MoveFileA failed");
     }
-    return err;
+    return ret;
 }
 
 bool DeleteAbsoluteFile(const String& FilePath) {
     auto filePathW = StringU8ToW(FilePath);
-    auto err = DeleteFileW(filePathW.c_str());
-    if (err) {
+    auto ret = DeleteFileW(filePathW.c_str());
+    if (ret == 0) {
         LogLastWin32Error("DeleteFileA failed");
     }
-    return err;
+    return ret;
 }
 
 bool PathIsDirectory(const String& path) {
