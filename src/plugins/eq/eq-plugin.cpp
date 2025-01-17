@@ -504,12 +504,13 @@ namespace {
                     if (!isBandEnabled(bandIdx)) {
                         continue;
                     }
+                    auto bandParams = GetBandParams(this, bandIdx);
+                    auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
                     auto& filters = impl->filters[bandIdx];
                     while (filters.size() < out->channels) {
                         filters.emplace_back(std::make_shared<DAW::Filter>());
+                        impl->filterCoeffs[filters.size()-1] = coefficients;
                     }
-                    auto bandParams = GetBandParams(this, bandIdx);
-                    auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
                     impl->filterCoeffs[bandIdx] = InterpolateFilterCoeffs(impl->filterCoeffs[bandIdx], coefficients, state == playback_state::status_render ? 1 : 3);
                     for (channelnum_t ch = 0; ch < channelCount; ++ch) {
                         auto bufChannel = bufEqd->SubChannelsSamplesBlock(ch, 1, i, stepSizeSamples);
@@ -522,12 +523,13 @@ namespace {
                 if (!isBandEnabled(bandIdx)) {
                     continue;
                 }
+                auto bandParams = GetBandParams(this, bandIdx);
+                auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
                 auto& filters = impl->filters[bandIdx];
                 while (filters.size() < out->channels) {
                     filters.emplace_back(std::make_shared<DAW::Filter>());
+                    impl->filterCoeffs[filters.size()-1] = coefficients;
                 }
-                auto bandParams = GetBandParams(this, bandIdx);
-                auto coefficients = GetFilterCoeffs(bandParams, format.sampleRate);
                 impl->filterCoeffs[bandIdx] = InterpolateFilterCoeffs(impl->filterCoeffs[bandIdx], coefficients, 3);
                 for (channelnum_t ch = 0; ch < channelCount; ++ch) {
                     auto bufChannel = bufEqd->SubChannelsBlock(ch, 1);
