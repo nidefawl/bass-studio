@@ -40,8 +40,8 @@ inline bool isStageBufferPointInput(const stage_bufferpoint stBufPt) {
 
 namespace AudioIO {
 
-    extern const std::array<samplerate_t, 4> ExtSamplerates;
-    extern const std::array<samplerate_t, 4> IntSamplerates;
+    extern const std::array<samplerate_t, 6> ExtSamplerates;
+    extern const std::array<samplerate_t, 6> IntSamplerates;
 
     struct io_cfg_channel {
         String name;

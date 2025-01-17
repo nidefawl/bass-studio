@@ -27,11 +27,11 @@
 
 
 namespace DAW::AudioIO {
-    const std::array<samplerate_t, 4> IntSamplerates = {
-        44100U, 48000U, 96000U, 192000U
+    const std::array<samplerate_t, 6> IntSamplerates = {
+        44100U, 48000U, 88200U, 96000U, 176400U, 192000U
     };
-    const std::array<samplerate_t, 4> ExtSamplerates = {
-        44100U, 48000U, 96000U, 192000U
+    const std::array<samplerate_t, 6> ExtSamplerates = {
+        44100U, 48000U, 88200U, 96000U, 176400U, 192000U
     };
     channel_pairing getTrackTypeFromNumChannels(channelnum_t t) {
         if (t < 2)
