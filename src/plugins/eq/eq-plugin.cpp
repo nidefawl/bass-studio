@@ -943,7 +943,7 @@ namespace PluginEQ {
             res.type = hittype::HIT_NONE;
             res.idx = -1;
             res.dist = 0.0f;
-            const float MIN_DIST = 7.0f;
+            const float MIN_DIST = 12.0f;
             const float pixelToDB = graphSize.y / PLOT_DB_RANGE;
             std::array<band_t, defaultBands.size()> bandParams{};
             for (int32_t bandIdx = 0; bandIdx < int32_t(bandParams.size()); ++bandIdx) {
@@ -1005,7 +1005,9 @@ namespace PluginEQ {
         }
 
         bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
-            guictr_base::handleMouseScroll(evt, xoffset, yoffset);
+            MouseEvent evtCopy = evt;
+            if (guictr_base::handleMouseScroll(evtCopy, xoffset, yoffset))
+                return true;
             auto hit = getMouseHit(vec2(evt.relMousepos) - graphPos);
             if (hit.type == hittype::HIT_BAND) {
                 auto bandParams = GetBandParams(moduleEq, hit.idx, false);
