@@ -181,28 +181,12 @@ void internalplugin::onWindowResize(ivec2 size) {
     if (windowClient.clientWindowInterface) {
         windowClient.clientWindowInterface->onResize(size);
     }
+    effectbase::onWindowResize(size);
 }
 
-// GLFWwindow* getGlfwFromWindowBase(window_base* w);
-
-// bool saveHostWindowPos(host_plugin_window* hostWindow, appwindow_size_t* size) {
-//     HWND hwnd = hostWindow->getHWND();
-//     size->valid = GetWindowPlacement(hwnd, &(size->p)) != 0;
-//     return true;
-// }
-
 bool internalplugin::onClose() {
+    effectbase::onClose();
     if (windowClient.clientWindow) {
-        // auto glfw = getGlfwFromWindowBase(windowClient.clientWindow);
-        // dbgassert(glfw);
-        // appwindow_size_t size;
-        // if (saveWindowPos(glfw, &size)) {
-        //     log_lf(Log::L_DEBUG, "save window pos %lu %lu %lu %lu\n", size.p.rcNormalPosition.left, size.p.rcNormalPosition.top, size.p.rcNormalPosition.right, size.p.rcNormalPosition.bottom);
-        // }
-        // appwindow_size_t size2;
-        // if (saveHostWindowPos(windowClient.hostWindow, &size2)) {
-        //     log_lf(Log::L_DEBUG, "save window pos %lu %lu %lu %lu\n", size2.p.rcNormalPosition.left, size2.p.rcNormalPosition.top, size2.p.rcNormalPosition.right, size2.p.rcNormalPosition.bottom);
-        // }
         dbgassert(windowClient.ctrl->isOk());
         windowClient.clientWindow->hide();
         destroyPluginWindow(windowClient.clientWindowInterface);
@@ -214,7 +198,7 @@ bool internalplugin::onClose() {
     }
     // windowHost = nullptr;
     windowClient = {};
-    return effectbase::onClose();
+    return true;
 }
 void internalplugin::getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainer>>& out) {
     for (auto& existingView : views) {

@@ -18,42 +18,30 @@
 using namespace cereal;
 
 
-#ifdef _WIN32
 #include "platform/win/windowsize.h"
-#include <windows.h>
 
-template <class Archive>
-void serialize(Archive& ar, appwindow_size_t& size) {
-    WINDOWPLACEMENT p{};
-    memcpy(&p, &size.data[0], sizeof(WINDOWPLACEMENT));
-    ar(size.valid,
-       p.flags,
-       p.showCmd,
-       (int32_t&) p.ptMinPosition.x,
-       (int32_t&) p.ptMinPosition.y,
-       (int32_t&) p.ptMaxPosition.x,
-       (int32_t&) p.ptMaxPosition.y,
-       (int32_t&) p.rcNormalPosition.left,
-       (int32_t&) p.rcNormalPosition.top,
-       (int32_t&) p.rcNormalPosition.right,
-       (int32_t&) p.rcNormalPosition.bottom);
-    memcpy(&size.data[0], &p, sizeof(WINDOWPLACEMENT));
-}
-#endif
-#if defined(__linux__) || defined(__APPLE__)
-#include "platform/linux/windowsize.h"
 
-template <class Archive>
-void serialize(Archive& ar, appwindow_size_t& settings) {
-    ar(settings.valid,
-       settings.x,
-       settings.y,
-       settings.w,
-       settings.h,
-       settings.hmax,
-       settings.vmax);
+template<class Archive>
+void save(Archive& archive, appwindow_size_t const& settings, const std::uint32_t version) {
+    size_type size = sizeof(settings.data);
+    archive(make_nvp("valid", settings.valid), make_nvp("type", settings.type), make_nvp("size", size));
+    ((JSONOutputArchive*) &archive)->saveBinaryValue(settings.data, size, "data");
 }
-#endif
+
+template<class Archive>
+void load(Archive& ar, appwindow_size_t& settings, const std::uint32_t version) {
+    if (version < 1) {
+        settings = {};
+        settings.valid = false;
+        return;
+    }
+    size_type size = 0;
+    ar(make_nvp("valid", settings.valid), make_nvp("type", settings.type), make_nvp("size", size));
+    std::vector<std::byte> vec;
+    vec.resize(size);
+    ((JSONInputArchive*) &ar)->loadBinaryValue((void*) vec.data(), size, "data");
+    memcpy(&settings.data[0], vec.data(), size);
+}
 
 namespace DAW::AudioIO {
     template <class Archive>
@@ -118,10 +106,12 @@ template <class Archive>
 void serialize(Archive& ar, recentfilelist& recentfiles) {
     ar(make_nvp("sorted", recentfiles.sortedEntries), make_nvp("files", recentfiles.recentFilesMeta));
 }
+
 template <class Archive>
 void serialize(Archive& ar, app_vst2_config& settings) {
     ar(make_nvp("uidRemapping", settings.uidRemapping));
 }
+
 template <class Archive>
 void serialize(Archive& ar, app_plugin_configuration& settings) {
     ar(
@@ -131,11 +121,15 @@ void serialize(Archive& ar, app_plugin_configuration& settings) {
     make_optional_nvp(ar, "clap.path", settings.pathClap);
     make_optional_nvp(ar, "vst3.path", settings.pathVst3);
 }
+
 template <class Archive>
 void serialize(Archive& ar, appwindowsettings& settings) {
-    // ar(make_nvp("grid", settings.dens));
-    // make_optional_nvp(ar, "windowsize", settings.size);
-    ar(make_nvp("grid", settings.dens), make_nvp("windowsize", settings.size), make_nvp("zoom", settings.zoom), make_nvp("flags", settings.flags));
+    ar(
+        make_nvp("grid", settings.dens),
+        make_nvp("windowsize", settings.size),
+        make_nvp("zoom", settings.zoom),
+        make_nvp("flags", settings.flags)
+    );
 }
 
 template <class Archive>
@@ -199,6 +193,7 @@ void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
         );
     }
 }
+CEREAL_CLASS_VERSION(appwindow_size_t, 1);
 CEREAL_CLASS_VERSION(appsettings, 5);
 
 

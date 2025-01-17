@@ -352,12 +352,11 @@ void host_plugin_window::show(ivec4 posSize, bool bSetPos, bool bSetSize) {
         posSize.z = posSize.w = 0;
     }
     SetWindowPos(hwnd, HWND_TOP, posSize.x, posSize.y, posSize.z, posSize.w, flags);
+    plugin->onShow(this);
     if (bSetSize) {
         resize(ivec2(posSize.z, posSize.w));
     }
-    plugin->onShow(this);
     plugin->onWindowResize(getContentSize());
-    // auto plugWindowSize = plugin->getWindowSize();
 }
 
 ivec2 host_plugin_window::getContentSize() const {

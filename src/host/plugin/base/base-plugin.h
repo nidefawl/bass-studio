@@ -81,6 +81,7 @@ public:
     const char* szName = nullptr;
 #endif
     ivec4 lastWindowPosSize{};
+    appwindow_size_t windowSize{};
     String sName;
     String sProductName;
     String sVendorName;

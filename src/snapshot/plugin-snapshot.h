@@ -1,5 +1,6 @@
 #pragma once
 #include "fileio.h"
+#include "platform/win/windowsize.h"
 #include "snapshot/snapshot.h"
 #include "snapshot/trackrouting-snapshot.h"
 #include "snapshot/track-snapshot.h"
@@ -24,6 +25,7 @@ struct plugin_windowlayout_snapshot_t {
     ivec4 windowPosSize{};
     bool windowPosSizeValid = false;
     bool isWindowOpen = false;
+    appwindow_size_t windowSize{};
 };
 struct plugin_ui_snapshot_t {
     bool isValidSnapshot = false;

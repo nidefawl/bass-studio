@@ -5,7 +5,8 @@ struct GLFWwindow;
 #endif
 struct appwindow_size_t {
     char data[64]{};
-    bool valid = false;
+    unsigned char type = 0;
+    unsigned char valid = 0;
 };
 bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* size);
 bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* size);

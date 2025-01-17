@@ -77,6 +77,7 @@ void vstplugin::onWindowResize(ivec2 size) {
     if (handle->axEffect) {
         handle->axEffect->onWindowResize(size);
     }
+    effectbase::onWindowResize(size);
 }
 
 void vstplugin::onEnable() {

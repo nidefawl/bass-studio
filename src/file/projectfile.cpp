@@ -110,12 +110,19 @@ void serialize(Archive& archive, glm::ivec4& m) {
 }
 } // namespace glm
 
+
+template<class Archive>
+void save(Archive& archive, appwindow_size_t const& settings, const std::uint32_t version);
+template<class Archive>
+void load(Archive& ar, appwindow_size_t& settings, const std::uint32_t version);
+
 template<class Archive>
 void serialize(Archive& archive, plugin_windowlayout_snapshot_t& m) {
     archive(
         make_nvp("windowPosSize", m.windowPosSize),
         make_nvp("windowPosValid", m.windowPosSizeValid),
         make_nvp("windowOpen", m.isWindowOpen));
+    make_optional_nvp(archive, "windowLayout", m.windowSize);
     m.isValidSnapshot = true;
 }
 

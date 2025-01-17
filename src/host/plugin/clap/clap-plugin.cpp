@@ -20,6 +20,7 @@
 #include "host/daw/history.h"
 #include "host/daw/history.h"
 #include "host/host_plugin_window.h"
+#include "host/plugin/base/base-plugin.h"
 #include "host/plugin/clap/clap-plugin-param.h"
 #include "host/host_plugin_loadresult.h"
 #include "logging.h"
@@ -1938,6 +1939,7 @@ ivec2 clapplugin::constrainWindowSize(host_plugin_window* window, ivec2 size) {
 
 void clapplugin::onWindowResize(ivec2 size) {
     // axEffect->onWindowResize(size);
+    effectbase::onWindowResize(size);
 }
 
 bool clapplugin::onShow(host_plugin_window* _window) {

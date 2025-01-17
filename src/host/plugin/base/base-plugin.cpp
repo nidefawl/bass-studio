@@ -29,6 +29,11 @@
 #include "host/daw/history.h"
 #include "host/host_plugin_window.h"
 
+
+bool saveHostWindowPos(host_plugin_window* hostWindow, appwindow_size_t* size);
+bool restoreHostWindowPos(host_plugin_window* hostWindow, appwindow_size_t* size);
+
+
 track_t* effectbase::getTrack() {
     audio_stage_t* stage = getTrackLink();
     if (!stage)
@@ -194,6 +199,9 @@ bool effectbase::openWindow(bool bResetPosition, ivec2 defaultSize) {
         posSize.x = this->lastWindowPosSize.x;
         posSize.y = this->lastWindowPosSize.y;
     }
+    if (bResetPosition) {
+        this->windowSize = {};
+    }
     if (this->windowHost == nullptr && (hasWindowEditor())) {
         this->windowHost = host_plugin_window::make(this, this->sName, size, bSupportsWindowResize);
     }
@@ -214,6 +222,7 @@ bool effectbase::closeWindow() {
 bool effectbase::onShow(host_plugin_window* _window) {
     if (this->windowHost == _window) {
         bEditOpen = true;
+        restoreHostWindowPos(_window, &windowSize);
     }
     return true;
 }
@@ -225,6 +234,7 @@ void effectbase::updateFromMainThread() {
 }
 
 bool effectbase::onClose() {
+    saveHostWindowPos(this->windowHost, &windowSize);
     bEditOpen = false;
     return true;
 }
@@ -252,12 +262,14 @@ std::shared_ptr<guiplugin> effectbase::getPluginGui(int32_t uuid) {
 plugin_windowlayout_snapshot_t effectbase::getWindowLayoutSnapshot() {
     if (this->windowHost) {
         this->windowHost->storePosition();
+        saveHostWindowPos(this->windowHost, &windowSize);
     }
     plugin_windowlayout_snapshot_t snapshot;
     snapshot.isValidSnapshot = true;
     snapshot.windowPosSizeValid = this->bWindowPosSizeValid;
     snapshot.windowPosSize = this->lastWindowPosSize;
     snapshot.isWindowOpen = this->bEditOpen;
+    snapshot.windowSize = this->windowSize;
     return snapshot;
 }
 
@@ -266,6 +278,7 @@ void effectbase::loadWindowLayoutSnapshot(const plugin_windowlayout_snapshot_t& 
         this->bWindowPosSizeValid = snapshot.windowPosSizeValid;
         this->lastWindowPosSize = snapshot.windowPosSize;
         this->bOpenWindowOnEnable = snapshot.isWindowOpen;
+        this->windowSize = snapshot.windowSize;
     }
 }
 

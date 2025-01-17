@@ -122,6 +122,10 @@ bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
         return false;
     }
 
+    if (placement->type != 2) {
+        return false;
+    }
+
     Display* display = glfwGetX11Display();
     Window window    = glfwGetX11Window(glfw);
     if (!display || !window) {
@@ -151,6 +155,7 @@ bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
 
 bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
     *placement = appwindow_size_t{};
+    placement->type = 2;
     
     Display* display = glfwGetX11Display();
     Window window    = glfwGetX11Window(glfw);
