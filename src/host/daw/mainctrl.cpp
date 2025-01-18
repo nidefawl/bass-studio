@@ -18,7 +18,7 @@
 #include "config.h"
 #include "cursor.h"
 #include "daw_async_project_load.h"
-#include "daw.h"
+#include "daw.hpp"
 #include "edithistory.h"
 #include "error.h"
 #include "event.h"

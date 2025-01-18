@@ -56,7 +56,6 @@ struct plugin_snapshot_t;
 struct track_id_snapshot_t;
 class project_controller_t;
 class AudioEffectX;
-class DawInstance;
 struct handles_t;
 
 typedef AEffect*(VSTPluginMain_t) (audioMasterCallback audioMasterCB);

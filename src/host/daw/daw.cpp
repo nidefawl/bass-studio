@@ -18,7 +18,7 @@
 #include "commands.h"
 #include "cursor.h"
 #include "daw_async_project_load.h"
-#include "daw.h"
+#include "daw.hpp"
 #include "edithistory.h"
 #include "error.h"
 #include "event.h"
@@ -1592,29 +1592,6 @@ void DawInstance::onPrePreDestroy() {
 }
 
 void DawInstance::onPreDestroy() {
-    // dbgassert(initState > 2);
-    // const bool isRealtimeInstance = initState > 3;
-    // initState = -1;
-
-    // if (isRealtimeInstance) {
-    //     setAudioThreadState(playback_state::status_no_process);
-    //     tls.midiHost->stopMidi();
-    //     tls.audioHost->stopAudio();
-    // }
-    // projectToLoad = nullptr;
-    // clipboardPlugins = nullptr;
-    // dragdropclip.reset();
-    // plugindb.closeDatabase();
-
-    // if (isRealtimeInstance) {
-    //     this->workerThread.stopThread();
-    //     this->workerThread.joinThread();
-    //     this->playThread.stopThread();
-    //     this->playThread.joinThread();
-    //     tls.audioHost->deinitPa();
-    //     tls.midiHost->deinitPm();
-    // }
-
     tls.host->unload();
     tls.audioCache->unloadAll();
     tls.host->destroy();
