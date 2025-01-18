@@ -13,8 +13,9 @@
 #include "plugin.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
-class guictr_plugin_basic final : public guictr_base {
+class guictr_plugin_basic : public guictr_base {
     effectbase* const module;
+protected:
     std::vector<guiknob_pluginparam*> knobs;
     gui_textfield editfield;
     void init() {
@@ -97,13 +98,13 @@ public:
         guictr_base::buttonClicked(button);
     }
 
-    void onGuiOpen() {
+    virtual void onGuiOpen() {
         for (auto knob : knobs) {
             knob->setEffectInstance(module);
         }
     }
 
-    void onGuiClose() {
+    virtual void onGuiClose() {
         for (auto knob : knobs) {
             knob->setEffectInstance(nullptr);
         }

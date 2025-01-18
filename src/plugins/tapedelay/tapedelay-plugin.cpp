@@ -1,6 +1,10 @@
 #include "tapedelay-plugin.hpp"
 #include "assert_dbg.h"
+#include "gui/container/container.h"
+#include "gui/container/container_layout.h"
 #include "gui/plugin/pluginviewcontainers.h"
+#include "host/plugin/internal/internal-plugin.h"
+#include "host/plugin/plugin-lockable.h"
 #include "math/seq_math.h"
 #include "plugins/plugin-ui.h"
 #include "rand.h"
@@ -9,8 +13,14 @@
 #include <numbers>
 
 namespace PluginDelay {
+    double GetScaledDelayMs(float paramValue) {
+        return math::clamp(paramValue * 2000.0, 1.0, 2000.0);
+    }
+    float GetParamValueForDelayMs(double ms) {
+        return math::clamp<float>(ms / 2000.0, 0.0, 1.0);
+    }
 
-    class EffectImplDelay {
+    class EffectImplDelay : public PluginLockable {
     public:
 	
         double dL[88211]{};
@@ -30,14 +40,14 @@ namespace PluginDelay {
         int cycle = 0;
         uint32_t fpdL = 0;
         uint32_t fpdR = 0;
-        float paramDelay = 1.0;
+        double paramDelayMs = 100.0;
         float paramFeedback = 0.0;
         float paramFreq = 0.5;
         float paramBW = 0.0;
         float paramFlutter = 0.0;
         float paramDryWet = 1.0;
-
-        EffectImplDelay() {
+        bool isPingPong = false;
+        explicit EffectImplDelay(DawInstance* _daw) : PluginLockable(_daw) {
             seq_rand rand;
             fpdL = 16386 + rand.rng_bits(30);
             fpdR = 16386 + rand.rng_bits(30);
@@ -57,8 +67,15 @@ namespace PluginDelay {
 
             //this is going to be 2 for 88.1 or 96k, 3 for silly people, 4 for 176 or 192k
             if (cycle > cycleEnd - 1) cycle = cycleEnd - 1;//sanity check
-
-            double baseSpeed = (pow(paramDelay, 4) * 25.0) + 1.0;
+            
+            double srCorrection = 1.0;
+            if (int32_t(sampleRate) == 96000 || int32_t(sampleRate) == 192000) {
+                srCorrection = 96000.0 / 88200.0;
+            }
+            double nSamplesDelay = math::clamp(paramDelayMs * srCorrection, 1.0, 2000.0) * 0.001 * 44100.0;
+            double baseSpeedL = math::clamp(double(88200.0)/nSamplesDelay, 1.0, 100.0);
+            double rightChannelMult = isPingPong ? 0.5 : 1.0;
+            double baseSpeedR = math::clamp(baseSpeedL * rightChannelMult, 1.0, 100.0);
             double feedback  = pow(paramFeedback, 2);
 
             //[0] is frequency: 0.000001 to 0.499999 is near-zero to near-Nyquist
@@ -87,7 +104,7 @@ namespace PluginDelay {
             outFilterL[5] = outFilterR[5] = 2.0 * (K * K - 1.0) * norm;
             outFilterL[6] = outFilterR[6] = (1.0 - K / outFilterR[1] + K * K) * norm;
 
-            double vibSpeed = pow(paramFlutter, 5) * baseSpeed * ((regenFilterR[0] * 0.09) + 0.025);//0.05
+            double vibSpeed = pow(paramFlutter, 5) * baseSpeedL * ((regenFilterR[0] * 0.09) + 0.025);//0.05
             double wet      = math::clamp(paramDryWet * 2.0, 0.0, 1.0);
             double dry      = math::clamp(2.0 - paramDryWet * 2.0, 0.0, 1.0);
             //this echo makes 50% full dry AND full wet, not crossfaded.
@@ -104,8 +121,8 @@ namespace PluginDelay {
 
                 cycle++;
                 if (cycle == cycleEnd) {
-                    double speedL = baseSpeed + (vibSpeed * (sin(sweepL) + 1.0));
-                    double speedR = baseSpeed + (vibSpeed * (sin(sweepR) + 1.0));
+                    double speedL = baseSpeedL + (vibSpeed * (sin(sweepL) + 1.0));
+                    double speedR = baseSpeedR + (vibSpeed * (sin(sweepR) + 1.0));
                     sweepL += (0.05 * inputSampleL * inputSampleL);
                     if (sweepL > std::numbers::pi * 2.0) sweepL -= std::numbers::pi * 2.0;
                     sweepR += (0.05 * inputSampleR * inputSampleR);
@@ -270,11 +287,31 @@ namespace PluginDelay {
                 out2++;
             }
         }
+        double getBaseSpeed(double paramDelay) {
+            return (pow(paramDelay, 4) * 100.0) + 1.0;
+        }
+        double getFromBaseSpeed(double baseSpeed) {
+            return pow((math::clamp(baseSpeed, 1.0, 100.0) - 1.0) / 100.0, 1.0 / 4.0);
+        }
+        double getCurrentDelayInMilliseconds(double paramDelay) {
+            double baseSpeed = getBaseSpeed(paramDelay);
+            return (2.0 / baseSpeed) * 1000.0;
+        }
+        double getCurrentDelayParam(double delayInMilliseconds) {
+            if (delayInMilliseconds <= 0.0) {
+                return getFromBaseSpeed(0.0);
+            }
+            double baseSpeed = 2.0 / (delayInMilliseconds / 1000.0);
+            return getFromBaseSpeed(baseSpeed);
+        }
+        bool isPingPongMode() {
+            return isPingPong;
+        }
     };
 
     module_delay::module_delay(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("Tape Delay", _projectGlobalId, _hostCallback),
-        impl(new EffectImplDelay())
+        impl(new EffectImplDelay(DawInstance::getOptional()))
     {
         struct paramentry {
             int32_t id;
@@ -282,8 +319,9 @@ namespace PluginDelay {
             String unit;
             float val;
         };
-        const auto parameterTypes = std::array<paramentry, 6> { {
+        const auto parameterTypes = std::array<paramentry, 7> { {
             paramentry{ 0, "Delay", "%", 1.0f },
+            paramentry{ 6, "Ping-Pong", "", 1.0f },
             paramentry{ 1, "Feedback", "%", 0.0f },
             paramentry{ 2, "Frequency", "%", 0.5f },
             paramentry{ 3, "Bandwith", "%", 0.0f },
@@ -293,6 +331,7 @@ namespace PluginDelay {
         for (const auto& paramEntry : parameterTypes) {
             registerParam(PARAM_OFFSET_IMPL + paramEntry.id)->initValue(paramEntry);
         }
+        getParam(PARAM_OFFSET_IMPL + 6)->quantizationSteps = 1;
     }
 
     module_delay::~module_delay() {
@@ -308,17 +347,122 @@ namespace PluginDelay {
             out->copyFrom(in);
             return;
         }
-        impl->paramDelay = getParamValue(PARAM_OFFSET_IMPL + 0);
+        impl->paramDelayMs = GetScaledDelayMs(getParamValue(PARAM_OFFSET_IMPL + 0));
         impl->paramFeedback = getParamValue(PARAM_OFFSET_IMPL + 1);
         impl->paramFreq = getParamValue(PARAM_OFFSET_IMPL + 2);
         impl->paramBW = getParamValue(PARAM_OFFSET_IMPL + 3);
         impl->paramFlutter = getParamValue(PARAM_OFFSET_IMPL + 4);
         impl->paramDryWet = getParamValue(PARAM_OFFSET_IMPL + 5);
+        impl->isPingPong = getParamValue(PARAM_OFFSET_IMPL + 6) >= 0.5f;
         impl->processReplacing(in->buf, out->buf, in->samples, format.sampleRate);
     }
 
+    param_converted_t module_delay::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+        auto param = getParam(idx);
+        dbgassert(param);
+        if (param->idx == PARAM_OFFSET_IMPL + 0) {
+            auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+            return { GetParamValueForDelayMs(fTextFieldVal), true };
+        }
+        return internalplugin::convertParamValueDisplay(idx, displayValue);
+    }
+
+    param_unit_t module_delay::convertParamValueToDisplay(int32_t idx, float value) {
+        auto param = getParam(idx);
+        dbgassert(param);
+        if (param->idx == PARAM_OFFSET_IMPL + 0) {
+            return {StringFormat("%.1f", GetScaledDelayMs(value)), "ms"};
+        }
+        return internalplugin::convertParamValueToDisplay(idx, value);
+    }
+    class guictr_module_delay : public guictr_plugin_basic {
+        module_delay* const module;
+        guictr_stacked ctr_delayoptions;
+        guictr_select_enum ctr_delaymode;
+    public:
+        explicit guictr_module_delay(module_delay* _module) : guictr_plugin_basic(_module), module(_module), ctr_delaymode(2) {
+            const std::array<const char*, 2> stringsDelayMode = {
+                "Normal", "Ping-Pong"
+            };
+            for (size_t i = 0; i < 2; ++i) {
+                auto& btn = ctr_delaymode.getButton(i);
+                const auto& name = stringsDelayMode[i];
+                btn.setTooltipText(String("Select ") + name);
+                btn.setText(name);
+                btn.setButtonColor(GuiColor::COL_KNOB);
+            }
+            ctr_delayoptions.padding = 0;
+            ctr_delayoptions.setBackgroundRendered(false);
+            ctr_delayoptions.setVerticalLayout(true);
+            
+            remove(knobs.front());
+            remove(knobs.back());
+            ctr_delayoptions.addEntry(knobs.front());
+            ctr_delayoptions.addEntry(&ctr_delaymode);
+            ctr_delayoptions.zOrder = 1;
+            sortChildren=true;
+            add(&ctr_delayoptions);
+            ctr_delayoptions.setSplitters({0.8});
+        }
+        ~guictr_module_delay() override {
+            removeGuis();
+        }
+            
+        class ctxmenu_delay_mode : public ctxtmenu_enum_option_select_base<ctxmenu_enum_select_entry> {
+            module_delay* const moduleInstance;
+        public:
+            ctxmenu_delay_mode(module_delay* _module, String _title, int32_t _id)
+                : ctxtmenu_enum_option_select_base(_id, _title), moduleInstance(_module)
+            {
+                entries.push_back({ 0, "Normal" });
+                entries.push_back({ 1, "Ping-Pong" });
+                perRowEntries = 2;
+            }
+            bool isEntrySelected(ctxmenu_enum_select_entry& e) const override {
+                return moduleInstance->impl->isPingPongMode() == (e.id == 1);
+            }
+        };
+        class guictr_module_delay_context_menu final : public guictxtmenu {
+            module_delay* const module;
+        public:
+            explicit guictr_module_delay_context_menu(module_delay* _module)
+                : guictxtmenu(), module(_module) 
+            {
+                this->size.x   = 220;
+                maxHeight = 0;
+                this->fontSize = FONT_SIZE_CTXT_SMALL;
+                this->paddingV = 0;
+                addEntry(new ctxmenu_delay_mode(module, "Mode", 100));
+            }
+            bool clickedElement(ctxtmenu_entry* e, int _id) override {
+                if (_id >= 100) {
+                    int clicked = _id - 100;
+                    auto lock = module->impl->lock();
+                    closeContextMenu();
+                    return true;
+                }
+                closeContextMenu();
+                return false;
+            }
+        };
+
+        /* void handleRightClick(MouseEvent& evt) override {
+            parentCtrl->openContextMenu(new guictr_module_delay_context_menu(module), evt.mousepos);
+        } */
+
+        void onGuiOpen() override {
+            guictr_plugin_basic::onGuiOpen();
+            ctr_delaymode.setAutomationRef(module, PARAM_OFFSET_IMPL + 6);
+        }
+    
+        void onGuiClose() override {
+            guictr_plugin_basic::onGuiClose();
+            ctr_delaymode.setAutomationRef(nullptr, -1);
+        }
+    };
     std::shared_ptr<PluginViewContainer> module_delay::createViewCtrInternal() {
-        return std::make_shared<PluginViewContainerBasic<guictr_plugin_basic, module_delay>>(this, 100, 150);
+        auto ctr = std::make_shared<PluginViewContainerBasic<guictr_module_delay, module_delay>>(this);
+        return ctr;
     }
 } // namespace PluginDelay
 

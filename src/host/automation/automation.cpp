@@ -498,6 +498,9 @@ param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value)
     if (param->unit == "%") {
         return {StringFormat("%.1f", value * 100.0f), param->unit};
     }
+    if (param->quantizationSteps == 1) {
+        return {value > 0.5f ? "On" : "Off", ""};
+    }
     return { StringFormat("%f", value), param->unit};
 }
 
