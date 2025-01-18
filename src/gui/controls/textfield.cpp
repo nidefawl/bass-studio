@@ -243,6 +243,7 @@ void gui_textfield::beginEdit() {
 }
 
 void gui_textfield::endEdit(bool success) {
+    mCommitted    = true;
     if (success) {
         mValidFormat = (mValueTemp.empty()) || checkFormat(utf::as_str8(mValueTemp), mFormat);
         if (mValidFormat) {
@@ -257,7 +258,6 @@ void gui_textfield::endEdit(bool success) {
     }
 
     mValidFormat  = true;
-    mCommitted    = true;
     mCursorPos    = -1;
     mSelectionPos = -1;
     mTextOffset   = 0;
@@ -270,9 +270,9 @@ bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
     }
     if (editable()) {
         if (focused) {
-            beginEdit();
+            if (mCommitted) beginEdit();
         } else {
-            endEdit(!mCommitted);
+            if (!mCommitted) endEdit(!mCommitted);
         }
     }
 
@@ -282,87 +282,89 @@ bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
 bool gui_textfield::keyboardEvent(KeyboardKey key, int /* scancode */, KeyboardState action, KeyboardMods modifiers) {
     if (editable() && mFocused) {
         if (action != KeyboardState::K_RELEASE) {
-            if (key == KeyboardKey::DAW_KB_LEFT) {
-                if (modifiers == KB_MOD_SHIFT) {
-                    if (mSelectionPos == -1)
-                        mSelectionPos = mCursorPos;
-                } else {
-                    mSelectionPos = -1;
-                }
+            if (!mCommitted) {
+                if (key == KeyboardKey::DAW_KB_LEFT) {
+                    if (modifiers == KB_MOD_SHIFT) {
+                        if (mSelectionPos == -1)
+                            mSelectionPos = mCursorPos;
+                    } else {
+                        mSelectionPos = -1;
+                    }
 
-                if (mCursorPos > 0)
-                    mCursorPos--;
-            } else if (key == KeyboardKey::DAW_KB_RIGHT) {
-                if (modifiers == KB_MOD_SHIFT) {
-                    if (mSelectionPos == -1)
-                        mSelectionPos = mCursorPos;
-                } else {
-                    mSelectionPos = -1;
-                }
-
-                if (mCursorPos < (int) mValueTemp.length())
-                    mCursorPos++;
-            } else if (key == KeyboardKey::DAW_KB_HOME) {
-                if (modifiers == KB_MOD_SHIFT) {
-                    if (mSelectionPos == -1)
-                        mSelectionPos = mCursorPos;
-                } else {
-                    mSelectionPos = -1;
-                }
-
-                mCursorPos = 0;
-            } else if (key == KeyboardKey::DAW_KB_END) {
-                if (modifiers == KB_MOD_SHIFT) {
-                    if (mSelectionPos == -1)
-                        mSelectionPos = mCursorPos;
-                } else {
-                    mSelectionPos = -1;
-                }
-
-                mCursorPos = (int) mValueTemp.size();
-            } else if (key == KeyboardKey::DAW_KB_BACKSPACE) {
-                if (!deleteSelection()) {
-                    if (mCursorPos > 0) {
+                    if (mCursorPos > 0)
                         mCursorPos--;
-                        if (filter && filter->isReplaceInput()) {
-                            mValueTemp[mCursorPos] = '0';
-                        } else if (mValueTemp.length()) {
-                            mValueTemp.erase(mValueTemp.begin() + mCursorPos);
+                } else if (key == KeyboardKey::DAW_KB_RIGHT) {
+                    if (modifiers == KB_MOD_SHIFT) {
+                        if (mSelectionPos == -1)
+                            mSelectionPos = mCursorPos;
+                    } else {
+                        mSelectionPos = -1;
+                    }
+
+                    if (mCursorPos < (int) mValueTemp.length())
+                        mCursorPos++;
+                } else if (key == KeyboardKey::DAW_KB_HOME) {
+                    if (modifiers == KB_MOD_SHIFT) {
+                        if (mSelectionPos == -1)
+                            mSelectionPos = mCursorPos;
+                    } else {
+                        mSelectionPos = -1;
+                    }
+
+                    mCursorPos = 0;
+                } else if (key == KeyboardKey::DAW_KB_END) {
+                    if (modifiers == KB_MOD_SHIFT) {
+                        if (mSelectionPos == -1)
+                            mSelectionPos = mCursorPos;
+                    } else {
+                        mSelectionPos = -1;
+                    }
+
+                    mCursorPos = (int) mValueTemp.size();
+                } else if (key == KeyboardKey::DAW_KB_BACKSPACE) {
+                    if (!deleteSelection()) {
+                        if (mCursorPos > 0) {
+                            mCursorPos--;
+                            if (filter && filter->isReplaceInput()) {
+                                mValueTemp[mCursorPos] = '0';
+                            } else if (mValueTemp.length()) {
+                                mValueTemp.erase(mValueTemp.begin() + mCursorPos);
+                            }
                         }
                     }
-                }
-            } else if (key == KeyboardKey::DAW_KB_DELETE) {
-                if (!deleteSelection()) {
-                    if (filter && filter->isReplaceInput()) {
-                    } else {
-                        if (mCursorPos < (int) mValueTemp.length())
-                            mValueTemp.erase(mValueTemp.begin() + mCursorPos);
+                } else if (key == KeyboardKey::DAW_KB_DELETE) {
+                    if (!deleteSelection()) {
+                        if (filter && filter->isReplaceInput()) {
+                        } else {
+                            if (mCursorPos < (int) mValueTemp.length())
+                                mValueTemp.erase(mValueTemp.begin() + mCursorPos);
+                        }
                     }
-                }
-            } else if (key == KeyboardKey::DAW_KB_ESCAPE) {
-                if (!mCommitted)
+                } else if (key == KeyboardKey::DAW_KB_A && isCtrl(modifiers)) {
+                    mCursorPos    = (int) mValueTemp.length();
+                    mSelectionPos = 0;
+                } else if (key == KeyboardKey::DAW_KB_X && isCtrl(modifiers)) {
+                    copySelection();
+                    deleteSelection();
+                } else if (key == KeyboardKey::DAW_KB_C && isCtrl(modifiers)) {
+                    copySelection();
+                } else if (key == KeyboardKey::DAW_KB_V && isCtrl(modifiers)) {
+                    deleteSelection();
+                    pasteFromClipboard();
+                } else if (key == KeyboardKey::DAW_KB_ESCAPE) {
                     endEdit(false);
-            } else if (mReturnCommits && (key == KeyboardKey::DAW_KB_ENTER || key == KeyboardKey::DAW_KB_KP_ENTER)) {
-                if (!mCommitted)
+                } else if (mReturnCommits && (key == KeyboardKey::DAW_KB_ENTER || key == KeyboardKey::DAW_KB_KP_ENTER)) {
                     endEdit(true);
-                else
+                }
+                return true;
+            } else {
+                if (mReturnCommits && (key == KeyboardKey::DAW_KB_ENTER || key == KeyboardKey::DAW_KB_KP_ENTER)) {
                     beginEdit();
-            } else if (key == KeyboardKey::DAW_KB_A && isCtrl(modifiers)) {
-                mCursorPos    = (int) mValueTemp.length();
-                mSelectionPos = 0;
-            } else if (key == KeyboardKey::DAW_KB_X && isCtrl(modifiers)) {
-                copySelection();
-                deleteSelection();
-            } else if (key == KeyboardKey::DAW_KB_C && isCtrl(modifiers)) {
-                copySelection();
-            } else if (key == KeyboardKey::DAW_KB_V && isCtrl(modifiers)) {
-                deleteSelection();
-                pasteFromClipboard();
+                    onChange();
+                    return true;
+                }
             }
-            onChange();
         }
-
-        return true;
     }
 
     return false;

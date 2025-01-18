@@ -23,6 +23,7 @@
 class gui_tempocontrol;
 class gui_tempocontrol_input final : public guibutton {
     gui_tempocontrol* const parentInput;
+    int32_t dragBeginTempo = 0;
 public:
     gui_tempocontrol_input(gui_tempocontrol* parent)
         : guibutton(), parentInput(parent) {
@@ -33,9 +34,8 @@ public:
     void render(NVGcontext* vg) override;
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-    void handleDraggedRelease(MouseEvent& evt) override {
-    }
     void onKeyInputChangeValue(ivec2 direction);
 };
 class gui_tempocontrol final : public guictr_base {
@@ -51,7 +51,6 @@ public:
         tempoInput.size = size;
     }
     void buttonClicked(guibase* button) override;
-    void onInputChanged(const gui_tempocontrol_input* input);
     void showEditField();
 };
 

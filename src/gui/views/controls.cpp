@@ -1,5 +1,6 @@
 #include "controls.h"
 
+#include "event.h"
 #include "gui/dialog/dialog_io.h"
 #include "guiconstant.h"
 #include "keyboard.h"
@@ -27,6 +28,25 @@
 #include "appsettings.h"
 #include <nanovg.h>
 
+
+class action_modify_project_tempo final : public action_base {
+    int32_t tempoBefore = 12800;
+    int32_t tempoAfter = 12800;
+
+public:
+    action_modify_project_tempo() = default;
+    action_modify_project_tempo(String description, int32_t tempoBefore, int32_t tempoAfter) : action_base(), tempoBefore(tempoBefore), tempoAfter(tempoAfter) {
+        desc   = std::move(description);
+    }
+    void undo(DawInstance* daw) override {
+        daw->setTempo(tempoBefore);
+        daw->updateVisibleTrackContents();
+    }
+    void redo(DawInstance* daw) override {
+        daw->setTempo(tempoAfter);
+        daw->updateVisibleTrackContents();
+    }
+};
 
 using Table::table_entry_t;
 using Table::tbl;
@@ -533,17 +553,22 @@ void gui_tempocontrol::buttonClicked(guibase* button) {
     }
     guictr_base::buttonClicked(button);
 }
-void gui_tempocontrol::onInputChanged(const gui_tempocontrol_input* input) {
-    auto const daw = dawCtrl->getDaw();
-    daw->updateVisibleTrackContents();
-}
 void gui_tempocontrol::showEditField() {
     editfield.mCallbackEnd = [this](const String& str) {
         auto daw = dawCtrl->getDaw();
         auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(str)));
         editfield.setVisible(false);
+        auto dragBeginTempo = dawCtrl->getDaw()->getCurrentTempo();
         daw->setTempo(math::clamp(math::roundfS32(fTextFieldVal*100.0f), 100, 99900));
-        onInputChanged(&this->tempoInput);
+        daw->updateVisibleTrackContents();
+        if (dragBeginTempo != dawCtrl->getDaw()->getCurrentTempo()) {
+            auto daw = dawCtrl->getDaw();
+            auto action = new action_modify_project_tempo("Modify Tempo", dragBeginTempo, daw->getCurrentTempo());
+            daw->pushHist(action);
+        }
+        if (parentCtrl) {
+            parentCtrl->focusGui(&tempoInput);
+        }
         return true;
     };
     editfield.pos  = {};
@@ -555,6 +580,7 @@ void gui_tempocontrol::showEditField() {
     editfield.setFontSize(tempoInput.size.y);
     parentCtrl->focusGui(&editfield);
 }
+
 void gui_tempocontrol_input::onKeyInputChangeValue(ivec2 direction) {
     auto const daw = dawCtrl->getDaw();
     int tempo = daw->getCurrentTempo();
@@ -568,10 +594,17 @@ bool gui_tempocontrol_input::handleKeyInput(KeyEvent& kevt) {
             ivec2 dir;
             arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
             if (dir.y) {
-                if ((kevt.mods & KB_MOD_SHIFT)) {
-                    dir *= 12;
+                dir.y *= 100;
+                if ((kevt.mods & KB_MOD_CTRL)) {
+                    dir.y /= 10;
                 }
+                dragBeginTempo = dawCtrl->getDaw()->getCurrentTempo();
                 onKeyInputChangeValue(dir);
+                if (dragBeginTempo != dawCtrl->getDaw()->getCurrentTempo()) {
+                    auto daw = dawCtrl->getDaw();
+                    auto action = new action_modify_project_tempo("Modify Tempo", dragBeginTempo, daw->getCurrentTempo());
+                    daw->pushHist(action);
+                }
                 handled = true;
             }
         }
@@ -649,6 +682,7 @@ void gui_tempocontrol_input::handleDraggedBegin(MouseEvent& evt) {
     if (evt.guiDragged == this) {
         parentCtrl->captureMouse(this);
     }
+    dragBeginTempo = dawCtrl->getDaw()->getCurrentTempo();
 }
 void gui_tempocontrol_input::handleDraggedMove(MouseEvent& evt) {
     if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
@@ -657,6 +691,13 @@ void gui_tempocontrol_input::handleDraggedMove(MouseEvent& evt) {
             return;
         evt.dragDistance->y = 0;
         onKeyInputChangeValue(ivec2{ 0, -disty * 100 });
+    }
+}
+void gui_tempocontrol_input::handleDraggedRelease(MouseEvent& evt) {
+    if (dragBeginTempo != dawCtrl->getDaw()->getCurrentTempo()) {
+        auto daw = dawCtrl->getDaw();
+        auto action = new action_modify_project_tempo("Modify Tempo", dragBeginTempo, daw->getCurrentTempo());
+        daw->pushHist(action);
     }
 }
 void gui_signaturecontrol::layout() {
