@@ -92,10 +92,7 @@ DawInstance* DawInstance::get() {
     return nullptr;
 }
 DawInstance* DawInstance::getOptional() {
-    auto mainCtrl = daw_tls::tls.mainCtrl;
-    if (mainCtrl)
-        return &mainCtrl->daw;
-    return nullptr;
+    return daw_tls::tls.dawInstance;
 }
 midihost* midihost::getInstance() {
     dbgassert(daw_tls::tls.tlsInitialized);
