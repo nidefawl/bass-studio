@@ -507,13 +507,28 @@ namespace PluginDelay {
             ctr_delayoptions.addEntry(knobs.front());
             ctr_delayoptions.addEntry(&ctr_delaysync);
             ctr_delayoptions.addEntry(&ctr_delaymode);
-            ctr_delayoptions.setSplitters({0.725, 0.725+0.1});
+            ctr_delayoptions.setSplitters({0.725, 0.725+0.125});
             sortChildren=true;
             ctr_delayoptions.zOrder = 1;
+            ctr_delayoptions.setFlag(FLG_NO_LAYOUT, true);
             add(&ctr_delayoptions);
         }
         ~guictr_module_delay() override {
             removeGuis();
+        }
+        void layout() override {
+            auto cs = getSizeContent();
+            ctr_delayoptions.pos = {};
+            ctr_delayoptions.size = ivec2(cs.x / 4, cs.y);
+            auto cs2 = ivec2(cs.x - (ctr_delayoptions.right()+padding), cs.y);
+            layoutEntries({ctr_delayoptions.right()+padding, 0}, cs2, { 1, 0 });
+            for (guibase* gui : guis) {
+                gui->layout();
+            }
+        }
+        void getSizeScale(int& w, int& h) const override {
+            w = 300;
+            h = 180;
         }
             
         class ctxmenu_delay_mode : public ctxtmenu_enum_option_select_base<ctxmenu_enum_select_entry> {
