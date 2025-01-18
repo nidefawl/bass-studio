@@ -14,10 +14,10 @@
 
 namespace PluginDelay {
     double GetScaledDelayMs(float paramValue) {
-        return math::clamp(paramValue * 2000.0, 1.0, 2000.0);
+        return math::clamp(math::powf(paramValue, 4.0f) * 2000.0, 1.0, 2000.0);
     }
     float GetParamValueForDelayMs(double ms) {
-        return math::clamp<float>(ms / 2000.0, 0.0, 1.0);
+        return math::clamp(math::powf(float(ms / 2000.0), 0.25f), 0.0f, 1.0f);
     }
 
     class EffectImplDelay : public PluginLockable {
@@ -74,7 +74,7 @@ namespace PluginDelay {
             }
             double nSamplesDelay = math::clamp(paramDelayMs * srCorrection, 1.0, 2000.0) * 0.001 * 44100.0;
             double baseSpeedL = math::clamp(double(88200.0)/nSamplesDelay, 1.0, 100.0);
-            double rightChannelMult = isPingPong ? 0.5 : 1.0;
+            double rightChannelMult = isPingPong ? 2.0 : 1.0;
             double baseSpeedR = math::clamp(baseSpeedL * rightChannelMult, 1.0, 100.0);
             double feedback  = pow(paramFeedback, 2);
 
