@@ -31,6 +31,11 @@ namespace PluginDelay {
         return float(pow(v, 0.25));
     }
 
+    enum DelayMode {
+        DELAY_MODE_NORMAL = 0,
+        DELAY_MODE_PINGPONG = 1,
+        DELAY_MODE_PONGPING = 2,
+    };
     class EffectImplDelay : public PluginLockable {
     public:
 	
@@ -57,7 +62,7 @@ namespace PluginDelay {
         float paramBW = 0.0;
         float paramFlutter = 0.0;
         float paramDryWet = 1.0;
-        bool isPingPong = false;
+        DelayMode delayMode = DELAY_MODE_NORMAL;
         int32_t syncFlags;
         std::vector<DAW::LFO::LFOSyncRatio> syncRatios;
         explicit EffectImplDelay(DawInstance* _daw) : PluginLockable(_daw) {
@@ -90,9 +95,22 @@ namespace PluginDelay {
             }
             double nSamplesDelay = math::clamp(paramDelayMs * srCorrection, DELAY_MIN_MS, DELAY_MAX_MS) * 0.001 * 44100.0;
             nSamplesDelay = math::max(1.0, nSamplesDelay);
-            double baseSpeedL = math::clamp(double(88200.0)/nSamplesDelay, 1.0, 100.0);
-            double rightChannelMult = isPingPong ? 2.0 : 1.0;
-            double baseSpeedR = math::clamp(baseSpeedL * rightChannelMult, 1.0, 100.0);
+            double leftChannelMult = 1.0;
+            double rightChannelMult = 1.0;
+            switch (delayMode) {
+                case DELAY_MODE_PINGPONG:
+                    leftChannelMult = 1.0;
+                    rightChannelMult = 0.5;
+                    break;
+                case DELAY_MODE_PONGPING:
+                    leftChannelMult = 0.5;
+                    rightChannelMult = 1.0;
+                    break;
+                default:
+                    break;
+            }
+            double baseSpeedL = math::clamp(double(88200.0)/nSamplesDelay * leftChannelMult, 1.0, 100.0);
+            double baseSpeedR = math::clamp(double(88200.0)/nSamplesDelay * rightChannelMult, 1.0, 100.0);
             double feedback  = pow(paramFeedback, 2);
 
             //[0] is frequency: 0.000001 to 0.499999 is near-zero to near-Nyquist
@@ -321,9 +339,6 @@ namespace PluginDelay {
             double baseSpeed = 2.0 / (delayInMilliseconds / 1000.0);
             return getFromBaseSpeed(baseSpeed);
         }
-        bool isPingPongMode() {
-            return isPingPong;
-        }
     };
 
     module_delay::module_delay(int32_t _projectGlobalId, IHostCallback* _hostCallback)
@@ -338,7 +353,7 @@ namespace PluginDelay {
         };
         const auto parameterTypes = std::array<paramentry, 8> { {
             paramentry{ 0, "Delay", "%", 0.4275f },
-            paramentry{ 6, "Ping-Pong", "", 1.0f },
+            paramentry{ 6, "Mode", "", 1.0f },
             paramentry{ 7, "Sync", "", 1.0f },
             paramentry{ 1, "Feedback", "%", 0.25f },
             paramentry{ 2, "Frequency", "%", 0.55f },
@@ -349,7 +364,7 @@ namespace PluginDelay {
         for (const auto& paramEntry : parameterTypes) {
             registerParam(PARAM_OFFSET_IMPL + paramEntry.id)->initValue(paramEntry);
         }
-        getParam(PARAM_OFFSET_IMPL + 6)->quantizationSteps = 1;
+        getParam(PARAM_OFFSET_IMPL + 6)->quantizationSteps = 2;
     }
 
     module_delay::~module_delay() {
@@ -389,7 +404,7 @@ namespace PluginDelay {
         impl->paramBW = getParamValue(PARAM_OFFSET_IMPL + 3);
         impl->paramFlutter = getParamValue(PARAM_OFFSET_IMPL + 4);
         impl->paramDryWet = getParamValue(PARAM_OFFSET_IMPL + 5);
-        impl->isPingPong = getParamValue(PARAM_OFFSET_IMPL + 6) >= 0.5f;
+        impl->delayMode = static_cast<DelayMode>(math::floorfS32(getParamValue(PARAM_OFFSET_IMPL + 6) * 2));
         impl->processReplacing(in->buf, out->buf, in->samples, format.sampleRate);
     }
 
@@ -413,6 +428,15 @@ namespace PluginDelay {
             auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
             return { GetParamValueForDelayMs(fTextFieldVal), true };
         }
+        if (param->idx == PARAM_OFFSET_IMPL + 6) {
+            if (displayValue.value == "Pong-Ping" || displayValue.value == "1") {
+                return {1.0f, true};
+            }
+            if (displayValue.value == "Ping-Pong" || displayValue.value == "2") {
+                return {0.5f, true};
+            }
+            return {0.0f, true};
+        }
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
 
@@ -428,6 +452,17 @@ namespace PluginDelay {
             auto fmtStr = ms < 10.0 ? "%.2f" : "%.1f";
             return {StringFormat(fmtStr, GetScaledDelayMs(value)), "ms"};
         }
+        if (param->idx == PARAM_OFFSET_IMPL + 6) {
+            switch (static_cast<DelayMode>(math::floorfS32(value * 2))) {
+                case DELAY_MODE_PONGPING:
+                    return {"Pong-Ping", ""};
+                case DELAY_MODE_PINGPONG:
+                    return {"Ping-Pong", ""};
+                case DELAY_MODE_NORMAL:
+                default:
+                    return {"Normal", ""};
+            }
+        }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
     class guictr_module_delay : public guictr_plugin_basic {
@@ -440,12 +475,12 @@ namespace PluginDelay {
             : guictr_plugin_basic(_module),
             module(_module),
             ctr_delaysync(2),
-            ctr_delaymode(2)
+            ctr_delaymode(3)
         {
-            const std::array<const char*, 2> stringsDelayMode = {
-                "Normal", "Ping-Pong"
+            const std::array<const char*, 3> stringsDelayMode = {
+                "Normal", "Ping-Pong", "Pong-Ping"
             };
-            for (size_t i = 0; i < 2; ++i) {
+            for (size_t i = 0; i < 3; ++i) {
                 auto& btn = ctr_delaymode.getButton(i);
                 const auto& name = stringsDelayMode[i];
                 btn.setTooltipText(String("Select ") + name);
@@ -472,7 +507,7 @@ namespace PluginDelay {
             ctr_delayoptions.addEntry(knobs.front());
             ctr_delayoptions.addEntry(&ctr_delaysync);
             ctr_delayoptions.addEntry(&ctr_delaymode);
-            ctr_delayoptions.setSplitters({0.75, 0.75+0.125});
+            ctr_delayoptions.setSplitters({0.725, 0.725+0.1});
             sortChildren=true;
             ctr_delayoptions.zOrder = 1;
             add(&ctr_delayoptions);
@@ -489,10 +524,11 @@ namespace PluginDelay {
             {
                 entries.push_back({ 0, "Normal" });
                 entries.push_back({ 1, "Ping-Pong" });
+                entries.push_back({ 1, "Pong-Ping" });
                 perRowEntries = 2;
             }
             bool isEntrySelected(ctxmenu_enum_select_entry& e) const override {
-                return moduleInstance->impl->isPingPongMode() == (e.id == 1);
+                return moduleInstance->impl->delayMode == e.id;
             }
         };
         class guictr_module_delay_context_menu final : public guictxtmenu {
