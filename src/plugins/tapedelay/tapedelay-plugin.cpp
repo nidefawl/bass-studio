@@ -1,23 +1,34 @@
 #include "tapedelay-plugin.hpp"
 #include "assert_dbg.h"
+#include "gui/automation/automatable.h"
 #include "gui/container/container.h"
 #include "gui/container/container_layout.h"
+#include "gui/controls/textfield.h"
 #include "gui/plugin/pluginviewcontainers.h"
+#include "host/host.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "host/plugin/plugin-lockable.h"
 #include "math/seq_math.h"
+#include "plugins/lfo/lfo-types.hpp"
 #include "plugins/plugin-ui.h"
 #include "rand.h"
+#include "seq_time.h"
 #include "types.h"
 #include <array>
 #include <numbers>
 
 namespace PluginDelay {
+    constexpr double DELAY_MIN_MS = 1.0;
+    constexpr double DELAY_MAX_MS = 2000.0;
     double GetScaledDelayMs(float paramValue) {
-        return math::clamp(math::powf(paramValue, 4.0f) * 2000.0, 1.0, 2000.0);
+        auto v = pow(double(paramValue), 4.0);
+        v *= (DELAY_MAX_MS - DELAY_MIN_MS);
+        v += DELAY_MIN_MS;
+        return math::clamp(v, DELAY_MIN_MS, DELAY_MAX_MS);
     }
     float GetParamValueForDelayMs(double ms) {
-        return math::clamp(math::powf(float(ms / 2000.0), 0.25f), 0.0f, 1.0f);
+        auto v = (ms - DELAY_MIN_MS) / (DELAY_MAX_MS - DELAY_MIN_MS);
+        return float(pow(v, 0.25));
     }
 
     class EffectImplDelay : public PluginLockable {
@@ -47,10 +58,15 @@ namespace PluginDelay {
         float paramFlutter = 0.0;
         float paramDryWet = 1.0;
         bool isPingPong = false;
+        int32_t syncFlags;
+        std::vector<DAW::LFO::LFOSyncRatio> syncRatios;
         explicit EffectImplDelay(DawInstance* _daw) : PluginLockable(_daw) {
             seq_rand rand;
             fpdL = 16386 + rand.rng_bits(30);
             fpdR = 16386 + rand.rng_bits(30);
+            using namespace DAW::LFO;
+            syncFlags = STRAIGHT | DOTTED | TRIPLET;
+            syncRatios = GetSyncRatios(syncFlags);
         }
 
         void processReplacing(float** inputs, float** outputs, samplecount_t sampleFrames, samplerate_t sampleRate) {
@@ -72,7 +88,8 @@ namespace PluginDelay {
             if (int32_t(sampleRate) == 96000 || int32_t(sampleRate) == 192000) {
                 srCorrection = 96000.0 / 88200.0;
             }
-            double nSamplesDelay = math::clamp(paramDelayMs * srCorrection, 1.0, 2000.0) * 0.001 * 44100.0;
+            double nSamplesDelay = math::clamp(paramDelayMs * srCorrection, DELAY_MIN_MS, DELAY_MAX_MS) * 0.001 * 44100.0;
+            nSamplesDelay = math::max(1.0, nSamplesDelay);
             double baseSpeedL = math::clamp(double(88200.0)/nSamplesDelay, 1.0, 100.0);
             double rightChannelMult = isPingPong ? 2.0 : 1.0;
             double baseSpeedR = math::clamp(baseSpeedL * rightChannelMult, 1.0, 100.0);
@@ -114,8 +131,8 @@ namespace PluginDelay {
             while (--sampleFrames >= 0) {
                 double inputSampleL = *in1;
                 double inputSampleR = *in2;
-                if (fabs(inputSampleL) < 1.18e-23) inputSampleL = fpdL * 1.18e-17;
-                if (fabs(inputSampleR) < 1.18e-23) inputSampleR = fpdR * 1.18e-17;
+                // if (fabs(inputSampleL) < 1.18e-23) inputSampleL = fpdL * 1.18e-17;
+                // if (fabs(inputSampleR) < 1.18e-23) inputSampleR = fpdR * 1.18e-17;
                 double drySampleL = inputSampleL;
                 double drySampleR = inputSampleR;
 
@@ -319,14 +336,15 @@ namespace PluginDelay {
             String unit;
             float val;
         };
-        const auto parameterTypes = std::array<paramentry, 7> { {
-            paramentry{ 0, "Delay", "%", 1.0f },
+        const auto parameterTypes = std::array<paramentry, 8> { {
+            paramentry{ 0, "Delay", "%", 0.4275f },
             paramentry{ 6, "Ping-Pong", "", 1.0f },
-            paramentry{ 1, "Feedback", "%", 0.0f },
-            paramentry{ 2, "Frequency", "%", 0.5f },
-            paramentry{ 3, "Bandwith", "%", 0.0f },
-            paramentry{ 4, "Flutter", "%", 0.0f },
-            paramentry{ 5, "Dry/Wet", "%", 1.0f },
+            paramentry{ 7, "Sync", "", 1.0f },
+            paramentry{ 1, "Feedback", "%", 0.25f },
+            paramentry{ 2, "Frequency", "%", 0.55f },
+            paramentry{ 3, "Bandwith", "%", 0.05f },
+            paramentry{ 4, "Flutter", "%", 0.3f },
+            paramentry{ 5, "Dry/Wet", "%", 0.33f },
         } };
         for (const auto& paramEntry : parameterTypes) {
             registerParam(PARAM_OFFSET_IMPL + paramEntry.id)->initValue(paramEntry);
@@ -347,7 +365,25 @@ namespace PluginDelay {
             out->copyFrom(in);
             return;
         }
-        impl->paramDelayMs = GetScaledDelayMs(getParamValue(PARAM_OFFSET_IMPL + 0));
+        const bool bIsSync = getParamValue(PARAM_OFFSET_IMPL + 7) >= 0.5f;
+        {
+            using namespace DAW::LFO;
+            if (bIsSync) {
+                impl->syncFlags = STRAIGHT | DOTTED | TRIPLET;
+            } else {
+                impl->syncFlags = 0;
+            }
+        }
+        const auto bpm100 = host->prjGlobals.tempo100;
+        const auto delayParam = getParamValue(PARAM_OFFSET_IMPL + 0);
+        if (!bIsSync) {
+            impl->paramDelayMs = GetScaledDelayMs(delayParam);
+        } else {
+            auto index = math::clamp<int32_t>(math::floorfS32(delayParam * CtrSize(impl->syncRatios)), 0, CtrSize(impl->syncRatios) - 1);
+            auto ratio = impl->syncRatios[index];
+            auto delayTicks = double(TICKS_BAR * ratio.numerator) / ratio.denominator;
+            impl->paramDelayMs = toSeconds(delayTicks, bpm100) * 1000.0;
+        }
         impl->paramFeedback = getParamValue(PARAM_OFFSET_IMPL + 1);
         impl->paramFreq = getParamValue(PARAM_OFFSET_IMPL + 2);
         impl->paramBW = getParamValue(PARAM_OFFSET_IMPL + 3);
@@ -361,6 +397,19 @@ namespace PluginDelay {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_OFFSET_IMPL + 0) {
+            if (impl->syncFlags) {
+                auto numSyncRatios = CtrSize(impl->syncRatios);
+                for (int32_t i = 0; i < numSyncRatios; ++i) {
+                    if (impl->syncRatios[i].text == displayValue.value) {
+                        return {((i)/float(numSyncRatios-1)), true};
+                    }
+                    if (impl->syncRatios[i].text == displayValue.value + "/1") {
+                        return {((i)/float(numSyncRatios-1)), true};
+                    }
+                }
+            }
+        }
+        if (param->idx == PARAM_OFFSET_IMPL + 0) {
             auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
             return { GetParamValueForDelayMs(fTextFieldVal), true };
         }
@@ -370,17 +419,29 @@ namespace PluginDelay {
     param_unit_t module_delay::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
+        if (param->idx == PARAM_OFFSET_IMPL + 0 && impl->syncFlags) {
+            auto lfoRateStr = FormatSyncRate(impl->syncRatios, impl->syncFlags, value);
+            return {lfoRateStr, impl->syncFlags ? "" : param->unit};
+        }
         if (param->idx == PARAM_OFFSET_IMPL + 0) {
-            return {StringFormat("%.1f", GetScaledDelayMs(value)), "ms"};
+            auto ms = GetScaledDelayMs(value);
+            auto fmtStr = ms < 10.0 ? "%.2f" : "%.1f";
+            return {StringFormat(fmtStr, GetScaledDelayMs(value)), "ms"};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
     class guictr_module_delay : public guictr_plugin_basic {
         module_delay* const module;
         guictr_stacked ctr_delayoptions;
+        guictr_select_enum ctr_delaysync;
         guictr_select_enum ctr_delaymode;
     public:
-        explicit guictr_module_delay(module_delay* _module) : guictr_plugin_basic(_module), module(_module), ctr_delaymode(2) {
+        explicit guictr_module_delay(module_delay* _module)
+            : guictr_plugin_basic(_module),
+            module(_module),
+            ctr_delaysync(2),
+            ctr_delaymode(2)
+        {
             const std::array<const char*, 2> stringsDelayMode = {
                 "Normal", "Ping-Pong"
             };
@@ -391,18 +452,30 @@ namespace PluginDelay {
                 btn.setText(name);
                 btn.setButtonColor(GuiColor::COL_KNOB);
             }
+            const std::array<const char*, 2> stringsDelaySync = {
+                "Free", "Sync"
+            };
+            for (size_t i = 0; i < 2; ++i) {
+                auto& btn = ctr_delaysync.getButton(i);
+                const auto& name = stringsDelaySync[i];
+                btn.setTooltipText(String("Tempo ") + name);
+                btn.setText(name);
+                btn.setButtonColor(GuiColor::COL_KNOB);
+            }
             ctr_delayoptions.padding = 0;
             ctr_delayoptions.setBackgroundRendered(false);
             ctr_delayoptions.setVerticalLayout(true);
             
             remove(knobs.front());
-            remove(knobs.back());
+            remove(knobs[knobs.size() - 2]);
+            remove(knobs[knobs.size() - 1]);
             ctr_delayoptions.addEntry(knobs.front());
+            ctr_delayoptions.addEntry(&ctr_delaysync);
             ctr_delayoptions.addEntry(&ctr_delaymode);
-            ctr_delayoptions.zOrder = 1;
+            ctr_delayoptions.setSplitters({0.75, 0.75+0.125});
             sortChildren=true;
+            ctr_delayoptions.zOrder = 1;
             add(&ctr_delayoptions);
-            ctr_delayoptions.setSplitters({0.8});
         }
         ~guictr_module_delay() override {
             removeGuis();
@@ -435,12 +508,12 @@ namespace PluginDelay {
                 addEntry(new ctxmenu_delay_mode(module, "Mode", 100));
             }
             bool clickedElement(ctxtmenu_entry* e, int _id) override {
-                if (_id >= 100) {
+                /* if (_id >= 100) {
                     int clicked = _id - 100;
                     auto lock = module->impl->lock();
                     closeContextMenu();
                     return true;
-                }
+                } */
                 closeContextMenu();
                 return false;
             }
@@ -453,11 +526,13 @@ namespace PluginDelay {
         void onGuiOpen() override {
             guictr_plugin_basic::onGuiOpen();
             ctr_delaymode.setAutomationRef(module, PARAM_OFFSET_IMPL + 6);
+            ctr_delaysync.setAutomationRef(module, PARAM_OFFSET_IMPL + 7);
         }
     
         void onGuiClose() override {
             guictr_plugin_basic::onGuiClose();
             ctr_delaymode.setAutomationRef(nullptr, -1);
+            ctr_delaysync.setAutomationRef(nullptr, -1);
         }
     };
     std::shared_ptr<PluginViewContainer> module_delay::createViewCtrInternal() {

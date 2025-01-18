@@ -73,6 +73,7 @@ public:
         auto param = dynamic_cast<guiknob_pluginparam*>(button);
         if (param && module) {
             auto paramIdx = param->getParamIdx();
+            auto layout = param->getLayout();
             auto paramValue = module->getParamValueDisplay(paramIdx);
             editfield.mCallbackEnd = [this, param, paramValue, paramIdx](const std::string& str) {
                 auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{str, paramValue.unit});
@@ -84,8 +85,10 @@ public:
                 editfield.setVisible(false);
                 return true;
             };
-            auto layout = param->getLayout();
-            editfield.pos = layout.pValue;
+            
+            auto pValue = param->parent->toScreenSpace(layout.pValue);
+            pValue = toControlsObjectSpace(pValue, editfield.parent);
+            editfield.pos = pValue;
             editfield.size = layout.sValue;
             editfield.setVisible(true);
             editfield.layout();

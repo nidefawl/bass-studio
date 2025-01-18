@@ -757,7 +757,7 @@ namespace PluginLFO {
         if (param->idx == PARAM_LFO_RATE) {
             auto& firstInstance = impl->channels[0];
             auto lfoRateStr = FormatSyncRate(firstInstance.syncRatios, firstInstance.syncFlags, value);
-            return {lfoRateStr, impl->getSyncFlags(0) ? "" : param->unit};
+            return {lfoRateStr, firstInstance.syncFlags ? "" : param->unit};
         }
         if (param->idx == PARAM_LFO_PHASE) {
             return {StringFormat("%.2f", value*360.0f), param->unit};
