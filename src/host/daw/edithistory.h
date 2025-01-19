@@ -1,6 +1,7 @@
 #pragma once
 #include <utility>
 #include <vector>
+#include "logging.h"
 #include "str_util.h"
 #include "assert_dbg.h"
 
@@ -52,7 +53,10 @@ public:
         action_base* step = m_undo.back();
         m_undo.pop_back();
         step->undo(daw);
-        dbgassert(!step->errored);
+        if (step->errored) {
+            log_lf(Log::L_ERROR, "Undo %s failed: %s\n", StringAsCStr(step->desc), StringAsCStr(step->errorDesc));
+            step->errored = false;
+        }
         m_redo.push_back(step);
         revision--;
     }
@@ -60,7 +64,10 @@ public:
         action_base* step = m_redo.back();
         m_redo.pop_back();
         step->redo(daw);
-        dbgassert(!step->errored);
+        if (step->errored) {
+            log_lf(Log::L_ERROR, "Redo %s failed: %s\n", StringAsCStr(step->desc), StringAsCStr(step->errorDesc));
+            step->errored = false;
+        }
         m_undo.push_back(step);
         revision++;
     }
