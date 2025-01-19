@@ -1376,8 +1376,14 @@ namespace DAW {
             int32_t mouseDragDist         = evt.relMousepos.x;
             const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
             parent->onChildLayoutChanged(this);
-            auto newHeight = math::min(TRACK_MAX_HEIGHT, math::max(TRACK_MIN_HEIGHT, (mouseDragDist) / MIXER_SIZE_STEP));
-            newHeight -= m_trackentry->trackMixer->childMixerWidthSteps;
+            auto bIsReturnOrMaster = TRACKTYPE_TO_CTR(m_trackentry->track->type) != TRACK_CTR_MIDIAUDIO;
+            int32_t newHeight = 2;
+            if (bIsReturnOrMaster) {
+                newHeight = m_trackentry->layout.height + (-mouseDragDist) / MIXER_SIZE_STEP;
+            } else {
+                newHeight = (mouseDragDist) / MIXER_SIZE_STEP;
+                newHeight -= m_trackentry->trackMixer->childMixerWidthSteps;
+            }
             m_trackentry->layout.height = math::clamp(newHeight, 2, 10);
             dawCtrl->updateVisibleTrackContents();
         } else {
