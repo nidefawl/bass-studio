@@ -1355,7 +1355,6 @@ void guitrack_editor::render(NVGcontext* vg) {
         for (track_t* g : project.tracksBottom.tracksFlat) {
             track_gui_entry_t* entry{};
             if (!iGuiMgr.getPointerEntry(g, &entry)) {
-                dbgassert(0);
                 continue;
             }
 

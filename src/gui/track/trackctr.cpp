@@ -62,7 +62,6 @@ void guitrack_controls::render(NVGcontext* vg) {
     for (track_t* g : project.tracksBottom) {
         track_gui_entry_t* entry = nullptr;
         if (!iGuiMgr.getPointerEntry(g, &entry)) {
-            dbgassert(0);
             continue;
         }
         if (entry->trackControls->isVisible()) {
@@ -235,8 +234,8 @@ void guictr_tracks::loadTrackLayouts(trackcontainer_snapshot_t& in) {
         if (it != snapshot.layouts.end()) {
             track_layout_snapshot_t& layout = it->second;
             track_gui_entry_t* entry{};
-            always_assert(guiMgr.getTrackEntry(snapshot.trackLoaded, &entry));
-            loadTrackLayout(this, entry, layout);
+            if (guiMgr.getTrackEntry(snapshot.trackLoaded, &entry))
+                loadTrackLayout(this, entry, layout);
         }
         // trackStatic.trackLoaded = nullptr;
     }
@@ -898,21 +897,17 @@ bool guitrack_controls::handleKeyInput(KeyEvent& kevt) {
 
 void guictr_tracks::onAdded() {
     guictr_base::onAdded();
-    removeAllTracks();
-    for (track_t* tr : project.trackList) {
-        removeTrack(tr, FLG_TRK_CHANGE_LOAD);
-    }
-    addAllTracks();
 }
 
 void guictr_tracks::onRemove() {
-    removeAllTracks();
     guictr_base::onRemove();
 }
 
 void guictr_tracks::addAllTracks() {
     for (track_t* tr : project.trackList) {
-        addTrack(tr, FLG_TRK_CHANGE_LOAD);
+        if (!guiMgr.getTrackEntry(tr, nullptr)) {
+            addTrack(tr, FLG_TRK_CHANGE_LOAD);
+        }
     }
 }
 
@@ -951,6 +946,7 @@ guictr_tracks::guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::Track
 }
 
 guictr_tracks::~guictr_tracks() {
+    removeAllTracks();
     remove(&scrollbar);
     remove(&trackEditor);
     remove(&trackControls);
