@@ -30,7 +30,7 @@ namespace dsp_util {
     constexpr float GAIN_SCALE_EXP    = 2.0f;
 
     inline constexpr float scaledRange(float db, float lvlFloor, float lvlCeil) {
-        if (db < dsp_util::DBFS_FLOOR)
+        if (db < lvlFloor)
             return 1.0f;
         float lvlRange = lvlFloor - lvlCeil;
         return (math::max(lvlFloor, math::min(db, lvlCeil)) - lvlCeil) / lvlRange;

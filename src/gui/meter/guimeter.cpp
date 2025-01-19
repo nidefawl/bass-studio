@@ -8,7 +8,9 @@
 #include "color_util.h"
 #include <nanovg.h>
 
-constexpr float scaledZero = dsp_util::scaledRange(0.0f, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+constexpr float MTR_UI_FLOOR     = -100.0f;
+constexpr float MTR_UI_CEIL      =   12.0f;
+constexpr float scaledZero = dsp_util::scaledRange(0.0f, MTR_UI_FLOOR, MTR_UI_CEIL);
 constexpr float FOLDED_METER_CHANNEL_WIDTH_PX = 2.5f;
 
 void renderMeterTextLevel(NVGcontext* vg, guitheme_t* theme, textlabel_dynamic_t* label, vec2 gainPos, vec2 gainSize, const String& strLevel, NVGcolor fontColor) {
@@ -34,7 +36,7 @@ void renderMeterChannelHorizontal(NVGcontext* vg, guitheme_t* theme, ivec2 mtrPo
         if (fLvl < math::F_MIN) {
             continue;
         }
-        auto scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+        auto scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), MTR_UI_FLOOR, MTR_UI_CEIL);
         auto hVal = (1.0f - scale) * mtrSize.x;
         auto x = mtrPos.x;
         auto y = mtrPos.y;
@@ -79,7 +81,7 @@ void renderMeterChannelVertical(NVGcontext* vg, guitheme_t* theme, ivec2 mtrPos,
         if (fLvl < math::F_MIN) {
             continue;
         }
-        double scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+        double scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), MTR_UI_FLOOR, MTR_UI_CEIL);
         float hVal   = (1.0f - scale) * mtrSize.y;
         float x = mtrPos.x;
         float y = mtrPos.y + mtrSize.y - hVal;
@@ -90,7 +92,7 @@ void renderMeterChannelVertical(NVGcontext* vg, guitheme_t* theme, ivec2 mtrPos,
             //            int32_t col = fLvl >= 1.0f ? 1 : 0;
             int32_t col = y < yZero ? 1 : 0;
             nvgStrokeColor(vg, colGainLvl[j * 2 + col]);
-            nvgStrokeWidth(vg, 1.5f);
+            nvgStrokeWidth(vg, 2.5f);
             nvgStroke(vg);
             continue;
         }
@@ -177,9 +179,9 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         const float hZero = (1.0f - scaledZero) * mtrSize.y;
         const float yZero = mtrPos.y + mtrSize.y - hZero;
         float x2           = pos.x + size.x - lW;
-        const int steps    = 8;
+        const int steps    = 10;
         float stops[steps] = {
-            0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f, -60.0f
+            0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f, -60.0f, -72.0f, -84.0f
         };
         nvgBeginPath(vg);
         nvgMoveTo(vg, mtrPos.x, yZero);
@@ -190,7 +192,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         nvgBeginPath(vg);
         for (int i = 0; i < steps; i++) {
             float lvlStop = stops[i];
-            double scale  = dsp_util::scaledRange(lvlStop, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+            double scale  = dsp_util::scaledRange(lvlStop, MTR_UI_FLOOR, MTR_UI_CEIL);
 
             float y = (i) / (steps - 1.0f);
 
@@ -207,7 +209,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         float prevStopY = -4;
         for (int i = 0; i < steps; i++) {
             float lvlStop = stops[i];
-            double scale  = dsp_util::scaledRange(lvlStop, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+            double scale  = dsp_util::scaledRange(lvlStop, MTR_UI_FLOOR, MTR_UI_CEIL);
             float y       = mtrPos.y + scale * mtrSize.y;
             if (i > 0 && y - prevStopY < lW * 0.6) {
                 continue;
@@ -216,7 +218,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 
             String strLevel = ".";
             strLevel = StringFormat("%.0f", lvlStop);
-            nvgText(vg, x2 + lW * 8.8f / 8.0f, y, StringAsCStr(strLevel), NULL);
+            nvgText(vg, x2 + lW * 9.8f / 8.0f, y, StringAsCStr(strLevel), NULL);
         }
     }
 
@@ -297,9 +299,9 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
         const auto wZero = (1.0f - scaledZero) * mtrSize.x;
         const auto xZero = mtrPos.x + mtrSize.x - wZero;
         float y2 = pos.y + size.y - lW;
-        const int steps    = 8;
+        const int steps    = 10;
         float stops[steps] = {
-            0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f, -60.0f
+            0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f, -60.0f, -72.0f, -84.0f
         };
         nvgBeginPath(vg);
         nvgMoveTo(vg, xZero, mtrPos.y);
@@ -309,7 +311,7 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
         nvgStroke(vg);
         nvgBeginPath(vg);
         for (float lvlStop : stops) {
-            auto scale  = dsp_util::scaledRange(lvlStop, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+            auto scale  = dsp_util::scaledRange(lvlStop, MTR_UI_FLOOR, MTR_UI_CEIL);
             auto x = mtrPos.x + scale * mtrSize.x;
             nvgMoveTo(vg, x, mtrPos.y);
             nvgLineTo(vg, x, y2 + lW * 2.0f / 8.0f);
@@ -323,7 +325,7 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
         float prevStopX = -4;
         for (int i = 0; i < steps; i++) {
             auto lvlStop = stops[i];
-            auto scale  = dsp_util::scaledRange(lvlStop, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+            auto scale  = dsp_util::scaledRange(lvlStop, MTR_UI_FLOOR, MTR_UI_CEIL);
             auto x = mtrPos.x + scale * mtrSize.x;
             if (i > 0 && x - prevStopX < lW * 0.6) {
                 continue;
