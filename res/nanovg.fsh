@@ -193,8 +193,8 @@ float getAntiBandingDither(vec2 pt) {
 vec4 getShadedBox(vec2 pt, vec2 Border, vec4 color, float intens) {
 	float fFade = Border.y * Border.y;
 	fFade *= Border.x;
-	vec3 paletteColor = palette( (1.0)-(Border.y*Border.y*(0.01)+0.18), vec3(0.5),vec3(0.5+intens*1.0),vec3(0.99, 0.95, 0.9),vec3(0.0,0.10,0.20) );
-	float globalShadingIntens = 0.2;
+	vec3 paletteColor = palette( (1.0)-(Border.y*Border.y*(0.01)+0.18), vec3(0.5),vec3(0.5+intens*1.0),vec3(0.96, 0.95, 0.96),vec3(0.1,0.10,0.10) );
+	float globalShadingIntens = 0.25;
 	vec4 result = vec4(mix(color.rgb, paletteColor.rgb*intens, globalShadingIntens*fFade), color.a);
 	result.rgb+=vec3(getAntiBandingDither(pt));
 	return clamp(result, vec4(0.0), vec4(1.0));
