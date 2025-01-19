@@ -40,7 +40,7 @@ protected:
     track_gui_entry_t* const m_trackentry;
 
 private:
-    GuiColor::constant_t color         = GuiColor::COL_KNOB;
+    GuiColor::constant_t color         = GuiColor::COL_AUTOMATION_LANE;
     GuiColor::constant_t colorInactive = GuiColor::COL_LABEL_INACTIVE;
     GuiColor::constant_t color2        = GuiColor::COL_KNOB_IND;
     GuiColor::constant_t colorHL       = GuiColor::COL_AUTOMATED;
