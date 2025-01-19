@@ -14,52 +14,37 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
 
     class guictr_mixers_options final : public guictr_base {
         guictr_mixers* const m_parent;
-        class guibutton_ctr_mixers_options : public guibutton {
-        public:
-            bool bIsSelected = false;
-            int32_t btnIndex = 0;
-            int32_t getIndex() const {
-                return btnIndex;
-            }
-            guibutton_ctr_mixers_options() = default;
-            bool getState() const override {
-                return bIsSelected;
-            }
-            void setState(bool b) {
-                bIsSelected = b;
-            }
-        };
-        std::array<guibutton_ctr_mixers_options, 3> btnViews;
+        std::array<guibuttontoggle, 3> btnViews;
     public:
         explicit guictr_mixers_options(guictr_mixers* _parent) : m_parent(_parent) {
             setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
-            padding = 6;
-            margin  = 6;
-            snapSides.y = snapSides.w = 0;
-            snapSides.x = snapSides.z = 1;
+            padding = 2;
             for (auto& btn : btnViews) {
-                btn.btnIndex = static_cast<int32_t>(&btn - btnViews.data());
+                btn.id = static_cast<int32_t>(&btn - btnViews.data());
                 btn.drawFn   = drawTextureSymbol;
                 String text;
-                switch (btn.btnIndex) {
+                switch (btn.id) {
                     case 0:
                         text = "Layout Wide/Compact";
-                        btn.drawParm = ICON_ARR_LEFT;
-                        btn.setState(m_parent->bWideLayout);
+                        btn.setStateRef(&m_parent->bWideLayout);
+                        btn.getIcon = [p = m_parent] { return p->bWideLayout ? ICON_ARR_RIGHT : ICON_ARR_DOWN; };
                         break;
                     case 1:
                         text = "Show Sends";
-                        btn.drawParm = ICON_MODULATION;
-                        btn.setState(m_parent->bShowSends);
+                        btn.icon = ICON_MODULATION;
+                        btn.setStateRef(&m_parent->bShowSends);
+                        btn.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
                         break;
                     case 2:
                         text = "Show Inputs/Outputs";
-                        btn.drawParm = ICON_MIDIPLUG;
-                        btn.setState(m_parent->bShowIO);
+                        btn.icon = ICON_MIDIPLUG;
+                        btn.setStateRef(&m_parent->bShowIO);
+                        btn.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
                         break;
                     default:
                         break;
                 }
+                btn.setLabel(text);
                 btn.setTooltipText(text);
                 btn.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
                 add(&btn);
@@ -71,26 +56,38 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
         void buttonClicked(guibase* button) override {
             for (auto& btn : btnViews) {
                 if (&btn == button) {
-                    btn.setState(!btn.getState());
-                    switch (btn.getIndex()) {
-                        case 2:
-                            m_parent->bShowIO = btn.getState();
-                            btnViews[0].setState(true);
-                            break;
+                    switch (btn.id) {
                         case 0: {
+                            m_parent->bWideLayout = !m_parent->bWideLayout;
+                            {
+                                track_gui_vector_td& tracks = m_parent->guiMgr.tracksVisibleFlat;
+                                for (track_gui_entry_t* entry : tracks) {
+                                    switch (TRACKTYPE_TO_CTR(entry->track->type)) {
+                                        case TRACK_CTR_MIDIAUDIO:
+                                        default:
+                                            entry->layout.height = m_parent->bWideLayout ? 5 : 3;
+                                            break;
+                                        case TRACK_CTR_RETURN:
+                                            entry->layout.height = m_parent->bWideLayout ? 6 : 3;
+                                            break;
+                                        case TRACK_CTR_MASTER:
+                                            entry->layout.height = m_parent->bWideLayout ? 8 : 6;
+                                            break;
+                                    }
+                                }
+                            }
                             break;
                         }
-                        case 1:
-                            m_parent->bShowSends = btn.getState();
+                        case 1: {
+                            m_parent->bShowSends = !m_parent->bShowSends;
                             break;
+                        }
+                        case 2: {
+                            m_parent->bShowIO = !m_parent->bShowIO;
+                            break;
+                        }
                         default:
                             break;
-                    }
-                    m_parent->bWideLayout = btnViews[0].getState();
-                    btnViews[0].drawParm = m_parent->bWideLayout ? ICON_ARR_RIGHT : ICON_ARR_LEFT;
-                    track_gui_vector_td& tracks = m_parent->guiMgr.tracksVisibleFlat;
-                    for (track_gui_entry_t* entry : tracks) {
-                        entry->layout.height = m_parent->bWideLayout ? 6 : 4;
                     }
                     m_parent->updateVisibleTracks();
                     m_parent->layout();
@@ -103,8 +100,12 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
         }
     };
     class guictr_mixers_content : public guictr_base {
-        public:
-        guictr_mixers_content() : guictr_base() {
+        track_gui_manager_t& guiMgr;
+    public:
+        guictr_mixers_content(track_gui_manager_t& _guiMgr) 
+            : guictr_base(),
+            guiMgr(_guiMgr)
+        {
             padding = 0;
             margin  = 0;
             setCanMouseHit(false);
@@ -114,6 +115,8 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
         void addTrackEntry(track_gui_entry_t& e);
         
         void removeTrackEntry(track_gui_entry_t& e);
+
+        void render(NVGcontext* vg) override;
     };
 protected:
     int32_t contentWidth    = 0;
@@ -137,7 +140,6 @@ public:
     void render(NVGcontext* vg) override;
     void layout() override;
     void updateVisibleTracks();
-
 
     void onChildLayoutChanged(guibase* g) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);

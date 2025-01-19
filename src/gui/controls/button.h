@@ -86,7 +86,7 @@ public:
         renderButtonLabel(vg, fl);
     }
 };
-class guibuttontoggle final : public guibuttonstate {
+class guibuttontoggle : public guibuttonstate {
     int _getIcon() {
         return getIcon ? getIcon() : icon;
     }
@@ -96,7 +96,7 @@ public:
     int icon     = -1;
     std::function<int()> getIcon;
     std::function<bool()> fnGetState;
-    GuiColor::constant_t colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
+    GuiColor::constant_t colorActive = GuiColor::COL_BTN_BG_DEFAULT_INACTIVE;
     guibuttontoggle() : guibuttonstate() {
     }
     void setRadius(float fRadius) {

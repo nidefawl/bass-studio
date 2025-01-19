@@ -1608,10 +1608,7 @@ void DawCtrl::updateVisibleTrackContents() {
             auto trackMixerCtr = guictr_cast<guictr_mixers>(entry);
             trackMixerCtr->updateVisibleTracks();
             if (trackMixerCtr->isVisible()) {
-                double scrollPixelOffset = trackMixerCtr->getScrollOffsetPixels();
                 trackMixerCtr->layout();
-                // trackMixerCtr->layoutVisibleTracks();
-                trackMixerCtr->scrollToPixelOffset(scrollPixelOffset);
             }
         }
         return true;

@@ -290,7 +290,6 @@ public:
     explicit guideferred(effect_deferred* _eff) : guiplugin(_eff), module(_eff) {
         isHorizontalTitle        = false;
         buttonBypass.icon        = -1;
-        buttonBypass.colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
         guiMeter.setVisible(false);
         add(&btnLoad);
     }

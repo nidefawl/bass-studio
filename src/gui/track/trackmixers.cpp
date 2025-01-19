@@ -3,8 +3,10 @@
 #include "gui/container/container.h"
 #include "gui/gui.h"
 #include "gui/meter/guimeter.h"
+#include "guibackgroundimage.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "host/track/track_types.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
@@ -41,6 +43,7 @@ namespace DAW {
         std::vector<gui_slider_pan*> sendPans;
         guictr_base* trackIO;
         int32_t childMixerWidthSteps = 0;
+        int32_t yOffsetTop = 0;
     public:
         guictr_mixers_mixer(guictr_mixers* _mixer, track_gui_entry_t* _entry) 
             : guictr_base(),
@@ -232,10 +235,10 @@ namespace DAW {
             int32_t heightInner = MIXER_SIZE_STEP - i2;
             int32_t csX      = size.x;
             int32_t csY      = size.y;
-            int32_t posY = 0;
+            int32_t posY = yOffsetTop;
             guibase* lastGui = nullptr;
             if (trackIO) {
-                trackIO->setVisible(m_parent->bShowIO && m_parent->bWideLayout);
+                trackIO->setVisible(m_parent->bShowIO);
                 if (trackIO->isVisible()) {
                     trackIO->pos = ivec2(inset, posY + inset);
                     trackIO->size = ivec2(csX - i2, MIXER_SIZE_STEP*3 - i2);
@@ -270,7 +273,7 @@ namespace DAW {
                 }
                 for (auto sendPanCtrl : sendPans) {
                     auto idx = sendPanCtrl->getParamIdx() - PARAM_OFFSET_SEND_PAN;
-                    sendPanCtrl->setFlag(FLG_RENDER_LABEL, m_trackentry->layout.height > 4);
+                    sendPanCtrl->setFlag(FLG_RENDER_LABEL, m_trackentry->layout.height > 8);
                     sendPanCtrl->setVisible(bShowPan && idx < numReturnChannels);
                 }
             }
@@ -280,7 +283,7 @@ namespace DAW {
             auto btnSize = csX/2;
             trackPanning.pos   = ivec2(inset, posY + inset);
             trackPanning.size  = ivec2(csX - i2, heightInner);
-            trackPanning.setFlag(FLG_RENDER_LABEL, m_trackentry->layout.height > 4);
+            trackPanning.setFlag(FLG_RENDER_LABEL, m_trackentry->layout.height > 3);
             posY += MIXER_SIZE_STEP;
 
 
@@ -310,8 +313,8 @@ namespace DAW {
                 trackGain.pos.x = (trackGain.size.x - maxWidth) / 2;
                 trackGain.size.x = maxWidth;
             }
-            trackGain.pos.y += i2;
-            trackGain.size.y -= i2;
+            trackGain.pos.y += inset*4;
+            trackGain.size.y -= inset*4;
             m_guiMeter.size = trackGain.size;
             m_guiMeter.pos.y = trackGain.pos.y;
             m_guiMeter.pos.x = trackGainWidth + ((csX - trackGainWidth) - m_guiMeter.size.x) / 2;
@@ -516,12 +519,12 @@ guictr_mixers::guictr_mixers(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::Track
       projectGlobals(_projectGlobals),
       guiMgr(),
       scrollbar(0, 0.0f, *this),
-      trackMixers(),
+      trackMixers(guiMgr),
       mixerOptions(this)
 {
     setGuiType(gui_type::CTR_TYPE_MIXERS);
-    padding = 0;
-    margin  = 0;
+    padding = 8;
+    margin  = 4;
     dawCtrl = _dawCtrl,
     setCanMouseHit(true);
     setBackgroundRendered(true);
@@ -815,7 +818,6 @@ void guictr_mixers::removeTrack(track_t* track, int flags) {
     }
     dbgassert(track->audio);
     trackMixers.removeTrackEntry(*entry);
-    // removeEntry(track->audio->guiInstances, entry);
     dbgassert(entry->trackMixer);
     delete entry->trackMixer;
     entry->trackMixer = nullptr;
@@ -838,7 +840,21 @@ void guictr_mixers::addTrack(track_t* track, int flags) {
     entry->trackMixerTitle->id = track->localIdxFlat;
     entry->trackMixer->zOrder = track->localIdxFlat;
     entry->trackMixerTitle->zOrder = track->localIdxFlat;
-    entry->layout.height = bWideLayout ? 6 : 4;
+    entry->layout.height = 4;
+    switch (TRACKTYPE_TO_CTR(track->type)) {
+        case TRACK_CTR_MIDIAUDIO:
+            entry->layout.height = 6;
+            break;
+        case TRACK_CTR_RETURN:
+            entry->layout.height = 4;
+            break;
+        case TRACK_CTR_MASTER:
+            entry->layout.height = 8;
+            break;
+        default:
+            break;
+    }
+    
 
     guiMgr.addTrack(entry);
     trackMixers.addTrackEntry(*entry);
@@ -1353,6 +1369,29 @@ void guictr_mixers::layout() {
         entry->trackMixer->childMixerWidthSteps = childMixerWidthSteps;
     }
 
+    // figure out the max depth (number of children) in tracksVisibleFlat
+    itAll = guiMgr.tracksVisibleFlat.begin();
+    itEnd = guiMgr.tracksVisibleFlat.end();
+
+    int32_t maxDepth = 0;
+    for (; itAll != itEnd; ++itAll) {
+        auto* entry = *itAll;
+        auto childLevel = entry->track->getChildLvl();
+        maxDepth = math::max(maxDepth, childLevel);
+    }
+
+    // set all trackMixer->yOffsetTop to entry->trackMixerTitle->size.y * (maxDepth - childLevel)
+    itAll = guiMgr.tracksVisibleFlat.begin();
+    itEnd = guiMgr.tracksVisibleFlat.end();
+
+    for (; itAll != itEnd; ++itAll) {
+        auto* entry = *itAll;
+        auto childLevel = entry->track->getChildLvl();
+        entry->trackMixer->yOffsetTop = entry->trackMixerTitle->size.y * (maxDepth - childLevel);
+    }
+    
+
+
     for (guibase* gui : guis) {
         gui->layout();
     }
@@ -1392,16 +1431,15 @@ namespace DAW {
         if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
             int32_t mouseDragDist         = evt.relMousepos.x;
             const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
-            parent->onChildLayoutChanged(this);
             auto bIsReturnOrMaster = TRACKTYPE_TO_CTR(m_trackentry->track->type) != TRACK_CTR_MIDIAUDIO;
-            int32_t newHeight = 2;
+            int32_t newWidth = 2;
             if (bIsReturnOrMaster) {
-                newHeight = m_trackentry->layout.height + (-mouseDragDist) / MIXER_SIZE_STEP;
+                newWidth = m_trackentry->layout.height + (-mouseDragDist) / MIXER_SIZE_STEP;
             } else {
-                newHeight = (mouseDragDist) / MIXER_SIZE_STEP;
-                newHeight -= m_trackentry->trackMixer->childMixerWidthSteps;
+                newWidth = (mouseDragDist) / MIXER_SIZE_STEP;
+                newWidth -= m_trackentry->trackMixer->childMixerWidthSteps;
             }
-            m_trackentry->layout.height = math::clamp(newHeight, 2, 10);
+            m_trackentry->layout.height = math::clamp(newWidth, 2, 10);
             dawCtrl->updateVisibleTrackContents();
         } else {
             parentCtrl->objectDragMove(this, evt);
@@ -1426,4 +1464,86 @@ namespace DAW {
         auto popupPos    = title->toScreenSpace(ivec2(0));
         OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
     }
-} // namespace DAW
+}// namespace DAW
+
+int32_t getPosXFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat) {
+    track_gui_entry_t* trLastVisible = nullptr;
+    track_gui_entry_t* trFirstReturn = nullptr;
+    for (track_gui_entry_t* trEntry : tracksVisibleFlat) {
+        auto trackTypeContainer = TRACKTYPE_TO_CTR(trEntry->track->type);
+        switch (trackTypeContainer) {
+            case TRACK_CTR_MIDIAUDIO:
+                trLastVisible = trEntry;
+                break;
+            case TRACK_CTR_RETURN:
+            case TRACK_CTR_MASTER:
+                if (!trFirstReturn) {
+                    trFirstReturn = trEntry;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    if (trFirstReturn && trFirstReturn->trackMixer) {
+        return trFirstReturn->trackMixer->top() - TRACK_HEIGHT_SPACING_HALF;
+    }
+    if (trLastVisible && trLastVisible->trackMixer) {
+        return trLastVisible->trackMixer->bottom() + TRACK_HEIGHT_SPACING_HALF;
+    }
+    return 0;
+}
+
+void guictr_mixers::guictr_mixers_content::render(NVGcontext* vg)  {
+    if (isBackgroundRendered()) {
+        renderBackground(vg);
+    }
+    if (!setScissorTransform(vg)) {
+        return;
+    }
+    auto bgImage = theme->getBackgroundImage(GuiBackgroundImage::BG_MIXER_1);
+    if (bgImage) {
+        bgImage->render(this, vg);
+    }
+    for (track_gui_entry_t* entry : guiMgr.getTracksTopFlat()) {
+        if (entry->trackMixerTitle->isVisible()) {
+            nvgSave(vg);
+            entry->trackMixerTitle->render(vg);
+            nvgRestore(vg);
+            nvgSave(vg);
+            entry->trackMixer->render(vg);
+            nvgRestore(vg);
+        }
+    }
+    auto& tracks = guiMgr.getTracksBottomFlat();
+    // draw a background for all return and master tracks
+    if (tracks.size()) {
+        auto min = tracks.front()->trackMixerTitle->getLeftTop();
+        auto max = tracks.back()->trackMixer->getRightBottom();
+        min.x -= 3;
+        max.x += 3;
+        nvgSave(vg);
+        nvgTranslate(vg, min.x, min.y);
+        nvgBeginPath(vg);
+        nvgRect(vg, 0, 0, max.x - min.x, max.y - min.y);
+        NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
+        bg.a = 1.0f;
+        nvgFillColor(vg, bg);
+        nvgFillCustomPar(vg, -2);
+        nvgSetShapeExtents(vg, 0, 0, max.x - min.x, max.y - min.y);
+        nvgFill(vg);
+        nvgRestore(vg);
+
+    }
+    for (track_gui_entry_t* entry : tracks) {
+        if (entry->trackMixerTitle->isVisible()) {
+            nvgSave(vg);
+            entry->trackMixerTitle->render(vg);
+            nvgRestore(vg);
+            nvgSave(vg);
+            entry->trackMixer->render(vg);
+            nvgRestore(vg);
+        }
+    }
+}
+

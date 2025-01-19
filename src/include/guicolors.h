@@ -47,7 +47,6 @@ namespace GuiColor {
     extern constant_t COL_BG_WIDGET;
     extern constant_t COL_BLACK;
     extern constant_t COL_BTN_BG_BYPASS_ACTIVE;
-    extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
     extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
     extern constant_t COL_BTN_BG_SHOW_ACTIVE;
     extern constant_t COL_BTN_LOAD_DEF_PLUGINS;

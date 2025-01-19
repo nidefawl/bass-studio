@@ -44,4 +44,5 @@ namespace GuiBackgroundImage {
     extern constant_t BG_EQUALIZER_1;
     extern constant_t BG_TRACKEDITOR_MIXERS_1;
     extern constant_t BG_TRACK_MIXER_1;
+    extern constant_t BG_MIXER_1;
 } // namespace GuiBackgroundImage

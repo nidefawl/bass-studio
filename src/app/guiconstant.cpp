@@ -167,4 +167,5 @@ namespace GuiBackgroundImage {
     constant_t BG_EQUALIZER_1("BG_EQUALIZER_1");
     constant_t BG_TRACKEDITOR_MIXERS_1("BG_TRACKEDITOR_MIXERS_1");
     constant_t BG_TRACK_MIXER_1("BG_TRACK_MIXER_1");
+    constant_t BG_MIXER_1("BG_MIXER_1");
 } // namespace GuiBackgroundImage

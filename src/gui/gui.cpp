@@ -732,9 +732,11 @@ void guibuttontoggle::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg)) {
         return;
     }
-    vec2 cen = vec2(size / 2);
-    cen.x += pos.x;
-    cen.y += pos.y;
+    auto minAxis = math::min(size.x, size.y);
+    // center the circle
+    auto pos = this->pos + (size - ivec2(minAxis)) / 2;
+    auto cen = pos + ivec2(minAxis) / 2;
+    float radius = this->radius == 0 ? minAxis * 0.5f : this->radius;
     int32_t state              = getStateFlags();
     GuiColor::constant_t color = GuiColor::COL_BTN_BG_DEFAULT_INACTIVE;
     if (getState()) {
