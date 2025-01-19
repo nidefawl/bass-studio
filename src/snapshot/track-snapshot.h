@@ -53,6 +53,10 @@ struct track_layout_snapshot_t {
     std::vector<subtrack_snapshot_t> subtracks;
 };
 
+struct mixer_layout_snapshot_t {
+    mixerlayout_settings_t layout;
+};
+
 struct track_snapshot_t {
     tracksnapshot_store_opts_t storeOpts;
     tracksettings_t trackSettings;
@@ -62,6 +66,7 @@ struct track_snapshot_t {
     track_impl_snapshot_t data;
     std::vector<clip_t> clips;
     std::map<int32_t, track_layout_snapshot_t> layouts;
+    std::map<int32_t, mixer_layout_snapshot_t> layoutsMixer;
     track_snapshot_t() = default;
     track_snapshot_t(const track_t* track, const tracksnapshot_store_opts_t& opts);
 };

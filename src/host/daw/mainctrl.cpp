@@ -1470,6 +1470,15 @@ std::shared_ptr<guictr_tracks> DawCtrl::getTrackContainer() {
     return nullptr;
 }
 
+std::shared_ptr<guictr_mixers> DawCtrl::getMixerContainer() {
+    auto entry = view->findByTagOrGuiType(GuiContainerTag::TAG_MIXERS, gui_type::CTR_TYPE_MIXERS, true);
+    if (entry) {
+        return std::static_pointer_cast<guictr_mixers>(entry->getSharedGui());
+    }
+    return nullptr;
+}
+
+
 std::shared_ptr<guictr_clipeditor> DawCtrl::getClipEditor() {
     auto entry = view->findByTagOrGuiType(GuiContainerTag::TAG_CLIPEDIT, gui_type::CTR_TYPE_CLIPEDITOR);
     if (entry) {
@@ -2115,6 +2124,12 @@ void DawCtrl::loadTrackLayouts(const std::shared_ptr<project_file>& file) {
             trackCtr->loadTrackLayouts(f->project.trackMasterCtr);
             trackCtr->setScrollOffset(f->layout.scrollOffsetX);
         }
+        if (entry->getType() == gui_type::CTR_TYPE_MIXERS) {
+            auto trackMixerCtr = guictr_cast<guictr_mixers>(entry);
+            trackMixerCtr->loadMixerLayouts(f->project.trackCtr);
+            trackMixerCtr->loadMixerLayouts(f->project.trackReturnCtr);
+            trackMixerCtr->loadMixerLayouts(f->project.trackMasterCtr);
+        }
         return true;
     });
 }
@@ -2224,17 +2239,7 @@ void load_project_task::run() {
                             dawCtrl->loadLayout(layout);
                             dawCtrl->getLayouts()[0] = layout;
                         }
-                        dawCtrl->view->visitEntries([f = file](SPLayoutEntry& entry) {
-                            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
-                                auto trackCtr = guictr_cast<guictr_tracks>(entry);
-                                trackCtr->getGrid().setLayout(f->layout.layoutGrid);  // TODO: per track editor / window
-                                trackCtr->loadTrackLayouts(f->project.trackCtr);      // OK: This loads per track editor / window
-                                trackCtr->loadTrackLayouts(f->project.trackReturnCtr);
-                                trackCtr->loadTrackLayouts(f->project.trackMasterCtr);
-                                trackCtr->setScrollOffset(f->layout.scrollOffsetX);   // TODO: per track editor / window
-                            }
-                            return true;
-                        });
+                        dawCtrl->loadTrackLayouts(projectToLoad->projectfile);
                     }
                     daw->loadProjectFinish();
                 }

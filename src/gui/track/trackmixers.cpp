@@ -850,6 +850,23 @@ void guictr_mixers::addTrack(track_t* track, int flags) {
     }
 }
 
+void loadMixerLayout(guictr_mixers* guiMixer, track_gui_entry_t* entry, const mixer_layout_snapshot_t& snapshot) {
+    entry->layout.height = snapshot.layout.width;
+}
+
+void guictr_mixers::loadMixerLayouts(trackcontainer_snapshot_t& in) {
+    for (track_snapshot_t& snapshot : in.tracks) {
+        dbgassert(snapshot.trackLoaded);
+        auto it = snapshot.layoutsMixer.find(trackMixerGlobalIndex);
+        if (it != snapshot.layoutsMixer.end()) {
+            auto& layout = it->second;
+            track_gui_entry_t* entry{};
+            always_assert(guiMgr.getTrackEntry(snapshot.trackLoaded, &entry));
+            loadMixerLayout(this, entry, layout);
+        }
+    }
+}
+
 void guictr_mixers::resetView() {
     guiMgr.reset();
 }

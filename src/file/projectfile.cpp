@@ -372,6 +372,16 @@ void load(Archive& archive, track_layout_snapshot_t& m, const std::uint32_t vers
 }
 
 template<class Archive>
+void serialize(Archive& archive, mixerlayout_settings_t& m) {
+    archive(make_nvp("width", m.width));
+}
+
+template<class Archive>
+void serialize(Archive& archive, mixer_layout_snapshot_t& m) {
+    archive(make_nvp("layout", m.layout));
+}
+
+template<class Archive>
 void serialize(Archive& archive, track_id_snapshot_t& m) {
     archive(make_nvp("stageId", m.stageId),
             make_nvp("inputStageId", m.inputStageId),
@@ -428,6 +438,9 @@ void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
         if (version >= 4) {
             archive(make_nvp("layouts", m.layouts));
         }
+        if (version >= 5) {
+            archive(make_nvp("layoutsMixer", m.layoutsMixer));
+        }
     }
 }
 
@@ -440,7 +453,8 @@ void save(Archive& archive, const track_snapshot_t& m, const std::uint32_t versi
         make_nvp("data", m.data),
         make_nvp("stageIds", m.stageIds),
         make_nvp("storeOpts", m.storeOpts),
-        make_nvp("layouts", m.layouts)
+        make_nvp("layouts", m.layouts),
+        make_nvp("layoutsMixer", m.layoutsMixer)
     );
 }
 
@@ -794,7 +808,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 
 CEREAL_CLASS_VERSION(guictrlayout_entry_snapshot_t, 1);
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 17);
-CEREAL_CLASS_VERSION(track_snapshot_t, 4);
+CEREAL_CLASS_VERSION(track_snapshot_t, 5);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);

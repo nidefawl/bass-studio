@@ -680,7 +680,7 @@ public:
     void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at);
     void removeAllSubtracks(track_gui_entry_t* entry);
     void loadTrackLayouts(trackcontainer_snapshot_t& in);
-    bool getTrackEntry(track_t* t, track_gui_entry_t** out) {
+    bool getTrackEntry(const track_t* t, track_gui_entry_t** out) {
         return guiMgr.getTrackEntry(t, out);
     }
     bool getPointerEntry(track_t* t, track_gui_entry_t** out) {

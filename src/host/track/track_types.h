@@ -80,6 +80,10 @@ struct tracklayout_settings_t {
     bool hideSubtracks = false;
 };
 
+struct mixerlayout_settings_t {
+    int width = 4;
+};
+
 struct subtracksettings_t {
     int32_t subtrackType    = 0;
 };

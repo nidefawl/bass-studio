@@ -172,8 +172,9 @@ public:
     void addTrack(track_t* track, int flags);
     void removeAllTracks();
     void addAllTracks();
+    void loadMixerLayouts(trackcontainer_snapshot_t& in);
    
-    bool getTrackEntry(track_t* t, track_gui_entry_t** out) {
+    bool getTrackEntry(const track_t* t, track_gui_entry_t** out) {
         return guiMgr.getTrackEntry(t, out);
     }
     bool getPointerEntry(track_t* t, track_gui_entry_t** out) {

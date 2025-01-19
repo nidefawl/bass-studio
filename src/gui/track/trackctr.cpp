@@ -229,13 +229,13 @@ void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const t
 }
 
 void guictr_tracks::loadTrackLayouts(trackcontainer_snapshot_t& in) {
-    for (track_snapshot_t& trackStatic : in.tracks) {
-        dbgassert(trackStatic.trackLoaded);
-        auto it = trackStatic.layouts.find(trackContainerGlobalIndex);
-        if (it != trackStatic.layouts.end()) {
+    for (track_snapshot_t& snapshot : in.tracks) {
+        dbgassert(snapshot.trackLoaded);
+        auto it = snapshot.layouts.find(trackContainerGlobalIndex);
+        if (it != snapshot.layouts.end()) {
             track_layout_snapshot_t& layout = it->second;
             track_gui_entry_t* entry{};
-            always_assert(guiMgr.getTrackEntry(trackStatic.trackLoaded, &entry));
+            always_assert(guiMgr.getTrackEntry(snapshot.trackLoaded, &entry));
             loadTrackLayout(this, entry, layout);
         }
         // trackStatic.trackLoaded = nullptr;

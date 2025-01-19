@@ -40,7 +40,7 @@ class DawViewContainers;
 class DawViewContainersMain;
 class track_gui_manager_i;
 class track_gui_manager_t;
-
+class guictr_mixers;
 class MainCtrl;
 class CompanionCtrl;
 class DawCtrl;
@@ -566,6 +566,12 @@ public:
     }
     const project_globals_t& getProjectGlobals() const {
         return projectGlobals;
+    }
+    std::vector<DawCtrl*>& getDawCtrls() {
+        return dawCtrls;
+    }
+    const std::vector<DawCtrl*>& getDawCtrls() const {
+        return dawCtrls;
     }
     static DawInstance* get();
     static DawInstance* getOptional();

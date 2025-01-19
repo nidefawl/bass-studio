@@ -23,6 +23,7 @@
 #include "gui/track/trackctr.h"
 #include "gui/track/trackcontrols.h"
 #include "gui/track/trackcontent.h"
+#include "gui/track/trackmixers.h"
 
 #include "note.h"
 #include "host/clip/clip.h"
@@ -224,15 +225,26 @@ track_snapshot_t::track_snapshot_t(const track_t* track, const tracksnapshot_sto
         clips.emplace_back(*clip);
     }
 
-    track_impl_t* p = track->audio;
-    if (p) {
-        int32_t trackCtrIdx = 0;
-        for (auto* entry : p->guiInstances) {
-            track_layout_snapshot_t snapshot;
-            saveTrackLayoutSettings(entry, snapshot.layout);
-            saveSubtrackLayout(entry, snapshot);
-            layouts[trackCtrIdx] = snapshot;
-            trackCtrIdx++;
+    auto daw = daw_tls::getTls().dawInstance;
+    if (daw) {
+        auto dawCtrls = daw->getDawCtrls();
+        for (auto dawCtrl : dawCtrls) {
+            auto index = dawCtrl->getDawWindowIndex();
+            auto trContainer = dawCtrl->getTrackContainer();
+            track_gui_entry_t* entry = nullptr;
+            if (trContainer && trContainer->getTrackEntry(track, &entry)) {
+                track_layout_snapshot_t snapshot{};
+                saveTrackLayoutSettings(entry, snapshot.layout);
+                saveSubtrackLayout(entry, snapshot);
+                layouts[index] = snapshot;
+                layoutsMixer[index] = mixer_layout_snapshot_t{};
+            }
+            auto mixer = dawCtrl->getMixerContainer();
+            if (mixer && mixer->getTrackEntry(track, &entry)) {
+                mixer_layout_snapshot_t snapshot{};
+                snapshot.layout.width = entry->layout.height;
+                layoutsMixer[index] = snapshot;
+            }
         }
     }
 }

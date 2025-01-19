@@ -272,6 +272,7 @@ public:
                                                         std::shared_ptr<guictr_layout> newContainer) override;
     void dragContainerRelayout(drag_ctr_event evt) override;
     std::shared_ptr<guictr_tracks> getTrackContainer();
+    std::shared_ptr<guictr_mixers> getMixerContainer();
     std::shared_ptr<guictr_clipeditor> getClipEditor();
 
     virtual void onPluginSelected();
