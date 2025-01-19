@@ -1849,7 +1849,6 @@ void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t
     if (treePos.parent) {
         strTarget = treePos.parent->name;
     }
-    log_printf("Moving %zu tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
 
     daw->onPluginsChanged();
     daw->updateVisibleTrackContents();

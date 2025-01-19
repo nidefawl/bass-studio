@@ -190,11 +190,13 @@ class audiohost_callback {
                 timings.samplePosProcOut += block->output->samples;
             }
             stream->outputTimeSeconds = block->time.inputTimeSeconds;
+            /*
             if (block->time.bResyncPos) {
                 double seconds = stream->getPlaybackTimeSeconds();
                 double samples = secondsToSamplesConvert<double, roundmode::none>(seconds, stream->getSampleRate());
+                // print time elapsed since start of playback
                 log_lf(Log::L_DEBUG, "First output after %f seconds %f \n", seconds, samples);
-            }
+            }*/
             if (block->time.bResyncPos || (stream->numInvocations % 100 == 0)) {
                 stream->playbackBeginTickPos = block->time.outputTickPos;
                 stream->playbackBeginTimeSeconds = getTimeSecondsD();

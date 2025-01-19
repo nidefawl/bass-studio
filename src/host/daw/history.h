@@ -75,10 +75,10 @@ public:
 
         automatable_t* at = tryGetAt(daw);
         if (at) {
-            log_lf(Log::L_DEBUG, "undo(): set %s::%s (idx %d) from %f to %f\n",
+            /* log_lf(Log::L_DEBUG, "undo(): set %s::%s (idx %d) from %f to %f\n",
                        StringAsCStr(at->getAutomatableName()),
                        StringAsCStr(at->getParamName(ref.paramIdx)),
-                       ref.paramIdx, valBefore, valAfter);
+                       ref.paramIdx, valBefore, valAfter); */
 
             at->setParamValue(ref.paramIdx, valBefore, FLG_PAR_UPDATE_UNDO);
         }
@@ -87,10 +87,10 @@ public:
     void redo(DawInstance* daw) override {
         automatable_t* at = tryGetAt(daw);
         if (at) {
-            log_lf(Log::L_DEBUG, "redo(): set %s::%s (idx %d) from %f to %f\n",
+            /* log_lf(Log::L_DEBUG, "redo(): set %s::%s (idx %d) from %f to %f\n",
                        StringAsCStr(at->getAutomatableName()),
                        StringAsCStr(at->getParamName(ref.paramIdx)),
-                       ref.paramIdx, valBefore, valAfter);
+                       ref.paramIdx, valBefore, valAfter); */
 
             at->setParamValue(ref.paramIdx, valAfter, FLG_PAR_UPDATE_UNDO);
         }

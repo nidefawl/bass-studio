@@ -327,9 +327,6 @@ void toggleDeviceEnableState(automatable_t* effect, int flags) {
 }
 
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
-    if (!automatedParams.empty()) {
-        log_lf(Log::L_DEBUG, "Loading %zu automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
-    }
     at->clearAutomations();
     for (const automation_view_t& automatedParam : automatedParams) {
         int32_t targetParam = automatedParam.targetParam;
@@ -346,7 +343,6 @@ void loadAutomation(const std::vector<automation_view_t>& automatedParams, autom
 void storeAutomation(std::vector<automation_view_t>& automatedParams, automatable_t* at) {
     std::vector<automation_lane_t> out;
     at->getAllAutomatedParams(out);
-    int total = 0;
     for (const auto& automatedParam : out) {
         dbgassert(!automatedParam.src.points.empty());
         automation_view_t atv;
@@ -354,10 +350,6 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
         atv.points      = automatedParam.src.points;
         atv.active      = automatedParam.src.isActive();
         automatedParams.push_back(atv);
-        total++;
-    }
-    if (total) {
-        log_lf(Log::L_TRACE, "Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
     }
 }
 

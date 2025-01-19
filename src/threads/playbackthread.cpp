@@ -212,7 +212,6 @@ private:
                                     tickPos                = startPos;
                                     ctrl->getPlaybackPos() = startPos;
                                     samplePos              = tickToSampleConvert<samplecount_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
-                                    log_printf("START ON %s seconds: %.2f - sample %zd\n", StringAsCStr(tickAsBeatString(startPos, false)), toSeconds(startPos, bpm100), samplePos);
                                     host->onStartPlayback(this->m_prjCtrl);
                                     timer2.reset();
                                     break;
