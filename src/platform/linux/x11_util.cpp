@@ -1,3 +1,4 @@
+#include "host/host_plugin_window.h"
 #include "logging.h"
 #include <cstddef>
 #if defined(__linux__)
@@ -117,20 +118,14 @@ static void SetWindowMaximizedFlag(Display* display,
                &e);
 }
 
-bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
-    if (!placement->valid) {
-        return false;
-    }
-
-    if (placement->type != 2) {
-        return false;
-    }
-
-    Display* display = glfwGetX11Display();
-    Window window    = glfwGetX11Window(glfw);
+bool restoreX11WindowPos(Display* display, Window window, appwindow_size_t* appwindowsize) {
     if (!display || !window) {
         return false;
     }
+    if (appwindowsize->type != 2) {
+        return false;
+    }
+    appwindow_size_linux_t* placement = (appwindow_size_linux_t*) appwindowsize->data;
 
     SetWindowMaximizedFlag(display, window, "_NET_WM_STATE_MAXIMIZED_HORZ", false);
     SetWindowMaximizedFlag(display, window, "_NET_WM_STATE_MAXIMIZED_VERT", false);
@@ -152,39 +147,52 @@ bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
     }
     return true;
 }
+bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* appwindowsize) {
+    return restoreX11WindowPos(glfwGetX11Display(), glfwGetX11Window(glfw), appwindowsize);
+}
+bool restoreHostWindowPos(host_plugin_window* hostWindow, appwindow_size_t* size) {
+    return restoreX11WindowPos(glfwGetX11Display(), hostWindow->getHWND(), size);
+}
+bool saveX11WindowPos(Display* display, Window window, appwindow_size_t* appwindowsize) {
+  if (!display || !window) {
+      return false;
+  }
 
-bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
-    *placement = appwindow_size_t{};
-    placement->type = 2;
-    
-    Display* display = glfwGetX11Display();
-    Window window    = glfwGetX11Window(glfw);
-    if (!display || !window) {
-        return false;
-    }
+  XWindowAttributes xwa;
+  if (!XGetWindowAttributes(display, window, &xwa)) {
+      return false;
+  }
 
-    XWindowAttributes xwa;
-    if (!XGetWindowAttributes(display, window, &xwa)) {
-        return false;
-    }
+  Window child{};
+  if (!XTranslateCoordinates(display, window, xwa.root, 0, 0, &xwa.x, &xwa.y, &child)) {
+      return false;
+  }
 
-    Window child{};
-    if (!XTranslateCoordinates(display, window, xwa.root, 0, 0, &xwa.x, &xwa.y, &child)) {
-        return false;
-    }
+  if (xwa.width < 0 || xwa.height < 0) {
+      return false;
+  }
+  appwindow_size_linux_t* placement = (appwindow_size_linux_t*) appwindowsize->data;
+  placement->valid = true;
+  placement->hmax  = IsWindowManagerStateSet(display, window, "_NET_WM_STATE_MAXIMIZED_HORZ");
+  placement->vmax  = IsWindowManagerStateSet(display, window, "_NET_WM_STATE_MAXIMIZED_VERT");
 
-    if (xwa.width < 0 || xwa.height < 0) {
-        return false;
-    }
-    placement->valid = true;
-    placement->hmax  = IsWindowManagerStateSet(display, window, "_NET_WM_STATE_MAXIMIZED_HORZ");
-    placement->vmax  = IsWindowManagerStateSet(display, window, "_NET_WM_STATE_MAXIMIZED_VERT");
-
-    placement->x = xwa.x;
-    placement->w = xwa.width;
-    placement->y = xwa.y;
-    placement->h = xwa.height;
-    return true;
+  placement->x = xwa.x;
+  placement->w = xwa.width;
+  placement->y = xwa.y;
+  placement->h = xwa.height;
+  return true;
 }
 
+bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* appwindowsize) {
+    *appwindowsize = appwindow_size_t{};
+    appwindowsize->type = 2;
+    return saveX11WindowPos(glfwGetX11Display(), glfwGetX11Window(glfw), appwindowsize);
+}
+
+bool saveHostWindowPos(host_plugin_window* hostWindow, appwindow_size_t* appwindowsize) {
+  Window window = hostWindow->getHWND();
+  *appwindowsize = appwindow_size_t{};
+  appwindowsize->type = 2;
+  return saveX11WindowPos(glfwGetX11Display(), window, appwindowsize);
+}
 #endif
