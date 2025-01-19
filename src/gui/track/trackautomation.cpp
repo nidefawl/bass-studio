@@ -719,7 +719,7 @@ void gui_track_automation::render(NVGcontext* vg) {
             mouseTick = data.points[currentDragged.dataPt].time;
             valAtMouse = data.points[currentDragged.dataPt].val;
         }
-        if (1) {
+        if constexpr (false) {
             float xTick = grid.tickToScreenD(mouseTick);
             nvgBeginPath(vg);
             nvgCircle(vg, xTick, sizeInset.y * (1.0f - valAtMouse), radiusHandleHL);
