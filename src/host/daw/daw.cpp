@@ -735,6 +735,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                     auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(mainCtrl, *this, highestIndex + 1);
                     ivec2 windowSize;
                     mainCtrl->mainWindow->getSize(&windowSize);
+                    windowSize = math::maxvec2(windowSize, ivec2(320, 240));
                     auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_STORE_WINDOW_POS_SIZE | WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_RESIZABLE);
                     auto idxOfWindow = companionCtrlStdPtr->getDawWindowIndex();
                     companionWindows.push_back(DawWindowCompanion{ compWindowNew, companionCtrlStdPtr });

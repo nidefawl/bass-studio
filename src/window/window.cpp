@@ -1346,7 +1346,8 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl,
 
     //TODO: document lifetime of control
     std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, overlayCtrl);
-
+    dbgassert(windowSize.x > 0 && windowSize.y > 0);
+    windowSize = math::maxvec2(windowSize, ivec2(1));
     ow->createMainWindow(windowSize.x, windowSize.y, flags);
     if (!(flags & WINDOW_IS_MAINWINDOW_SLAVE)) {
         ow->initControl();
