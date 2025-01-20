@@ -88,7 +88,7 @@ namespace DAW {
         field->setSelectionRange(-1, -1);
         field->parentCtrl->focusGui(field);
     }
-    void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
+
     bool OpenRenameAbsoluteFilePopup(AppCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& pathAbs, std::function<bool(const String& str)> callback) {
         if (pathAbs.empty()) {
             return false;

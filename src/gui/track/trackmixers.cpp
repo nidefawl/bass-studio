@@ -1444,8 +1444,11 @@ namespace DAW {
     }
 
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry) {
-        auto cb = [trackEntry = trackentry](const String& str) {
-            trackEntry->track->name = str;
+        auto cb = [ctrl, trackId = trackentry->track->projectIdx](const String& str) {
+            auto* track = ctrl->getDaw()->getTrackId(trackId);
+            if (track) {
+                track->name = str;
+            }
             return false;
         };
         guibase* title = nullptr;
