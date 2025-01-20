@@ -121,17 +121,17 @@ public:
     ~guipluginview() override;
     effectbase* const effect;
     guidropdownprogram dropdownProgram;
-    gui_list params;                    //TODO: use add() on control
-    guibuttontoggle buttonOpenEditor;   //TODO: use add() on controls
-    guibuttontoggle buttonShowParameterList;// TODO: use add() on controls;
+    gui_list params;
+    guibuttontoggle buttonOpenEditor;
+    guibuttontoggle buttonShowParameterList;
     gui_textfield textFieldSearchBox;
     int layoutWidthParams = 200;
 
-    /* holds view controller for internal vstplugins with custom gui (non-steinberg api) */
+    /* holds view controller for internal plugins */
     std::shared_ptr<PluginViewContainer> viewCtr;
-    /* holds guictrs of internal vstplugins with custom gui (non-steinberg api) */
+    /* holds guictrs of internal plugins */
     std::vector<guictr_base*> viewCtrs;
-    /* holds size for internal vstplugins with custom gui (non-steinberg api) */
+    /* holds size for internal plugins */
     ivec2 sizeCtrs{};
     bool bParamListVisible = true;
     void updateParamList(const String& strParamNameFilter);

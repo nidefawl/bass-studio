@@ -630,11 +630,9 @@ guipluginview::guipluginview(effectbase* _effect)
     params.setVisible(_effect->getModuleType() == MODULE_TYPE_VST2 
                       || _effect->getModuleType() == MODULE_TYPE_CLAP
                       || _effect->getModuleType() == MODULE_TYPE_VST3);
-    // this->isHorizontalTitle = !params.isVisible();
     params.setRowHeight(48);
     params.margin = 2;
     params.padding = 4;
-    textFieldSearchBox.setParent(this);
     textFieldSearchBox.setChangeCallback([this](const String& str) {
         updateParamList(str);
         return true;
@@ -642,29 +640,28 @@ guipluginview::guipluginview(effectbase* _effect)
     textFieldSearchBox.setPlaceholder("Search");
     buttonOpenEditor.icon = ICON_SYNTH_SMALL;
     buttonOpenEditor.setStateRef(&_effect->bEditOpen);
-    buttonOpenEditor.setParent(this);
     buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
-    params.setParent(this);
     bParamListVisible = params.isVisible();
     buttonShowParameterList.icon = ICON_ADJUST;
     buttonShowParameterList.setStateRef(&bParamListVisible);
-    buttonShowParameterList.setParent(this);
     buttonShowParameterList.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
-    dropdownProgram.setParent(this);
     updateParamList("");
     addGuiBtnTitlebar(&buttonShowParameterList);
     addGuiBtnTitlebar(&buttonOpenEditor);
+    add(&params);
+    add(&dropdownProgram);
+    add(&textFieldSearchBox);
 }
 
 guipluginview::~guipluginview() {
     remove(&buttonOpenEditor);
     remove(&buttonShowParameterList);
+    remove(&params);
+    remove(&dropdownProgram);
+    remove(&textFieldSearchBox);
 }
 void guipluginview::setControl(BaseCtrl* parentCtrl) {
     guiplugin::setControl(parentCtrl);
-    params.setControl(parentCtrl);
-    dropdownProgram.setControl(parentCtrl);
-    textFieldSearchBox.setControl(parentCtrl);
     for (auto* ctr : viewCtrs) {
         ctr->setControl(parentCtrl);
     }
@@ -1052,7 +1049,6 @@ void guipluginview::setLayoutMode(int32_t layoutMode) {
     guiplugin::setLayoutMode(layoutMode);
     dropdownProgram.setVisible(this->layoutMode == 0 && effect->programNames.size());
     params.setVisible(this->bParamListVisible && this->layoutMode == 0);
-    // bParamListVisible = params.isVisible();
     for (auto* ctr : viewCtrs) {
         ctr->setVisible(layoutMode == 0);
     }
@@ -1061,7 +1057,6 @@ void guipluginview::setLayoutMode(int32_t layoutMode) {
 void guiplugin::setLayoutMode(int32_t layoutMode) {
     this->layoutMode = layoutMode;
     guiMeter.setVisible(layoutMode == 0 && bShowMeter);
-    // isHorizontalTitle = layoutMode == 0;
     buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
 }
 
