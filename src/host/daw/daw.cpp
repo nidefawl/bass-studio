@@ -1439,6 +1439,11 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
     resetClipViews();
     auto parentId = track->parent ? track->parent->projectIdx : -1;
     auto childTreeIdx = track->childIdxTree;
+    for (DawCtrl* pDawCtrl : dawCtrls) {
+        if (pDawCtrl->isOk()) {
+            pDawCtrl->closeAllContextMenus();
+        }
+    }
     project.trackList.removeTrack(track);
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
