@@ -176,11 +176,11 @@ inline std::variant<gpu_program, String> loadshader(const gpu_program_definition
     lastModTimeGpuSoundShader = timeDiskGpuSoundShader;
     lastModTimeShaderToyShader = timeDiskShaderToyShader;
     if (!glSourceLoader->addStageSrc(GL_COMPUTE_SHADER, filenameGpuSoundShader.c_str(), 0) || glSourceLoader->sources.empty()) {
-        log_lf(Log::L_ERROR, "Failed to load compute shader source file %s", StringAsCStr(filenameGpuSoundShader));
+        log_lf(Log::L_ERROR, "Failed to load compute shader source file %s\n", StringAsCStr(filenameGpuSoundShader));
         return previous;
     }
     if (!glSourceLoader->addStageSrc(GL_COMPUTE_SHADER, filenameShaderToyShader.c_str(), 0)) {
-        log_lf(Log::L_ERROR, "Failed to load compute shader source file %s", StringAsCStr(filenameShaderToyShader));
+        log_lf(Log::L_ERROR, "Failed to load compute shader source file %s\n", StringAsCStr(filenameShaderToyShader));
         return previous;
     }
     auto& sourcefiles = glSourceLoader->sources;
