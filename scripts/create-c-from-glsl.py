@@ -99,11 +99,16 @@ def main():
         ouput.write(outputCSourceFile.encode("UTF-8"))
 
     # create header file with declarations
-    cVarDecls = ['#pragma once\n\n']
-    cVarDecls.append('extern "C" {\n')
+    cVarDecls = ['#pragma once\n']
+    cVarDecls.append('#ifdef __cplusplus')
+    cVarDecls.append('extern "C" {')
+    cVarDecls.append('#endif\n')
     for shaderFileEntry in shaderFileList:
         cVarDecls.append(f'extern const char* const {shaderFileEntry["VAR_NAME"]};')
-    cVarDecls.append('\n}\n')
+    cVarDecls.append('\n#ifdef __cplusplus')
+    cVarDecls.append('}')
+    cVarDecls.append('#endif')
+    cVarDecls.append('')
     outputCHeaderFile = '\n'.join(cVarDecls)
     pathBuiltinShadersH = os.path.join(path, "gl", "builtin_shaders.h")
     with open(pathBuiltinShadersH, "wb") as ouput:
