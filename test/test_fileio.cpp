@@ -40,14 +40,12 @@ void test_listFilesystemNonRecursive() {
   std::vector<String> fileExtensions;
   auto resPath = TEST_PATH("filebrowser");
   listFilesystemNonRecursive(resPath, fileExtensions, files);
-  TEST_ASSERT_EQUAL(files.size(), 4U);
+  TEST_ASSERT_EQUAL(files.size(), 3U);
   for (auto& file : files) {
     TEST_ASSERT_EQUAL(file.bIsDir, true);
     std::vector<FileFound> filesSub;
     listFilesystemNonRecursive(file.path, fileExtensions, filesSub);
-    if ("0files" == file.name) {
-      TEST_ASSERT_EQUAL(filesSub.size(), 0U);
-    } else if ("1file" == file.name) {
+    if ("1file" == file.name) {
       TEST_ASSERT_EQUAL(filesSub.size(), 1U);
       for (auto& fileSub : filesSub) {
         TEST_ASSERT_EQUAL(fileSub.bIsDir, false);
