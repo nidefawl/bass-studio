@@ -96,7 +96,7 @@ struct DynamicLibrary
 	template <typename T>
 	T getProcAddress (const char* name)
 	{
-		return module ? reinterpret_cast<T> (GetProcAddress (module, name)) : nullptr;
+		return module ? reinterpret_cast<T> ((void*) GetProcAddress (module, name)) : nullptr;
 	}
 
 private:

@@ -208,10 +208,10 @@ LRESULT Window::proc (UINT message, WPARAM wParam, LPARAM lParam)
 			auto* proposedSize = reinterpret_cast<SIZE*> (lParam);
 			auto newScaleFactor =
 			    static_cast<double> (wParam) / static_cast<double> (USER_DEFAULT_SCREEN_DPI);
-			controller->onContentScaleFactorChanged (*this, newScaleFactor);
+			controller->onContentScaleFactorChanged (*this, float(newScaleFactor));
 			if (dpiChangedSize.width != 0 && dpiChangedSize.height != 0)
 			{
-				WINDOWINFO windowInfo {0};
+				WINDOWINFO windowInfo {};
 				GetWindowInfo (hwnd, &windowInfo);
 				RECT clientRect {};
 				clientRect.right = dpiChangedSize.width;
@@ -295,7 +295,7 @@ void Window::resize (Size newSize)
 	}
 	if (getContentSize () == newSize)
 		return;
-	WINDOWINFO windowInfo {0};
+	WINDOWINFO windowInfo {};
 	GetWindowInfo (hwnd, &windowInfo);
 	RECT clientRect {};
 	clientRect.right = newSize.width;
