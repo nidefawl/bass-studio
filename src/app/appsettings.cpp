@@ -33,6 +33,6 @@ void recentfilelist::add(const String& path) {
     std::tm* now  = std::localtime(&t);
     auto strDate  = std::to_string(now->tm_year + 1900) +
                    "-" + std::to_string(now->tm_mon + 1) +
-                   "-" + std::to_string(now->tm_mday) + "\n";
+                   "-" + std::to_string(now->tm_mday);
     recentFilesMeta[path] = recentfilelistentry{ path, strDate };
 }
