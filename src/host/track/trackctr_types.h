@@ -75,7 +75,7 @@ namespace DAW {
     };
     gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ivec2 pos, bool bIncludeBeforeAfter = true);
     void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepos, const String& trackName, bool bIncludeBeforeAfter = true);
-    void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot);
+    bool MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot);
     void InsertTrackContainerOnTrack(DawInstance* daw, trackcontainer_snapshot_t* ctr, const gui_track_drop_position_t& slot);
     void InsertEffectDeferredOnStage(DawInstance* daw, audio_stage_t* stage, effect_deferred* effect, int32_t slot, bool activate, bool scrollTo);
 }

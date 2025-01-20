@@ -1798,7 +1798,7 @@ void SetDragDropTrackInidicatorFromMousePos(guictr_tracks* parent, ivec2 mousepo
     parent->dawCtrl->getDragDropTarget() = target;
 }
 
-void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot) {
+bool MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t slot) {
     using drop_type = gui_track_drop_position_t::drop_type;
     int32_t treeIdx = 0;
     track_t* targetTrack = nullptr;
@@ -1826,16 +1826,16 @@ void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t
             break;
         default:
             dbgassert(0);
-            return;
+            return false;
     }
     if (targetTrack && TRACKTYPE_TO_CTR(targetTrack->type) != TRACKTYPE_TO_CTR(track->type)) {
         log_printf("Cannot move there\n");
-        return;
+        return false;
     }
     // don't move master and return to top tracks
     if (!targetTrack && TRACKTYPE_TO_CTR(track->type) != TRACK_CTR_MIDIAUDIO) {
         log_printf("Cannot move there\n");
-        return;
+        return false;
     }
     track_tree_pos_t treePos{};
     treePos.treeIdx      = treeIdx;
@@ -1844,7 +1844,7 @@ void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t
     std::vector<track_t*> selectedTracks;
     selectedTracks.push_back(track);
     ThreadLock lock  = daw->lockPlayThread();
-    bool failed      = !daw->getTracks().moveTracks(selectedTracks, treePos);
+    bool bSuccess = daw->getTracks().moveTracks(selectedTracks, treePos);
     String strTarget = "<root>";
     if (treePos.parent) {
         strTarget = treePos.parent->name;
@@ -1853,6 +1853,7 @@ void MoveTrackToSlot(DawInstance* daw, track_t* track, gui_track_drop_position_t
     daw->onPluginsChanged();
     daw->updateVisibleTrackContents();
     //TODO: edithistory entry
+    return bSuccess;
 }
 
 void InsertTrackContainerOnTrack(DawInstance* daw, trackcontainer_snapshot_t* ctr, const gui_track_drop_position_t& slot) {
