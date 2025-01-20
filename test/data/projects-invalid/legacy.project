@@ -1,0 +1,1258 @@
+{
+    "project": {
+        "ptr_wrapper": {
+            "id": 2147483649,
+            "data": {
+                "cereal_class_version": 1,
+                "projectdata": {
+                    "masterTracks": {
+                        "tracklist": [
+                            {
+                                "cereal_class_version": 5,
+                                "idx": 0,
+                                "settings": {
+                                    "cereal_class_version": 0,
+                                    "name": "Master 1",
+                                    "rgb": -15776251,
+                                    "type": 0
+                                },
+                                "clips": [],
+                                "data": {
+                                    "plugins": [],
+                                    "track": {
+                                        "params": [
+                                            {
+                                                "idx": 4127,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4111,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4126,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4110,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4125,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4109,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4124,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4108,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4123,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4107,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4122,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4106,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4105,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4104,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4103,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4102,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4116,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4121,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4113,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4120,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4112,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4119,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 2,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4115,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4118,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 0.7373871207237244,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4114,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4117,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "arp": {
+                                        "params": [
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.25,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.625,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "io": {
+                                        "input": {
+                                            "type": 0,
+                                            "stageId": -1,
+                                            "stageEndPointType": 2,
+                                            "externalInputType": 1,
+                                            "projectGlobalId": 0,
+                                            "externalInputIdx": 0,
+                                            "srcChannelOffset": 0,
+                                            "dstChannelOffset": 0
+                                        },
+                                        "output": {
+                                            "type": 0,
+                                            "stageId": -1,
+                                            "stageEndPointType": 2,
+                                            "externalInputType": 1,
+                                            "projectGlobalId": 0,
+                                            "externalInputIdx": 0,
+                                            "srcChannelOffset": 0,
+                                            "dstChannelOffset": 0
+                                        },
+                                        "midiInputs": [
+                                            {
+                                                "stageId": -1,
+                                                "stageEndPointType": 2,
+                                                "type": 1,
+                                                "inputName": "None",
+                                                "srcChannel": -1,
+                                                "dstChannel": -1
+                                            }
+                                        ]
+                                    },
+                                    "routing": {
+                                        "inputRoutingOutputStage": [
+                                            {
+                                                "type": 0,
+                                                "stageId": -1,
+                                                "stageEndPointType": 2,
+                                                "externalInputType": 1,
+                                                "projectGlobalId": 0,
+                                                "externalInputIdx": 0,
+                                                "srcChannelOffset": 0,
+                                                "dstChannelOffset": 0
+                                            }
+                                        ],
+                                        "inputRoutingEffects": [],
+                                        "routingState": 1
+                                    },
+                                    "modulation": {
+                                        "modulations": [],
+                                        "mixer": [],
+                                        "arp": []
+                                    }
+                                },
+                                "stageIds": {
+                                    "stageId": 4,
+                                    "inputStageId": 5,
+                                    "outputStageId": 6,
+                                    "outputPostStageId": 7
+                                },
+                                "storeOpts": {
+                                    "storePluginPreset": true,
+                                    "storeAutomation": true,
+                                    "storeClips": true,
+                                    "storeLayouts": true
+                                },
+                                "layouts": [
+                                    {
+                                        "key": 0,
+                                        "value": {
+                                            "cereal_class_version": 2,
+                                            "layout": {
+                                                "height": 4,
+                                                "hideSubtracks": false,
+                                                "fold": false
+                                            },
+                                            "subtracks": []
+                                        }
+                                    },
+                                    {
+                                        "key": 1,
+                                        "value": {
+                                            "layout": {
+                                                "height": 4,
+                                                "hideSubtracks": false,
+                                                "fold": false
+                                            },
+                                            "subtracks": []
+                                        }
+                                    }
+                                ],
+                                "layoutsMixer": [
+                                    {
+                                        "key": 0,
+                                        "value": {
+                                            "layout": {
+                                                "width": 8
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "key": 1,
+                                        "value": {
+                                            "layout": {
+                                                "width": 8
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        "hierachy": [
+                            -1
+                        ]
+                    },
+                    "returnTracks": {
+                        "tracklist": [],
+                        "hierachy": []
+                    },
+                    "tracks": {
+                        "tracklist": [
+                            {
+                                "idx": 0,
+                                "settings": {
+                                    "name": "Midi 1",
+                                    "rgb": -15047042,
+                                    "type": 2
+                                },
+                                "clips": [],
+                                "data": {
+                                    "plugins": [],
+                                    "track": {
+                                        "params": [
+                                            {
+                                                "idx": 4127,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4111,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4126,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4110,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4125,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4109,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4124,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4108,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4123,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4107,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4122,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4106,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4105,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4104,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4103,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4102,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4116,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4121,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4113,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4120,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4112,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4119,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 2,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4115,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4118,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 0.7373871207237244,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4114,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4117,
+                                                "val": 0.5,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "arp": {
+                                        "params": [
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.25,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.625,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "io": {
+                                        "input": {
+                                            "type": 1,
+                                            "stageId": -1,
+                                            "stageEndPointType": 2,
+                                            "externalInputType": 1,
+                                            "projectGlobalId": 0,
+                                            "externalInputIdx": 0,
+                                            "srcChannelOffset": 0,
+                                            "dstChannelOffset": 0
+                                        },
+                                        "output": {
+                                            "type": 0,
+                                            "stageId": -1,
+                                            "stageEndPointType": 2,
+                                            "externalInputType": 1,
+                                            "projectGlobalId": 0,
+                                            "externalInputIdx": 0,
+                                            "srcChannelOffset": 0,
+                                            "dstChannelOffset": 0
+                                        },
+                                        "midiInputs": [
+                                            {
+                                                "stageId": -1,
+                                                "stageEndPointType": 0,
+                                                "type": 0,
+                                                "inputName": "Default",
+                                                "srcChannel": -1,
+                                                "dstChannel": -1
+                                            }
+                                        ]
+                                    },
+                                    "routing": {
+                                        "inputRoutingOutputStage": [
+                                            {
+                                                "type": 0,
+                                                "stageId": -1,
+                                                "stageEndPointType": 2,
+                                                "externalInputType": 1,
+                                                "projectGlobalId": 0,
+                                                "externalInputIdx": 0,
+                                                "srcChannelOffset": 0,
+                                                "dstChannelOffset": 0
+                                            }
+                                        ],
+                                        "inputRoutingEffects": [],
+                                        "routingState": 1
+                                    },
+                                    "modulation": {
+                                        "modulations": [],
+                                        "mixer": [],
+                                        "arp": []
+                                    }
+                                },
+                                "stageIds": {
+                                    "stageId": 0,
+                                    "inputStageId": 1,
+                                    "outputStageId": 2,
+                                    "outputPostStageId": 3
+                                },
+                                "storeOpts": {
+                                    "storePluginPreset": true,
+                                    "storeAutomation": true,
+                                    "storeClips": true,
+                                    "storeLayouts": true
+                                },
+                                "layouts": [
+                                    {
+                                        "key": 0,
+                                        "value": {
+                                            "layout": {
+                                                "height": 4,
+                                                "hideSubtracks": false,
+                                                "fold": false
+                                            },
+                                            "subtracks": []
+                                        }
+                                    },
+                                    {
+                                        "key": 1,
+                                        "value": {
+                                            "layout": {
+                                                "height": 4,
+                                                "hideSubtracks": false,
+                                                "fold": false
+                                            },
+                                            "subtracks": []
+                                        }
+                                    }
+                                ],
+                                "layoutsMixer": [
+                                    {
+                                        "key": 0,
+                                        "value": {
+                                            "layout": {
+                                                "width": 6
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "key": 1,
+                                        "value": {
+                                            "layout": {
+                                                "width": 6
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        "hierachy": [
+                            -1
+                        ]
+                    },
+                    "globals": {
+                        "loopEnabled": true,
+                        "loopStart": 0,
+                        "loopLen": 16384,
+                        "tempo100": 12800,
+                        "signatureNum": 4,
+                        "signatureDenom": 2,
+                        "playbackPos": 0,
+                        "cursor": {
+                            "pos": 0,
+                            "track": -1,
+                            "subtrack": -1,
+                            "range": 0,
+                            "trackrange": 0,
+                            "subtrackrange": 0
+                        },
+                        "grooveData": []
+                    },
+                    "exportSettings": {
+                        "pos": 0,
+                        "len": 0,
+                        "path": "",
+                        "locked": false
+                    },
+                    "quantizeSettings": {
+                        "start": 2048,
+                        "end": 2048
+                    },
+                    "samplerate": 44100
+                },
+                "layout": {
+                    "grid": {
+                        "offset": 0.0,
+                        "zoom": 0.1599999964237213
+                    },
+                    "scrollOffsetX": 0.0
+                },
+                "samples": {
+                    "list": []
+                },
+                "layouts": [
+                    {
+                        "value0": {
+                            "ptr_wrapper": {
+                                "id": 2147483650,
+                                "data": {
+                                    "cereal_class_version": 1,
+                                    "type": 0,
+                                    "label": "",
+                                    "ctrLayout": 0,
+                                    "activePosition": -1,
+                                    "entries": [],
+                                    "splitterPositions": [],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        "value1": {
+                            "ptr_wrapper": {
+                                "id": 2147483651,
+                                "data": {
+                                    "type": 0,
+                                    "label": "",
+                                    "ctrLayout": 0,
+                                    "activePosition": -1,
+                                    "entries": [],
+                                    "splitterPositions": [],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        "value2": [
+                            0.0,
+                            1.0
+                        ],
+                        "center": {
+                            "ptr_wrapper": {
+                                "id": 2147483652,
+                                "data": {
+                                    "type": 0,
+                                    "label": "",
+                                    "ctrLayout": 1,
+                                    "activePosition": -1,
+                                    "entries": [
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483653,
+                                                "data": {
+                                                    "type": 101,
+                                                    "label": "Layout",
+                                                    "ctrLayout": 3,
+                                                    "activePosition": 0,
+                                                    "entries": [
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483654,
+                                                                "data": {
+                                                                    "type": 129,
+                                                                    "label": "Tracks",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 105,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483655,
+                                                                "data": {
+                                                                    "type": 130,
+                                                                    "label": "Nodes",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 106,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 103,
+                                                    "data": ""
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483656,
+                                                "data": {
+                                                    "type": 101,
+                                                    "label": "Layout",
+                                                    "ctrLayout": 3,
+                                                    "activePosition": 0,
+                                                    "entries": [
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483657,
+                                                                "data": {
+                                                                    "type": 114,
+                                                                    "label": "Clip Editor",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 107,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483658,
+                                                                "data": {
+                                                                    "type": 140,
+                                                                    "label": "Mixers",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 109,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483659,
+                                                                "data": {
+                                                                    "type": 124,
+                                                                    "label": "Plugins",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 108,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 104,
+                                                    "data": ""
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "splitterPositions": [
+                                        0.5
+                                    ],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "value0": {
+                            "ptr_wrapper": {
+                                "id": 2147483660,
+                                "data": {
+                                    "type": 0,
+                                    "label": "",
+                                    "ctrLayout": 0,
+                                    "activePosition": -1,
+                                    "entries": [],
+                                    "splitterPositions": [],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        "value1": {
+                            "ptr_wrapper": {
+                                "id": 2147483661,
+                                "data": {
+                                    "type": 0,
+                                    "label": "",
+                                    "ctrLayout": 1,
+                                    "activePosition": -1,
+                                    "entries": [
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483662,
+                                                "data": {
+                                                    "type": 101,
+                                                    "label": "Top",
+                                                    "ctrLayout": 3,
+                                                    "activePosition": 0,
+                                                    "entries": [
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483663,
+                                                                "data": {
+                                                                    "type": 107,
+                                                                    "label": "Plugin Library",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483664,
+                                                                "data": {
+                                                                    "type": 108,
+                                                                    "label": "Loaded Plugins",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483665,
+                                                                "data": {
+                                                                    "type": 112,
+                                                                    "label": "Performance",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483666,
+                                                                "data": {
+                                                                    "type": 102,
+                                                                    "label": "Properties",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "splitterPositions": [],
+                                                    "entryTag": -1,
+                                                    "data": ""
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483667,
+                                                "data": {
+                                                    "type": 101,
+                                                    "label": "Bottom",
+                                                    "ctrLayout": 3,
+                                                    "activePosition": 0,
+                                                    "entries": [
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483668,
+                                                                "data": {
+                                                                    "type": 106,
+                                                                    "label": "Preferences",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483669,
+                                                                "data": {
+                                                                    "type": 103,
+                                                                    "label": "Theme",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483670,
+                                                                "data": {
+                                                                    "type": 104,
+                                                                    "label": "History",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483671,
+                                                                "data": {
+                                                                    "type": 102,
+                                                                    "label": "Properties",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483672,
+                                                                "data": {
+                                                                    "type": 105,
+                                                                    "label": "Shader Test",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": -1,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "splitterPositions": [],
+                                                    "entryTag": -1,
+                                                    "data": ""
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "splitterPositions": [
+                                        0.5
+                                    ],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        },
+                        "value2": [
+                            0.0,
+                            0.8500000238418579
+                        ],
+                        "center": {
+                            "ptr_wrapper": {
+                                "id": 2147483673,
+                                "data": {
+                                    "type": 0,
+                                    "label": "",
+                                    "ctrLayout": 1,
+                                    "activePosition": -1,
+                                    "entries": [
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483674,
+                                                "data": {
+                                                    "type": 101,
+                                                    "label": "Layout",
+                                                    "ctrLayout": 3,
+                                                    "activePosition": 0,
+                                                    "entries": [
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483675,
+                                                                "data": {
+                                                                    "type": 129,
+                                                                    "label": "Tracks",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 105,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483676,
+                                                                "data": {
+                                                                    "type": 130,
+                                                                    "label": "Nodes",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 106,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "splitterPositions": [],
+                                                    "entryTag": 103,
+                                                    "data": ""
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "ptr_wrapper": {
+                                                "id": 2147483677,
+                                                "data": {
+                                                    "type": 101,
+                                                    "label": "Layout",
+                                                    "ctrLayout": 1,
+                                                    "activePosition": -1,
+                                                    "entries": [
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483678,
+                                                                "data": {
+                                                                    "type": 114,
+                                                                    "label": "Clip Editor",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 107,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483679,
+                                                                "data": {
+                                                                    "type": 140,
+                                                                    "label": "Mixers",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 109,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "ptr_wrapper": {
+                                                                "id": 2147483680,
+                                                                "data": {
+                                                                    "type": 124,
+                                                                    "label": "Plugins",
+                                                                    "ctrLayout": 0,
+                                                                    "activePosition": -1,
+                                                                    "entries": [],
+                                                                    "splitterPositions": [],
+                                                                    "entryTag": 108,
+                                                                    "data": ""
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "splitterPositions": [
+                                                        0.3333333432674408,
+                                                        0.6666666865348816
+                                                    ],
+                                                    "entryTag": 104,
+                                                    "data": ""
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "splitterPositions": [
+                                        0.5
+                                    ],
+                                    "entryTag": -1,
+                                    "data": ""
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
