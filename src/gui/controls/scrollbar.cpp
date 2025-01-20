@@ -1,15 +1,15 @@
 #include <nanovg.h>
-#include "logging.h"
-#include "math/seq_math.h"
-#include "math/vec.h"
-#include "scrollbar.h"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "math/vec.hpp"
+#include "scrollbar.hpp"
 
-#include "gui/gui.h"
-#include "guicolors.h"
-#include "guiconstant.h"
-#include "theme.h"
-#include "basectrl.h"
-#include "splitter.h"
+#include "gui/gui.hpp"
+#include "guicolors.hpp"
+#include "guiconstant.hpp"
+#include "theme.hpp"
+#include "basectrl.hpp"
+#include "splitter.hpp"
 
 void gui_scrollbar::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg)) {

@@ -4,20 +4,20 @@
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "math/seq_math.h"
-#include "seq_util.h"
-#include "math/vec.h"
-#include "math/mat.h"
-#include "str_util.h"
-#include "fileio.h"
-#include "host/audiocache/audiocache.h"
+#include "math/seq_math.hpp"
+#include "seq_util.hpp"
+#include "math/vec.hpp"
+#include "math/mat.hpp"
+#include "str_util.hpp"
+#include "fileio.hpp"
+#include "host/audiocache/audiocache.hpp"
 
-#include "gl_pathrenderer.h"
-#include "gl_util.h"
-#include "gl_attr.h"
-#include "gl_vbo.h"
-#include "gl_tess2d.h"
-#include "hires_timer.h"
+#include "gl_pathrenderer.hpp"
+#include "gl_util.hpp"
+#include "gl_attr.hpp"
+#include "gl_vbo.hpp"
+#include "gl_tess2d.hpp"
+#include "hires_timer.hpp"
 #include "assert_dbg.h"
 #include <par/par_streamlines.h>
 

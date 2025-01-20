@@ -1,9 +1,9 @@
 
-#include "math/seq_math.h"
-#include "math/vec.h"
-#include "str_util.h"
-#include "gui/container/container.h"
-#include "gui/controls/inputfield.h"
+#include "math/seq_math.hpp"
+#include "math/vec.hpp"
+#include "str_util.hpp"
+#include "gui/container/container.hpp"
+#include "gui/controls/inputfield.hpp"
 
 
 template<typename T>

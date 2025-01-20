@@ -1,0 +1,132 @@
+#pragma once
+#include "compiler.hpp"
+#include "math/seq_math.hpp"
+#include "types.hpp"
+#include <map>
+#include "str_util.hpp"
+
+#define STATS_PROCESSING_MAX_SAMPLES 1024
+#define STATS_PROCESSING_INTERVAL_STEP 16
+struct track_midiprocess_profiling_t {
+    int64_t tm0InputClips       = 0;
+    int64_t tm1InputRT          = 0;
+    int64_t tm2ProcNotes        = 0;
+    int64_t tm3RevalidateEnds   = 0;
+    int64_t tm4SortEvents       = 0;
+    int64_t tm5ProcArp          = 0;
+    int64_t tm6UpdateOutputPost = 0;
+    int64_t tm7ValidateMidi     = 0;
+};
+struct stats_processing_timings_t {
+    int64_t statsProcSamples[STATS_PROCESSING_MAX_SAMPLES] = {};
+
+    int64_t timeTrackProcessPluginsRaw = 0;
+    int64_t timeTrackProcessPlugins    = 0;
+    int64_t timeTrackApplyAutomation   = 0;
+    int64_t timeTrackProcessMidi       = 0;
+    int64_t timeTrackMixInputs         = 0;
+    int64_t timeTrackRecordPre         = 0;
+    int64_t timeTrackFillAudioClips    = 0;
+    int64_t timeTrackProcessAudio      = 0;
+    int64_t timeTrackRecordPost        = 0;
+    int32_t statsProcStep              = 0;
+    int64_t statsWriteOffset           = 0;
+    int64_t numBlocksProcessed         = 0;
+    static MAYBE_INLINE_CONSTEXPR void MixStats(stats_processing_timings_t& lhs, const stats_processing_timings_t& rhs, double f) {
+        // can't use memcpy because of constexpr
+        // std::memcpy(lhs.statsProcSamples, rhs.statsProcSamples, sizeof(lhs.statsProcSamples));
+        for (int i = 0; i < STATS_PROCESSING_MAX_SAMPLES; i++) {
+            lhs.statsProcSamples[i] = rhs.statsProcSamples[i];
+        }
+    #define PROF_LERP_FIELD(fieldname) lhs.fieldname = math::rounddS64(double(lhs.fieldname) * (1.0 - f) + double(rhs.fieldname) * f)
+        PROF_LERP_FIELD(timeTrackProcessPluginsRaw);
+        PROF_LERP_FIELD(timeTrackProcessPlugins);
+        PROF_LERP_FIELD(timeTrackApplyAutomation);
+        PROF_LERP_FIELD(timeTrackProcessMidi);
+        PROF_LERP_FIELD(timeTrackMixInputs);
+        PROF_LERP_FIELD(timeTrackRecordPre);
+        PROF_LERP_FIELD(timeTrackFillAudioClips);
+        PROF_LERP_FIELD(timeTrackProcessAudio);
+        PROF_LERP_FIELD(timeTrackRecordPost);
+        PROF_LERP_FIELD(numBlocksProcessed);
+        PROF_LERP_FIELD(statsProcStep);
+        PROF_LERP_FIELD(statsWriteOffset);
+    #undef PROF_LERP_FIELD
+    }
+};
+
+#define NUM_BINS_STATS 16
+struct host_stats_reducted_t {
+    double usage;
+    int64_t timeProcess;
+    int64_t timeProcessRaw;
+    int64_t timePerBlock_usec;
+};
+struct host_stats_t {
+    int32_t tickBar = 0;
+    int32_t samplesProcessed;
+    int32_t blocksProcessed;
+    int64_t timeProcessPluginsRaw;
+    int64_t timeProcessPlugins;
+    int64_t timeBlockRaw;
+    int64_t timeBlock;
+    std::map<const char*, int64_t> timings;
+    track_midiprocess_profiling_t blockMidiStats;
+    float usage;
+    float usageRaw;
+    int32_t inputQueueLen          = 0;
+    int32_t outputQueueLen         = 0;
+    int32_t resamplerInNumBlocks   = 0;
+    int32_t resamplerInNumSamples  = 0;
+    int32_t resamplerOutNumBlocks  = 0;
+    int32_t resamplerOutNumSamples = 0;
+    int64_t resamplerDelayInput    = 0;
+    int64_t resamplerDelayOutput   = 0;
+    int64_t lastInvocationTime_i64 = 0;
+};
+
+struct render_clip_cache_stats_t {
+    int64_t timeRender;
+    int64_t clipsCached;
+    int64_t sizeCacheAllocatedMemBytes;
+};
+struct alignas(64) prof_stats_applicaton_t {
+    int64_t tickTimerDelay       = 0;
+    int64_t tickTimerDuration    = 0;
+    int64_t timeRefreshAll       = 0;
+    int64_t timeSwapBuffersAll   = 0;
+    int64_t numMessagesProcessed = 0;
+    int64_t numMessagesWmPaint   = 0;
+    int64_t numRedrawReq         = 0;
+};
+struct alignas(64) prof_stats_render_t {
+    int64_t timePrerender           = 0;
+    int64_t timeRenderEditor        = 0;
+    int64_t timeRenderTrackControls = 0;
+    int64_t timeUpdateWaveforms     = 0;
+    int64_t clipsRendered           = 0;
+    int64_t notesRendered           = 0;
+    int64_t numWaveFormsRendered    = 0;
+    int64_t playThreadLockCount     = 0;
+};
+struct alignas(64) prof_stats_window_t {
+    int64_t timeRender              = 0;
+    int64_t timeSwapBuffers         = 0;
+    int64_t timePrerender           = 0;
+    int64_t timeAppTick             = 0;
+    int64_t fps = 0;
+};
+struct vst_opcode_stats_t {
+    int32_t tmMillis      = 0;
+    int32_t numDispatches = 0;
+};
+namespace Profiling {
+    struct profiling_register_params_t {
+        String name;
+        int32_t displayIndex = 0;
+    };
+    template<typename T>
+    void profilingRegisterEntry(void* instance, const profiling_register_params_t& params);
+    template<typename T>
+    void profilingCommitStats(void* instance, int frameNumber, T& stats);
+}// namespace Profiling

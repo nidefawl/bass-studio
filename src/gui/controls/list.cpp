@@ -1,18 +1,18 @@
 #include <cstdint>
 #include <nanovg.h>
 #include <algorithm>
-#include "guiglobals.h"
-#include "math/vec.h"
-#include "list.h"
-#include "gui/gui.h"
-#include "mouse.h"
-#include "event.h"
-#include "guicolors.h"
-#include "theme.h"
-#include "gui/container/container.h"
-#include "renderresources.h"
-#include "basectrl.h"
-#include "host/daw/mainctrl.h"
+#include "guiglobals.hpp"
+#include "math/vec.hpp"
+#include "list.hpp"
+#include "gui/gui.hpp"
+#include "mouse.hpp"
+#include "event.hpp"
+#include "guicolors.hpp"
+#include "theme.hpp"
+#include "gui/container/container.hpp"
+#include "renderresources.hpp"
+#include "basectrl.hpp"
+#include "host/daw/mainctrl.hpp"
 
 void gui_list_entry::handleDraggedMove(MouseEvent& evt) {
     parentCtrl->objectDragMove(this, evt);

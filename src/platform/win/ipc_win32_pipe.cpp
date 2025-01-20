@@ -1,9 +1,9 @@
-#include "ipc.h"
-#include "logging.h"
-#include "str_util.h"
-#include "platform.h"
-#include "thread.h"
-#include "exceptions.h"
+#include "ipc.hpp"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "platform.hpp"
+#include "thread.hpp"
+#include "exceptions.hpp"
 
 #include <windows.h>
 #include <cstdlib>

@@ -1,10 +1,10 @@
-#include "types.h"
+#include "types.hpp"
 #include <nanovg.h>
 #include <algorithm>
-#include "math/seq_math.h"
-#include "math/vec.h"
-#include "color_util.h"
-#include "platform.h"
+#include "math/seq_math.hpp"
+#include "math/vec.hpp"
+#include "color_util.hpp"
+#include "platform.hpp"
 
 NVGcolor getCursorColor() {
     float f1 = 0.3f;

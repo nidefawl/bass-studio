@@ -1,13 +1,13 @@
-#include "midi_host.h"
-#include "appsettings.h"
-#include "logging.h"
-#include "midi-defs.h"
-#include "platform.h"
-#include "samplerate.h"
-#include "str_util.h"
+#include "midi_host.hpp"
+#include "appsettings.hpp"
+#include "logging.hpp"
+#include "midi-defs.hpp"
+#include "platform.hpp"
+#include "samplerate.hpp"
+#include "str_util.hpp"
 #include <portmidi.h>
-#include "tls.h"
-#include "types.h"
+#include "tls.hpp"
+#include "types.hpp"
 
 #define IN_QUEUE_SIZE  1024
 #define OUT_QUEUE_SIZE 1024

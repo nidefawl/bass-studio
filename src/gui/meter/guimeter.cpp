@@ -1,11 +1,11 @@
-#include "guimeter.h"
-#include "config.h"
-#include "math/seq_math.h"
-#include "gui/gui.h"
-#include "theme.h"
-#include "dsp_util.h"
-#include "host/meter/meter.h"
-#include "color_util.h"
+#include "guimeter.hpp"
+#include "config.hpp"
+#include "math/seq_math.hpp"
+#include "gui/gui.hpp"
+#include "theme.hpp"
+#include "dsp_util.hpp"
+#include "host/meter/meter.hpp"
+#include "color_util.hpp"
 #include <nanovg.h>
 
 constexpr float MTR_UI_FLOOR     = -100.0f;

@@ -1,11 +1,11 @@
 #include "TestBase.hpp"
 #include <vector>
 #include <cstdio>
-#include "str_util.h"
-#include "seq_util.h"
-#include "types.h"
-#include "compiler.h"
-#include "platform/mingw/mingw.exc.h"
+#include "str_util.hpp"
+#include "seq_util.hpp"
+#include "types.hpp"
+#include "compiler.hpp"
+#include "platform/mingw/mingw.exc.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

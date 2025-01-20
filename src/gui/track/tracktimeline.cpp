@@ -1,13 +1,13 @@
 #include <nanovg.h>
 #include <vector>
 
-#include "guicolors.h"
-#include "logging.h"
-#include "tracktimeline.h"
-#include "math/seq_math.h"
-#include "grid.h"
-#include "gui/gui.h"
-#include "host/daw/mainctrl.h"
+#include "guicolors.hpp"
+#include "logging.hpp"
+#include "tracktimeline.hpp"
+#include "math/seq_math.hpp"
+#include "grid.hpp"
+#include "gui/gui.hpp"
+#include "host/daw/mainctrl.hpp"
 
 
 bool guitrack_timeline::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {

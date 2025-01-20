@@ -1,6 +1,6 @@
 #pragma once
-#include "str_util.h"
-#include "types.h"
+#include "str_util.hpp"
+#include "types.hpp"
 #define ENABLE_ALLOCATION_TRACKING 0
 
 namespace DebugAlloc {

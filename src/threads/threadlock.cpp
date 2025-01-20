@@ -1,8 +1,8 @@
-#include "threadlock.h"
+#include "threadlock.hpp"
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include "error.h"
+#include "error.hpp"
 
 /*static*/ ThreadLock ThreadLock::MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock) noexcept {
     return ThreadLock(ThreadLock::Impl{&_mutex, &_isLocked, bTryLock});

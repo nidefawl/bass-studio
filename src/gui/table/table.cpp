@@ -1,14 +1,14 @@
-#include "table.h"
+#include "table.hpp"
 #include <memory>
 #include <numeric>
 #include <vector>
 #include <nanovg.h>
-#include "math/seq_math.h"
-#include "seq_util.h"
-#include "str_util.h"
-#include "theme.h"
-#include "event.h"
-#include "gui/gui.h"
+#include "math/seq_math.hpp"
+#include "seq_util.hpp"
+#include "str_util.hpp"
+#include "theme.hpp"
+#include "event.hpp"
+#include "gui/gui.hpp"
 #include "assert_dbg.h"
 
 namespace Table {

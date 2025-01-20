@@ -1,24 +1,24 @@
 #include "TestBase.hpp"
-#include "appsettings.h"
-#include "host/audiocache/audiocache.h"
-#include "common/test_common.h"
-#include "host/daw/mainctrl.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "host/project/project.h"
-#include "samplerate.h"
-#include "seq_time.h"
-#include "tls.h"
-#include "host/track/track_types.h"
-#include "types.h"
-#include "util/testing_environment.h"
+#include "appsettings.hpp"
+#include "host/audiocache/audiocache.hpp"
+#include "common/test_common.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "host/project/project.hpp"
+#include "samplerate.hpp"
+#include "seq_time.hpp"
+#include "tls.hpp"
+#include "host/track/track_types.hpp"
+#include "types.hpp"
+#include "util/testing_environment.hpp"
 #include <cmath>
 #include <memory>
 #include <utility>
 #include <vector>
-#include "host/audiobuffer/audioblock.h"
-#include "host/clip/clip.h"
-#include "host/host.h"
+#include "host/audiobuffer/audioblock.hpp"
+#include "host/clip/clip.hpp"
+#include "host/host.hpp"
 
 namespace test_host {
     std::shared_ptr<DawInstance> initDaw(const sampleformat_t sampleformat) {

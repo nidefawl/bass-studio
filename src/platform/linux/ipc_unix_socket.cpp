@@ -1,6 +1,6 @@
 #ifndef _WIN32
-#include "ipc.h"
-#include "str_util.h"
+#include "ipc.hpp"
+#include "str_util.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/un.h>
-#include "logging.h"
+#include "logging.hpp"
 
 
 class ipc_server::Impl {

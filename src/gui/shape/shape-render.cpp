@@ -1,6 +1,6 @@
-#include "guicolors.h"
-#include "host/shape/shape.h"
-#include "theme.h"
+#include "guicolors.hpp"
+#include "host/shape/shape.hpp"
+#include "theme.hpp"
 #include <nanovg.h>
 #include "shape-render.hpp"
 

@@ -1,0 +1,284 @@
+#pragma once
+#include "host/host_pluginmanager.hpp"
+#include "types.hpp"
+#include <memory>
+#include <utility>
+#include <vector>
+#include "str_util.hpp"
+#include "seq_time.hpp"
+#include "host/automation/automation.hpp"
+#include "logging.hpp"
+#include "platform.hpp"
+#include "host/meter/meter.hpp"
+#include "snapshot/snapshot.hpp"
+#include "snapshot/plugin-snapshot.hpp"
+#include "host/plugin/modules.hpp"
+#include "util/profiling.hpp"
+#include "saferef.hpp"
+#include "host/daw_channel.hpp"
+#include "gui/table/table_fwd.hpp"
+#include "gui/plugin/pluginviewcontainers.hpp"
+#include "plugins/synth/IPlugMidi.hpp"
+#include "host/audiobuffer/audioblock.hpp"
+
+namespace DAW::Host {
+    class Host;
+    class PluginManager;
+}
+class DawInstance;
+class effect_deferred;
+class guiplugin;
+class host_plugin_window;
+class track_t;
+struct audio_stage_t;
+struct handles_t;
+
+extern bool storePluginPresetWithSnapshot;// = true;
+extern bool loadPluginPresetWithSnapshot; // = false;
+struct midi_data_processing_t;
+namespace PluginWrapper {
+    class PluginInternalVST2;
+}
+class effectbase : public automatable_t {
+    friend class PluginWrapper::PluginInternalVST2;
+    friend class DAW::Host::PluginManager;
+    friend class DAW::Host::Host;
+    friend class guiplugin;
+    friend class effect_deferred;
+
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
+public:
+    std::vector<DAW::channel_ref_t> inputChannels;
+    std::unique_ptr<DelayLine> delayLine;
+    DAW::rmsmeter meter;
+    DAW::rmsmeter meterIn;
+    std::vector<int32_t> heldNotes;
+    sampleformat_t format;
+    AudioBlock* blockInputs        = nullptr;
+    AudioBlock* blockOutputs       = nullptr;
+    int32_t projectGlobalId        = 0;
+    int32_t localDbId              = -1;
+    IHostCallback* hostCallback  = nullptr;
+    bool bIsEnabled                = false;
+    bool bEditOpen                 = false;
+    bool bCaptureGUI               = false;
+    bool bCanReceiveMidi           = false;
+    bool bCanSendMidi              = false;
+    bool bMPESupport               = false;
+    bool bSupportsWindowResize     = false;
+    bool isSynth                   = false;
+    bool bWindowPosSizeValid       = false;
+    bool bInEditIdle               = false;
+    bool bOpenWindowOnEnable       = false;
+    int32_t slot                   = -1;
+    int midiEventsDispatched       = 0;
+    audio_stage_t* trackImpl       = nullptr;
+    host_plugin_window* windowHost = nullptr;
+#ifndef NDEBUG
+    //helper indicator in gdb.
+    //gdb cannot display std::string when built without clib-debug flag (SLOW)
+    const char* szName = nullptr;
+#endif
+    ivec4 lastWindowPosSize{};
+    appwindow_size_t windowSize{};
+    String sName;
+    String sProductName;
+    String sVendorName;
+    stats_processing_timings_t procStats;
+    stats_processing_timings_t procStatsAvg;
+    std::map<int32_t, plugin_ui_snapshot_t> uiSnapshots;
+    std::map<int32_t, std::shared_ptr<guiplugin>> uiInstances;
+    SafeRef<effectbase> safeRef;
+    int32_t requestCaptureGUI    = 0;
+protected:
+    int nLoadCalls               = 0;
+    DAW::Host::PluginManager* pluginMgr = nullptr;
+    String currentProgramNameStr = "<no program>";
+    bool currentProgramNameSet   = false;
+    std::vector<std::shared_ptr<PluginViewContainer>> views;
+public:
+    std::vector<String> programNames;
+    std::vector<DAW::channel_desc> inputChannelsDesc;
+    std::vector<DAW::channel_desc> outputChannelsDesc;
+    std::map<int32_t, String> programPitchNames;
+protected:
+    void initDefaultIODesc();
+    virtual void initBuffers();
+    void initMeters();
+
+public:
+    effectbase(String _sName, int32_t _projectGlobalId, IHostCallback* _hostCallback);
+    ~effectbase() override;
+    
+    std::shared_ptr<guiplugin> getPluginGui(int32_t uuid);
+
+    virtual std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) {
+        return nullptr;
+    }
+
+    SafeRef<effectbase> makeSafeRef();
+    String getName() const { return sName; };
+    String getProductName() const { return sProductName; };
+    DAW::Host::PluginManager* getPluginManager() const { return pluginMgr; }
+    void setProductName(String _name) {
+        replaceString(_name, "[jBridge]", "");
+        this->sProductName = std::move(_name);
+    }
+    void setName(String _name) {
+        this->sName = std::move(_name);
+#ifndef NDEBUG
+        this->szName = this->sName.c_str();
+#endif
+    }
+    String getVendorName() const { return sVendorName; };
+    void setVendorName(String _name) {
+        this->sVendorName = std::move(_name);
+    }
+    std::vector<std::shared_ptr<PluginViewContainer>>& getViewCtrs() { return views; }
+    const std::vector<std::shared_ptr<PluginViewContainer>>& getViewCtrs() const { return views; }
+    virtual int32_t getEffectVersion() const { return 1; }
+    virtual int32_t getUUID_U32() const { return 1; }
+    IHostCallback* getHostCallback() const { return hostCallback; }
+
+    virtual void onEnable(){};
+    virtual void onDisable(){};
+    virtual ModuleType getModuleType()  = 0;
+    virtual bool hasAutomationModulationOutput() const {
+        return false;
+    }
+
+    virtual void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) = 0;
+    virtual void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
+    virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
+    virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
+    virtual void processMidi(midi_data_processing_t& midiEvents);
+    virtual void sendNotesOff();
+    virtual bool hasWindowEditor() {
+        return false;
+    }
+    virtual bool showWindow(bool bResetPosition);
+protected:
+    bool openWindow(bool bResetPosition, ivec2 defaultSize);
+public:
+    virtual bool closeWindow();
+    virtual void onWindowDestroy();
+    virtual void onWindowResize(ivec2 size);
+    virtual bool onShow(host_plugin_window* window);
+    virtual bool onClose();
+    virtual void updateFromMainThread(); // main thread idle 
+    virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) {
+        return size;
+    };
+    virtual void unload(DAW::Host::PluginManager* host);
+    virtual void load(DAW::Host::PluginManager* host);
+    virtual samplecount_t getPluginLatency() = 0;
+    virtual String getInfo(std::vector<String>& list) { return ""; };
+    track_t* getTrack() override;
+    virtual void onTick(double since);
+    virtual void setSampleFormat(sampleformat_t sampleFormat) {
+        format = sampleFormat;
+        if (blockInputs && blockInputs->samples != sampleFormat.blockSize)
+            blockInputs->realloc(sampleFormat.blockSize);
+
+        if (blockOutputs && blockOutputs->samples != sampleFormat.blockSize)
+            blockOutputs->realloc(sampleFormat.blockSize);
+    }
+    virtual sampleformat_t getSampleFormat();
+    virtual void getChildAudioStages(std::vector<audio_stage_t*>& targets) {
+    }
+    virtual void loadSnapshot(const plugin_snapshot_t& snapshot) = 0;
+    virtual void breakTrackLink();
+    virtual void setTrackLink(audio_stage_t* audioStage);
+    virtual void onPreUnload() {
+    }
+    virtual bool isBypass() {
+        return !this->bIsEnabled;
+    }
+    virtual void setSlot(int32_t i) {
+        slot = i;
+    }
+    virtual int32_t getSlot() {
+        return slot;
+    }
+    virtual audio_stage_t* getTrackLink() {
+        return trackImpl;
+    }
+    virtual bool isDeferred() {
+        return false;
+    }
+    virtual bool getCurrentProgramName(String& out) {
+        return false;
+    }
+    virtual bool setCurrentProgram(uint32_t index) {
+        return false;
+    }
+    virtual bool getCurrentProgram(uint32_t& index) {
+        return false;
+    }
+    virtual bool getNumberOfPrograms(uint32_t& index) {
+        return false;
+    }
+    const std::map<int32_t, String>& getProgramPitchNames() const { return programPitchNames; }
+    bool hasTrackLink() const {
+        return trackImpl != nullptr;
+    }
+
+    void storeWindowPosSize(ivec4 posSize) {
+        this->lastWindowPosSize = posSize;
+        this->bWindowPosSizeValid = true;
+    }
+
+    plugin_windowlayout_snapshot_t getWindowLayoutSnapshot();
+    void loadWindowLayoutSnapshot(const plugin_windowlayout_snapshot_t& snapshot);
+
+public:
+    virtual effect_deferred* toDeferred();
+    void updateOnEnableParam(bool wasEnable, bool isEnable, int flags);
+    virtual void getDeferredEffects(std::vector<effectbase*>& effects){};
+    virtual void addPropertiesParameterList(Table::tbl& table);
+    virtual void addPropertiesTooltip(Table::tbl& table);
+    virtual void addPropertiesParameterTooltip(Table::tbl& table, int idx);
+    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+    automatable_param_ref_t toRef() const override;
+};
+
+struct effect_deferred_impl;
+class effect_deferred final : public effectbase {
+public:
+    effect_deferred_impl* mImpl = nullptr;
+
+public:
+    effect_deferred(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+    ~effect_deferred() override;
+    void loadSnapshot(const plugin_snapshot_t& snapshot) override;
+    samplecount_t getPluginLatency() override;
+    String getInfo(std::vector<String>& list) override;
+    ModuleType getModuleType() override;
+    void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
+    std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
+    void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
+    bool hasWindowEditor() override {
+        return false;
+    }
+    // automatable_t interface
+    String getAutomatableName() override;
+    automatable_param_ref_t toRef() const override;
+
+    static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);
+    String getDfrdPluginName() const;
+    const plugin_snapshot_t& getSnapshotConst() const;
+    plugin_snapshot_t& getSnapshot();
+    bool isDeferred() override {
+        return true;
+    }
+    bool isBypass() override {
+        return true;
+    }
+    int getModuleStoredType() const;
+};
+namespace DAW {
+    effectbase* loadEffectModule(Host::PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
+    void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
+    void removePlugin(DawInstance* daw, effectbase* module);
+}

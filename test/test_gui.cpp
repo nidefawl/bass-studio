@@ -1,10 +1,10 @@
-#include "common/test_appctrl.h"
-#include "str_util.h"
+#include "common/test_appctrl.hpp"
+#include "str_util.hpp"
 #include <memory>
 #include <vector>
 
-#include "appconfig.h"
-#include "appsettings.h"
+#include "appconfig.hpp"
+#include "appsettings.hpp"
 
 class TestAppInstanceService : public AppInstanceService {
     std::shared_ptr<TestAppCtrl> app;

@@ -3,29 +3,29 @@
 #include <nanovg_min.h>
 #include <typeinfo>
 #include <utility>
-#include "appconfig.h"
+#include "appconfig.hpp"
 #include "assert_dbg.h"
-#include "gui/tooltip/tooltip.h"
-#include "guiglobals.h"
-#include "math/vec.h"
-#include "math/seq_math.h"
-#include "color_util.h"
-#include "basectrl.h"
-#include "gui.h"
-#include "gui/controls/button.h"
-#include "platform.h"
-#include "theme.h"
-#include "saferef.h"
-#include "seq_util.h"
-#include "guicolors.h"
-#include "guiconstant.h"
-#include "gui/properties/properties_table.h"
-#include "gui/contextmenu/contextmenu_base.h"
-#include "renderresources.h"
-#include "thread.h"
-#include "util/debug_alloc.h"
-#include "guifonts.h"
-#include "host/daw/mainctrl.h"
+#include "gui/tooltip/tooltip.hpp"
+#include "guiglobals.hpp"
+#include "math/vec.hpp"
+#include "math/seq_math.hpp"
+#include "color_util.hpp"
+#include "basectrl.hpp"
+#include "gui.hpp"
+#include "gui/controls/button.hpp"
+#include "platform.hpp"
+#include "theme.hpp"
+#include "saferef.hpp"
+#include "seq_util.hpp"
+#include "guicolors.hpp"
+#include "guiconstant.hpp"
+#include "gui/properties/properties_table.hpp"
+#include "gui/contextmenu/contextmenu_base.hpp"
+#include "renderresources.hpp"
+#include "thread.hpp"
+#include "util/debug_alloc.hpp"
+#include "guifonts.hpp"
+#include "host/daw/mainctrl.hpp"
 
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 bool g_debugTextRenderLayout = false;
@@ -341,7 +341,7 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
     nvgLineTo(vg, x + w, y + h);
     nvgStrokePaint(vg, paintLeft);
     nvgStroke(vg);
-    nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+    nvgShapeAntiAlias(vg, 1);
 }
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
     float inset = math::max(2.0f, size.x / 8.0f);

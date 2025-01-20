@@ -1,8 +1,8 @@
-#include "inputfield.h"
+#include "inputfield.hpp"
 
-#include "keyboard.h"
-#include "logging.h"
-#include "str_util.h"
+#include "keyboard.hpp"
+#include "logging.hpp"
+#include "str_util.hpp"
 
 void gui_numberinput_field_base::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))

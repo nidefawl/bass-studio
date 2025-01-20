@@ -1,7 +1,7 @@
-#include "basectrl.h"
-#include "hires_timer.h"
-#include "platform.h"
-#include "math/simd_math.h"
+#include "basectrl.hpp"
+#include "hires_timer.hpp"
+#include "platform.hpp"
+#include "math/simd_math.hpp"
 #include <benchmark/benchmark.h>
 #include <cmath>
 #include <iostream>

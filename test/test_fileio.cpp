@@ -1,8 +1,8 @@
 #include "TestBase.hpp"
-#include "common/test_common.h"
-#include "fileio.h"
-#include "logging.h"
-#include "platform.h"
+#include "common/test_common.hpp"
+#include "fileio.hpp"
+#include "logging.hpp"
+#include "platform.hpp"
 #include "buildinfo.h"
 #include <vector>
 

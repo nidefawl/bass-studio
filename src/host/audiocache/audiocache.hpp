@@ -1,0 +1,212 @@
+#pragma once
+#include <cstdint>
+#include <unordered_map>
+#include <atomic>
+#include <memory>
+#include <functional>
+#include <optional>
+#include <variant>
+#include "host/clip/clip.hpp"
+#include "host/project/project.hpp"
+#include "types.hpp"
+#include "str_util.hpp"
+#include "host/audiosample.hpp"
+#include "wave/waveform_render.hpp"
+#include "samplefileidx.hpp"
+
+#include <dr_libs/dr_wav.h>
+#include <dr_libs/dr_mp3.h>
+#include <dr_libs/dr_flac.h>
+
+struct drflac_file {
+    drflac* pFlac = nullptr;
+};
+
+using audiofile_variant = std::variant<std::monostate, drwav, drmp3, drflac_file>;
+
+struct archive;
+struct NVGcontext;
+class clip_audio_t;
+
+struct audiofile_path_t {
+    int32_t id = 0;
+    String path;
+};
+
+struct audiofile_t final : public samplesource_t {
+    enum AudioFileStateFlags : uint8_t {
+        AUDIOFILE_FLAGS_NONE = 0,
+        AUDIOFILE_FLAG_LOADED = 1 << 0,
+        AUDIOFILE_FLAG_MODIFIED = 1 << 1,
+        AUDIOFILE_FLAG_MISSING = 1 << 2,
+        AUDIOFILE_FLAG_TEMPORARY = 1 << 3,
+        AUDIOFILE_FLAG_BUNDLED = 1 << 4,
+        AUDIOFILE_FLAG_DERIVED = 1 << 5,
+        AUDIOFILE_FLAG_LOADING = 1 << 6,
+    };
+    static inline String getAudioFileStateAsString(uint8_t flags) {
+        String s = "";
+        if (flags & AUDIOFILE_FLAG_LOADED) {
+            s += "LOADED ";
+        }
+        if (flags & AUDIOFILE_FLAG_MODIFIED) {
+            s += "MODIFIED ";
+        }
+        if (flags & AUDIOFILE_FLAG_MISSING) {
+            s += "MISSING ";
+        }
+        if (flags & AUDIOFILE_FLAG_TEMPORARY) {
+            s += "TEMPORARY ";
+        }
+        if (flags & AUDIOFILE_FLAG_BUNDLED) {
+            s += "BUNDLED ";
+        }
+        if (flags & AUDIOFILE_FLAG_DERIVED) {
+            s += "DERIVED ";
+        }
+        if (flags & AUDIOFILE_FLAG_LOADING) {
+            s += "LOADING ";
+        }
+        if (s.empty()) {
+            s = "NONE";
+        }
+        return s;
+    }
+    int32_t id = -1;
+    int32_t derivedFromId = -1;
+    String path;
+    String name;
+    String ext;
+    String bundlePath;
+    uint8_t state = AUDIOFILE_FLAGS_NONE;
+    String pathLoaded;
+    std::unique_ptr<audiosample_t> sample;
+    clip_audio_settings_t settings;
+    samplerate_t sourceSamplerate = 0;
+    audiosample_t* getSample() override {
+        return sample.get();
+    }
+    audiofile_path_t getPath() {
+        return { id, path };
+    }
+    audiofile_path_t getPathLoaded() {
+        return { id, pathLoaded };
+    }
+};
+struct store_sample_req_t {
+    int32_t id = -1;
+    sampleformat_t format{};
+    samplecount_t offset = 0;
+    samplecount_t length = 0;
+    samplecount_t preAllocate = 0;
+    std::vector<samplechannel_t> channels;
+    bool bDownsample = false;
+};
+struct create_sample_req_t {
+    sampleformat_t format{};
+    channelnum_t numChannels = 0;
+    bool isTemporarySample = false;
+    String path = "";
+    int32_t id = -1;
+    samplecount_t preAllocate = 0;
+};
+
+namespace DAW {
+    samplecount_t SaveSampleToFile(audiofile_t& file, const String& fOutWave);
+}
+class audiocache {
+    samplerate_t samplerate = 0;
+    std::atomic<int32_t> nextIdx{ 0 };
+    std::vector<std::shared_ptr<audiofile_t>> list;
+    std::unordered_map<int, audiofile_t*> mapId;
+
+public:
+    static void Downsample(audiosample_t* sample, std::atomic<bool>* abortFlag = nullptr, uint8_t numSteps = audiosample_t::MAX_DOWNSAMPLE);
+    class fileloader {
+        static const size_t chunkSize = 1024 * 256;
+        std::shared_ptr<audiofile_t> file;
+        std::optional<audiofile_variant> audiofileVariant;
+        String error;
+        samplerate_t sourceSamplerate = 0;
+        samplerate_t targetSamplerate = 0;
+        channelnum_t sourceNumChannels = 0;
+        std::vector<float> pSamples;
+        samplecount_t numSamplesFileHeader = 0;
+        samplecount_t numSamplesReadFromFile = 0;
+        std::vector<uint8_t> heapBuffer;
+        bool bReadComplete = false;
+        bool bResampleComplete = false;
+        int32_t downsampleStep = 0;
+        samplecount_t resampleInputOffset = 0;
+        samplecount_t resampleOutputOffset = 0;
+        void* soxrContext = nullptr;
+    public:
+        fileloader() = default;
+        bool resolveFile(const String& pathIn, const String& workingDir, bool remapPath, int32_t id = -1);
+        bool preloadFile(struct archive* ar, struct archive_entry* entry);
+        bool loadFileIncremental();
+        float getProgress() const;
+        bool resample();
+        const String& getError() const {
+            return error;
+        }
+        std::shared_ptr<audiofile_t>& getSPFile() {
+            return file;
+        }
+        audiofile_t* getFile() {
+            dbgassert(file.get());
+            return file.get();
+        }
+        bool isFinished() const;
+        bool isOk() const {
+            return error.empty();
+        }
+        samplerate_t getSourceSampleRate() const {
+            return sourceSamplerate;
+        }
+        void setTargetSampleRate(samplerate_t samplerate) {
+            targetSamplerate = samplerate;
+        }
+        samplerate_t getTargetSampleRate() const {
+            return targetSamplerate;
+        }
+        samplecount_t getExpectedNumSamples() const;
+    };
+    explicit audiocache(samplerate_t _samplerate) {
+        setSamplerate(_samplerate);
+    }
+    ~audiocache() {
+        this->mapId.clear();
+        this->list.clear();
+    }
+    static audiocache* getInstance();
+    void addFile(std::shared_ptr<audiofile_t>& af);
+    void updateSample(const store_sample_req_t& ssr);
+    audiofile_t* createSample(const create_sample_req_t& ssr);
+    void setSamplerate(samplerate_t samplerate);
+    samplerate_t getSampleRate() const {
+        return samplerate;
+    }
+    int32_t getUniqueSampleId() {
+        return nextIdx.fetch_add(1);
+    }
+    void unloadSampleId(int32_t id);
+    audiofile_t* getSample(int32_t i);
+    audiofile_t* getDerivedSample(clip_audio_t& clipAudio, std::atomic<bool>* abortFlag = nullptr);
+    audiofile_t* getDerivedSample(const clip_audio_t& clipAudio) const;
+    audiofile_t* getByFilename(const String& pathFile);
+    size_t getNumAudioSamplesLoaded() const;
+    void store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v);
+    void load(samplefile_index_t& v, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir);
+    void saveSamples(const std::vector<int32_t>& refSampleIds);
+    void unloadAll();
+    void unloadUnreferenced(const std::vector<int32_t>& refSampleIds);
+    void rellocateSamples(const std::vector<int32_t>& refSampleIds, const String& directory);
+    int writeToArchive( const std::vector<int32_t>& refSampleIds,
+                        struct archive* ar,
+                        std::function<void(const String&, int32_t, int32_t)>& onProgress,
+                        std::function<void(const String& msg, const String& file)>& onError);
+    bool isEmpty() const;
+    bool loadFile(std::shared_ptr<audiofile_t>& outFile, const String& pathIn, const String& workingDir, bool remapPath = true, struct archive* ar = nullptr, struct archive_entry* entry = nullptr);
+};
+

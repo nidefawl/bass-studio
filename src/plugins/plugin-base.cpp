@@ -1,32 +1,32 @@
 
-#include "appconfig.h"
-#include "tls.h"
-#include "types.h"
-#include "plugin-base.h"
+#include "appconfig.hpp"
+#include "tls.hpp"
+#include "types.hpp"
+#include "plugin-base.hpp"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
-#include "config.h"
-#include "str_util.h"
-#include "logging.h"
-#include "fileio.h"
+#include "config.hpp"
+#include "str_util.hpp"
+#include "logging.hpp"
+#include "fileio.hpp"
 
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
 #include <windows.h>//this include SUCKS
 #include <direct.h> //_getcwd
-#include "str_win32.h"
+#include "str_win32.hpp"
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
 
-#include "plugins/plugin.h"
-#include "plugins/plugincontrol.h"
-#include "plugins/plugin-window.h"
-#include "gui/plugin/pluginviewcontainers.h"
-#include "exceptions.h"
-#include "msgbox.h"
-#include "platform.h"
-#include "host/daw/mainctrl.h"
+#include "plugins/plugin.hpp"
+#include "plugins/plugincontrol.hpp"
+#include "plugins/plugin-window.hpp"
+#include "gui/plugin/pluginviewcontainers.hpp"
+#include "exceptions.hpp"
+#include "msgbox.hpp"
+#include "platform.hpp"
+#include "host/daw/mainctrl.hpp"
 
 #include "assert_dbg.h"
 

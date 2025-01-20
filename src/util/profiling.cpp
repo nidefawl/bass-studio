@@ -1,6 +1,6 @@
-#include "util/profiling.h"
-#include "str_util.h"
-#include "profiling_impl.h"
+#include "util/profiling.hpp"
+#include "str_util.hpp"
+#include "profiling_impl.hpp"
 
 namespace ProfilingImpl {
     template<typename T>

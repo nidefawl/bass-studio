@@ -1,9 +1,9 @@
-#include "color_util.h"
+#include "color_util.hpp"
 #include "glheaders.h"
-#include "hires_timer.h"
-#include "math/seq_math.h"
-#include "math/vec.h"
-#include "theme.h"
+#include "hires_timer.hpp"
+#include "math/seq_math.hpp"
+#include "math/vec.hpp"
+#include "theme.hpp"
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -13,20 +13,20 @@
 #include <nanovg_gl.h>
 #include <benchmark/benchmark.h>
 #include <array>
-#include "types.h"
+#include "types.hpp"
 #include <cstdio>
 #include <functional>
 #include <memory>
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include "logging.h"
-#include "str_util.h"
-#include "exceptions.h"
-#include "platform.h"
-#include "renderresources.h"
-#include "mousecursor.h"
-#include "guifonts.h"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "exceptions.hpp"
+#include "platform.hpp"
+#include "renderresources.hpp"
+#include "mousecursor.hpp"
+#include "guifonts.hpp"
 #include "buildinfo.h"
 #include "../test/TestBase.hpp"
 
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
         if (!vg) {
             throw appexception("Couldn't initialize nanovg");
         }
-        nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+        nvgShapeAntiAlias(vg, 1);
         RenderResources::initResources(vg);
         guitheme_t theme;
 

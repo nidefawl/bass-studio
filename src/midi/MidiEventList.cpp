@@ -2,7 +2,7 @@
  * Based on https://github.com/craigsapp/midifile
  * Modifications (c) Michael Hept
  */
-#include "MidiEventList.h"
+#include "MidiEventList.hpp"
 #include <vector>
 #include <iostream>
 #include <algorithm>

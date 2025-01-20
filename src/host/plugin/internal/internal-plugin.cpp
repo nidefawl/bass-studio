@@ -3,19 +3,19 @@
 #include <utility>
 #include <vector>
 #include "assert_dbg.h"
-#include "host/automation/automation.h"
-#include "host/plugin/modules.h"
-#include "plugins/synth/IPlugMidi.h"
-#include "seq_util.h"
+#include "host/automation/automation.hpp"
+#include "host/plugin/modules.hpp"
+#include "plugins/synth/IPlugMidi.hpp"
+#include "seq_util.hpp"
 
-#include "snapshot/snapshot.h"
-#include "host/plugin/base/base-plugin.h"
-#include "internal-plugin.h"
-#include "host/track/track.h"
-#include "gui/plugin/pluginctr.h"
-#include "host/daw/mainctrl.h"
-#include "host/daw/history.h"
-#include "host/host_plugin_window.h"
+#include "snapshot/snapshot.hpp"
+#include "host/plugin/base/base-plugin.hpp"
+#include "internal-plugin.hpp"
+#include "host/track/track.hpp"
+#include "gui/plugin/pluginctr.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "host/daw/history.hpp"
+#include "host/host_plugin_window.hpp"
 
 namespace {
     void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, const tracksnapshot_store_opts_t& opts) {

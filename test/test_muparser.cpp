@@ -1,5 +1,5 @@
 #include "TestBase.hpp"
-#include "common/test_common.h"
+#include "common/test_common.hpp"
 #include <muParser.h>
 
 namespace {

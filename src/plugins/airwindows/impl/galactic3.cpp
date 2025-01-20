@@ -1,6 +1,6 @@
 #include "../airwindows-types.hpp"
 #include "assert_dbg.h"
-#include "rand.h"
+#include "rand.hpp"
 #include <array>
 #include <cstdint>
 #include <numbers>

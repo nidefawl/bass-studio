@@ -1,24 +1,24 @@
 #include <nanovg.h>
 #include "assert_dbg.h"
-#include "guibackgroundimage.h"
-#include "logging.h"
-#include "math/vec.h"
-#include "math/seq_math.h"
-#include "guiglobals.h"
-#include "guicolors.h"
-#include "guiconstant.h"
-#include "gui/gui.h"
-#include "container.h"
-#include "basectrl.h"
-#include "color_util.h"
-#include "exceptions.h"
-#include "mouse.h"
-#include "event.h"
-#include "renderresources.h"
-#include "gui/controls/button.h"
-#include "saferef.h"
-#include "str_util.h"
-#include "host/daw/mainctrl.h"
+#include "guibackgroundimage.hpp"
+#include "logging.hpp"
+#include "math/vec.hpp"
+#include "math/seq_math.hpp"
+#include "guiglobals.hpp"
+#include "guicolors.hpp"
+#include "guiconstant.hpp"
+#include "gui/gui.hpp"
+#include "container.hpp"
+#include "basectrl.hpp"
+#include "color_util.hpp"
+#include "exceptions.hpp"
+#include "mouse.hpp"
+#include "event.hpp"
+#include "renderresources.hpp"
+#include "gui/controls/button.hpp"
+#include "saferef.hpp"
+#include "str_util.hpp"
+#include "host/daw/mainctrl.hpp"
 
 void guictr_base::setControl(BaseCtrl* parentCtrl) {
     guibase::setControl(parentCtrl);
@@ -243,7 +243,7 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
         }
         nvgTranslateZ(vg, 3.0f);
     }
-    nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+    nvgShapeAntiAlias(vg, 1);
 }
 
 bool guictr_base::setScissorTransformContainer(NVGcontext* vg) {

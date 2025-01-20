@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 #include "assert_dbg.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "seq_time.h"
-#include "str_util.h"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "seq_time.hpp"
+#include "str_util.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

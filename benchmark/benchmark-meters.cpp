@@ -1,18 +1,18 @@
 #include <benchmark/benchmark.h>
 #include <array>
 #include <cstdio>
-#include "host/audiobuffer/audioblock.h"
-#include "logging.h"
-#include "rand.h"
-#include "str_util.h"
-#include "exceptions.h"
-#include "host/meter/meter.h"
-#include "host/meter/meter_old.h"
-#include "platform.h"
+#include "host/audiobuffer/audioblock.hpp"
+#include "logging.hpp"
+#include "rand.hpp"
+#include "str_util.hpp"
+#include "exceptions.hpp"
+#include "host/meter/meter.hpp"
+#include "host/meter/meter_old.hpp"
+#include "platform.hpp"
 
 #include <functional>
 #include <memory>
-#include "sse.h"
+#include "sse.hpp"
 
 volatile bool fatalError;
 

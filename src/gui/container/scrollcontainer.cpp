@@ -1,12 +1,12 @@
-#include "scrollcontainer.h"
+#include "scrollcontainer.hpp"
 #include <nanovg.h>
 #include <vector>
-#include "event.h"
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "guicolors.h"
-#include "gui/controls/scrollbar.h"
-#include "basectrl.h"
+#include "event.hpp"
+#include "gui/gui.hpp"
+#include "gui/container/container.hpp"
+#include "guicolors.hpp"
+#include "gui/controls/scrollbar.hpp"
+#include "basectrl.hpp"
 
 void guictr_scrollbar::render(NVGcontext* vg) {
     if (isBackgroundRendered()) {

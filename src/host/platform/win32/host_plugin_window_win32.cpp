@@ -1,18 +1,18 @@
-#include "host/plugin/modules.h"
+#include "host/plugin/modules.hpp"
 #ifdef _WIN32
-#include "logging.h"
-#include "str_util.h"
-#include "host/host_plugin_window.h"
-#include "host/host_pluginmanager.h"
-#include "host/plugin/vst/vstplugin.h"
-#include "host/daw/mainctrl.h"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "host/host_plugin_window.hpp"
+#include "host/host_pluginmanager.hpp"
+#include "host/plugin/vst/vstplugin.hpp"
+#include "host/daw/mainctrl.hpp"
 #include <windows.h>
 #include <winuser.h>
 #include <tchar.h>
 
-#include "math/vec.h"
-#include "math/seq_math.h"
-#include "platform/win/platform_win.h"
+#include "math/vec.hpp"
+#include "math/seq_math.hpp"
+#include "platform/win/platform_win.hpp"
 
 #define WINDOW_HANDLE HWND
 #define WIN32API_CALLBACK_TYPE __stdcall

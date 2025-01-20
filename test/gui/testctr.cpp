@@ -9,28 +9,28 @@
 #include <array>
 
 #include "assert_dbg.h"
-#include "gui/container/container_builder.h"
-#include "gui/contextmenu/contextmenu.h"
-#include "gui/controls/button.h"
+#include "gui/container/container_builder.hpp"
+#include "gui/contextmenu/contextmenu.hpp"
+#include "gui/controls/button.hpp"
 #include "gui/controls/filebrowser.hpp"
-#include "gui/dialog/dialogs.h"
-#include "gui/gui.h"
-#include "gui/views/pluginlist.h"
-#include "guicolors.h"
-#include "math/vec.h"
-#include "rand.h"
-#include "renderresources.h"
-#include "str_util.h"
-#include "basectrl.h"
-#include "gui/container/container.h"
-#include "gui/container/container_layout.h"
-#include "gui/controls/knob.h"
-#include "gui/controls/inputfield.h"
-#include "gui/controls/colorpick.h"
-#include "gui/controls/background_image_settings.h"
-#include "gui/dropdown/dropdown_generic.h"
-#include "logging.h"
-#include "platform.h"
+#include "gui/dialog/dialogs.hpp"
+#include "gui/gui.hpp"
+#include "gui/views/pluginlist.hpp"
+#include "guicolors.hpp"
+#include "math/vec.hpp"
+#include "rand.hpp"
+#include "renderresources.hpp"
+#include "str_util.hpp"
+#include "basectrl.hpp"
+#include "gui/container/container.hpp"
+#include "gui/container/container_layout.hpp"
+#include "gui/controls/knob.hpp"
+#include "gui/controls/inputfield.hpp"
+#include "gui/controls/colorpick.hpp"
+#include "gui/controls/background_image_settings.hpp"
+#include "gui/dropdown/dropdown_generic.hpp"
+#include "logging.hpp"
+#include "platform.hpp"
 
 class guictr_debugstrings : public guictr_base {
 public:
@@ -402,7 +402,7 @@ void guictr_testgui::render(NVGcontext* vg) {
 		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_KNOB_IND));
 		nvgStrokeWidth(vg, 1.5f);
 		nvgStroke(vg);
-		nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+		nvgShapeAntiAlias(vg, 1);
 		nvgBeginPath(vg);
 		nvgRect(vg, 16, 16, 256, 256);
 		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
@@ -437,7 +437,7 @@ void guictr_testgui::render(NVGcontext* vg) {
 		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_KNOB_IND));
 		nvgStrokeWidth(vg, 1.5f);
 		nvgStroke(vg);
-		nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+		nvgShapeAntiAlias(vg, 1);
 		nvgRestore(vg);
 		nvgSave(vg);
 		nvgTranslate(vg, 320, 32+128);

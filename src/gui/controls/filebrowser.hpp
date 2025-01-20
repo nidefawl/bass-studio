@@ -3,18 +3,18 @@
 #include <utility>
 
 #include "assert_dbg.h"
-#include "fileio.h"
-#include "gui/contextmenu/contextmenu.h"
-#include "gui/controls/list.h"
-#include "gui/gui.h"
-#include "gui/track/trackcontrols.h"
-#include "gui/track/trackctr.h"
-#include "host/daw/mainctrl.h"
-#include "host/track/track_impl.h"
-#include "host/track/trackctr_types.h"
-#include "logging.h"
-#include "renderresources.h"
-#include "str_util.h"
+#include "fileio.hpp"
+#include "gui/contextmenu/contextmenu.hpp"
+#include "gui/controls/list.hpp"
+#include "gui/gui.hpp"
+#include "gui/track/trackcontrols.hpp"
+#include "gui/track/trackctr.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "host/track/track_impl.hpp"
+#include "host/track/trackctr_types.hpp"
+#include "logging.hpp"
+#include "renderresources.hpp"
+#include "str_util.hpp"
 
 
 int32_t GetIconFromExtension(const String& path);

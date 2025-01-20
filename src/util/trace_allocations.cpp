@@ -9,8 +9,8 @@ AllocStats endTrace() {
 }
 } // namespace DebugAlloc
 #else
-#include "compiler.h"
-#include "logging.h"
+#include "compiler.hpp"
+#include "logging.hpp"
 #include <new>
 #include <cstdlib>
 

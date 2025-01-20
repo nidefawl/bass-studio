@@ -1,23 +1,23 @@
 #include <nanovg.h>
 #include <vector>
-#include "logging.h"
-#include "math/seq_math.h"
-#include "math/vec.h"
-#include "str_util.h"
-#include "window.h"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "math/vec.hpp"
+#include "str_util.hpp"
+#include "window.hpp"
 
-#include "keyboard.h"
-#include "commands.h"
+#include "keyboard.hpp"
+#include "commands.hpp"
 
-#include "basectrl.h"
-#include "seq_util.h"
+#include "basectrl.hpp"
+#include "seq_util.hpp"
 
-#include "../gui/gui.h"
-#include "guiconstant.h"
-#include "gui/container/container.h"
-#include "gui/contextmenu/contextmenu_base.h"
-#include "gui/container/scrollcontainer.h"
-#include "gui/controls/scrollbar.h"
+#include "../gui/gui.hpp"
+#include "guiconstant.hpp"
+#include "gui/container/container.hpp"
+#include "gui/contextmenu/contextmenu_base.hpp"
+#include "gui/container/scrollcontainer.hpp"
+#include "gui/controls/scrollbar.hpp"
 
 void PopupCtrl::closePopup() {
     if (isShown()) {

@@ -1,6 +1,6 @@
-#include "logging.h"
-#include "str_util.h"
-#include "seq_time.h"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "seq_time.hpp"
 #include <array>
 #include <charconv>
 #include <system_error>

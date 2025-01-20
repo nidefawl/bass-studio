@@ -48,6 +48,8 @@ endif()
 
 
 file(GLOB_RECURSE HDR_ALL_FILES src/*.h)
+file(GLOB_RECURSE HPP_ALL_FILES src/*.h)
+set(HDR_ALL_FILES ${HPP_ALL_FILES} ${HDR_ALL_FILES})
 file(GLOB_RECURSE CXX_ALL_FILES src/*.cxx)
 file(GLOB_RECURSE CPP_ALL_FILES src/*.cpp)
 set(CPP_ALL_FILES ${CXX_ALL_FILES} ${CPP_ALL_FILES})
@@ -355,15 +357,15 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
   "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
   "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
   "$<$<COMPILE_LANGUAGE:CXX>:<fstream$<ANGLE-R>>"
-  "$<$<COMPILE_LANGUAGE:CXX>:include/types.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:include/math/mat.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:host/track/track_impl.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:include/basectrl.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:host/daw/mainctrl.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:include/renderresources.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
+  "$<$<COMPILE_LANGUAGE:CXX>:include/types.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:include/math/mat.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:host/track/track_impl.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:include/basectrl.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:host/daw/mainctrl.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:include/renderresources.hpp>"
+  "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.hpp>"
 )
 
 

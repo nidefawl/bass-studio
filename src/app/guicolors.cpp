@@ -1,13 +1,13 @@
-#include "guicolors.h"
+#include "guicolors.hpp"
 #include <vector>
 #include <algorithm>
-#include "math/seq_math.h"
-#include "logging.h"
-#include "str_util.h"
-#include "renderresources.h"
-#include "guifonts.h"
-#include "guiglobals.h"
-#include "theme.h"
+#include "math/seq_math.hpp"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "renderresources.hpp"
+#include "guifonts.hpp"
+#include "guiglobals.hpp"
+#include "theme.hpp"
 #include <nanovg.h>
 
 

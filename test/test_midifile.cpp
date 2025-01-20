@@ -1,11 +1,11 @@
 #include "TestBase.hpp"
-#include "common/test_common.h"
-#include "fileio.h"
-#include "fileloader.h"
-#include "logging.h"
-#include "midi/MidiFile.h"
-#include "platform.h"
-#include "str_util.h"
+#include "common/test_common.hpp"
+#include "fileio.hpp"
+#include "fileloader.hpp"
+#include "logging.hpp"
+#include "midi/MidiFile.hpp"
+#include "platform.hpp"
+#include "str_util.hpp"
 #include <vector>
 
 namespace {

@@ -1,10 +1,10 @@
 #include "TestBase.hpp"
 #include <vector>
-#include "types.h"
+#include "types.hpp"
 #include <chrono>
-#include "common/test_common.h"
-#include "thread.h"
-#include "threads/workerthread.h"
+#include "common/test_common.hpp"
+#include "thread.hpp"
+#include "threads/workerthread.hpp"
 
 using hp_clock = std::chrono::high_resolution_clock;
 

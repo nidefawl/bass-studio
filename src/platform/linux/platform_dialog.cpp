@@ -2,13 +2,13 @@
 #include <exception>
 #include <vector>
 #include "assert_dbg.h"
-#include "fileio.h"
-#include "hires_timer.h"
-#include "logging.h"
-#include "platform.h"
-#include "platform/linux/nfd/nfd.h"
-#include "str_util.h"
-#include "window.h"
+#include "fileio.hpp"
+#include "hires_timer.hpp"
+#include "logging.hpp"
+#include "platform.hpp"
+#include "platform/linux/nfd/nfd.hpp"
+#include "str_util.hpp"
+#include "window.hpp"
 
 
 int browseForFolder(const String& title, const String& pathStart, String& _out) {

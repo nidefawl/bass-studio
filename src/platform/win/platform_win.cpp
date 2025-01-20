@@ -1,30 +1,30 @@
 #include <cstring>
 #ifdef _WIN32
-#include "config.h"
-#include "str_util.h"
-#include "math/seq_math.h"
-#include "error.h"
-#include "str_win32.h"
-#include "logging.h"
+#include "config.hpp"
+#include "str_util.hpp"
+#include "math/seq_math.hpp"
+#include "error.hpp"
+#include "str_win32.hpp"
+#include "logging.hpp"
 #include "assert_dbg.h"
-#include "msgbox.h"
+#include "msgbox.hpp"
 #include <shlobj.h>//for knownFolder
 #include <sstream>
-#include "types.h"
+#include "types.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <csignal>
 #include <excpt.h>
 #include <windows.h>
 #ifdef __MINGW32__
-#include "mmsystem.h"
+#include <mmsystem.h>
 #else
 #include <timeapi.h>
 #endif
 #include <fcntl.h>
 #include <io.h>
 #include <vector>
-#include "platform.h"
+#include "platform.hpp"
 
 
 static HWND mainHWND = nullptr;

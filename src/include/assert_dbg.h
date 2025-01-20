@@ -20,7 +20,7 @@
 #else // DBG_ASSERT_DISABLE
 
 #ifdef __cplusplus
-#include "compiler.h"
+#include "compiler.hpp"
 
 void CPP_failedAssert(const char* expr, const char *file, int line);
 

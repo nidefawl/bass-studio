@@ -35,9 +35,9 @@
 #include "audioeffectx.h"
 #include "aeffeditor.h"
 #include <exception>
-#include "str_util.h"
-#include "exceptions.h"
-#include "msgbox.h"
+#include "str_util.hpp"
+#include "exceptions.hpp"
+#include "msgbox.hpp"
 
 //-----------------------------------------------------------------------------------------------------------------
 // Class AudioEffectX Implementation

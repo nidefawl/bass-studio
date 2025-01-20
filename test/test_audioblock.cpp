@@ -1,8 +1,8 @@
 #include "TestBase.hpp"
-#include "host/audiobuffer/audioblock.h"
-#include "common/test_common.h"
-#include "types.h"
-#include "util/testing_environment.h"
+#include "host/audiobuffer/audioblock.hpp"
+#include "common/test_common.hpp"
+#include "types.hpp"
+#include "util/testing_environment.hpp"
 #include <utility>
 #include <vector>
 

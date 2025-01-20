@@ -1,14 +1,14 @@
 #pragma once
-#include "host/audiobuffer/audioblock.h"
-#include "host/host.h"
-#include "host/plugin/internal/internal-plugin.h"
-#include "logging.h"
-#include "seq_time.h"
-#include "str_util.h"
+#include "host/audiobuffer/audioblock.hpp"
+#include "host/host.hpp"
+#include "host/plugin/internal/internal-plugin.hpp"
+#include "logging.hpp"
+#include "seq_time.hpp"
+#include "str_util.hpp"
 #include "synth-types.hpp"
 #include "synth-param.hpp"
-#include "host/plugin/plugin-lockable.h"
-#include "types.h"
+#include "host/plugin/plugin-lockable.hpp"
+#include "types.hpp"
 
 namespace PluginSynth {
 

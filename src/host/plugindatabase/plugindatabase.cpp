@@ -1,16 +1,16 @@
 
-#include "plugindatabase.h"
-#include "host/plugin/modules.h"
-#include "logging.h"
-#include "tls.h"
-#include "types.h"
-#include "str_util.h"
+#include "plugindatabase.hpp"
+#include "host/plugin/modules.hpp"
+#include "logging.hpp"
+#include "tls.hpp"
+#include "types.hpp"
+#include "str_util.hpp"
 #include "assert_dbg.h"
-#include "fileio.h"
-#include "platform.h"
-#include "appsettings.h"
-#include "snapshot/snapshot.h"
-#include "snapshot/plugin-snapshot.h"
+#include "fileio.hpp"
+#include "platform.hpp"
+#include "appsettings.hpp"
+#include "snapshot/snapshot.hpp"
+#include "snapshot/plugin-snapshot.hpp"
 #include <exception>
 #include <memory>
 #include <utility>

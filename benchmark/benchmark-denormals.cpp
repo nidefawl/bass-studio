@@ -1,14 +1,14 @@
 #include <benchmark/benchmark.h>
 #include <array>
-#include "logging.h"
-#include "str_util.h"
-#include "exceptions.h"
-#include "appconfig.h"
-#include "appsettings.h"
-#include "platform.h"
-#include "basectrl.h"
-#include "hires_timer.h"
-#include "sse.h"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "exceptions.hpp"
+#include "appconfig.hpp"
+#include "appsettings.hpp"
+#include "platform.hpp"
+#include "basectrl.hpp"
+#include "hires_timer.hpp"
+#include "sse.hpp"
 
 #include <memory>
 #include <cstdio>
@@ -18,7 +18,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <intrin.h>
-#include "platform/win/platform_win.h"
+#include "platform/win/platform_win.hpp"
 #endif
 
 void generateDenormals(float y[16]) {

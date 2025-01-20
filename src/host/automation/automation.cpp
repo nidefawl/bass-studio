@@ -1,19 +1,19 @@
 #include <algorithm>
 #include <vector>
 #include "assert_dbg.h"
-#include "automation.h"
-#include "config.h"
-#include "host/daw/mainctrl.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "host/plugin/vst/vstplugin.h"
-#include "gui/automation/automatable.h"
-#include "platform.h"
-#include "seq_time.h"
-#include "seq_util.h"
-#include "str_util.h"
-#include "dsp_util.h"
-#include "types.h"
+#include "automation.hpp"
+#include "config.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "host/plugin/vst/vstplugin.hpp"
+#include "gui/automation/automatable.hpp"
+#include "platform.hpp"
+#include "seq_time.hpp"
+#include "seq_util.hpp"
+#include "str_util.hpp"
+#include "dsp_util.hpp"
+#include "types.hpp"
 
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
     int32_t idx = 0;

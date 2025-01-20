@@ -1,8 +1,8 @@
 #pragma once
-#include "gui/container/container.h"
-#include "gui/container/scrollcontainer.h"
-#include "gui/controls/knobpluginparam.h"
-#include "host/plugin/plugin-lockable.h"
+#include "gui/container/container.hpp"
+#include "gui/container/scrollcontainer.hpp"
+#include "gui/controls/knobpluginparam.hpp"
+#include "host/plugin/plugin-lockable.hpp"
 #include "synth-modulations.hpp"
 
 
@@ -526,7 +526,7 @@ public:
             nvgStrokeWidth(vg, theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG));
             nvgStrokeColor(vg, color);
             nvgStroke(vg);
-            // nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+            // nvgShapeAntiAlias(vg, 1);
             nvgTranslateZ(vg, 1.0f);
         }
     }

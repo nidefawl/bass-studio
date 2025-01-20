@@ -1,10 +1,10 @@
 #pragma once
-#include "rand.h"
-#include "types.h"
-#include "str_util.h"
-#include "seq_time.h"
-#include "math/seq_math.h"
-#include "host/plugin/internal/internal-plugin.h"
+#include "rand.hpp"
+#include "types.hpp"
+#include "str_util.hpp"
+#include "seq_time.hpp"
+#include "math/seq_math.hpp"
+#include "host/plugin/internal/internal-plugin.hpp"
 #include <cstdint>
 #include <vector>
 

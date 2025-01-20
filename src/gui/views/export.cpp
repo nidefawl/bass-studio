@@ -1,12 +1,12 @@
-#include "controls.h"
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "gui/container/container_builder.h"
-#include "gui/controls/button.h"
-#include "host/daw/mainctrl.h"
-#include "host/host_pluginmanager.h"
-#include "host/track/track_impl.h"
-#include "seq_time.h"
+#include "controls.hpp"
+#include "gui/gui.hpp"
+#include "gui/container/container.hpp"
+#include "gui/container/container_builder.hpp"
+#include "gui/controls/button.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "host/host_pluginmanager.hpp"
+#include "host/track/track_impl.hpp"
+#include "seq_time.hpp"
 
 
 namespace DAW {

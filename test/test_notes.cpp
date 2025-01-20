@@ -1,10 +1,10 @@
 #include "TestBase.hpp"
 #include <vector>
-#include "host/daw/clipboard.h"
-#include "seq_time.h"
-#include "host/clip/clip.h"
-#include "host/daw/mainctrl.h"
-#include "common/test_common.h"
+#include "host/daw/clipboard.hpp"
+#include "seq_time.hpp"
+#include "host/clip/clip.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "common/test_common.hpp"
 
 namespace {
     tick_t populateWithManyNotes(clip_t* clip) {

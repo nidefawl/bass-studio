@@ -1,16 +1,16 @@
-#include "gui/track/trackcontent.h"
-#include "subtrack.h"
-#include "basectrl.h"
-#include "host/daw/mainctrl.h"
+#include "gui/track/trackcontent.hpp"
+#include "subtrack.hpp"
+#include "basectrl.hpp"
+#include "host/daw/mainctrl.hpp"
 #include <nanovg.h>
-#include "str_util.h"
-#include "math/vec.h"
-#include "math/seq_math.h"
-#include "wave/waveform_render_impl.h"
-#include "host/track/track.h"
-#include "host/track/track_impl.h"
-#include "color_util.h"
-#include "seq_util.h"
+#include "str_util.hpp"
+#include "math/vec.hpp"
+#include "math/seq_math.hpp"
+#include "wave/waveform_render_impl.hpp"
+#include "host/track/track.hpp"
+#include "host/track/track_impl.hpp"
+#include "color_util.hpp"
+#include "seq_util.hpp"
 #include <unordered_map>
 
 class gui_subtrack_waveview final : public gui_track_subtrack {

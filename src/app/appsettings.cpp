@@ -1,11 +1,11 @@
 #include <ctime>
 #include <memory>
-#include "appsettings.h"
+#include "appsettings.hpp"
 #if defined(__linux__) || defined(__APPLE__)
-#include "platform/linux/windowsize.h"
+#include "platform/linux/windowsize.hpp"
 #endif
 #ifdef _WIN32
-#include "platform/win/windowsize.h"
+#include "platform/win/windowsize.hpp"
 #endif
 
 void recentfilelist::add(const String& path) {

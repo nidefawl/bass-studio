@@ -1,12 +1,12 @@
-#include "arp.h"
-#include "appsettings.h"
-#include "gui/automation/automatable.h"
-#include "gui/contextmenu/contextmenu.h"
-#include "gui/contextmenu/contextmenu_daw.h"
-#include "gui/controls/knoblabeled.h"
-#include "guiconstant.h"
-#include "math/seq_math.h"
-#include "seq_util.h"
+#include "arp.hpp"
+#include "appsettings.hpp"
+#include "gui/automation/automatable.hpp"
+#include "gui/contextmenu/contextmenu.hpp"
+#include "gui/contextmenu/contextmenu_daw.hpp"
+#include "gui/controls/knoblabeled.hpp"
+#include "guiconstant.hpp"
+#include "math/seq_math.hpp"
+#include "seq_util.hpp"
 
 class guiknob_arp final : public guiknob {
     const DAW::midiarp::arp_param_entry_t& param;

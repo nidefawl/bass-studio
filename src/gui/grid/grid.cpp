@@ -1,6 +1,6 @@
-#include "seq_time.h"
-#include "grid.h"
-#include "host/project/projectcontroller.h"
+#include "seq_time.hpp"
+#include "grid.hpp"
+#include "host/project/projectcontroller.hpp"
 
 void scaled_grid::makeTickVisible(tick_t tickTime) {
     double tickBars = tickTime / (double) TICKS_BAR;

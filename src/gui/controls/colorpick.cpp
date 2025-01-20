@@ -1,11 +1,11 @@
-#include "colorpick.h"
-#include "color_util.h"
-#include "basectrl.h"
-#include "gui/container/container.h"
-#include "gui/contextmenu/contextmenu_daw.h"
-#include "gui/contextmenu/contextmenu_color.h"
-#include "gui/gui.h"
-#include "math/seq_math.h"
+#include "colorpick.hpp"
+#include "color_util.hpp"
+#include "basectrl.hpp"
+#include "gui/container/container.hpp"
+#include "gui/contextmenu/contextmenu_daw.hpp"
+#include "gui/contextmenu/contextmenu_color.hpp"
+#include "gui/gui.hpp"
+#include "math/seq_math.hpp"
 #include <glm/vec3.hpp>
 #include <glm/gtx/color_space.hpp>
 

@@ -1,7 +1,7 @@
-#include "keyboard.h"
+#include "keyboard.hpp"
 #include "assert_dbg.h"
-#include "commands.h"
-#include "event.h"
+#include "commands.hpp"
+#include "event.hpp"
 
 String KeyEvent::toString() const {
     return StringFormat("KeyEvent: type=%d, keyCode=%d, scancode=%d, mods=%d, keyname=%s", type, static_cast<int32_t>(keyCode), scancode, mods, keyname);

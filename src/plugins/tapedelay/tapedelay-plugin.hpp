@@ -1,6 +1,6 @@
 #pragma once
-#include "host/plugin/modules.h"
-#include "host/plugin/internal/internal-plugin.h"
+#include "host/plugin/modules.hpp"
+#include "host/plugin/internal/internal-plugin.hpp"
 
 namespace PluginDelay {
 class EffectImplDelay;

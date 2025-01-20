@@ -1,11 +1,11 @@
 #include "TestBase.hpp"
-#include "host/graph/effect_graph.h"
-#include "str_util.h"
-#include "common/test_common.h"
-#include "host/host_pluginmanager.h"
-#include "host/host.h"
-#include "tls.h"
-#include "appconfig.h"
+#include "host/graph/effect_graph.hpp"
+#include "str_util.hpp"
+#include "common/test_common.hpp"
+#include "host/host_pluginmanager.hpp"
+#include "host/host.hpp"
+#include "tls.hpp"
+#include "appconfig.hpp"
 #include <memory>
 
 

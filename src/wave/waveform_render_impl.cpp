@@ -1,9 +1,9 @@
 #include "assert_dbg.h"
 #include "glheaders.h"
-#include "seq_util.h"
-#include "waveform_render_impl.h"
-#include "gl/gl_util.h"
-#include "gl/gl_pathrenderer.h"
+#include "seq_util.hpp"
+#include "waveform_render_impl.hpp"
+#include "gl/gl_util.hpp"
+#include "gl/gl_pathrenderer.hpp"
 
 #include <nanovg.h>
 #include <nanovg_gl.h>
@@ -12,17 +12,17 @@
 #include <utility>
 #include <vector>
 
-#include "math/seq_math.h"
-#include "math/mat.h"
-#include "platform.h"
-#include "exceptions.h"
-#include "host/audiocache/audiocache.h"
-#include "waveform_render.h"
-#include "waveform_generate.h"
-#include "logging.h"
-#include "appconfig.h"
-#include "tls.h"
-#include "gui/gui.h"
+#include "math/seq_math.hpp"
+#include "math/mat.hpp"
+#include "platform.hpp"
+#include "exceptions.hpp"
+#include "host/audiocache/audiocache.hpp"
+#include "waveform_render.hpp"
+#include "waveform_generate.hpp"
+#include "logging.hpp"
+#include "appconfig.hpp"
+#include "tls.hpp"
+#include "gui/gui.hpp"
 
 
 struct waveformrender::Impl {

@@ -1,9 +1,9 @@
 #pragma once
-#include "host/shape/shape.h"
-#include "math/seq_math.h"
-#include "math/simd_math.h"
+#include "host/shape/shape.hpp"
+#include "math/seq_math.hpp"
+#include "math/simd_math.hpp"
 #include "plugins/lfo/lfo-types.hpp"
-#include "types.h"
+#include "types.hpp"
 #include <array>
 
 namespace PluginSynth {

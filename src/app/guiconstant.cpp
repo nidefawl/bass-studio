@@ -1,9 +1,9 @@
-#include "guiconstant.h"
+#include "guiconstant.hpp"
 #include <nanovg_min.h>
 #include <vector>
-#include "guiglobals.h"
-#include "guibackgroundimage.h"
-#include "logging.h"
+#include "guiglobals.hpp"
+#include "guibackgroundimage.hpp"
+#include "logging.hpp"
 
 namespace GuiConstant {
 

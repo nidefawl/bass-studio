@@ -1,9 +1,9 @@
-#include "exceptions.h"
-#include "str_util.h"
-#include "commands.h"
-#include "config.h"
-#include "platform.h"
-#include "exceptions.h"
+#include "exceptions.hpp"
+#include "str_util.hpp"
+#include "commands.hpp"
+#include "config.hpp"
+#include "platform.hpp"
+#include "exceptions.hpp"
 
 #include <vector>
 #include <iostream>

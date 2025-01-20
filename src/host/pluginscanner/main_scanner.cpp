@@ -11,14 +11,14 @@
  */
 
 #include "assert_dbg.h"
-#include "host/host_plugin_loadresult.h"
-#include "host/plugin/clap/clap-plugin.h"
-#include "host/plugin/vst/vstplugin.h"
-#include "host/plugin/vst/vstplugin-handles.h"
-#include "host/host_pluginmanager.h"
-#include "host/host.h"
-#include "host/plugin/vst3/vst3plugin.h"
-#include "logging.h"
+#include "host/host_plugin_loadresult.hpp"
+#include "host/plugin/clap/clap-plugin.hpp"
+#include "host/plugin/vst/vstplugin.hpp"
+#include "host/plugin/vst/vstplugin-handles.hpp"
+#include "host/host_pluginmanager.hpp"
+#include "host/host.hpp"
+#include "host/plugin/vst3/vst3plugin.hpp"
+#include "logging.hpp"
 #include <public.sdk/source/vst/hosting/plugprovider.h>
 #include <public.sdk/source/vst/hosting/module.h>
 #include <public.sdk/source/vst/hosting/hostclasses.h>
@@ -28,18 +28,18 @@
 #include <pluginterfaces/vst/ivsteditcontroller.h>
 #include <pluginterfaces/vst/ivstprocesscontext.h>
 #include <pluginterfaces/gui/iplugview.h>
-#include "seq_util.h"
-#include "threads/childprocessthread.h"
-#include "appsettings.h"
+#include "seq_util.hpp"
+#include "threads/childprocessthread.hpp"
+#include "appsettings.hpp"
 #include "buildinfo.h"
-#include "exceptions.h"
-#include "fileio.h"
-#include "ipc.h"
-#include "platform.h"
-#include "str_util.h"
-#include "thread.h"
-#include "tls.h"
-#include "appconfig.h"
+#include "exceptions.hpp"
+#include "fileio.hpp"
+#include "ipc.hpp"
+#include "platform.hpp"
+#include "str_util.hpp"
+#include "thread.hpp"
+#include "tls.hpp"
+#include "appconfig.hpp"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
 #include <cstdint>
@@ -48,7 +48,7 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 
 #ifdef _WIN32
-#include "platform/win/platform_win.h"
+#include "platform/win/platform_win.hpp"
 #include <windows.h>
 #endif
 

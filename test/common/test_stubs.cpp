@@ -1,6 +1,6 @@
-#include "util/testing_environment.h"
-#include "logging.h"
-#include "thread.h"
+#include "util/testing_environment.hpp"
+#include "logging.hpp"
+#include "thread.hpp"
 #include "assert_dbg.h"
 #include <cstdio>
 

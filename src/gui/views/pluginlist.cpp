@@ -1,6 +1,6 @@
-#include "pluginlist.h"
-#include "gui/table/table.h"
-#include "guicolors.h"
+#include "pluginlist.hpp"
+#include "gui/table/table.hpp"
+#include "guicolors.hpp"
 #include <nanovg.h>
 
 template<>
@@ -68,7 +68,7 @@ void gui_pluginlist_entry::drawBackground(NVGcontext* vg, const guitheme_t* them
         NVGcolor bg = theme->getColor(getBackgroundColorFromState(stateflags));
         nvgFillColor(vg, bg);
         nvgFill(vg);
-        nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+        nvgShapeAntiAlias(vg, 1);
         nvgTranslateZ(vg, -2.0f);
         nvgTranslateZ(vg, 3.0f);
     }

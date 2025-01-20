@@ -1,11 +1,11 @@
-#include "projectfile.h"
+#include "projectfile.hpp"
 
-#include "snapshot/snapshot.h"
-#include "snapshot/trackrouting-snapshot.h"
-#include "snapshot/track-snapshot.h"
-#include "snapshot/plugin-snapshot.h"
-#include "snapshot/project-snapshot.h"
-#include "gui/container/container_layout_types.h"
+#include "snapshot/snapshot.hpp"
+#include "snapshot/trackrouting-snapshot.hpp"
+#include "snapshot/track-snapshot.hpp"
+#include "snapshot/plugin-snapshot.hpp"
+#include "snapshot/project-snapshot.hpp"
+#include "gui/container/container_layout_types.hpp"
 
 #include <exception>
 #include <vector>
@@ -14,23 +14,23 @@
 #include <memory>
 #include <functional>
 
-#include "config.h"
-#include "platform.h"
-#include "exceptions.h"
-#include "seq_time.h"
-#include "seq_util.h"
-#include "math/vec.h"
-#include "str_util.h"
-#include "fileio.h"
-#include "logging.h"
-#include "layout.h"
-#include "shapefile.h"
-#include "host/clip/clip.h"
-#include "host/daw_channel.h"
-#include "host/automation/automation.h"
-#include "host/track/track.h"
-#include "host/project/project.h"
-#include "host/plugin/modules.h"
+#include "config.hpp"
+#include "platform.hpp"
+#include "exceptions.hpp"
+#include "seq_time.hpp"
+#include "seq_util.hpp"
+#include "math/vec.hpp"
+#include "str_util.hpp"
+#include "fileio.hpp"
+#include "logging.hpp"
+#include "layout.hpp"
+#include "shapefile.hpp"
+#include "host/clip/clip.hpp"
+#include "host/daw_channel.hpp"
+#include "host/automation/automation.hpp"
+#include "host/track/track.hpp"
+#include "host/project/project.hpp"
+#include "host/plugin/modules.hpp"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>

@@ -1,14 +1,14 @@
-#include "host/host_plugin_loadresult.h"
-#include "math/seq_math.h"
-#include "str_util.h"
-#include "host/host_pluginmanager.h"
-#include "host/plugin/modules.h"
-#include "host/plugin/base/base-plugin.h"
-#include "host/plugin/vst/vstplugin.h"
-#include "host/plugin/vst/vstplugin-handles.h"
+#include "host/host_plugin_loadresult.hpp"
+#include "math/seq_math.hpp"
+#include "str_util.hpp"
+#include "host/host_pluginmanager.hpp"
+#include "host/plugin/modules.hpp"
+#include "host/plugin/base/base-plugin.hpp"
+#include "host/plugin/vst/vstplugin.hpp"
+#include "host/plugin/vst/vstplugin-handles.hpp"
 
-#include "plugins/info/info-plugin.h"
-#include "plugins/synth/synth-plugin.h"
+#include "plugins/info/info-plugin.hpp"
+#include "plugins/synth/synth-plugin.hpp"
 
 typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 

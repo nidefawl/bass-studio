@@ -1,7 +1,7 @@
 #include "TestBase.hpp"
 #include <vector>
-#include "compiler.h"
-#include "saferef.h"
+#include "compiler.hpp"
+#include "saferef.hpp"
 
 
 namespace test_saferef {

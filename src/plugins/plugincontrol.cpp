@@ -1,4 +1,4 @@
-#include "plugincontrol.h"
+#include "plugincontrol.hpp"
 
 #include "glheaders.h"
 #include <nanovg.h>
@@ -12,30 +12,30 @@
 #include <cstdarg>
 
 
-#include "tls.h"
-#include "window.h"
-#include "platform.h"
+#include "tls.hpp"
+#include "window.hpp"
+#include "platform.hpp"
 
-#include "keyboard.h"
-#include "commands.h"
+#include "keyboard.hpp"
+#include "commands.hpp"
 
-#include "basectrl.h"
-#include "exceptions.h"
-#include "color_util.h"
-#include "str_util.h"
-#include "logging.h"
-#include "menu.h"
-#include "msgbox.h"
+#include "basectrl.hpp"
+#include "exceptions.hpp"
+#include "color_util.hpp"
+#include "str_util.hpp"
+#include "logging.hpp"
+#include "menu.hpp"
+#include "msgbox.hpp"
 
-#include "../gui/gui.h"
-#include "gui/container/container.h"
-#include "gui/controls/button.h"
-#include "gui/contextmenu/contextmenu_base.h"
-#include "gui/controls/scrollbar.h"
-#include "gui/controls/statusbar.h"
-#include "gui/menu/menu.h"
-#include "plugin.h"
-#include "host/daw/mainctrl.h"
+#include "../gui/gui.hpp"
+#include "gui/container/container.hpp"
+#include "gui/controls/button.hpp"
+#include "gui/contextmenu/contextmenu_base.hpp"
+#include "gui/controls/scrollbar.hpp"
+#include "gui/controls/statusbar.hpp"
+#include "gui/menu/menu.hpp"
+#include "plugin.hpp"
+#include "host/daw/mainctrl.hpp"
 
 
 void PluginControl::destroy() {

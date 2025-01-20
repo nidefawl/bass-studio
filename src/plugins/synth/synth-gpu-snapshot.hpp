@@ -1,8 +1,8 @@
 #pragma once
-#include "file/shapefile.h"
-#include "str_util.h"
-#include "byte-buffer.h"
-#include "synth-snapshot.h"
+#include "file/shapefile.hpp"
+#include "str_util.hpp"
+#include "byte-buffer.hpp"
+#include "synth-snapshot.hpp"
 #include <array>
 #include <cstdint>
 #include <utility>

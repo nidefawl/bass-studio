@@ -1,4 +1,4 @@
-#include "resampler.h"
+#include "resampler.hpp"
 
 bool oversampler_t::runResample(AudioBlock& srcBlock, AudioBlock& dstBlock, uint32_t& nOutputProcessed) {
     dbgassert(srcBlock.samples == this->numSamplesInput);

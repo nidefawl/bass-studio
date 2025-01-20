@@ -1,10 +1,10 @@
-#include "DropTarget.h"
+#include "DropTarget.hpp"
 #include <ole2.h>
-#include "event.h"
-#include "math/vec.h"
-#include "str_win32.h"
-#include "keyboard.h"
-#include "error.h"
+#include "event.hpp"
+#include "math/vec.hpp"
+#include "str_win32.hpp"
+#include "keyboard.hpp"
+#include "error.hpp"
 
 
 

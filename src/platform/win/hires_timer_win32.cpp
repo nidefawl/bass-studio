@@ -1,6 +1,6 @@
 #ifdef _WIN32
-#include "hires_timer.h"
-#include "exceptions.h"
+#include "hires_timer.hpp"
+#include "exceptions.hpp"
 #include <windows.h>
 #include <profileapi.h>
 #include "assert_dbg.h"

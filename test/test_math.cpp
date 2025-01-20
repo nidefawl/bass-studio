@@ -1,7 +1,7 @@
 #include "TestBase.hpp"
-#include "math/seq_math.h"
-#include "logging.h"
-#include "rand.h"
+#include "math/seq_math.hpp"
+#include "logging.hpp"
+#include "rand.hpp"
 #include <limits>
 #include <vector>
 

@@ -1,14 +1,14 @@
-#include "childprocessthread.h"
+#include "childprocessthread.hpp"
 
 #include <vector>
 #include <array>
 #include <thread>
 #include <mutex>
 #include <atomic>
-#include "logging.h"
-#include "str_util.h"
-#include "thread.h"
-#include "exceptions.h"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "thread.hpp"
+#include "exceptions.hpp"
 #include "assert_dbg.h"
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>

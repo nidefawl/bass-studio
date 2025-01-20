@@ -1,8 +1,8 @@
 #ifdef _WIN32
-#include "config.h"
-#include "types.h"
-#include "str_util.h"
-#include "host/host_pluginmanager.h"
+#include "config.hpp"
+#include "types.hpp"
+#include "str_util.hpp"
+#include "host/host_pluginmanager.hpp"
 #include <windows.h>
 
 // Roughly equal to https://jstuff.wordpress.com/jbridge/how-to-add-direct-support-for-jbridge-in-your-host/

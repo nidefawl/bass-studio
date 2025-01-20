@@ -1,17 +1,17 @@
-#include "dsp_util.h"
-#include "samplerate.h"
-#include "config.h"
-#include "math/seq_math.h"
-#include "host/audiobuffer/audioblock.h"
+#include "dsp_util.hpp"
+#include "samplerate.hpp"
+#include "config.hpp"
+#include "math/seq_math.hpp"
+#include "host/audiobuffer/audioblock.hpp"
 #include <cstdlib>
-#include "types.h"
+#include "types.hpp"
 #include <cmath>
 #include <memory.h>
 #include <algorithm>
 #include <limits>
 #include <cstring>
-#include "math/vec.h"
-#include "types.h"
+#include "math/vec.hpp"
+#include "types.hpp"
 #include <glm/geometric.hpp>
 
 namespace dsp_util {

@@ -1,4 +1,4 @@
-#include "rand.h"
+#include "rand.hpp"
 #include <public.sdk/source/vst/hosting/hostclasses.h>
 #include <public.sdk/source/vst/hosting/module.h>
 #include <public.sdk/samples/vst-hosting/editorhost/source/platform/iplatform.h>

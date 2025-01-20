@@ -1,7 +1,7 @@
 #include "airwindows-plugin.hpp"
 #include "airwindows-types.hpp"
 #include "assert_dbg.h"
-#include "plugins/plugin-ui.h"
+#include "plugins/plugin-ui.hpp"
 
 namespace PluginAirWindows {
     IEffectImpl* createEffectImplGalactic1();

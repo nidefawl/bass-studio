@@ -6,28 +6,28 @@
 #include <memory>
 #include <GLFW/glfw3.h>
 
-#include "appconfig.h"
-#include "appsettings.h"
-#include "window.h"
-#include "platform.h"
-#include "fileio.h"
+#include "appconfig.hpp"
+#include "appsettings.hpp"
+#include "window.hpp"
+#include "platform.hpp"
+#include "fileio.hpp"
 
-#include "keyboard.h"
-#include "commands.h"
+#include "keyboard.hpp"
+#include "commands.hpp"
 
-#include "basectrl.h"
-#include "exceptions.h"
-#include "color_util.h"
-#include "str_util.h"
-#include "logging.h"
-#include "tls.h"
+#include "basectrl.hpp"
+#include "exceptions.hpp"
+#include "color_util.hpp"
+#include "str_util.hpp"
+#include "logging.hpp"
+#include "tls.hpp"
 
-#include "gui/gui.h"
-#include "gui/container/container.h"
+#include "gui/gui.hpp"
+#include "gui/container/container.hpp"
 
-#include "host/audiocache/audiocache.h"
-#include "wave/waveform_render.h"
-#include "wave/waveform_render_impl.h"
+#include "host/audiocache/audiocache.hpp"
+#include "wave/waveform_render.hpp"
+#include "wave/waveform_render_impl.hpp"
 
 #include "TestBase.hpp"
 #include "assert_dbg.h"

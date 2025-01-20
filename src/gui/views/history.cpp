@@ -1,9 +1,9 @@
-#include "gui/container/container_builder.h"
-#include "host/daw/mainctrl.h"
-#include "host/daw/edithistory.h"
-#include "gui/container/container.h"
-#include "gui/controls/list.h"
-#include "gui/container/scrollcontainer.h"
+#include "gui/container/container_builder.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "host/daw/edithistory.hpp"
+#include "gui/container/container.hpp"
+#include "gui/controls/list.hpp"
+#include "gui/container/scrollcontainer.hpp"
 
 class gui_list_history final : public gui_list {
 public:

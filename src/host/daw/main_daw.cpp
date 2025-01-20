@@ -1,6 +1,6 @@
-#include "basectrl.h"
-#include "host/daw/mainctrl.h"
-#include "str_util.h"
+#include "basectrl.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "str_util.hpp"
 #include <memory>
 #include <vector>
 

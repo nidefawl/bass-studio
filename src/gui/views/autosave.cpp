@@ -1,12 +1,12 @@
 #include <algorithm>
-#include "guicolors.h"
-#include "guiconstant.h"
-#include "host/daw/mainctrl.h"
-#include "math/vec.h"
-#include "gui/gui.h"
-#include "gui/controls/button.h"
-#include "gui/contextmenu/contextmenu_base.h"
-#include "platform.h"
+#include "guicolors.hpp"
+#include "guiconstant.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "math/vec.hpp"
+#include "gui/gui.hpp"
+#include "gui/controls/button.hpp"
+#include "gui/contextmenu/contextmenu_base.hpp"
+#include "platform.hpp"
 
 
 class gui_autosave final : public guictxtmenu_base {

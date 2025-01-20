@@ -1,12 +1,12 @@
-#include "appconfig.h"
+#include "appconfig.hpp"
 #include "assert_dbg.h"
-#include "event.h"
+#include "event.hpp"
 #include "glheaders.h"
-#include "hires_timer.h"
-#include "host/plugin/modules.h"
-#include "platform/linux/windowsize.h"
-#include "tls.h"
-#include "util/profiling.h"
+#include "hires_timer.hpp"
+#include "host/plugin/modules.hpp"
+#include "platform/linux/windowsize.hpp"
+#include "tls.hpp"
+#include "util/profiling.hpp"
 #include "util/trace_allocations.hpp"
 #include <GLFW/glfw3.h>
 #include <memory>
@@ -17,7 +17,7 @@
 #endif
 #include <nanovg.h>
 #include <nanovg_gl.h>
-#include "types.h"
+#include "types.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -34,44 +34,44 @@
 #include <map>
 #include <glm/geometric.hpp>
 
-#include "config.h"
-#include "math/vec.h"
-#include "math/seq_math.h"
-#include "str_util.h"
-#include "exceptions.h"
-#include "color_util.h"
-#include "mouse.h"
-#include "keyboard.h"
-#include "window.h"
-#include "msgbox.h"
-#include "menu.h"
-#include "basectrl.h"
-#include "droptargetlistener.h"
-#include "platform.h"
-#include "logging.h"
-#include "appsettings.h"
-#include "renderresources.h"
-#include "mousecursor.h"
-#include "fileio.h"
-#include "thread.h"
-#include "error.h"
+#include "config.hpp"
+#include "math/vec.hpp"
+#include "math/seq_math.hpp"
+#include "str_util.hpp"
+#include "exceptions.hpp"
+#include "color_util.hpp"
+#include "mouse.hpp"
+#include "keyboard.hpp"
+#include "window.hpp"
+#include "msgbox.hpp"
+#include "menu.hpp"
+#include "basectrl.hpp"
+#include "droptargetlistener.hpp"
+#include "platform.hpp"
+#include "logging.hpp"
+#include "appsettings.hpp"
+#include "renderresources.hpp"
+#include "mousecursor.hpp"
+#include "fileio.hpp"
+#include "thread.hpp"
+#include "error.hpp"
 #include "buildinfo.h"
-#include "threads/workerthread.h"
-#include "gl/gl_framebuffer.h"
-#include "gl/gl_vbo.h"
-#include "gl/gl_util.h"
+#include "threads/workerthread.hpp"
+#include "gl/gl_framebuffer.hpp"
+#include "gl/gl_vbo.hpp"
+#include "gl/gl_util.hpp"
 #include "gl/gl_context.hpp"
-#include "window_impl.h"
-#include "platform.h"
+#include "window_impl.hpp"
+#include "platform.hpp"
 
 #ifdef _WIN32
-#include "platform/win/platform_win.h"
-#include "platform/win/DropTarget.h"
-#include "str_win32.h"
+#include "platform/win/platform_win.hpp"
+#include "platform/win/DropTarget.hpp"
+#include "str_win32.hpp"
 #endif
 #ifdef __linux__
-#include "platform/linux/x11_util.h"
-#include "platform/linux/nfd/nfd.h"
+#include "platform/linux/x11_util.hpp"
+#include "platform/linux/nfd/nfd.hpp"
 #endif
 #ifdef __APPLE__
 void sendExposeEvent(GLFWwindow* glfw);
@@ -320,7 +320,7 @@ private:
         if (!nanovgCtxt) {
             throw appexception("Couldn't initialize nanovg");
         }
-        nvgShapeAntiAlias(nanovgCtxt, USE_NANOVG_AA);
+        nvgShapeAntiAlias(nanovgCtxt, 1);
 
         RenderResources::initResources(nanovgCtxt);
         MouseCursors::initCursors();//TODO: call MouseCursors::destroy() on exit of last instance
@@ -1793,7 +1793,7 @@ void makeWindowContextCurrent(window_base* w) {
 }
 
 
-#include "platform/win/debug_msg_count.h"
+#include "platform/win/debug_msg_count.hpp"
 win32_hwnd_msg_counter_t msgCounter;
 bool msgCounterEnabled = false;
 
@@ -2128,8 +2128,8 @@ void windowTickTimerRun() {
 }
 
 #if BUILD_DAW_HOST
-#include "plugins/plugin-window.h"
-#include "plugins/plugincontrol.h"
+#include "plugins/plugin-window.hpp"
+#include "plugins/plugincontrol.hpp"
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include <vstsdk-plugin-2.4/aeffeditor.h>

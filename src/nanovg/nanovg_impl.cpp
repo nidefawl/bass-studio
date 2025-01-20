@@ -2,8 +2,8 @@
 #include "nanovg_internal.h"
 #include "nanovg_gl.h"
 
-#include "platform.h"
-#include "hires_timer.h"
+#include "platform.hpp"
+#include "hires_timer.hpp"
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -35,7 +35,7 @@ const char** glnvg_getShaderDefs(int flags, int* numOpts) {
 #include <math/vec.h>
 #include <math/mat.h>
 #include <math/seq_math.h>
-#include "logging.h"
+#include "logging.hpp"
 
 void glnvg__updateMvpCXX(int u_loc_mvp, float w, float h) {
 	float fTime = glnvg__getTimeMillisf() * 0.1f;

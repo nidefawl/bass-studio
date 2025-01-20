@@ -1,5 +1,5 @@
 #if defined(__linux__) || defined(__APPLE__)
-#include "hires_timer.h"
+#include "hires_timer.hpp"
 #include <ctime>
 
 static_assert(sizeof(struct timespec)*2 <= HIRES_TIMER_STACK_SIZE, "struct timespec size does not match HIRES_TIMER_STACK_SIZE");

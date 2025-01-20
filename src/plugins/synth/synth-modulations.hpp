@@ -1,8 +1,8 @@
 #pragma once
-#include "host/automation/automation.h"
-#include "math/seq_math.h"
-#include "str_util.h"
-#include "types.h"
+#include "host/automation/automation.hpp"
+#include "math/seq_math.hpp"
+#include "str_util.hpp"
+#include "types.hpp"
 #include <array>
 #include <cstdint>
 #include <muParser.h>

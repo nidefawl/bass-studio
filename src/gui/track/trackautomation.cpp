@@ -1,28 +1,28 @@
-#include "trackautomation.h"
+#include "trackautomation.hpp"
 
 #include "assert_dbg.h"
-#include "grid_constants.h"
-#include "guicolors.h"
-#include "guiconstant.h"
-#include "guiglobals.h"
-#include "math/seq_math.h"
-#include "gui/gui.h"
-#include "cursor.h"
-#include "event.h"
-#include "color_util.h"
-#include "seq_util.h"
-#include "host/track/track.h"
-#include "host/clip/clip.h"
-#include "grid.h"
-#include "gui/container/container.h"
-#include "str_util.h"
-#include "trackctr.h"
-#include "basectrl.h"
-#include "host/daw/mainctrl.h"
-#include "host/automation/automation.h"
-#include "host/track/track.h"
-#include "host/track/track_impl.h"
-#include "renderresources.h"
+#include "grid_constants.hpp"
+#include "guicolors.hpp"
+#include "guiconstant.hpp"
+#include "guiglobals.hpp"
+#include "math/seq_math.hpp"
+#include "gui/gui.hpp"
+#include "cursor.hpp"
+#include "event.hpp"
+#include "color_util.hpp"
+#include "seq_util.hpp"
+#include "host/track/track.hpp"
+#include "host/clip/clip.hpp"
+#include "grid.hpp"
+#include "gui/container/container.hpp"
+#include "str_util.hpp"
+#include "trackctr.hpp"
+#include "basectrl.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "host/automation/automation.hpp"
+#include "host/track/track.hpp"
+#include "host/track/track_impl.hpp"
+#include "renderresources.hpp"
 #include <cstdint>
 #include <nanovg.h>
 
@@ -585,7 +585,7 @@ void gui_track_automation::render(NVGcontext* vg) {
             nvgStrokeWidth(vg, 1.5f);
             nvgStroke(vg);
             if (nPoints > 128)
-                nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+                nvgShapeAntiAlias(vg, 1);
         }
 
         if ((currentDragged.mode == dragmode::drag_segment || currentDragged.mode == dragmode::drag_selection)) {

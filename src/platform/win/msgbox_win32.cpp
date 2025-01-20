@@ -1,5 +1,5 @@
 #ifdef _WIN32
-#include "msgbox.h"
+#include "msgbox.hpp"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 

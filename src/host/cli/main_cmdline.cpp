@@ -1,5 +1,5 @@
-#include "host/daw/main_daw.h"
-#include "host/daw/mainctrl.h"
+#include "host/daw/main_daw.hpp"
+#include "host/daw/mainctrl.hpp"
 #include <memory>
 
 int main(int argc, char* argv[]) {

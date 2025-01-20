@@ -1,9 +1,9 @@
-#include "menu.h"
+#include "menu.hpp"
 #include "buildinfo.h"
-#include "guicolors.h"
-#include "guiglobals.h"
-#include "renderresources.h"
-#include "window.h"
+#include "guicolors.hpp"
+#include "guiglobals.hpp"
+#include "renderresources.hpp"
+#include "window.hpp"
 #include <nanovg.h>
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)

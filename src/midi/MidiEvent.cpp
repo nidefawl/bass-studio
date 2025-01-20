@@ -2,7 +2,7 @@
  * Based on https://github.com/craigsapp/midifile
  * Modifications (c) Michael Hept
  */
-#include "MidiEvent.h"
+#include "MidiEvent.hpp"
 #include <cstdlib>
 
 

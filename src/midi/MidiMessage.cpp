@@ -2,7 +2,7 @@
  * Based on https://github.com/craigsapp/midifile
  * Modifications (c) Michael Hept 2017-2022
  */
-#include "MidiMessage.h"
+#include "MidiMessage.hpp"
 #include <vector>
 #include <iostream>
 #include <iterator>

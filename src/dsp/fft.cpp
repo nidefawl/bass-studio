@@ -1,5 +1,5 @@
-#include "fft.h"
-#include "math/seq_math.h"
+#include "fft.hpp"
+#include "math/seq_math.hpp"
 #include <cmath>
 #include <vector>
 #include <array>

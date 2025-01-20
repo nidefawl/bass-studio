@@ -1,6 +1,6 @@
-#include "dropdown.h"
-#include "guiglobals.h"
-#include "str_util.h"
+#include "dropdown.hpp"
+#include "guiglobals.hpp"
+#include "str_util.hpp"
 
 bool guidropdownbase::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
     if (-1 != getSelectIndex()) {

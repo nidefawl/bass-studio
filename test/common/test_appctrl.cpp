@@ -1,5 +1,5 @@
-#include "test_appctrl.h"
-#include "appsettings.h"
+#include "test_appctrl.hpp"
+#include "appsettings.hpp"
 #include "glheaders.h"
 
 #include <nanovg.h>
@@ -9,28 +9,28 @@
 #include <memory>
 #include <GLFW/glfw3.h>
 
-#include "gui/shape/shapeeditor.h"
-#include "host/shape/shape.h"
-#include "plugins/visualizer/visualizer-plugin.h"
-#include "tls.h"
-#include "window.h"
-#include "platform.h"
+#include "gui/shape/shapeeditor.hpp"
+#include "host/shape/shape.hpp"
+#include "plugins/visualizer/visualizer-plugin.hpp"
+#include "tls.hpp"
+#include "window.hpp"
+#include "platform.hpp"
 
-#include "keyboard.h"
-#include "commands.h"
+#include "keyboard.hpp"
+#include "commands.hpp"
 
-#include "basectrl.h"
-#include "exceptions.h"
-#include "color_util.h"
-#include "str_util.h"
-#include "logging.h"
-#include "menu.h"
+#include "basectrl.hpp"
+#include "exceptions.hpp"
+#include "color_util.hpp"
+#include "str_util.hpp"
+#include "logging.hpp"
+#include "menu.hpp"
 
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "gui/controls/button.h"
-#include "gui/menu/menu.h"
-#include "gui/dialog/dialog.h"
+#include "gui/gui.hpp"
+#include "gui/container/container.hpp"
+#include "gui/controls/button.hpp"
+#include "gui/menu/menu.hpp"
+#include "gui/dialog/dialog.hpp"
 
 #define CMD_DRAW_BACKBUFFER_TOGGLE 21312
 

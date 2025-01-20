@@ -1,6 +1,6 @@
 #pragma once
-#include "gui/container/container.h"
-#include "gui/table/table.h"
+#include "gui/container/container.hpp"
+#include "gui/table/table.hpp"
 
 class gui_dragged_files final : public guictr_base {
     const int HEIGHT_ENTRY = 20;

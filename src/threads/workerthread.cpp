@@ -6,8 +6,8 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
-#include "thread.h"
-#include "workerthread.h"
+#include "thread.hpp"
+#include "workerthread.hpp"
 #include "assert_dbg.h"
 
 #ifdef _WIN32

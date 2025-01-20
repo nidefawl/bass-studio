@@ -2,8 +2,8 @@
  * Based on https://github.com/craigsapp/midifile
  * Modifications (c) Michael Hept
  */
-#include "MidiFile.h"
-#include "midi/MidiEventList.h"
+#include "MidiFile.hpp"
+#include "midi/MidiEventList.hpp"
 #include <cstdint>
 #include <cstring>
 #include <iostream>

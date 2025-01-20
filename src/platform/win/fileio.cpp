@@ -1,18 +1,18 @@
-#include "logging.h"
+#include "logging.hpp"
 #include <cstdint>
 #ifdef _WIN32
-#include "str_util.h"
-#include "fileio.h"
-#include "exceptions.h"
-#include "types.h"
+#include "str_util.hpp"
+#include "fileio.hpp"
+#include "exceptions.hpp"
+#include "types.hpp"
 #include <windows.h>
 #include <vector>
 #include <limits>
 #include <stdexcept>
 #include "assert_dbg.h"
-#include "platform.h"
-#include "platform_win.h"
-#include "str_win32.h"
+#include "platform.hpp"
+#include "platform_win.hpp"
+#include "str_win32.hpp"
 #include <shlobj.h>
 
 

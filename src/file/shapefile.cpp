@@ -1,7 +1,7 @@
-#include "fileio.h"
-#include "host/shape/shape.h"
-#include "exceptions.h"
-#include "shapefile.h"
+#include "fileio.hpp"
+#include "host/shape/shape.hpp"
+#include "exceptions.hpp"
+#include "shapefile.hpp"
 
 #include <iostream>
 #include <sstream>

@@ -1,8 +1,8 @@
 #include "TestBase.hpp"
 #include <limits>
-#include "math/vec.h"
-#include "str_util.h"
-#include "logging.h"
+#include "math/vec.hpp"
+#include "str_util.hpp"
+#include "logging.hpp"
 
 namespace {
     void test_stringify() {

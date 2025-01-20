@@ -1,4 +1,4 @@
-#include "pymachine.h"
+#include "pymachine.hpp"
 #ifdef USE_PYTHON
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
@@ -9,19 +9,19 @@
 #include <pybind11/chrono.h>
 #endif
 
-#include "types.h"
-#include "note.h"
-#include "str_util.h"
-#include "fileio.h"
-#include "platform.h"
-#include "logging.h"
-#include "gui/clipeditor/clipeditor_python_processor.h"
+#include "types.hpp"
+#include "note.hpp"
+#include "str_util.hpp"
+#include "fileio.hpp"
+#include "platform.hpp"
+#include "logging.hpp"
+#include "gui/clipeditor/clipeditor_python_processor.hpp"
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 
 #ifdef _WIN32
-#include "str_win32.h"
+#include "str_win32.hpp"
 #endif
 
 #ifdef USE_PYTHON

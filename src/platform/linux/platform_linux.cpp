@@ -1,11 +1,11 @@
 #if defined(__linux__) || defined(__APPLE__)
 #include <csignal>
-#include "types.h"
+#include "types.hpp"
 #include <sys/time.h>
 #include <sys/types.h>
-#include "msgbox.h"
-#include "str_util.h"
-#include "platform.h"
+#include "msgbox.hpp"
+#include "str_util.hpp"
+#include "platform.hpp"
 #include <string.h>
 #include <unistd.h>
 #include <pwd.h>

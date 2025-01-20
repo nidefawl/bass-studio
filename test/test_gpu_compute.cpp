@@ -1,26 +1,26 @@
 #include "TestBase.hpp"
-#include "appsettings.h"
-#include "gl/gl_util.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "platform.h"
-#include "samplerate.h"
-#include "str_util.h"
-#include "thread.h"
+#include "appsettings.hpp"
+#include "gl/gl_util.hpp"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "platform.hpp"
+#include "samplerate.hpp"
+#include "str_util.hpp"
+#include "thread.hpp"
 #include "buildinfo.h"
-#include "types.h"
+#include "types.hpp"
 #include "glheaders.h"
-#include "hires_timer.h"
-#include "tls.h"
+#include "hires_timer.hpp"
+#include "tls.hpp"
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <glm/gtc/type_ptr.hpp>
-#include "types.h"
-#include "plugins/synth/synth-gpu-gl.h"
-#include "plugins/synth/synth-gpu-parameters.h"
-#include "host/audiobuffer/audiobuffer.h"
+#include "types.hpp"
+#include "plugins/synth/synth-gpu-gl.hpp"
+#include "plugins/synth/synth-gpu-parameters.hpp"
+#include "host/audiobuffer/audiobuffer.hpp"
 
 
 namespace DAW::GPU {

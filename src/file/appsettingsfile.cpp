@@ -1,4 +1,4 @@
-#include "appsettings.h"
+#include "appsettings.hpp"
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/details/helpers.hpp>
@@ -8,17 +8,17 @@
 #include <cereal_optional_nvp/cereal_optional_nvp.hpp>
 #include <fstream>
 
-#include "config.h"
-#include "exceptions.h"
-#include "fileio.h"
-#include "host/audio_config.h"
-#include "platform.h"
-#include "str_util.h"
+#include "config.hpp"
+#include "exceptions.hpp"
+#include "fileio.hpp"
+#include "host/audio_config.hpp"
+#include "platform.hpp"
+#include "str_util.hpp"
 
 using namespace cereal;
 
 
-#include "platform/win/windowsize.h"
+#include "platform/win/windowsize.hpp"
 
 
 template<class Archive>

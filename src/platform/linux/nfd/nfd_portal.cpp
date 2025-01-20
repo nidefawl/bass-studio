@@ -17,8 +17,8 @@
 #include <sys/random.h>  // for the random token string
 #include <unistd.h>      // for access()
 
-#include "nfd.h"
-#include "str_util.h"
+#include "nfd.hpp"
+#include "str_util.hpp"
 
 int getTopLevelWindowXID();
 

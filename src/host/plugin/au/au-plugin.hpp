@@ -1,0 +1,60 @@
+#pragma once
+#ifdef __APPLE__
+#endif
+#include "types.hpp"
+#include "math/vec.hpp"
+#include "str_util.hpp"
+#include "seq_time.hpp"
+
+#include "host/automation/automation.hpp"
+#include "logging.hpp"
+#include "platform.hpp"
+#include "host/meter/meter.hpp"
+#include "snapshot/snapshot.hpp"
+#include "host/plugin/base/base-plugin.hpp"
+
+struct handles_t;
+class host_plugin_window;
+
+class auplugin final : public effectbase {
+public:
+    handles_t* const handle;
+    String sDir;
+    bool bInEditIdle   = false;
+    int pluginCategory = 0;
+    int vstVersion     = 0;
+    int uId            = 0;
+    host_plugin_window* window = NULL;
+    std::vector<String> programNames;
+    std::vector<String> inputNames;
+    std::vector<String> outputNames;
+    auplugin(handles_t* _handle, int32_t globalId, IHostCallback* hostcallback, String sDir, String sName)
+        : effectbase(sName, globalId, hostcallback), handle(_handle) {
+        this->sDir = sDir;
+    }
+    ~auplugin() override = default;
+
+protected:
+    void onEnable() override;
+    void onDisable() override;
+
+public:
+    ModuleType getModuleType() override { return MODULE_TYPE_AU; };
+
+    bool hasWindowEditor() override {
+        return false;
+    }
+    void unload(DAW::Host::PluginManager* host) override;
+    void load(DAW::Host::PluginManager* host) override;
+
+    // automatable_t interface
+    String getAutomatableName() override;
+    param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
+    automatable_param_ref_t toRef() const override;
+
+    void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
+    void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
+    std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
+    void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
+    samplecount_t getPluginLatency() override;
+};

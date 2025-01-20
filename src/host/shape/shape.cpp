@@ -1,13 +1,13 @@
-#include "shape.h"
+#include "shape.hpp"
 #include "assert_dbg.h"
 #include <cstdint>
 #include <glm/geometric.hpp>
 #include <vector>
-#include "logging.h"
-#include "math/seq_math.h"
-#include "math/vec.h"
-#include "seq_util.h"
-#include "math/seq_math.h"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "math/vec.hpp"
+#include "seq_util.hpp"
+#include "math/seq_math.hpp"
 
 namespace DAW::Shape {
     constexpr float SHAPE_LERP_MIN_DIST = 1.0f / 1024.0f;

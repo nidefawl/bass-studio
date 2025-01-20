@@ -1,13 +1,13 @@
 #ifdef __APPLE__
 #endif
-#include "types.h"
-#include "math/vec.h"
-#include "str_util.h"
-#include "seq_time.h"
+#include "types.hpp"
+#include "math/vec.hpp"
+#include "str_util.hpp"
+#include "seq_time.hpp"
 
-#include "host/track/track.h"
-#include "host/track/track_impl.h"
-#include "au-plugin.h"
+#include "host/track/track.hpp"
+#include "host/track/track_impl.hpp"
+#include "au-plugin.hpp"
 
 void auplugin::unload(DAW::Host::PluginManager* host) {}
 void auplugin::load(DAW::Host::PluginManager* host) {}

@@ -1,6 +1,6 @@
 #pragma once
 #include "lfo-types.hpp"
-#include "gui/contextmenu/contextmenu_base.h"
+#include "gui/contextmenu/contextmenu_base.hpp"
 
 namespace DAW::LFO {
 

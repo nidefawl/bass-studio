@@ -1,7 +1,7 @@
 #include "TestBase.hpp"
-#include "common/test_common.h"
-#include "logging.h"
-#include "str_util.h"
+#include "common/test_common.hpp"
+#include "logging.hpp"
+#include "str_util.hpp"
 #include <archive.h>
 #include <archive_entry.h>
 #include <cstddef>

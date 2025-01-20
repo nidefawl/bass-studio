@@ -3,17 +3,17 @@
 #include <memory.h>
 #include <cstdlib>
 #include <cstring>
-#include "types.h"
-#include "audiobuffer.h"
-#include "config.h"
-#include "seq_util.h"
-#include "mem.h"
-#include "audioblock.h"
-#include "rand.h"
-#include "math/seq_math.h"
-#include "types.h"
+#include "types.hpp"
+#include "audiobuffer.hpp"
+#include "config.hpp"
+#include "seq_util.hpp"
+#include "mem.hpp"
+#include "audioblock.hpp"
+#include "rand.hpp"
+#include "math/seq_math.hpp"
+#include "types.hpp"
 #include "assert_dbg.h"
-#include "logging.h"
+#include "logging.hpp"
 
 template<typename FPType>
 void AudioBlockBase<FPType>::BeginTrace() {

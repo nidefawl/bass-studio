@@ -1,8 +1,8 @@
 #pragma once
-#include "host/plugin/modules.h"
-#include "types.h"
-#include "str_util.h"
-#include "host/plugin/internal/internal-plugin.h"
+#include "host/plugin/modules.hpp"
+#include "types.hpp"
+#include "str_util.hpp"
+#include "host/plugin/internal/internal-plugin.hpp"
 #include <vector>
 
 namespace PluginAirWindows {

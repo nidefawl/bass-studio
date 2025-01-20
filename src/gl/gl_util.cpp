@@ -1,15 +1,15 @@
-#include "gl/gl_util.h"
+#include "gl/gl_util.hpp"
 #include "glheaders.h"
 #include <GLFW/glfw3.h>
 #include <vector>
 #include "assert_dbg.h"
-#include "gl_tess2d.h"
-#include "gl_attr.h"
-#include "gl_vbo.h"
-#include "gl_framebuffer.h"
-#include "logging.h"
-#include "seq_util.h"
-#include "str_util.h"
+#include "gl_tess2d.hpp"
+#include "gl_attr.hpp"
+#include "gl_vbo.hpp"
+#include "gl_framebuffer.hpp"
+#include "logging.hpp"
+#include "seq_util.hpp"
+#include "str_util.hpp"
 
 void debugCB(GLenum source,
              GLenum type,

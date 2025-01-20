@@ -1,6 +1,6 @@
 #include "TestBase.hpp"
-#include "logging.h"
-#include "str_util.h"
+#include "logging.hpp"
+#include "str_util.hpp"
 #include <vector>
 
 void setGlobalLogger(Logger* logger) noexcept;

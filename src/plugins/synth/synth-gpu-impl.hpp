@@ -1,15 +1,15 @@
 #pragma once
-#include "host/audiobuffer/audioblock.h"
-#include "types.h"
-#include "config.h"
+#include "host/audiobuffer/audioblock.hpp"
+#include "types.hpp"
+#include "config.hpp"
 #include "assert_dbg.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "note.h"
-#include "rand.h"
-#include "seq_time.h"
-#include "seq_util.h"
-#include "str_util.h"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "note.hpp"
+#include "rand.hpp"
+#include "seq_time.hpp"
+#include "seq_util.hpp"
+#include "str_util.hpp"
 
 #include "synth-types.hpp"
 #include "synth-param.hpp"
@@ -18,9 +18,9 @@
 #include "synth-modulations-ui.hpp"
 #include "plugins/lfo/lfo-types.hpp"
 #include "plugins/lfo/lfo-ui.hpp"
-#include "synth-gpu-parameters.h"
+#include "synth-gpu-parameters.hpp"
 #include "synth-gpu-snapshot.hpp"
-#include "synth-gpu-gl.h"
+#include "synth-gpu-gl.hpp"
 
 #include <cstdint>
 #include <nanovg_min.h>

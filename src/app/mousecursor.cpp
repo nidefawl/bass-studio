@@ -1,12 +1,12 @@
 #include <vector>
-#include "types.h"
+#include "types.hpp"
 #include <memory>
-#include "logging.h"
-#include "str_util.h"
-#include "fileio.h"
-#include "mouse.h"
-#include "mousecursor.h"
-#include "exceptions.h"
+#include "logging.hpp"
+#include "str_util.hpp"
+#include "fileio.hpp"
+#include "mouse.hpp"
+#include "mousecursor.hpp"
+#include "exceptions.hpp"
 
 #include <GLFW/glfw3.h>
 

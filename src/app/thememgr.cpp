@@ -1,14 +1,14 @@
 #include <vector>
-#include "appsettings.h"
-#include "fileio.h"
-#include "logging.h"
-#include "thememgr.h"
+#include "appsettings.hpp"
+#include "fileio.hpp"
+#include "logging.hpp"
+#include "thememgr.hpp"
 
-#include "str_util.h"
-#include "theme.h"
-#include "themefile.h"
-#include "basectrl.h"
-#include "platform.h"
+#include "str_util.hpp"
+#include "theme.hpp"
+#include "themefile.hpp"
+#include "basectrl.hpp"
+#include "platform.hpp"
 
 
 void guitheme_mgr::addTheme(const guitheme_t& theme) {

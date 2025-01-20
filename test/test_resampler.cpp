@@ -1,11 +1,11 @@
 #include "TestBase.hpp"
 #include <vector>
 #include <memory>
-#include "rand.h"
-#include "seq_time.h"
-#include "host/resampler/resampler.h"
-#include "host/audiobuffer/audioblock.h"
-#include "common/test_common.h"
+#include "rand.hpp"
+#include "seq_time.hpp"
+#include "host/resampler/resampler.hpp"
+#include "host/audiobuffer/audioblock.hpp"
+#include "common/test_common.hpp"
 
 namespace {
 

@@ -1,6 +1,6 @@
-#include "gl_shader.h"
-#include "fileio.h"
-#include "logging.h"
+#include "gl_shader.hpp"
+#include "fileio.hpp"
+#include "logging.hpp"
 
 
 int32_t prependGLSL(String& s, const String& src) {

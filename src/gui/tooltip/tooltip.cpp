@@ -1,6 +1,6 @@
-#include "tooltip.h"
-#include "gui/table/table.h"
-#include "str_util.h"
+#include "tooltip.hpp"
+#include "gui/table/table.hpp"
+#include "str_util.hpp"
 
 #include <vector>
 

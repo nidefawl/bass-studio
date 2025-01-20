@@ -1,16 +1,16 @@
-#include "logging.h"
-#include "types.h"
+#include "logging.hpp"
+#include "types.hpp"
 #include <exception>
 #include <memory>
 #include <vector>
 #include <nanovg.h>
 
-#include "str_util.h"
-#include "fileio.h"
-#include "platform.h"
-#include "renderresources.h"
-#include "guifonts.h"
-#include "exceptions.h"
+#include "str_util.hpp"
+#include "fileio.hpp"
+#include "platform.hpp"
+#include "renderresources.hpp"
+#include "guifonts.hpp"
+#include "exceptions.hpp"
 
 #include <GLFW/glfw3.h>
 

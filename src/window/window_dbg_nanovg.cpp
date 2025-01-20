@@ -4,22 +4,22 @@
 #include <array>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "gui/gui.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "platform.h"
-#include "str_util.h"
-#include "gl/gl_util.h"
-#include "gl/gl_attr.h"
-#include "gl/gl_vbo.h"
-#include "gl/gl_tess2d.h"
+#include "gui/gui.hpp"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "platform.hpp"
+#include "str_util.hpp"
+#include "gl/gl_util.hpp"
+#include "gl/gl_attr.hpp"
+#include "gl/gl_vbo.hpp"
+#include "gl/gl_tess2d.hpp"
 #include "gl/builtin_shaders.h"
-#include "renderresources.h"
-#include "color_util.h"
-#include "rand.h"
-#include "guifonts.h"
-#include "theme.h"
-#include "window_impl.h"
+#include "renderresources.hpp"
+#include "color_util.hpp"
+#include "rand.hpp"
+#include "guifonts.hpp"
+#include "theme.hpp"
+#include "window_impl.hpp"
 
 namespace windowdebug_dbgnanovg {
 

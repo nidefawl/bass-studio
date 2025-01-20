@@ -1,7 +1,7 @@
 #include "../airwindows-types.hpp"
 #include "assert_dbg.h"
-#include "host/plugin/modules.h"
-#include "rand.h"
+#include "host/plugin/modules.hpp"
+#include "rand.hpp"
 #include <array>
 #include <numbers>
 

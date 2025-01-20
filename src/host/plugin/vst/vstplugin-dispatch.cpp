@@ -1,11 +1,11 @@
 #include <vstsdk-host-2.4/aeffect.h>
 #include <stddef.h>
 #include <stdint.h>
-#include "compiler.h"
-#include "seq_util.h"
+#include "compiler.hpp"
+#include "seq_util.hpp"
 
 #ifdef _WIN32
-#include "platform/mingw/mingw.exc.h"
+#include "platform/mingw/mingw.exc.hpp"
 #include <windows.h>
 #else
 #define seh_try(label)

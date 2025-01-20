@@ -13,7 +13,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
-#include "math/vec.h"
+#include "math/vec.hpp"
 
 #ifdef _MSC_VER
 #define __PRETTY_FUNCTION__ __FUNCSIG__

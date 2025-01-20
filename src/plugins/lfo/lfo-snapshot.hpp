@@ -1,9 +1,9 @@
 #pragma once
-#include "str_util.h"
-#include "types.h"
+#include "str_util.hpp"
+#include "types.hpp"
 #include <vector>
 #include <memory>
-#include "file/shapefile.h"
+#include "file/shapefile.hpp"
 
 namespace PluginLFO {
 

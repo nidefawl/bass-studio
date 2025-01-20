@@ -1,7 +1,7 @@
-#include "types.h"
-#include "compiler.h"
-#include "thread.h"
-#include "str_util.h"
+#include "types.hpp"
+#include "compiler.hpp"
+#include "thread.hpp"
+#include "str_util.hpp"
 #include "assert_dbg.h"
 #include <mutex>
 #include <atomic>

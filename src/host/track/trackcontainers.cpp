@@ -1,10 +1,10 @@
 #include <algorithm>
-#include "exceptions.h"
-#include "seq_util.h"
-#include "seq_time.h"
-#include "host/track/track.h"
-#include "host/track/track_impl.h"
-#include "host/daw/mainctrl.h"
+#include "exceptions.hpp"
+#include "seq_util.hpp"
+#include "seq_time.hpp"
+#include "host/track/track.hpp"
+#include "host/track/track_impl.hpp"
+#include "host/daw/mainctrl.hpp"
 
 void releaseTrackContainer(track_vector& vec) {
     for (auto track : vec) {

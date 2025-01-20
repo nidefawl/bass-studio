@@ -1,9 +1,9 @@
 #include "TestBase.hpp"
-#include "fileio.h"
-#include "host/audiocache/audiocache.h"
-#include "logging.h"
-#include "samplerate.h"
-#include "tls.h"
+#include "fileio.hpp"
+#include "host/audiocache/audiocache.hpp"
+#include "logging.hpp"
+#include "samplerate.hpp"
+#include "tls.hpp"
 #include <memory>
 #include <signalsmith-stretch.h>
 #include <vector>

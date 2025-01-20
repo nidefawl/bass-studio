@@ -1,11 +1,11 @@
-#include "str_util.h"
+#include "str_util.hpp"
 #include <cstring>
 #include <string>
 #ifdef _WIN32
-#include "fileio.h"
+#include "fileio.hpp"
 #include "assert_dbg.h"
-#include "platform_win.h"
-#include "str_win32.h"
+#include "platform_win.hpp"
+#include "str_win32.hpp"
 #include <shlobj.h>
 #include <windows.h>
 #include <vector>

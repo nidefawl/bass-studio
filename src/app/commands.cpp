@@ -1,11 +1,11 @@
-#include "commands.h"
+#include "commands.hpp"
 #include "assert_dbg.h"
-#include "event.h"
-#include "keyboard.h"
-#include "logging.h"
-#include "renderresources.h"
-#include "seq_util.h"
-#include "str_util.h"
+#include "event.hpp"
+#include "keyboard.hpp"
+#include "logging.hpp"
+#include "renderresources.hpp"
+#include "seq_util.hpp"
+#include "str_util.hpp"
 #include <algorithm>
 #include <array>
 

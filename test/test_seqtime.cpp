@@ -1,13 +1,13 @@
 #include "TestBase.hpp"
 #include <vector>
-#include "types.h"
-#include "seq_time.h"
-#include "math/seq_math.h"
-#include "host/clip/clip.h"
-#include "host/project/project.h"
-#include "host/track/track.h"
-#include "host/project/projectcontroller.h"
-#include "common/test_common.h"
+#include "types.hpp"
+#include "seq_time.hpp"
+#include "math/seq_math.hpp"
+#include "host/clip/clip.hpp"
+#include "host/project/project.hpp"
+#include "host/track/track.hpp"
+#include "host/project/projectcontroller.hpp"
+#include "common/test_common.hpp"
 
 namespace {
     void test_TickConversions() {

@@ -1,7 +1,7 @@
 #pragma once
-#include "types.h"
-#include "str_util.h"
-#include "host/automation/automation.h"
+#include "types.hpp"
+#include "str_util.hpp"
+#include "host/automation/automation.hpp"
 
 namespace PluginSynth {
 

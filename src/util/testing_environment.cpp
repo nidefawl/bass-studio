@@ -1,5 +1,5 @@
-#include "types.h"
-#include "util/testing_environment.h"
+#include "types.hpp"
+#include "util/testing_environment.hpp"
 #include <cstdio>
 
 #undef HAVE_BUILTIN_TRAP

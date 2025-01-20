@@ -1,7 +1,7 @@
-#include "contextmenu.h"
-#include "menu.h"
-#include "window.h"
-#include "renderresources.h"
+#include "contextmenu.hpp"
+#include "menu.hpp"
+#include "window.hpp"
+#include "renderresources.hpp"
 
 ctxtmenu_entry::ctxtmenu_entry(BaseCtrl* ctrl, GlobalCommandType _type) 
     : commandtype(_type)

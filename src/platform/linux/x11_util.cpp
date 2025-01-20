@@ -1,5 +1,5 @@
-#include "host/host_plugin_window.h"
-#include "logging.h"
+#include "host/host_plugin_window.hpp"
+#include "logging.hpp"
 #include <cstddef>
 #if defined(__linux__)
 #include <GLFW/glfw3.h>
@@ -8,7 +8,7 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>
-#include "platform.h"
+#include "platform.hpp"
 
 extern "C" {
     static bool IsWindowManagerStateSet(Display* display,

@@ -3,15 +3,15 @@
 #include <exception>
 #include <memory>
 #include <string>
-#include "math/seq_math.h"
-#include "midi/MidiFile.h"
-#include "fileloader.h"
-#include "logging.h"
-#include "seq_time.h"
-#include "host/clip/clip.h"
-#include "host/track/track.h"
-#include "host/daw/clipboard.h"
-#include "fileio.h"
+#include "math/seq_math.hpp"
+#include "midi/MidiFile.hpp"
+#include "fileloader.hpp"
+#include "logging.hpp"
+#include "seq_time.hpp"
+#include "host/clip/clip.hpp"
+#include "host/track/track.hpp"
+#include "host/daw/clipboard.hpp"
+#include "fileio.hpp"
 
 namespace {
     tick_t roundTickLenUp(tick_t len) {

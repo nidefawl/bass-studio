@@ -1,7 +1,7 @@
 #ifdef _WIN32
-#include "menu.h"
-#include "str_util.h"
-#include "str_win32.h"
+#include "menu.hpp"
+#include "str_util.hpp"
+#include "str_win32.hpp"
 #include <windows.h>
 
 int findSub(HMENU parent, void* ptr) {

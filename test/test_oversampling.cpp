@@ -1,11 +1,11 @@
 #include "TestBase.hpp"
-#include "fileio.h"
-#include "host/audiobuffer/audioblock.h"
-#include "host/audiocache/audiocache.h"
-#include "logging.h"
-#include "samplerate.h"
-#include "tls.h"
-#include "types.h"
+#include "fileio.hpp"
+#include "host/audiobuffer/audioblock.hpp"
+#include "host/audiocache/audiocache.hpp"
+#include "logging.hpp"
+#include "samplerate.hpp"
+#include "tls.hpp"
+#include "types.hpp"
 #include <dsp/rates.h>
 #include <vector>
 

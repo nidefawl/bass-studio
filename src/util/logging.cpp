@@ -4,15 +4,15 @@
 #include <io.h>
 #include <wincon.h> // Ensure this is included for WriteConsoleA
 #endif
-#include "str_util.h"
-#include "util/testing_environment.h"
+#include "str_util.hpp"
+#include "util/testing_environment.hpp"
 #include <ctime>
 #include <vector>
 #include <mutex>
-#include "logging.h"
+#include "logging.hpp"
 #include "assert_dbg.h"
-#include "fileio.h"
-#include "thread.h"
+#include "fileio.hpp"
+#include "thread.hpp"
 #ifdef HAVE_SLOWSTACKTRACE
 #include <slowstacktrace.h>
 #endif

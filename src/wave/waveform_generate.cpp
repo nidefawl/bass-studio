@@ -1,16 +1,16 @@
 #include <cmath>
 #include <vector>
 
-#include "host/clip/clip.h"
-#include "host/project/projectcontroller.h"
-#include "math/vec.h"
-#include "math/mat.h"
-#include "math/seq_math.h"
-#include "host/audiosample.h"
-#include "tls.h"
-#include "types.h"
-#include "waveform_render.h"
-#include "logging.h"
+#include "host/clip/clip.hpp"
+#include "host/project/projectcontroller.hpp"
+#include "math/vec.hpp"
+#include "math/mat.hpp"
+#include "math/seq_math.hpp"
+#include "host/audiosample.hpp"
+#include "tls.hpp"
+#include "types.hpp"
+#include "waveform_render.hpp"
+#include "logging.hpp"
 #include "assert_dbg.h"
 
 using vec2list = std::vector<vec2>;

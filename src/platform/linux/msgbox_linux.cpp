@@ -1,6 +1,6 @@
 #if defined(__linux__)
-#include "msgbox.h"
-#include "str_util.h"
+#include "msgbox.hpp"
+#include "str_util.hpp"
 #include "buildinfo.h"
 
 int DBus_DesktopNotification(const String& source, const String& title, const String& body, int timeoutMilliseconds);

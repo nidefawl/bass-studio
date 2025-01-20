@@ -1,4 +1,4 @@
-#include "mainctrl.h"
+#include "mainctrl.hpp"
 
 namespace DAW {
 String MakeUniqueTrackName(project_t* project, const String& strNewName) {

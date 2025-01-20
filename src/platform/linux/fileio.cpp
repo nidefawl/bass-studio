@@ -1,11 +1,11 @@
 #if defined(__linux__) || defined(__APPLE__)
-#include "fileio.h"
-#include "exceptions.h"
-#include "str_util.h"
+#include "fileio.hpp"
+#include "exceptions.hpp"
+#include "str_util.hpp"
 #include "assert_dbg.h"
-#include "window.h"
-#include "platform.h"
-#include "logging.h"
+#include "window.hpp"
+#include "platform.hpp"
+#include "logging.hpp"
 
 #include <stb/stb_image.h>
 #include <vector>
@@ -14,7 +14,7 @@
 
 #include <limits>
 #include <cstdio>
-#include "types.h"
+#include "types.hpp"
 #include <cstdlib>
 #include <stdexcept>
 #include <sys/types.h>

@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-#include "host/host_plugin_window.h"
+#include "host/host_plugin_window.hpp"
 
 constinit size_t SIZEOF_WINDOWPLACEMENT = sizeof(WINDOWPLACEMENT);
 bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* size) {

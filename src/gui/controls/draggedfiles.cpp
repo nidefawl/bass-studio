@@ -1,5 +1,5 @@
 #include "draggedfiles.hpp"
-#include "host/daw/mainctrl.h"
+#include "host/daw/mainctrl.hpp"
 
 void gui_dragged_files::handleDraggedMove(MouseEvent& evt) {
     if (bIsExternal) {

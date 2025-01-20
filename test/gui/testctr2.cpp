@@ -1,11 +1,11 @@
 
-#include "gui/views/controls.h"
-#include "platform.h"
-#include "types.h"
-#include "str_util.h"
-#include "basectrl.h"
-#include "gui/container/container.h"
-#include "logging.h"
+#include "gui/views/controls.hpp"
+#include "platform.hpp"
+#include "types.hpp"
+#include "str_util.hpp"
+#include "basectrl.hpp"
+#include "gui/container/container.hpp"
+#include "logging.hpp"
 #include <nanovg.h>
 
 namespace {

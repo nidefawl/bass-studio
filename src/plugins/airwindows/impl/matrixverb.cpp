@@ -1,7 +1,7 @@
 #include <numbers>
 
 #include "../airwindows-types.hpp"
-#include "rand.h"
+#include "rand.hpp"
 
 namespace PluginAirWindows {
     class EffectImplMatrixVerb : public IEffectImpl {

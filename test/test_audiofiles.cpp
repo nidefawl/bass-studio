@@ -1,12 +1,12 @@
 #include "TestBase.hpp"
-#include "fileio.h"
-#include "host/audiocache/audiocache.h"
-#include "logging.h"
-#include "platform.h"
-#include "rand.h"
-#include "str_util.h"
-#include "tls.h"
-#include "types.h"
+#include "fileio.hpp"
+#include "host/audiocache/audiocache.hpp"
+#include "logging.hpp"
+#include "platform.hpp"
+#include "rand.hpp"
+#include "str_util.hpp"
+#include "tls.hpp"
+#include "types.hpp"
 #include <cstdint>
 #include <vector>
 

@@ -3,10 +3,10 @@
 #include <vector>
 #include "assert_dbg.h"
 #include "dsp/CalcKaiserWindow.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "samplerate.h"
-#include "types.h"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "samplerate.hpp"
+#include "types.hpp"
 #include <array>
 
 namespace {

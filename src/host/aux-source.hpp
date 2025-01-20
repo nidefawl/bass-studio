@@ -1,10 +1,10 @@
 #pragma once
-#include "dsp_util.h"
-#include "host/audiobuffer/audioblock.h"
-#include "host/audiobuffer/audiobuffer.h"
-#include "host/project/project.h"
-#include "rand.h"
-#include "seq_time.h"
+#include "dsp_util.hpp"
+#include "host/audiobuffer/audioblock.hpp"
+#include "host/audiobuffer/audiobuffer.hpp"
+#include "host/project/project.hpp"
+#include "rand.hpp"
+#include "seq_time.hpp"
 #include <readerwriterqueue/readerwriterqueue.hpp>
 
 namespace DAW {

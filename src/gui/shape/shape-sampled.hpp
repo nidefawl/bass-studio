@@ -1,5 +1,5 @@
 #pragma once
-#include "host/shape/shape.h"
+#include "host/shape/shape.hpp"
 #include <vector>
 
 namespace DAW::Shape {

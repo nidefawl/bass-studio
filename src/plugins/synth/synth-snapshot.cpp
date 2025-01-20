@@ -1,8 +1,8 @@
-#include "file/shapefile.h"
-#include "str_util.h"
-#include "synth-plugin.h"
-#include "synth-snapshot.h"
-#include "byte-buffer.h"
+#include "file/shapefile.hpp"
+#include "str_util.hpp"
+#include "synth-plugin.hpp"
+#include "synth-snapshot.hpp"
+#include "byte-buffer.hpp"
 #include <array>
 #include <cstdint>
 #include <utility>

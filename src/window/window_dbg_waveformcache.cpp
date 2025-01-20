@@ -2,20 +2,20 @@
 #include <nanovg.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "math/vec.h"
-#include "math/mat.h"
-#include "fileio.h"
-#include "str_util.h"
-#include "gl/gl_util.h"
-#include "gl/gl_attr.h"
-#include "gl/gl_vbo.h"
-#include "gl/gl_tess2d.h"
-#include "gl/gl_shader.h"
+#include "math/vec.hpp"
+#include "math/mat.hpp"
+#include "fileio.hpp"
+#include "str_util.hpp"
+#include "gl/gl_util.hpp"
+#include "gl/gl_attr.hpp"
+#include "gl/gl_vbo.hpp"
+#include "gl/gl_tess2d.hpp"
+#include "gl/gl_shader.hpp"
 #include "gl/builtin_shaders.h"
-#include "wave/waveform_render_impl.h"
-#include "color_util.h"
-#include "window_impl.h"
-#include "host/daw/mainctrl.h"
+#include "wave/waveform_render_impl.hpp"
+#include "color_util.hpp"
+#include "window_impl.hpp"
+#include "host/daw/mainctrl.hpp"
 
 namespace windowdebug_waveformcache {
 

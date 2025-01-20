@@ -1,8 +1,8 @@
 #if defined(__linux__) || defined(__APPLE__)
-#include "logging.h"
-#include "host/host_plugin_window.h"
-#include "host/host_pluginmanager.h"
-#include "host/plugin/base/base-plugin.h"
+#include "logging.hpp"
+#include "host/host_plugin_window.hpp"
+#include "host/host_pluginmanager.hpp"
+#include "host/plugin/base/base-plugin.hpp"
 #include "buildinfo.h"
 #include <vector>
 #include <GLFW/glfw3.h>

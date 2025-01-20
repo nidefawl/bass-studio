@@ -1,14 +1,14 @@
-#include "appsettings.h"
+#include "appsettings.hpp"
 #include "archive.h"
 #include "archive_entry.h"
-#include "fileio.h"
-#include "exceptions.h"
+#include "fileio.hpp"
+#include "exceptions.hpp"
 #include <cstdlib>
 #include <cstdio>
-#include "logging.h"
-#include "platform.h"
-#include "str_util.h"
-#include "tls.h"
+#include "logging.hpp"
+#include "platform.hpp"
+#include "str_util.hpp"
+#include "tls.hpp"
 #include <stb/stb_image.h>
 
 namespace App::Platform {

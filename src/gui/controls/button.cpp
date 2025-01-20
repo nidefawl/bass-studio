@@ -1,7 +1,7 @@
-#include "button.h"
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "renderresources.h"
+#include "button.hpp"
+#include "gui/gui.hpp"
+#include "gui/container/container.hpp"
+#include "renderresources.hpp"
 
 GuiColor::constant_t guibutton::getBackgroundColorFromState(int32_t stateflags) const {
     if ((stateflags & FLG_HAS_COLOR_BG) && getState()) {

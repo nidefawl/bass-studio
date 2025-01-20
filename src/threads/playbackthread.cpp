@@ -1,5 +1,5 @@
-#include "playbackthread.h"
-#include "types.h"
+#include "playbackthread.hpp"
+#include "types.hpp"
 #include <atomic>
 #include <queue>
 #include <thread>
@@ -7,20 +7,20 @@
 #include <condition_variable>
 #include "assert_dbg.h"
 
-#include "error.h"
-#include "math/seq_math.h"
-#include "str_util.h"
-#include "thread.h"
-#include "threadlock.h"
-#include "seq_time.h"
-#include "hires_timer.h"
+#include "error.hpp"
+#include "math/seq_math.hpp"
+#include "str_util.hpp"
+#include "thread.hpp"
+#include "threadlock.hpp"
+#include "seq_time.hpp"
+#include "hires_timer.hpp"
 #include <readerwriterqueue/readerwriterqueue.hpp>
-#include "host/daw/mainctrl.h"
-#include "host/host.h"
-#include "host/midihost/midi_host.h"
-#include "logging.h"
-#include "sse.h"
-#include "appconfig.h"
+#include "host/daw/mainctrl.hpp"
+#include "host/host.hpp"
+#include "host/midihost/midi_host.hpp"
+#include "logging.hpp"
+#include "sse.hpp"
+#include "appconfig.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

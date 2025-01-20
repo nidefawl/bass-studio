@@ -1,7 +1,7 @@
-#include "dropdown_generic.h"
-#include "str_util.h"
-#include "gui/contextmenu/contextmenu_base.h"
-#include "gui/contextmenu/contextmenu.h"
+#include "dropdown_generic.hpp"
+#include "str_util.hpp"
+#include "gui/contextmenu/contextmenu_base.hpp"
+#include "gui/contextmenu/contextmenu.hpp"
 
 /* TODO: find a way to have this generic, while having definition of guidropdown_generic_ctxt only in this cpp file */
 template<>

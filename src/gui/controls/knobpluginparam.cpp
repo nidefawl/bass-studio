@@ -1,6 +1,6 @@
-#include "knobpluginparam.h"
-#include "gui/table/table.h"
-#include "gui/tooltip/tooltip.h"
+#include "knobpluginparam.hpp"
+#include "gui/table/table.hpp"
+#include "gui/tooltip/tooltip.hpp"
 
 using Table::table_entry_t;
 using Table::tbl_row_t;

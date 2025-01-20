@@ -1,6 +1,6 @@
-#include "basectrl.h"
-#include "hires_timer.h"
-#include "platform.h"
+#include "basectrl.hpp"
+#include "hires_timer.hpp"
+#include "platform.hpp"
 #include <benchmark/benchmark.h>
 #include <cstdint>
 #define NUM_PASS_STEP 1

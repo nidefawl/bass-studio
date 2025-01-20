@@ -1,9 +1,9 @@
-#include "asynctask.h"
-#include "gui/container/container.h"
-#include "guicolors.h"
-#include "host/daw/mainctrl.h"
-#include "logging.h"
-#include "str_util.h"
+#include "asynctask.hpp"
+#include "gui/container/container.hpp"
+#include "guicolors.hpp"
+#include "host/daw/mainctrl.hpp"
+#include "logging.hpp"
+#include "str_util.hpp"
 #include <nanovg.h>
 
 class async_test_task_impl final : public DAW::async_task_t {

@@ -1,5 +1,5 @@
-#include "host/plugin/clap/clap-plugin-param.h"
-#include "host/plugin/clap/clap-plugin.h"
+#include "host/plugin/clap/clap-plugin-param.hpp"
+#include "host/plugin/clap/clap-plugin.hpp"
 
 PluginParam::PluginParam(clapplugin &pluginHost, const clap_param_info &info, double value)
    : _info(info), _value(value) {}

@@ -6,28 +6,28 @@
 #include <mutex>
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
-#include "config.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "str_util.h"
-#include "dsp_util.h"
-#include "color_util.h"
+#include "config.hpp"
+#include "logging.hpp"
+#include "math/seq_math.hpp"
+#include "str_util.hpp"
+#include "dsp_util.hpp"
+#include "color_util.hpp"
 
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "gui/plugin/pluginviewcontainers.h"
-#include "gui/controls/knobpluginparam.h"
-#include "gui/container/container.h"
+#include "gui/gui.hpp"
+#include "gui/container/container.hpp"
+#include "gui/plugin/pluginviewcontainers.hpp"
+#include "gui/controls/knobpluginparam.hpp"
+#include "gui/container/container.hpp"
 
-#include "basectrl.h"
-#include "platform.h"
-#include "../plugin.h"
-#include "info-plugin.h"
-#include "plugins/plugin-base.h"
-#include "plugins/plugin-window.h"
-#include "host/audiobuffer/audioblock.h"
-#include "midi-defs.h"
-#include "../synth/IPlugMidi.h"
+#include "basectrl.hpp"
+#include "platform.hpp"
+#include "../plugin.hpp"
+#include "info-plugin.hpp"
+#include "plugins/plugin-base.hpp"
+#include "plugins/plugin-window.hpp"
+#include "host/audiobuffer/audioblock.hpp"
+#include "midi-defs.hpp"
+#include "../synth/IPlugMidi.hpp"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
 namespace PluginHostInfo {
