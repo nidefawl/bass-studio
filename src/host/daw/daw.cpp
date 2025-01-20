@@ -389,6 +389,7 @@ void DawInstance::unloadProject() {
     for (DawCtrl* ctrl : dawCtrls) {
         ctrl->resetClipViews();
         ctrl->closeContextMenu();
+        ctrl->closeAllAppMenus();
         ctrl->resetMouseContext();
         ctrl->setSelectedTrack(nullptr);
     }
