@@ -8,11 +8,7 @@
 #include "samplerate.h"
 #include "host/audiobuffer/audioblock.h"
 #include "host/audiobuffer/audiobuffer.h"
-
 #include "host/audiohost/audio_host.h"
-#include "host/midihost/midi_host.h"
-#include "midi-defs.h"
-#include "midi-event.h"
 
 #include "types.h"
 #include "assert_dbg.h"
