@@ -1397,7 +1397,6 @@ public:
         } else {
             parentIdx = -1;
         }
-        String name = trackPtr->name;
         dbgassert(trackPtr);
         daw->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
         dbgassert(localIdx == trackPtr->localIdxFlat);
