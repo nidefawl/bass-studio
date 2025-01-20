@@ -2,14 +2,16 @@
 // A.Greensted - Feb 2010
 // http://www.labbookpages.co.uk
 
+#include "CalcKaiserWindow.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <math.h>
 #include <string.h>
-#include <iostream>
-#include "CalcKaiserWindow.h"
-#include "math/seq_math.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 double* calcLPF(double sampFreq, double transFreq, double rippleDB, double transWidth, int* kaiserWindowLength) {
 	double beta;

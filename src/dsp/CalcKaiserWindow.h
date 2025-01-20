@@ -2,6 +2,10 @@
 // FIR filters by Windowing
 // A.Greensted - Feb 2010
 // http://www.labbookpages.co.uk
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 enum filterType {LOW_PASS, HIGH_PASS, BAND_PASS, BAND_STOP};
 enum windowType {RECTANGULAR, BARTLETT, HANNING, HAMMING, BLACKMAN};
@@ -18,3 +22,7 @@ double *createKaiserWindow(double *in, double *out, int windowLength, double bet
 double modZeroBessel(double x);
 
 double* calcLPF(double sampleFreq, double transFreq, double rippleDB, double transWidth, int* kaiserWindowLength);
+
+#ifdef __cplusplus
+}
+#endif
