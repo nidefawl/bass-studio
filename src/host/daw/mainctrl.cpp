@@ -482,12 +482,14 @@ public:
     }
 
     void destroy() {
-        
+        // release all track resources, in case unload project has not been called
         auto trackCtr = std::static_pointer_cast<guictr_tracks>(ctrEntryTracks->getSharedGui());
         if (trackCtr) {
-            // onRemove is not called for nested layout container entries
-            // so we need to call it manually
             trackCtr->removeAllTracks(); 
+        }
+        auto mixerCtr = std::static_pointer_cast<guictr_mixers>(ctrEntryMixers->getSharedGui());
+        if (mixerCtr) {
+            mixerCtr->removeAllTracks(); 
         }
         auto ctrCtrTop = findByTagEntry(GuiContainerTag::TAG_TAB_TOP);
         if (ctrCtrTop) {
