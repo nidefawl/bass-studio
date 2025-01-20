@@ -790,6 +790,7 @@ void guictr_mixers::scrollTo(guibase* g) {
 
 void guictr_mixers::onAdded() {
     guictr_base::onAdded();
+    addAllTracks();
 }
 
 void guictr_mixers::onRemove() {

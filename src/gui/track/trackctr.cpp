@@ -659,13 +659,13 @@ bool track_gui_manager_t::getTrackEntry(const track_t* t, track_gui_entry_t** ou
 }
 
 bool track_gui_manager_t::getPointerEntry(const track_t* t, track_gui_entry_t** out) {
-    *out    = nullptr;
+    if (out) *out    = nullptr;
     auto it = std::find_if(entries.begin(), entries.end(), [t](track_gui_entry_t* entry) {
         return entry->track == t;
     });
     if (it != entries.end()) {
         track_gui_entry_t* pEntry = *it;
-        *out = pEntry;
+        if (out) *out = pEntry;
         return true;
     }
     return false;
@@ -901,6 +901,7 @@ bool guitrack_controls::handleKeyInput(KeyEvent& kevt) {
 
 void guictr_tracks::onAdded() {
     guictr_base::onAdded();
+    addAllTracks();
 }
 
 void guictr_tracks::onRemove() {
