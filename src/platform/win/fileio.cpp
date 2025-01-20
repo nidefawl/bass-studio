@@ -163,8 +163,7 @@ public:
         auto strW = StringU8ToW(filename);
         m_handle = CreateFileW(strW.c_str(), accessMode, shareMode,
                                nullptr, createFlags, attr, nullptr);
-        ThrowLastErrorIf(m_handle == INVALID_HANDLE_VALUE,
-                         "CreateFile call failed on file named " + filename);
+        ThrowLastErrorIf(m_handle == INVALID_HANDLE_VALUE, "Failed to open file");
     }
 
     ~FileImpl() { CloseHandle(m_handle); }

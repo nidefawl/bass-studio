@@ -254,10 +254,19 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
     static const int BUFFERLENGTH = 1024;
     WString buf;
     buf.resize(BUFFERLENGTH);
-    FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, buf.data(), BUFFERLENGTH - 1, nullptr);
+    auto len = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, buf.data(), BUFFERLENGTH - 1, nullptr);
+    if (len == 0) {
+        return msg + ": " + std::to_string(error) + ")";
+    }
+    buf.resize(len);
     if (msg.empty())
         return { StringWToU8(buf) };
-    return msg + " (" + StringTrim(StringWToU8(buf)) + ")";
+    String fmtMsg = StringTrim(StringWToU8(buf));
+    String errMsg = msg;
+    errMsg += ": ";
+    errMsg += fmtMsg;
+    log_lf(Log::L_ERROR, "%s\n", errMsg.c_str());
+    return errMsg;
 }
 
 namespace App::Platform {

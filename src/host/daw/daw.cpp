@@ -465,7 +465,7 @@ void DawInstance::saveFile(const String& path) {
 }
 
 void DawInstance::loadFile(String path, int flags) {
-    std::shared_ptr<project_file> f = nullptr;
+    std::variant<std::shared_ptr<project_file>, String> fileOrErr = "Failed loading project";
     String loadFileExt, loadFileDirectory;
     SplitPath(path, &loadFileDirectory, nullptr, &loadFileExt);
     std::vector<uint8_t> projJsonData;
@@ -491,15 +491,23 @@ void DawInstance::loadFile(String path, int flags) {
             ReadFileVector(path, projJsonData);
         }
         timer.reset(); 
-        f = loadProject(projJsonData);
+        fileOrErr = loadProject(projJsonData);
     } catch (const std::exception& e) {
-        log_printf("Failed loading file '%s': %s\n", StringAsCStr(path), e.what());
+        fileOrErr = e.what();
     }
-    if (!f) {
+    if (std::holds_alternative<String>(fileOrErr)) {
+        String errMsg = std::get<String>(fileOrErr);
         if (tls.mainCtrl) {
-            tls.mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
+            String fullError = "Failed loading '";
+            fullError += path;
+            fullError += "':\n\n";
+            fullError += errMsg;
+            tls.mainCtrl->openDialog(new guidialog_message_box("Failed loading project", fullError));
+            tls.mainCtrl->setStatusText("Failed loading " + FileNameFromPath(path) + ": " + errMsg);
+            log_lf(Log::L_ERROR, "Failed loading %s: %s\n", StringAsCStr(path), StringAsCStr(errMsg));
         }
     } else {
+        auto f = std::get<std::shared_ptr<project_file>>(fileOrErr);
         f->path = path;
         const bool wasUserCallback = (flags & DAW::PluginLoadFlags::FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
         auto cb                    = [this, path, projFile = f, wasUserCallback](int n) {

@@ -1,7 +1,4 @@
 #include "projectfile.h"
-#include "host/plugin/modules.h"
-#include "platform.h"
-#include "shapefile.h"
 
 #include "snapshot/snapshot.h"
 #include "snapshot/trackrouting-snapshot.h"
@@ -12,13 +9,13 @@
 
 #include <exception>
 #include <vector>
-#include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <memory>
 #include <functional>
 
 #include "config.h"
+#include "platform.h"
 #include "exceptions.h"
 #include "seq_time.h"
 #include "seq_util.h"
@@ -26,13 +23,14 @@
 #include "str_util.h"
 #include "fileio.h"
 #include "logging.h"
-
+#include "layout.h"
+#include "shapefile.h"
 #include "host/clip/clip.h"
 #include "host/daw_channel.h"
 #include "host/automation/automation.h"
 #include "host/track/track.h"
-#include "layout.h"
 #include "host/project/project.h"
+#include "host/plugin/modules.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
@@ -896,7 +894,7 @@ bool validateProjectFile(const std::shared_ptr<project_file>& projectfile) {
     return true;
 }
 
-std::shared_ptr<project_file> loadProject(const std::vector<uint8_t>& vec) {
+std::variant<std::shared_ptr<project_file>, String> loadProject(const std::vector<uint8_t>& vec) {
     try {
         Stringstream sstream(std::string(vec.begin(), vec.end()));
         auto f = std::make_shared<project_file>();
@@ -905,8 +903,7 @@ std::shared_ptr<project_file> loadProject(const std::vector<uint8_t>& vec) {
             ar(make_nvp("project", f));
         }
         if (f->fileFmtVersion < 2) {
-            log_lf(Log::L_WARN, "legacy project file version %u\n", f->fileFmtVersion);
-            return nullptr;
+            return "legacy project file version";
         }
         if (f->project.samplerate == 0) {
             f->project.samplerate = 44100;
@@ -917,9 +914,8 @@ std::shared_ptr<project_file> loadProject(const std::vector<uint8_t>& vec) {
         }
         return f;
     } catch (const std::exception& e) {
-        log_printf("loadProject exception: %s\n", e.what());
+        return e.what();
     }
-    return nullptr;
 }
 
 bool saveProject(const std::shared_ptr<project_file>& f, std::vector<uint8_t>& bufferOut) {
@@ -943,10 +939,11 @@ std::shared_ptr<project_file> loadProjectFromJsonFile(const String& path) {
         std::vector<uint8_t> vec;
         ReadFileVector(path, vec);
         auto f = loadProject(vec);
-        if (f) {
-            f->path = path;
+        if (std::holds_alternative<std::shared_ptr<project_file>>(f)) {
+            return std::get<std::shared_ptr<project_file>>(f);
+        } else {
+            log_lf(Log::L_WARN, "loadProjectFromJsonFile: %s\n", StringAsCStr(std::get<String>(f)));
         }
-        return f;
     } catch (const FileIOException& e) {
         log_printf("loadProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     }

@@ -79,7 +79,7 @@ class guidialog_message_box final : public guidialog_base {
     String strMessage;
 public:
     guidialog_message_box(String title, String message)
-    : guidialog_base(ivec2(420, 160), true), strMessage(std::move(message)) {
+    : guidialog_base(ivec2(720, 200), true), strMessage(std::move(message)) {
         setLabel(std::move(title));
         btnOk.setText("Ok");
         add(&btnOk);

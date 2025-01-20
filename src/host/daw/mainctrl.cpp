@@ -1213,7 +1213,7 @@ namespace DAW {
 void MainCtrl::initApp(const std::vector<String>& args) {
     auto& settings = daw_tls::getSettings();
     auto pathProjStartup = settings.dawsettings.startupProjectPath;
-    if (!pathProjStartup.empty() && FileExists(pathProjStartup)) {
+    if (!pathProjStartup.empty()) {
         loadProject = pathProjStartup;
         if (settings.dawsettings.startupLoadDeffered) {
             loadFlags |= DAW::PluginLoadFlags::FLAG_DEFER_LOAD;

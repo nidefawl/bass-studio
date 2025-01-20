@@ -4,6 +4,7 @@
 #include <memory>
 #include "host/audiocache/samplefileidx.h"
 #include "snapshot/project-snapshot.h"
+#include <variant>
 
 struct project_file {
     uint32_t fileFmtVersion = 0;
@@ -20,7 +21,7 @@ struct project_to_load_t {
 };
 
 bool saveProject(const std::shared_ptr<project_file>& f, std::vector<uint8_t>& bufferOut);
-std::shared_ptr<project_file> loadProject(const std::vector<uint8_t>& vec);
+std::variant<std::shared_ptr<project_file>, String> loadProject(const std::vector<uint8_t>& vec);
 
 bool saveProjectToJsonFile(const std::shared_ptr<project_file>& f, const String& path);
 std::shared_ptr<project_file> loadProjectFromJsonFile(const String& path);
