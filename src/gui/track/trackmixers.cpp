@@ -165,6 +165,14 @@ namespace DAW {
             if (!setScissorTransform(vg)) {
                 return;
             }
+            auto cs        = getSizeContent();
+            NVGcolor color = rgbToNvg(m_track->rgb);
+            color.a        = 0.5f;
+            int inset      = 1;
+            nvgBeginPath(vg);
+            nvgRect(vg, inset, 0, cs.x - inset * 2, cs.y);
+            nvgFillColor(vg, color);
+            nvgFill(vg);
             for (auto gui : guis) {
                 if (gui->isVisible()) {
                     nvgSave(vg);
