@@ -4,9 +4,9 @@
 #include "math/vec.h"
 #include "str_win32.h"
 #include "keyboard.h"
+#include "error.h"
 
 
-void handleStdException(std::exception& e);
 
 class DropTargetImpl : public IDropTarget {
 public:
