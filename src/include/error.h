@@ -1,32 +1,5 @@
 #pragma once
 #include <exception>
-#define ERR_ACCESSVIOLATION 1
-#define ERR_UNKNOWN 2
+
 void handleStdException(std::exception& e);
 
-
-#undef HAVE_BUILTIN_TRAP
-#ifdef __GNUC__
-#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#if GCC_VERSION > 40203
-#define HAVE_BUILTIN_TRAP
-#endif
-#else
-#ifdef __has_builtin
-#if __has_builtin(__builtin_trap)
-#define HAVE_BUILTIN_TRAP
-#endif
-#endif
-#endif
-
-#ifdef HAVE_BUILTIN_TRAP
-#define debugRaiseSegFault() __builtin_trap()
-#else
-#include <cstdio>
-#define debugRaiseSegFault()        \
-    do {                            \
-        int* volatile iptr = 0;     \
-        int i              = *iptr; \
-        std::printf("%d", i);       \
-    } while (0)
-#endif

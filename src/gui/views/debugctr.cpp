@@ -39,6 +39,7 @@
 #include "gui/plugin/plugin.h"
 #include "gui/clipeditor/clipeditor.h"
 #include "appconfig.h"
+#include "util/testing_environment.h"
 
 #ifdef _WIN32
 #define DISPLAY_WIN_MSG_STATS 1
@@ -626,7 +627,7 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
             break;
         case ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD:
             daw->getPlayThread()->call([]() {
-                debugRaiseSegFault();
+              daw_test::debugRaiseSegFault();
             }, false);
             break;
         case ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD:
@@ -635,7 +636,7 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
             }, false);
             break;
         case ID_BTN_INJECT_SEGFAULT_MAIN_THREAD:
-            debugRaiseSegFault();
+            daw_test::debugRaiseSegFault();
             break;
         case ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD:
             throw std::bad_alloc();

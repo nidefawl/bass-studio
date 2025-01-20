@@ -16,7 +16,7 @@ namespace daw_test {
         return false;
 #endif
     }
-
+    void debugRaiseSegFault();
 class failed_assert_exception final : public std::runtime_error {
 public:
     explicit failed_assert_exception(const char* msg) : runtime_error(msg) {}
