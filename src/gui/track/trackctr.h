@@ -454,24 +454,8 @@ public:
 #endif
         entries.push_back(entry);
     }
-    /**
-     * checks if entry is visible.
-     * A track_gui_entry_t is visible if
-     * none of its parents have the field
-     * this->layout.hideTrack == true
-     */
     bool isVisible(const track_gui_entry_t* entry) override {
-        bool bHidden = false;
-        track_t* p   = entry->track->parent;
-        while (!bHidden && p) {
-            track_gui_entry_t* parentEntry{};
-            if (!getPointerEntry(p, &parentEntry)) {
-                return false;
-            }
-            bHidden |= parentEntry->isHidden();
-            p = p->parent;
-        }
-        return !bHidden;
+        return true;
     }
     bool validTrackIdx(int32_t idx) const override {
         return idx >= 0 && idx < (int32_t) tracksVisibleFlat.size();
@@ -504,11 +488,12 @@ public:
             track_gui_entry_t* entry{};
 
             if ((getPointerEntry(current, &entry))) {
-                if (!entry->isHidden() && !current->children.empty()) {
+                if (entry->isHidden) {
+                    continue;
+                }
+                if (!current->children.empty()) {
                     stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
                 }
-                dbgassert(isVisible(entry));
-                dbgassert(entry->track == current);
                 if (TRACKTYPE_TO_CTR(entry->track->type) == TRACK_CTR_MIDIAUDIO) {
                     trackEntriesTop.push_back(entry);
                 } else {
@@ -570,6 +555,8 @@ class guitrack_topleft final : public guictr_base {
     project_t& project;
     guibuttontoggle btnFoldAll;
     guibuttontoggle btnCopyAutomation;
+    guibuttontoggle btnShowReturnTracks;
+    guibuttontoggle btnShowMasterTracks;
     bool isFolded = false;
     std::vector<guibuttontoggle*> guiButtons;
 
@@ -578,6 +565,8 @@ public:
     ~guitrack_topleft() override {
         remove(&btnCopyAutomation);
         remove(&btnFoldAll);
+        remove(&btnShowReturnTracks);
+        remove(&btnShowMasterTracks);
     }
     void buttonClicked(guibase* _button) override;
     void layout() override {
@@ -602,6 +591,7 @@ public:
 };
 class guictr_tracks final : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
     friend class guitrack_editor;
+    friend class guitrack_topleft;
     int32_t trackContainerGlobalIndex = 0;
 
 public:
@@ -619,6 +609,8 @@ protected:
     gui_scrollbar scrollbar;
     int32_t contentHeight   = 0;
     int32_t contentViewSize = 0;
+    bool bShowReturnTracks = true;
+    bool bShowMasterTracks = true;
 
 public:
     guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_file& _dragdropclip);

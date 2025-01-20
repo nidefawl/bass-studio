@@ -463,7 +463,7 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
             if (!trCtr->getTrackEntry(tr, &entry)) {
                 dbgassert(0);
             } else {
-                entry->layout.hideTrack     = false;
+                entry->layout.foldTrack     = false;
                 entry->layout.hideSubtracks = false;
                 updateStoreLoadSubtracks(trCtr.get(), entry);
 

@@ -10,11 +10,10 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
     friend class guitrack_editor;
     friend class DAW::guictr_mixers_mixer;
     friend class guictr_mixers_options;
-    int32_t trackMixerGlobalIndex = 0;
 
     class guictr_mixers_options final : public guictr_base {
         guictr_mixers* const m_parent;
-        std::array<guibuttontoggle, 3> btnViews;
+        std::array<guibuttontoggle, 5> btnViews;
     public:
         explicit guictr_mixers_options(guictr_mixers* _parent) : m_parent(_parent) {
             setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
@@ -39,6 +38,18 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
                         text = "Show Inputs/Outputs";
                         btn.icon = ICON_MIDIPLUG;
                         btn.setStateRef(&m_parent->bShowIO);
+                        btn.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
+                        break;
+                    case 3:
+                        text = "Show Return Tracks";
+                        btn.icon = ICON_MODULATION_INPUT;
+                        btn.setStateRef(&m_parent->bShowReturnTracks);
+                        btn.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
+                        break;
+                    case 4:
+                        text = "Show Master Tracks";
+                        btn.icon = ICON_ADJUST;
+                        btn.setStateRef(&m_parent->bShowMasterTracks);
                         btn.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
                         break;
                     default:
@@ -86,6 +97,24 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
                             m_parent->bShowIO = !m_parent->bShowIO;
                             break;
                         }
+                        case 3: {
+                            m_parent->bShowReturnTracks = !m_parent->bShowReturnTracks;
+                            for (track_gui_entry_t* entry : m_parent->guiMgr.tracksVisibleFlat) {
+                                if (entry->track->type == TRACK_TYPE_RETURN) {
+                                    // entry->layout.hideTrack = !m_parent->bShowMasterTracks;
+                                }
+                            }
+                            break;
+                        }
+                        case 4: {
+                            m_parent->bShowMasterTracks = !m_parent->bShowMasterTracks;
+                            for (track_gui_entry_t* entry : m_parent->guiMgr.tracksVisibleFlat) {
+                                if (entry->track->type == TRACK_TYPE_MASTER) {
+                                    // entry->layout.hideTrack = !m_parent->bShowMasterTracks;
+                                }
+                            }
+                            break;
+                        }
                         default:
                             break;
                     }
@@ -119,11 +148,14 @@ class guictr_mixers final : public guictr_base, public gui_scrollcontainer {
         void render(NVGcontext* vg) override;
     };
 protected:
+    int32_t trackMixerGlobalIndex = 0;
     int32_t contentWidth    = 0;
     int32_t contentViewSize = 0;
     bool bWideLayout = false;
     bool bShowSends = true;
     bool bShowIO = false;
+    bool bShowReturnTracks = true;
+    bool bShowMasterTracks = true;
 public:
     project_t& project;
     project_globals_t& projectGlobals;

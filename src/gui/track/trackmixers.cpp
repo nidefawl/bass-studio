@@ -409,14 +409,14 @@ namespace DAW {
             }
             dawCtrl->setSelectedTrack(m_track);
             if (isResize(evt.relMousepos+getPosContent())) {
-                dragMode = DragModeTrack::DRAG_TRACK_RESIZE;
+                dragMode = DragModeTrack::DRAG_TRACK_RESIZE_NO_SUBTRACKS;
             }
         }
 
         void handleDraggedMove(MouseEvent& evt) override;
 
         void handleDraggedRelease(MouseEvent& evt) override {
-            if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
+            if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE_NO_SUBTRACKS) {
     
             } else {
                 parentCtrl->objectDragRelease(this, evt);
@@ -534,6 +534,7 @@ guictr_mixers::guictr_mixers(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::Track
 }
 
 guictr_mixers::~guictr_mixers() {
+    removeAllTracks();
     remove(&scrollbar);
     remove(&mixerOptions);
     remove(&trackMixers);
@@ -746,20 +747,17 @@ void guictr_mixers::render(NVGcontext* vg) {
 }
 
 void guictr_mixers::updateVisibleTracks() {
-    guiMgr.updateVisibleTracks(project.trackList);
-
-    track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
-    for (track_t* tr : project.trackList) {
-        track_gui_entry_t* entry = nullptr;
-        if (!(guiMgr.getPointerEntry(tr, &entry))) {
-            continue;
+    for (auto entry : guiMgr.entries) {
+        auto tr = entry->track;
+        bool bIsVisible = bShowMasterTracks || tr->type != TRACK_TYPE_MASTER;
+        bIsVisible = bIsVisible && (bShowReturnTracks || tr->type != TRACK_TYPE_RETURN);
+        if (entry->isHidden == bIsVisible) {
+            entry->isHidden = !bIsVisible;
+            entry->trackMixer->setVisible(bIsVisible);
+            entry->trackMixerTitle->setVisible(bIsVisible);
         }
-        if (!assert_expr(entry->trackMixer)) {
-            continue;
-        }
-        const bool bVisible = STL_CONTAINS(tracks, entry);
-        entry->trackMixer->setVisible(bVisible);
     }
+    guiMgr.updateVisibleTracks(project.trackList);
 }
 
 void guictr_mixers::onChildLayoutChanged(guibase* g) {
@@ -784,23 +782,18 @@ void guictr_mixers::scrollTo(guibase* g) {
 
 void guictr_mixers::onAdded() {
     guictr_base::onAdded();
-    removeAllTracks();
-    for (track_t* tr : project.trackList) {
-        removeTrack(tr, FLG_TRK_CHANGE_LOAD);
-    }
-    addAllTracks();
 }
 
 void guictr_mixers::onRemove() {
-    removeAllTracks();
     guictr_base::onRemove();
 }
 
 void guictr_mixers::addAllTracks() {
     for (track_t* tr : project.trackList) {
-        addTrack(tr, FLG_TRK_CHANGE_LOAD);
+        if (!guiMgr.getTrackEntry(tr, nullptr)) {
+            addTrack(tr, FLG_TRK_CHANGE_LOAD);
+        }
     }
-    updateVisibleTracks();
 }
 
 void guictr_mixers::removeAllTracks() {
@@ -808,7 +801,6 @@ void guictr_mixers::removeAllTracks() {
     for (auto* entry : tracksCopy) {
         removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
     }
-    updateVisibleTracks();
 }
 
 void guictr_mixers::removeTrack(track_t* track, int flags) {
@@ -877,8 +869,9 @@ void guictr_mixers::loadMixerLayouts(trackcontainer_snapshot_t& in) {
         if (it != snapshot.layoutsMixer.end()) {
             auto& layout = it->second;
             track_gui_entry_t* entry{};
-            always_assert(guiMgr.getTrackEntry(snapshot.trackLoaded, &entry));
-            loadMixerLayout(this, entry, layout);
+            if (guiMgr.getTrackEntry(snapshot.trackLoaded, &entry)) {
+                loadMixerLayout(this, entry, layout);
+            }
         }
     }
 }
@@ -1328,8 +1321,6 @@ void guictr_mixers::layout() {
         if (guiMgr.isVisible(entry)) {
             int32_t w = setTrackPosition(entry, x, false);
             x += w + TRACK_MIXER_SPACING;
-        } else {
-            dbgassert(0);
         }
     }
 
@@ -1347,8 +1338,6 @@ void guictr_mixers::layout() {
             int32_t w = setTrackPosition(entry, x, true);
             x -= w;
             x -= TRACK_MIXER_SPACING;
-        } else {
-            dbgassert(0);
         }
         itMastersTracks++;
     }
@@ -1428,7 +1417,7 @@ void guictr_mixers::scrollOffsetChanged(int dir, float offset) {
 
 namespace DAW {
     void guictr_mixertitle::handleDraggedMove(MouseEvent& evt) {
-        if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
+        if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE_NO_SUBTRACKS) {
             int32_t mouseDragDist         = evt.relMousepos.x;
             const int32_t MIXER_SIZE_STEP = theme->get(GuiConstant::CONST_MIXER_SIZE_STEP);
             auto bIsReturnOrMaster = TRACKTYPE_TO_CTR(m_trackentry->track->type) != TRACK_CTR_MIDIAUDIO;
@@ -1518,22 +1507,33 @@ void guictr_mixers::guictr_mixers_content::render(NVGcontext* vg)  {
     auto& tracks = guiMgr.getTracksBottomFlat();
     // draw a background for all return and master tracks
     if (tracks.size()) {
-        auto min = tracks.front()->trackMixerTitle->getLeftTop();
-        auto max = tracks.back()->trackMixer->getRightBottom();
-        min.x -= 3;
-        max.x += 3;
-        nvgSave(vg);
-        nvgTranslate(vg, min.x, min.y);
-        nvgBeginPath(vg);
-        nvgRect(vg, 0, 0, max.x - min.x, max.y - min.y);
-        NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
-        bg.a = 1.0f;
-        nvgFillColor(vg, bg);
-        nvgFillCustomPar(vg, -2);
-        nvgSetShapeExtents(vg, 0, 0, max.x - min.x, max.y - min.y);
-        nvgFill(vg);
-        nvgRestore(vg);
-
+        guibase* first = nullptr;
+        guibase* last = nullptr;
+        for (auto* entry : tracks) {
+            if (entry->trackMixerTitle->isVisible()) {
+                if (!first) {
+                    first = entry->trackMixerTitle;
+                }
+                last = entry->trackMixer;
+            }
+        }
+        if (first && last) {
+            ivec2 min = first->getLeftTop();
+            ivec2 max = last->getRightBottom();
+            min.x -= 3;
+            max.x += 3;
+            nvgSave(vg);
+            nvgTranslate(vg, min.x, min.y);
+            nvgBeginPath(vg);
+            nvgRect(vg, 0, 0, max.x - min.x, max.y - min.y);
+            NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
+            bg.a = 1.0f;
+            nvgFillColor(vg, bg);
+            nvgFillCustomPar(vg, -2);
+            nvgSetShapeExtents(vg, 0, 0, max.x - min.x, max.y - min.y);
+            nvgFill(vg);
+            nvgRestore(vg);
+        }
     }
     for (track_gui_entry_t* entry : tracks) {
         if (entry->trackMixerTitle->isVisible()) {

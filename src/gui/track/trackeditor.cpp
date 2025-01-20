@@ -1352,21 +1352,15 @@ void guitrack_editor::render(NVGcontext* vg) {
     if (bottomHeight > 0) {
         nvgSave(vg);
         nvgIntersectScissor(vg, 0, ySplit, cs.x, bottomHeight);
-        for (track_t* g : project.tracksBottom.tracksFlat) {
-            track_gui_entry_t* entry{};
-            if (!iGuiMgr.getPointerEntry(g, &entry)) {
-                continue;
-            }
-
-            dbgassert(entry->trackContent->isVisible() == iGuiMgr.isVisible(entry));
-
+        auto& tracksBottom = iGuiMgr.getTracksBottomFlat();
+        for (track_gui_entry_t* entry : tracksBottom) {
             if (entry->trackContent->isVisible()) {
                 nvgSave(vg);
                 entry->trackContent->render(vg);
                 if (action.dragtype) {
                     auto clipboard = action.clipboard.get();
                     if (clipboard) {
-                        int32_t clipboardIdx = g->projectIdx - clipboard->srcTrack - (cursor.cursorTrack - action.cursorBegin.cursorTrack);
+                        int32_t clipboardIdx = entry->track->projectIdx - clipboard->srcTrack - (cursor.cursorTrack - action.cursorBegin.cursorTrack);
                         if (clipboardIdx >= 0 && clipboardIdx < int32_t(clipboard->tracks.size())) {
                             track_clipboard_t* trClipboard = clipboard->tracks[clipboardIdx].get();
                             for (auto& clip : trClipboard->clips) {
@@ -1392,10 +1386,8 @@ void guitrack_editor::render(NVGcontext* vg) {
     if (ySplit > 0) {
         nvgSave(vg);
         nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-        for (track_t* t : project.trackMidiAudioCtr.tracksFlat) {
-            track_gui_entry_t* entry{};
-            always_assert(iGuiMgr.getPointerEntry(t, &entry));
-            dbgassert(entry->trackContent != nullptr);
+        auto& tracksTop = iGuiMgr.getTracksTopFlat();
+        for (track_gui_entry_t* entry : tracksTop) {
             auto totalHeight = entry->trackContent->size.y;
             if (!entry->subtracks.empty()) {
                 totalHeight = entry->subtracks.back()->bottom() - entry->trackContent->top();
@@ -1407,7 +1399,7 @@ void guitrack_editor::render(NVGcontext* vg) {
                 if (action.dragtype) {
                     auto clipboard = action.clipboard.get();
                     if (clipboard) {
-                        int32_t clipboardIdx = t->projectIdx - clipboard->srcTrack - (cursor.cursorTrack - action.cursorBegin.cursorTrack);
+                        int32_t clipboardIdx = entry->track->projectIdx - clipboard->srcTrack - (cursor.cursorTrack - action.cursorBegin.cursorTrack);
                         if (clipboardIdx >= 0 && clipboardIdx < int32_t(clipboard->tracks.size())) {
                             track_clipboard_t* trClipboard = clipboard->tracks[clipboardIdx].get();
                             for (auto& clip : trClipboard->clips) {

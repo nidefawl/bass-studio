@@ -44,11 +44,12 @@ struct track_gui_entry_t {
     tracklayout_state_t state;
     std::vector<gui_track_subtrack*> subtracks;
     std::map<clip_t*, gui_clip*> clipsGuis;
+    bool isHidden = false;
     bool validSubtrack(int32_t subtrackIdx) const {
         return subtrackIdx >= 0 && subtrackIdx < (int32_t) subtracks.size();
     }
-    bool isHidden() const {
-        return layout.hideTrack && track->children.empty();
+    bool isFolded() const {
+        return layout.foldTrack;
     }
     int32_t getHeight() const;
 };

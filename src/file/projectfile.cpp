@@ -337,7 +337,7 @@ template<class Archive>
 void serialize(Archive& archive, tracklayout_settings_t& m) {
     archive(make_nvp("height", m.height),
             make_nvp("hideSubtracks", m.hideSubtracks),
-            make_nvp("hideTrack", m.hideTrack));
+            make_nvp("fold", m.foldTrack));
 }
 
 template<class Archive>
@@ -365,8 +365,8 @@ void save(Archive& archive, track_layout_snapshot_t const& m, const std::uint32_
 
 template<class Archive>
 void load(Archive& archive, track_layout_snapshot_t& m, const std::uint32_t version) {
-    archive(make_nvp("layout", m.layout));
-    if (version > 0) {
+    if (version > 1) {
+        archive(make_nvp("layout", m.layout));
         archive(make_nvp("subtracks", m.subtracks));
     }
 }
@@ -810,7 +810,7 @@ CEREAL_CLASS_VERSION(guictrlayout_entry_snapshot_t, 1);
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 17);
 CEREAL_CLASS_VERSION(track_snapshot_t, 5);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
-CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);
+CEREAL_CLASS_VERSION(track_layout_snapshot_t, 2);
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
 
 

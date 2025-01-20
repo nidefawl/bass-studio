@@ -76,7 +76,7 @@ struct tracksettings_t {
 
 struct tracklayout_settings_t {
     int height         = 4;
-    bool hideTrack     = false;
+    bool foldTrack     = false;
     bool hideSubtracks = false;
 };
 

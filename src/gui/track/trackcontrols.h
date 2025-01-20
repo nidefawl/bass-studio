@@ -11,7 +11,8 @@
 
 enum class DragModeTrack : uint8_t {
     DRAG_TRACK_NONE,
-    DRAG_TRACK_RESIZE,
+    DRAG_TRACK_RESIZE_WITH_SUBTRACKS,
+    DRAG_TRACK_RESIZE_NO_SUBTRACKS,
 };
 
 class gui_track_content_base : public guictr_base {
@@ -50,6 +51,7 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override;
     void handleRightClick(MouseEvent& evt) override;
     bool isResize(ivec2 mpos);
+    bool isResizeFirstSubtrack(ivec2 mpos);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void layout() override;
     guibase* getTitle();

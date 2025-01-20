@@ -972,7 +972,7 @@ void saveSubtrackLayout(track_gui_entry_t* entry, track_layout_snapshot_t& snaps
 }
 
 void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry) {
-    bool hide = entry->layout.hideSubtracks || entry->layout.hideTrack;
+    bool hide = entry->layout.hideSubtracks || entry->layout.foldTrack;
     if (entry->state.wasInHide == hide)
         return;
     entry->state.wasInHide = hide;

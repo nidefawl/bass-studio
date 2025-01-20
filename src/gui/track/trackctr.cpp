@@ -38,7 +38,7 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
 }
 
 int32_t track_gui_entry_t::getHeight() const {
-    if (layout.hideTrack) {
+    if (layout.foldTrack) {
         return math::max<int32_t>(1, CtrSize(track->children));
     }
     return layout.height;
@@ -103,7 +103,7 @@ int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
     int32_t trH = e->getHeight();
     int32_t totalHeight = trH * TRACK_HEIGHT_STEP;
 
-    if (!(e->isHidden() || e->layout.hideSubtracks)) {
+    if (!e->layout.foldTrack && !e->layout.hideSubtracks) {
         for (auto t2 : e->subtracks) {
             totalHeight += t2->height * TRACK_HEIGHT_STEP + TRACK_HEIGHT_SPACING;
         }
@@ -118,7 +118,7 @@ int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool is
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
     int32_t childTrackInsetX = e->track->getChildLvl() * 8;
-    bool bIsHidden   = e->isHidden();
+    bool bIsFolded   = e->layout.foldTrack;
     ivec2& cntPos    = e->trackContent->pos;
     ivec2& mxrPos    = e->trackControls->pos;
     cntPos           = ivec2(0, y);
@@ -127,7 +127,7 @@ int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool is
     e->trackContent->size = ivec2(trackEditor.size.x, trH * TRACK_HEIGHT_STEP);
     int32_t x2       = e->trackContent->left();
     int32_t y2       = e->trackContent->bottom();
-    if (!(bIsHidden || e->layout.hideSubtracks)) {
+    if (!(bIsFolded || e->layout.hideSubtracks)) {
         for (auto t2 : e->subtracks) {
             int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
 
@@ -215,7 +215,7 @@ void loadTrackLayoutSettings(track_gui_entry_t* entry, const tracklayout_setting
 
 void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
     entry->subtracks.clear();
-    bool hide = entry->layout.hideSubtracks || entry->layout.hideTrack;
+    bool hide = entry->layout.hideSubtracks || entry->layout.foldTrack;
     if (hide) {
         entry->state.layoutSaved = snapshot;
         entry->state.wasInHide   = true;
@@ -261,25 +261,22 @@ void guictr_tracks::scrollTo(guibase* g) {
 }
 
 void guictr_tracks::updateVisibleTracks() {
+    for (auto entry : guiMgr.entries) {
+        auto tr = entry->track;
+        bool bIsVisible = bShowMasterTracks || tr->type != TRACK_TYPE_MASTER;
+        bIsVisible = bIsVisible && (bShowReturnTracks || tr->type != TRACK_TYPE_RETURN);
+        if (entry->isHidden == bIsVisible) {
+            entry->isHidden = !bIsVisible;
+            entry->trackControls->setVisible(bIsVisible);
+            entry->trackContent->setVisible(bIsVisible);
+        }
+    }
     guiMgr.updateVisibleTracks(project.trackList);
-
     track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
-    for (track_t* tr : project.trackList) {
-        track_gui_entry_t* entry = nullptr;
-        if (!(guiMgr.getPointerEntry(tr, &entry))) {
-            continue;
-        }
-        if (!assert_expr(entry->trackContent)) {
-            continue;
-        }
-        const bool bVisible = STL_CONTAINS(tracks, entry);
-        entry->trackContent->setVisible(bVisible);
-        entry->trackControls->setVisible(bVisible);
-        if (bVisible) {
-            entry->trackContent->updateVisibleTrackContents(m_grid);
-            for (gui_track_subtrack* au : entry->subtracks) {
-                au->updateVisibleTrackContents(m_grid);
-            }
+    for (track_gui_entry_t* entry : tracks) {
+        entry->trackContent->updateVisibleTrackContents(m_grid);
+        for (gui_track_subtrack* au : entry->subtracks) {
+            au->updateVisibleTrackContents(m_grid);
         }
     }
 }
@@ -355,8 +352,6 @@ void guictr_tracks::layout() {
         if (guiMgr.isVisible(entry)) {
             int32_t h = setTrackPosition(entry, y, false);
             y += h + TRACK_HEIGHT_SPACING;
-        } else {
-            dbgassert(0);
         }
     }
 
@@ -372,11 +367,7 @@ void guictr_tracks::layout() {
             int32_t h = setTrackPosition(entry, y, true);
             y -= h;
             y -= TRACK_HEIGHT_SPACING;
-        } else {
-            dbgassert(0);
         }
-
-
         itMastersTracks++;
     }
 
@@ -442,26 +433,21 @@ void guictr_tracks::render(NVGcontext* vg) {
         if (ySplit > 0) {
             nvgSave(vg);
             nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-            for (track_t* t : project.trackMidiAudioCtr) {
-                track_gui_entry_t* entry = nullptr;
-                if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
-                    drawSeperator(vg, theme, entry->trackControls->bottom() + TRACK_HEIGHT_SPACING_HALF, cs);
-                }
+            for (track_gui_entry_t* entry : guiMgr.getTracksTopFlat()) {
+                drawSeperator(vg, theme, entry->trackControls->bottom() + TRACK_HEIGHT_SPACING_HALF, cs);
                 lastEntry = entry;
             }
             nvgRestore(vg);
         }
-        if (!project.tracksBottom.empty() && (ySplit <= 0 || trackEditor.size.y > ySplit)) {
+        auto& tracksBottm = guiMgr.getTracksBottomFlat();
+        if (!tracksBottm.empty() && (ySplit <= 0 || trackEditor.size.y > ySplit)) {
             if (ySplit > 0) {
                 nvgIntersectScissor(vg, 0, ySplit, cs.x, trackEditor.size.y - ySplit);
             } else {
                 nvgIntersectScissor(vg, 0, 0, cs.x, trackEditor.size.y);
             }
-            for (track_t* t : project.tracksBottom) {
-                track_gui_entry_t* entry = nullptr;
-                if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
-                    drawSeperator(vg, theme, entry->trackControls->top() - TRACK_HEIGHT_SPACING_HALF, cs);
-                }
+            for (track_gui_entry_t* entry : tracksBottm) {
+                drawSeperator(vg, theme, entry->trackControls->top() - TRACK_HEIGHT_SPACING_HALF, cs);
             }
         }
         nvgRestore(vg);
@@ -792,9 +778,17 @@ void guitrack_topleft::buttonClicked(guibase* _button) {
             if (!isFolded && TRACKTYPE_TO_CTR(entry->track->type) != TRACK_CTR_MIDIAUDIO) {
                 continue;
             }
-            entry->layout.hideTrack = isFolded;
+            entry->layout.foldTrack = isFolded;
             updateStoreLoadSubtracks(entry->parent, entry);
         }
+        dawCtrl->updateVisibleTrackContents();
+    }
+    if (_button == &btnShowReturnTracks) {
+        ctrTracks.bShowReturnTracks = !ctrTracks.bShowReturnTracks;
+        dawCtrl->updateVisibleTrackContents();
+    }
+    if (_button == &btnShowMasterTracks) {
+        ctrTracks.bShowMasterTracks = !ctrTracks.bShowMasterTracks;
         dawCtrl->updateVisibleTrackContents();
     }
 }
@@ -820,8 +814,18 @@ guitrack_topleft::guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _da
     btnCopyAutomation.icon = ICON_AUTOMATION;
     btnCopyAutomation.setStateRef(&daw_tls::getTls().runtime->copyAutomation);
     btnCopyAutomation.colorActive = GuiColor::COL_AUTOMATED;
+    btnShowReturnTracks.setLabel("Show Return Tracks");
+    btnShowReturnTracks.icon = ICON_MODULATION_INPUT;
+    btnShowReturnTracks.setStateRef(&ctrTracks.bShowReturnTracks);
+    btnShowReturnTracks.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
+    btnShowMasterTracks.setLabel("Show Master Tracks");
+    btnShowMasterTracks.icon = ICON_ADJUST;
+    btnShowMasterTracks.setStateRef(&ctrTracks.bShowMasterTracks);
+    btnShowMasterTracks.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
     guiButtons.push_back(&btnFoldAll);
     guiButtons.push_back(&btnCopyAutomation);
+    guiButtons.push_back(&btnShowReturnTracks);
+    guiButtons.push_back(&btnShowMasterTracks);
     for (auto guiBtn : guiButtons) {
         add(guiBtn);
     }
