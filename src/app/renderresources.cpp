@@ -153,6 +153,8 @@ namespace RenderResources {
             load(vg, "icons/modulation_input.png", imgIconsBuf[ICON_MODULATION_INPUT]);
             load(vg, "icons/icon_file_audio.png", imgIconsBuf[ICON_FILE_AUDIO]);
             load(vg, "icons/icon_file_midi.png", imgIconsBuf[ICON_FILE_MIDI]);
+            load(vg, "icons/checkbox_unchecked.png", imgIconsBuf[ICON_CHECKBOX_UNCHECKED]);
+            load(vg, "icons/checkbox_checked.png", imgIconsBuf[ICON_CHECKBOX_CHECKED]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];

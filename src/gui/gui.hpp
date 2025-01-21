@@ -1,7 +1,6 @@
 #pragma once
 #include <nanovg.h>
 #include <vector>
-#include "grid.hpp"
 #include "math/seq_math.hpp"
 #include "math/vec.hpp"
 #include "str_util.hpp"
@@ -27,6 +26,7 @@ class gui_pluginlist_entry;
 class gui_clip;
 class gui_track_content;
 class scaled_grid;
+struct grid_div;
 struct guitheme_t;
 struct dragdrop_file;
 struct track_gui_entry_t;

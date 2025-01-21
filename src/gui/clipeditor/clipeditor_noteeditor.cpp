@@ -887,7 +887,8 @@ void renderClipHandlesBackground(NVGcontext* vg, const guitheme_t* theme, const 
     nvgFill(vg);
 }
 void renderGridList(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, vec2 handlesPos, vec2 handlesSize) {
-    for (grid_div g : grid.gridList) {
+    auto& gridList = grid.getActiveGrid();
+    for (auto& g : gridList) {
         nvgBeginPath(vg);
         nvgMoveTo(vg, handlesPos.x + g.screenpos, handlesPos.y - 2);
         nvgLineTo(vg, handlesPos.x + g.screenpos, handlesPos.y + handlesSize.y + 2);

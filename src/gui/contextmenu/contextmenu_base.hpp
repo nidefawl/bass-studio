@@ -8,6 +8,7 @@
 #include "gui/container/container.hpp"
 #include "guicolors.hpp"
 #include "basectrl.hpp"
+#include "renderresources.hpp"
 
 namespace RenderResources {
     struct NvgImageTexture;
@@ -207,6 +208,24 @@ public:
             }
         }
         return -1;
+    }
+};
+
+class ctxtmenu_toggle_setting final : public ctxtmenu_entry {
+public:
+    ctxtmenu_toggle_setting(String _title, int _id, bool bIsChecked = false)
+        : ctxtmenu_entry(std::move(_title), _id)
+    {
+        setChecked(bIsChecked);
+    }
+
+    void render(ivec2 p, NVGcontext* vg, int, ivec2 mouse) override {
+        ctxtmenu_entry::render(p, vg, 0, mouse);
+    }
+
+    void setChecked(bool b) {
+        auto icon = b ? ICON_CHECKBOX_CHECKED : ICON_CHECKBOX_UNCHECKED;
+        setIcon(&RenderResources::imgIcons[icon], GuiColor::COL_TEXT);
     }
 };
 

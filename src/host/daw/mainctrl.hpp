@@ -29,7 +29,6 @@
 #include "mouse.hpp"
 #include "keyboard.hpp"
 #include "event.hpp"
-#include "grid.hpp"
 #include "cursor.hpp"
 #include "host/track/track.hpp"
 #include "host/clip/clip.hpp"

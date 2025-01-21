@@ -111,6 +111,7 @@ class guictxtmenu_noteeditor final : public guictxtmenu {
     ctxtmenu_color_select* sel = nullptr;
     ctxtmenu_time_select* timeSel1 = nullptr;
     ctxtmenu_time_select* timeSel2 = nullptr;
+    ctxtmenu_toggle_setting* toggleTriplets = nullptr;
 
 public:
     explicit guictxtmenu_noteeditor(guictr_noteeditor* _editor) {
@@ -138,7 +139,9 @@ public:
             // addEntry(sel);
         }
         addEntry(new ctxtmenu_splitter());
-        timeSel1     = new ctxtmenu_time_select(_editor->getGrid(), "Adaptive Grid", 0);
+        toggleTriplets = new ctxtmenu_toggle_setting("Triplets", 0, editor->getGrid().grid_dens.triplets);
+        addEntry(toggleTriplets);
+        timeSel1 = new ctxtmenu_time_select(_editor->getGrid(), "Adaptive Grid", 0);
         timeSel1->initAdaptive();
         addEntry(timeSel1);
         timeSel2 = new ctxtmenu_time_select(_editor->getGrid(), "Fixed Grid", 0);
@@ -147,7 +150,10 @@ public:
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
         auto& grid = editor->getGrid();
-        if (e == this->timeSel1 || e == this->timeSel2) {
+        if (e == toggleTriplets) {
+            grid.grid_dens.triplets = !grid.grid_dens.triplets;
+            grid.notifyChange();
+        } else if (e == this->timeSel1 || e == this->timeSel2) {
             if (_id == 110 + 9) {// OFF
                 grid.grid_dens.enabled = false;
             } else if (_id >= 110) {
@@ -754,7 +760,7 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
         return;
     }
     renderBackground(vg);
-    renderGridLines(vg, theme, grid.gridList, size);
+    renderGridLines(vg, theme, grid.getActiveGrid(), size);
     const auto clip = view.clip();
     if (!clip) {
         if (dragMode == drag_frame) {
@@ -844,7 +850,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
         return;
     }
     renderBackground(vg);
-    renderGridLines(vg, theme, grid.gridList, size);
+    renderGridLines(vg, theme, grid.getActiveGrid(), size);
     float w = size.x;
     const float h = size.y;
     NVGpaint paint{};
@@ -1101,7 +1107,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             nvgFill(vg);
         }
 
-        renderGridLines(vg, theme, grid.gridList, cs);
+        renderGridLines(vg, theme, grid.getActiveGrid(), cs);
 
         //    nvgBeginPath(vg);
         //    nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
@@ -1183,7 +1189,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
 
 
-        renderGridLines(vg, theme, grid.gridList, cs);
+        renderGridLines(vg, theme, grid.getActiveGrid(), cs);
 
     }
     clip_t* const currentClip = view.clip();
@@ -1540,7 +1546,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                     note.len   = grid.getTickLength();
                     notes.paste(note);
                     contextNote = notes.get(note.time, pitch);
-                    if (assert_expr(contextNote)) {
+                    if ((contextNote)) {
                         notes.selection.insert(contextNote);
                         dawCtrl->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
                         desc = "Add Note";

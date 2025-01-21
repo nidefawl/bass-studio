@@ -31,7 +31,7 @@ public:
         width = size.x;
         this->fontSize = _fontSize;
         const int h    = math::roundfS32(_fontSize);
-        layoutE(width, h, fixed ? 5 : 3);
+        layoutE(width, h, fixed ? 4 : 3);
         if (fixed) {
             _time_sel_entry& off = entries.back();
             off.x                = inset;

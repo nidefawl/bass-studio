@@ -10,7 +10,6 @@
 #include "seq_util.hpp"
 #include "track.hpp"
 #include "snapshot/track-snapshot.hpp"
-#include "grid.hpp"
 
 class gui_track_content;
 class guictr_tracks;

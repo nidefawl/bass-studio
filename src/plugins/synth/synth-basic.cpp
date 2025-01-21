@@ -22,19 +22,6 @@
 
 #include <utility>
 
-class ctxtmenu_toggle_setting final : public ctxtmenu_entry {
-public:
-    ctxtmenu_toggle_setting(String _title, int _id)
-        : ctxtmenu_entry(std::move(_title), _id)
-    {
-        auto icon = ICON_PLUS;
-        setIcon(&RenderResources::imgIcons[icon], GuiColor::COL_WHITE);
-    }
-
-    void render(ivec2 p, NVGcontext* vg, int, ivec2 mouse) override {
-        ctxtmenu_entry::render(p, vg, 0, mouse);
-    }
-};
 namespace PluginSynth {
     
 struct VoiceSynth {
@@ -1467,16 +1454,16 @@ public:
             maxHeight = 0;
             this->fontSize = FONT_SIZE_CTXT_SMALL;
             this->paddingV = 0;
-            addEntry(new ctxtmenu_toggle_setting("Show Editor", 0));
+            addEntry(new ctxtmenu_toggle_setting("Dummy Setting", 0, false));
             addEntry(new DAW::Shape::ctxtmenu_lfo_shape_select("Shape", 1));
         }
         bool clickedElement(ctxtmenu_entry* e, int _id) override {
             if (_id == 0) {
                 auto guiCtr = safeRefGet(refGui);
                 if (guiCtr) {
-                    auto bVisible = !guiCtr->isVisible();
-                    guiCtr->setVisible(bVisible);
-                    static_cast<ctxtmenu_toggle_setting*>(e)->setIcon(&RenderResources::imgIcons[bVisible ? ICON_MINUS : ICON_PLUS], GuiColor::COL_WHITE);
+                    static bool bDummySetting = false;
+                    bDummySetting = !bDummySetting;
+                    dynamic_cast<ctxtmenu_toggle_setting*>(e)->setChecked(bDummySetting);
                     guiCtr->parent->onChildLayoutChanged(guiCtr);
                     return true;
                 }

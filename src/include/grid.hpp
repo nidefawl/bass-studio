@@ -21,7 +21,8 @@ struct grid_density {
     bool enabled          = true;
     bool isfixed          = false;
     int8_t fixedBars      = 2;
-    int8_t dynamicDensity = 3;
+    int8_t dynamicDensity = 0;
+    bool triplets = false;
     template<class Archive>
     void serialize(Archive& ar) {
         ar(enabled, isfixed, fixedBars, dynamicDensity);
@@ -35,7 +36,9 @@ struct grid_density {
         return dynamicDensity;
     }
 };
+
 class scaled_grid;
+
 class grid_changed_cb {
 public:
     virtual ~grid_changed_cb() = default;
@@ -50,8 +53,12 @@ protected:
     uint8_t gridMaxDens = 8;
 public:
     grid_density grid_dens;
+    std::vector<tick_t> gridListTicks;
+    std::vector<tick_t> gridListTicksTriplets;
     std::vector<grid_div> gridList;
+    std::vector<grid_div> gridListTriplets;
 
+    double stepWidthTicks = double(TICKS_BAR);
     double bars     = 0;
     double bar_size = 0;
     double incr_bg  = 0;
@@ -59,6 +66,9 @@ public:
 public:
     scaled_grid() {
         showRange(0, TICKS_BAR * 4);
+    }
+    const std::vector<grid_div>& getActiveGrid() const {
+        return grid_dens.triplets ? gridListTriplets : gridList;
     }
     void setGridMaxDens(uint8_t dens) {
         gridMaxDens = math::clamp<uint8_t>(dens, 1, 8);
@@ -76,7 +86,7 @@ public:
         calcLen(offset, zoom, contentsize.x);
         lastW      = contentsize.x;
     }
-    tick_t getTickLength() const;
+    double getTickLength() const;
     void notifyChange();
     double getOffset() const {
         return this->offset;
