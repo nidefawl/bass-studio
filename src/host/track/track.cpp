@@ -958,13 +958,13 @@ void saveSubtrackLayout(track_gui_entry_t* entry, track_layout_snapshot_t& snaps
     snapshot.subtracks.reserve(entry->subtracks.size());
     for (auto* subtrack : entry->subtracks) {
         automatable_param_ref_t atlRef{};
-        if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+        if (subtrack->getSubtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
             dbgassert(subtrack->at);
             atlRef = subtrack->at->toRef();
             atlRef.paramIdx = subtrack->param;
         }
         subtrack_snapshot_t subtrackSnapshot;
-        subtrackSnapshot.settings.subtrackType = subtrack->subtrackType();
+        subtrackSnapshot.settings.subtrackType = subtrack->getSubtrackType();
         subtrackSnapshot.layoutSettings.height = subtrack->height;
         subtrackSnapshot.atlRef = atlRef;
         snapshot.subtracks.push_back(std::move(subtrackSnapshot));

@@ -238,8 +238,7 @@ public:
     scaled_grid& getGrid() {
         return m_grid;
     }
-    //TODO: prefix with get
-    virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
+    virtual int getSubtrackType() { return SUBTRACK_TYPE_EMPTY; }
     automated_param_t* getAutomation() const {
         if (at) {
             return at->getRegisteredAutomation(param);
@@ -312,7 +311,7 @@ public:
 class gui_track_automationlane final : public gui_track_subtrack {
 public:
     gui_track_automationlane(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
-    int subtrackType() override { return gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION; }
+    int getSubtrackType() override { return gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION; }
     ~gui_track_automationlane() override = default;
     void handleRightClick(MouseEvent& evt) override;
 };

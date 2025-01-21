@@ -589,7 +589,7 @@ void guitrack_editor::removeAllAutomationLanes(track_gui_entry_t* entry, automat
 
     auto& atLanes = entry->subtracks;
     auto it       = std::remove_if(atLanes.begin(), atLanes.end(), [this, at, paramIdx](gui_track_subtrack* al) {
-        if (al->subtrackType() != gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+        if (al->getSubtrackType() != gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
             return false;
         }
         if ((!at || al->at == at) && (paramIdx < 0 || al->param == paramIdx)) {

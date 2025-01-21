@@ -45,7 +45,7 @@ public:
             }
         }
     }
-    int subtrackType() override { return SUBTRACK_TYPE_WAVE; }
+    int getSubtrackType() override { return SUBTRACK_TYPE_WAVE; }
 
     void onTick(AppCtrl*) override {
         if (culled) {

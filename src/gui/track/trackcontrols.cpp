@@ -2025,7 +2025,7 @@ bool guictxtmenu_track::clickedElement(ctxtmenu_entry* e, int _id) {
             tr->audio->flags &= ~(audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT);
             std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
             for (auto subtrack : subtracksVecCopy) {
-                if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
+                if (subtrack->getSubtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
                     trackCtr->removeSubtrack(m_trackentry, subtrack);
                 }
             }
