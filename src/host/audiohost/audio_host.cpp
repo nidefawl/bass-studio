@@ -168,7 +168,6 @@ class audiohost_callback {
             }
         }
         stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
-        //TODO: still a race condition on_terminate here
         AudioBuffer* block        = nullptr;
         channelnum_t numOutChannelsWritten = 0;
         if (stream->try_dequeue(block)) {
