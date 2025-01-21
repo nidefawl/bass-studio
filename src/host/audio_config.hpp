@@ -102,4 +102,4 @@ namespace AudioIO {
     };
 } // namespace AudioIO
 
-} // namespace DAWmidistage_type
+} // namespace DAW
