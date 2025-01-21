@@ -305,10 +305,10 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(guitrack_editor* const _edito
     }
     addEntry(new ctxtmenu_splitter());
     scaled_grid& grid = _editor->getGrid();
-    timeSel1     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
+    timeSel1     = new ctxtmenu_time_select(grid, "Auto", 0);
     timeSel1->initAdaptive();
     addEntry(timeSel1);
-    timeSel2 = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
+    timeSel2 = new ctxtmenu_time_select(grid, "Manual", 0);
     timeSel2->initFixed();
     addEntry(timeSel2);
 }
