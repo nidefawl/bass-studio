@@ -191,7 +191,6 @@ public:
 
     template<typename Container>
     void sortChildrenByList(Container& container) {
-        //TODO: very inefficient
         std::sort(guis.begin(), guis.end(), [&container](guibase* a, guibase* b) {
             int indexA = indexOfCtr(container, a);
             int indexB = indexOfCtr(container, b);
