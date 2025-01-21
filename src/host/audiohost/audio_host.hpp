@@ -44,13 +44,12 @@ public:
         moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
         moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueueInput;
 
-        //TODO: heap alloc to reduce allocated memory
-        std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataInput;
-        std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataOutput;
+        std::vector<DAW::meter_runningsum> meterDataInput;
+        std::vector<DAW::meter_runningsum> meterDataOutput;
         DAW::rmsmeter metersInput;
         DAW::rmsmeter metersOutput;
-        std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataCBInput;
-        std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataCBOutput;
+        std::vector<DAW::meter_runningsum> meterDataCBInput;
+        std::vector<DAW::meter_runningsum> meterDataCBOutput;
         std::shared_ptr<DAW::rmsmeter> meterCallbackInput;
         std::shared_ptr<DAW::rmsmeter> meterCallbackOutput;
 

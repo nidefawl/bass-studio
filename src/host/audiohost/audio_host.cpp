@@ -269,8 +269,12 @@ static void StreamFinished(void* userData) {
 using DAW::channel_pairing;
 
 audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, DAW::AudioIO::io_cfg_tracks& cfg, channelnum_t _nOutputChannels, channelnum_t _nInputChannels)
-    : metersInput(meterDataInput.data(), meterDataInput.size()),
+    : meterDataInput(_nInputChannels),
+      meterDataOutput(_nOutputChannels),
+      metersInput(meterDataInput.data(), meterDataInput.size()),
       metersOutput(meterDataOutput.data(), meterDataOutput.size()),
+      meterDataCBInput(_nInputChannels),
+      meterDataCBOutput(_nOutputChannels),
       meterCallbackInput(!_nInputChannels ? nullptr : std::make_shared<DAW::rmsmeter>(meterDataCBInput.data(), math::min<channelnum_t>(_nInputChannels, 2))),
       meterCallbackOutput(!_nOutputChannels ? nullptr : std::make_shared<DAW::rmsmeter>(meterDataCBOutput.data(), math::min<channelnum_t>(_nOutputChannels, 2))),
       host(_host), streamId(_streamId), streamIdx(_streamIdx),
@@ -377,12 +381,8 @@ void audiohost::HostIOStream::enqueueInput(AudioBuffer* buf) {
     AudioBlock* blockIn = buf->output;
     metersInput.update(blockIn, 1.0f);
     metersInput.onTick(blockIn->samples / (double) this->host->lSampleRate);
-    //TODO: skip this copy step if guictr_input_meters is not visible
     for (auto & nTrack : channelsInput) {
         auto* track = nTrack.get();
-        //if (track->buf.channels != buf->output->channels) {
-        //    log_printf("mismatch! tracksInput.size %d, track.channels %d, input.channels %d\n", tracksInput.size(), track->buf.channels, buf->output->channels);
-        //}
         track->buf.realloc(blockIn->samples);
         track->buf.copyFrom(blockIn, [offset = track->channelOffset](uint32_t dstIdx, uint32_t srcIdx) {
             return offset + dstIdx;
