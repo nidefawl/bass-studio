@@ -1082,39 +1082,6 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
 
     if (enableProfiling) {
         stats.timings["Block.Tracks"] = timerProfile.getTimeReset();
-    }
-
-    for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
-        const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
-        const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
-        track_t* const track = trackNode.trackOptional;
-        track_impl_t* const trackImpl = track->audio;
-        if (trackImpl->mixer.isEnabled()) {
-            auto tracDst = trackImpl->outputChannel;
-            if (tracDst.type == DAW::stage_type::INPUT_DEFAULT) {
-                DAW::channel_ref_t tmp;
-                if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
-                    tracDst = tmp;
-                }
-            }
-            if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::stage_type::INPUT_EXTERNAL_AUDIO) {
-                // TODO: latency compensate (add external output nodes to graph)
-                /* Calculate master tracks gain level */
-                //TODO: use MixInputs
-                float fGainMaster;
-                if (dsp_util::getGainLvl(trackImpl->mixer.getParam(PARAM_TRACK_GAIN)->getValue(), fGainMaster)) {
-                }
-                auto routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
-                auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-                impl->blockOutput.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
-                        .addFromOp(&trackSubChannelOutput, mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
-
-            }
-        }
-    }
-    // blockExtOut now holds master channels outputs
-
-    if (enableProfiling) {
         stats.timings["Block.TrackOutputRouting"] = timerProfile.getTimeReset();
     }
 
@@ -1130,16 +1097,6 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
 
 #if 1
     if (enableProfiling) timerProfile.reset();
-    /* Update all track meters */
-    // for (track_t* track : project->trackList) {
-    //     track_impl_t* trAudio = track->audio;
-    //     if (!trAudio)
-    //         continue;
-    //     float fGainTrack;
-    //     dsp_util::getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
-    //     trAudio->meter.update(&trAudio->output, fGainTrack);
-    //     trAudio->meterInput.update(&trAudio->input, 1.0f);
-    // }
     if (enableProfiling) {
         stats.timings["Block.UpdateMeters"] = timerProfile.getTimeReset();
     }
