@@ -401,20 +401,6 @@ void trackcontainer_tracktype_t::copyFrom(trackcontainer_snapshot_t& in) {
     }
     track_vector newTrackVecTree;
     deserializeTrackTree(in, newTrackVecTree);
-    //bool reassignIdx = false;
-    //for (track_t* track : newTrackVecTree) {
-    //    reassignIdx |= track->localIdxFlat < 0;
-    //}
-    //if (reassignIdx) {
-    //    int32_t idx = 0;
-    //    for (track_t* tr2 : newTrackVecTree) {
-    //        tr2->localIdxFlat = idx++;
-    //    }
-    //} else {
-    //    std::sort(newTrackVecTree.begin(), newTrackVecTree.end(), [](track_t* const& a, track_t* const& b) {
-    //        return a->localIdxFlat < b->localIdxFlat;
-    //    });
-    //}
     setFromVectorTree(std::move(newTrackVecTree));
     int32_t idx = 0;
     for (track_t* tr : tracksFlat) {

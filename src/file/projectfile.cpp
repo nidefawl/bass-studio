@@ -712,6 +712,8 @@ void serialize(Archive& archive, project_snapshot_t& m) {
             make_nvp("exportSettings", m.exportSettings));
     make_optional_nvp(archive, "quantizeSettings", m.quantizeSettings);
     make_optional_nvp(archive, "samplerate", m.samplerate);
+    make_optional_nvp(archive, "solo", m.solodTracks);
+    make_optional_nvp(archive, "record", m.recordArmedTracks);
 };
 
 template<class Archive>

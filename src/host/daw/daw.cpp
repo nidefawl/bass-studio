@@ -1111,8 +1111,8 @@ bool DawInstance::setLoadedProject(const std::shared_ptr<project_file>& file, in
     return b;
 }
 
-void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
-
+void DawInstance::loadProject0(const std::shared_ptr<project_file>& spFile) {
+    auto file = spFile.get();
     setAudioThreadState(playback_state::status_no_process);
     log_printf("Loading project %s: %zu tracks\n", StringAsCStr(file->path), project.trackList.size());
     unloadProject();
@@ -1147,6 +1147,18 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
 
     /** load track snapshots */
     project.trackList.loadProjectSnapshot(tls.host, file->project);
+
+    // restore soloed tracks and record armed tracks
+    for (auto track : project.trackList.getAllTracksFlatVecRef()) {
+        bool isSolo = STL_CONTAINS(file->project.solodTracks, track->audio->stageId.stageId);
+        bool isArmed = STL_CONTAINS(file->project.recordArmedTracks, track->audio->stageId.stageId);
+        if (isSolo) {
+            track->audio->flags |= audiostageflags_t::SOLO;
+        }
+        if (isArmed) {
+            track->audio->flags |= audiostageflags_t::RECORD_ARMED;
+        }
+    }
 
     /** fix audio clip lengths */
     for (track_t* t : project.trackList) {

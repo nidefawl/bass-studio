@@ -558,6 +558,20 @@ void track_impl_t::updateAutomatableTargets(DAW::Host::Host* const host, double 
 
 void project_t::copyTo(project_snapshot_t& project) {
     trackList.copyTo(project);
+    // store soloed tracks and record armed tracks
+    for (auto track : trackList.trackAllCtr) {
+        if (!assert_expr(track->audio)) {
+            continue;
+        }
+        bool isSolo = (track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
+        bool isArmed = (track->audio->flags & audiostageflags_t::RECORD_ARMED) != audiostageflags_t::NONE;
+        if (isSolo) {
+            project.solodTracks.push_back(track->audio->stageId.stageId);
+        }
+        if (isArmed) {
+            project.recordArmedTracks.push_back(track->audio->stageId.stageId);
+        }
+    }
 }
 
 void project_t::copyFrom(project_snapshot_t& project) {
