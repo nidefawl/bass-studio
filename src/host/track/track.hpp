@@ -433,8 +433,8 @@ public:
             tracksFlat.push_back(node);
         }
     }
-    void setFromVectorTree(const track_vector& vecTree) {
-        tracksTree = vecTree;
+    void setFromVectorTree(track_vector&& vecTree) {
+        tracksTree = std::move(vecTree);
         repopulateFlatTracks();
     }
     void add(track_t* trackAdd) {
