@@ -1173,7 +1173,7 @@ void sortControlEvents(std::vector<midievent_ctrl_t>& ctrlEvents) {
     });
 }
 
-void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi_data_t& data, DAW::midichannel_ref_t midiChannel, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
+void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi_data_t& data, const DAW::midichannel_ref_t& midiChannel, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
 #ifndef NDEBUG
     tick_t lastNoteStart = -1;
 #endif
