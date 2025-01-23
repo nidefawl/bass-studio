@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdint>
 #include <optional>
 
 #include "host/audiobuffer/audioblock.hpp"
@@ -1181,6 +1182,9 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi
         dbgassert(lastNoteStart == -1 || note.start() >= lastNoteStart);
         lastNoteStart = note.start();
 #endif
+        if (midiChannel.srcChannel >= 0 && note.channel != midiChannel.srcChannel) {
+            continue;
+        }
         if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
             note_t noteCopy = note;
             int32_t ret = cutIntersectingNotesFindDupe(list, noteCopy);
@@ -1188,7 +1192,6 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi
                 continue;
             }
             if (ret != 0) {
-                log_lf(Log::L_DEBUG, "note cut: %d\n", ret);
                 continue;
             }
             if (!list.capacity()) {
@@ -1197,47 +1200,25 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi
             auto it = std::find_if(list.begin(), list.end(), [&note](const auto& n) {
                 return n.time > note.time;
             });
+            if (midiChannel.dstChannel >= 0)
+                noteCopy.channel = int8_t(midiChannel.dstChannel);
             list.insert(it, note);
         }
     }
-    // for (auto& evt : data.events.m_list) {
-    //     if (evt.tick >= absStart && evt.tick < absEnd) {
-    //         if (!ctrlEvts.capacity()) {
-    //             ctrlEvts.reserve(4);
-    //         }
-    //         auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&evt](const auto& n) {
-    //             return n.tick > evt.tick;
-    //         });
-    //         ctrlEvts.insert(it, evt);
-    //     }
-    // }
-    for (auto& ctrlEvt : data.events.m_list) {
-        auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&ctrlEvt](const auto& n) {
-            return n.tick > ctrlEvt.tick;
+    for (auto evtCopy : data.events.m_list) {
+        auto channel = int8_t(evtCopy.message & 0x0F);
+        if (midiChannel.srcChannel >= 0 && channel != int8_t(midiChannel.srcChannel)) {
+            continue;
+        }
+        if (midiChannel.dstChannel >= 0)
+            evtCopy.message = (evtCopy.message & 0xF0) | midiChannel.dstChannel;
+        auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&evtCopy](const auto& n) {
+            return n.tick > evtCopy.tick;
         });
-        ctrlEvts.insert(it, ctrlEvt);
+        ctrlEvts.insert(it, evtCopy);
     }
-    constexpr bool logProcessedNotes = false;
-    if (logProcessedNotes && !data.notes.m_list.empty()) {
-        // print absStart to absEnd range we looked at
-        // and print the min, max and number of events in data.notes
-        log_lf(Log::L_DEBUG, "Notes in input: %zd. Notes copied: %zd\n", data.notes.m_list.size(), list.size());
-        log_lf(Log::L_DEBUG, "absStart: %d, absEnd: %d\n", absStart, absEnd);
-    } 
 }
 
-/* void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const std::map<String, DAW::Host::midi_data_t>& midiRealtimeDeviceInputs, DAW::midichannel_ref_t midiChannel, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
-
-    for (auto& device : midiRealtimeDeviceInputs) {
-        if (midiChannel.type == midistage_type::INPUT_EXTERNAL_MIDI) {
-            if (midiChannel.externalInputIdx != 255) {
-                if (midiChannel.name != device.first)
-                    continue;
-            }
-            CopyMidiEventsInRange(absStart, absEnd, device.second, midiChannel, list, ctrlEvts);
-        }
-    }
-} */
 } // namespace DAW::Host
 
 /**
@@ -1318,17 +1299,6 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                         }
                     }
                     CopyMidiEventsInRange(blockStart, blockEnd, device.second, midiChannel, notes, ctrlEvents);
-                }
-                if (midiChannel.dstChannel > -1) {
-                    auto dstChannel = uint8_t(midiChannel.dstChannel);
-                    //TODO: next line does nothing, noteEvents is not used. Filtering and mapping has to happen in CopyMidiEventsInRange
-                    for (auto& note : noteEvents) {
-                        note.channel = dstChannel;
-                    }
-                    for (auto& ctrl : ctrlEvents) {
-                        ctrl.message &= ~0x0F;
-                        ctrl.message |= dstChannel & 0x0F;
-                    }
                 }
             }
         }
