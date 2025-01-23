@@ -633,13 +633,26 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
     const auto realtimeMidiTrackingTime = audioProperties.ticksPerBlock * 9;
     const auto msToTicks = secondsToTicks(1.0 / 1000.0, prjGlobals.tempo100);
     auto& inputDevices = midihost::getInstance()->getDevicesInput();
+    
     const auto midiTimeNow = getMidiTime(nullptr);
     bool notesProcessed = false;
-    for (auto& device : inputDevices) {
+    for (size_t devIdx = 0; devIdx < inputDevices.size(); devIdx++) {
+        auto& device = inputDevices[devIdx];
         std::sort(device.midiMsgs.begin(), device.midiMsgs.end(), [](auto& a, auto& b) {
             return a.timestamp < b.timestamp;
         });
-        midi_data_t& midiData = midiRealtimeDeviceInputs[device.deviceName];
+        auto itMapEntry = midiRealtimeDeviceInputs.find(device.deviceName);
+        // create new entry if not found
+        if (itMapEntry == midiRealtimeDeviceInputs.end()) {
+            midiRealtimeDeviceInputs[device.deviceName] = midi_data_t{
+                .name = device.deviceName,
+                .bIsSoftwareDevice = device.bIsSoftwareDevice,
+                .notes = {},
+                .events = {},
+            };
+            itMapEntry = midiRealtimeDeviceInputs.find(device.deviceName);
+        }
+        auto& midiData = itMapEntry->second;
         for (auto& msg : device.midiMsgs) {
             auto timeUntilStart = (msg.timestamp - midiTimeNow);
             auto tickEvtDelay = math::rounddS32(dTickPosBlockStart + (timeUntilStart * msToTicks) + realtimeMidiDelayTicks);

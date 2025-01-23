@@ -73,6 +73,7 @@
 #include "host/project/project.hpp"
 #include "host/track/track_impl.hpp"
 #include "host/track/track.hpp"
+#include "host/track/track_types.hpp"
 #include "keyboard.hpp"
 #include "logging.hpp"
 #include "math/seq_math.hpp"
@@ -1515,7 +1516,13 @@ void DawCtrl::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
 }
 
 void DawCtrl::setSelectedTrack(track_t* track) {
+    if (selectedTrack) {
+        selectedTrack->audio->flags &= ~audiostageflags_t::TRACK_UI_SELECTED;
+    }
     selectedTrack = track;
+    if (selectedTrack) {
+        selectedTrack->audio->flags |= audiostageflags_t::TRACK_UI_SELECTED;
+    }
     view->visitEntries([&](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
             auto spCtrPlugins = std::static_pointer_cast<guictr_plugins>(entry->getSharedGui());

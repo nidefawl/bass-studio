@@ -19,13 +19,14 @@ class midihost {
 public:
     struct opened_device_t {
         std::vector<MidiIOEvent> midiMsgs;
-        std::vector<MidiIOEvent> temporaryNotes;
         std::vector<MidiIOEvent> midiBufferInspect;
         PmStream* stream{nullptr};
         String deviceName;
         int32_t deviceIdx{0};
         int32_t direction = 0; // 0 == input 1 == output
         bool preserveInputForInspection;
+        bool bIsSoftwareDevice = false;
+        bool bIsHiddenDevice = false;
     };
 
 private:
@@ -41,14 +42,7 @@ private:
 public:
     midihost() = default;
     static midihost* getInstance();
-    //void enqueue(AudioBuffer*);
     int32_t processMidi(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop);
-    bool hasInputMessages() {
-        return std::any_of(devicesInput.cbegin(), devicesInput.cend(), [](auto &dev) {
-            return dev.midiMsgs.size() > 0;
-        });
-    }
-    std::vector<MidiIOEvent> getInputMessages();
     std::vector<opened_device_t>& getDevicesInput() {
         return devicesInput;
     }

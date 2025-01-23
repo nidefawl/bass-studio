@@ -1,9 +1,11 @@
 #include "midi_host.hpp"
 #include "appsettings.hpp"
+#include "assert_dbg.h"
 #include "logging.hpp"
 #include "midi-defs.hpp"
 #include "platform.hpp"
 #include "samplerate.hpp"
+#include "seq_util.hpp"
 #include "str_util.hpp"
 #include <portmidi.h>
 #include "tls.hpp"
@@ -231,53 +233,42 @@ int32_t getMidiTime(void* userData) {
     int32_t time = static_cast<int32_t>(static_cast<uint64_t>(getTimeMillis()) & (0x7FFF'FFFFLL));
     return time;
 }
-#define TIMEOUT_TEMP_NOTES 2000
-// HACK: inject midi preview note
+
 int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch, int32_t velocity) {
-    //    log_lf(Log::L_DEBUG, "trigger %d\n", pitch);
     int32_t status = 0x90 | (channel & 0xF);
     PmMessage msg = Pm_Message(status, pitch, velocity);
     int32_t current_timestamp = getMidiTime(nullptr);
     MidiIOEvent evt{msg, current_timestamp};
-    for (auto& dev : devicesInput) {
-        if (deviceIdx < 0 || dev.deviceIdx == deviceIdx) {
-            dev.temporaryNotes.push_back(evt);
-            dev.midiMsgs.insert(dev.midiMsgs.begin(), evt);
-            if (dev.preserveInputForInspection)
-                dev.midiBufferInspect.push_back(evt);
-        }
+    if (!assert_expr(!devicesInput.empty()))
+        return current_timestamp;
+    if (deviceIdx >= -1 && deviceIdx < CtrSize(devicesInput)) {
+        auto& dev = devicesInput[deviceIdx < 0 ? 0 : deviceIdx];
+        dev.midiMsgs.emplace_back(evt);
+        if (dev.preserveInputForInspection)
+            dev.midiBufferInspect.push_back(evt);
     }
     return current_timestamp;
 }
 int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
-
-    //    log_lf(Log::L_DEBUG, "kill %d\n", pitch);
     int32_t status = 0x80 | (channel & 0xF);
     PmMessage msg = Pm_Message(status, pitch, 0);
     int32_t current_timestamp = getMidiTime(nullptr);
     MidiIOEvent evt{msg, current_timestamp};
-    for (auto& dev : devicesInput) {
-        if (deviceIdx < 0 || dev.deviceIdx == deviceIdx) {
-            dev.midiMsgs.insert(dev.midiMsgs.begin(), evt);
-            if (dev.preserveInputForInspection)
-                dev.midiBufferInspect.push_back(evt);
-        }
+    if (deviceIdx >= -1 && deviceIdx < CtrSize(devicesInput)) {
+        auto& dev = devicesInput[deviceIdx < 0 ? 0 : deviceIdx];
+        dev.midiMsgs.emplace_back(evt);
+        if (dev.preserveInputForInspection)
+            dev.midiBufferInspect.push_back(evt);
     }
 
     return current_timestamp;
 }
-/* timer interrupt for processing midi data.
-   Incoming data is delivered to main program via in_queue.
-   Outgoing data from main program is delivered via out_queue.
-   Incoming data from midi_in is copied with low latency to  midi_out.
-   Sysex messages from either source block messages from the other.
- */
+
+
 int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state,
                               bool inLoop) {
     PmError result;
     PmEvent buffer; /* just one message at a time */
-    /* if (current_timestamp % 1000 == 0)
-        log_lf(Log::L_DEBUG, "time %d\n", current_timestamp); */
 
     auto current_timestamp = getMidiTime(nullptr);
     /* do nothing until initialization completes */
@@ -289,6 +280,9 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
 
     //    /* see if there is any midi input to process */
     for (auto& dev : devicesInput) {
+        if (dev.bIsSoftwareDevice) {
+            continue;
+        }
         auto streamIn = dev.stream;
         dbgassert(streamIn);
         std::vector<MidiIOEvent> messages;
@@ -304,9 +298,9 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
                 last_timestamp = current_timestamp;
 
                 /* the data might be the end of a sysex message that
-                   has timed out, in which case we must ignore it.
-                   It's a continuation of a sysex message if status
-                   is actually a data byte (high-order bit is zero). */
+                has timed out, in which case we must ignore it.
+                It's a continuation of a sysex message if status
+                is actually a data byte (high-order bit is zero). */
                 status = Pm_MessageStatus(buffer.message);
                 if (((status & 0x80) == 0) && !inputInSysex) {
                     continue; /* ignore this data */
@@ -316,9 +310,9 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
 
                 /* send the message to the application */
                 /* you might want to filter clock or active sense messages here
-                   to avoid sending a bunch of junk to the application even if
-                   you want to send it to MIDI THRU
-                 */
+                to avoid sending a bunch of junk to the application even if
+                you want to send it to MIDI THRU
+                */
                 //                Pm_Enqueue(in_queue, &buffer);
 
                 /* sysex processing */
@@ -330,48 +324,30 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
                 }
                 if (inputInSysex && /* look for EOX */
                     (((buffer.message & 0xFF) == MIDI_EOX) || (((buffer.message >> 8) & 0xFF) == MIDI_EOX) ||
-                     (((buffer.message >> 16) & 0xFF) == MIDI_EOX) || (((buffer.message >> 24) & 0xFF) == MIDI_EOX))) {
+                    (((buffer.message >> 16) & 0xFF) == MIDI_EOX) || (((buffer.message >> 24) & 0xFF) == MIDI_EOX))) {
                     inputInSysex = FALSE;
                 }
             }
         } while (result);
+
+
         if (!messages.empty()) {
             for (auto& msg : messages) {
                 if (0 == msg.timestamp)
                     msg.timestamp = current_timestamp;
             }
-            dev.midiMsgs.insert(dev.midiMsgs.begin(), messages.cbegin(), messages.cend());
+            // dev.midiMsgs.insert(dev.midiMsgs.begin(), messages.cbegin(), messages.cend());
+            // insert at end
+            dev.midiMsgs.insert(dev.midiMsgs.end(), messages.cbegin(), messages.cend());
             if (dev.preserveInputForInspection)
                 dev.midiBufferInspect.insert(dev.midiBufferInspect.end(), messages.cbegin(), messages.cend());
-        }
-        // kill temporary notes after timeout
-        if (!dev.temporaryNotes.empty()) {
-            auto it = dev.temporaryNotes.begin();
-            while (it != dev.temporaryNotes.end()) {
-                auto& msg = *it;
-                if (current_timestamp - msg.timestamp >= TIMEOUT_TEMP_NOTES) {
-
-//                    int32_t channel = Pm_MessageStatus(msg.message) & MIDI_CHN_MASK;
-//                    int32_t status = 0x80 | (channel & 0xF);
-//                    int32_t pitch = Pm_MessageData1(msg.message);
-//                    int32_t velocity = 0;
-//                    PmMessage noteOffMessage = Pm_Message(status, pitch, velocity);
-//                    MidiIOEvent noteOffEvt {
-//                        noteOffMessage,
-//                        current_timestamp
-//                    };
-//                    dev.midiMsgs.insert(dev.midiMsgs.begin(), noteOffEvt);
-
-                    it = dev.temporaryNotes.erase(it);
-                } else {
-                    it++;
-                }
-            }
         }
     }
 
 
     for (auto& dev : devicesOutput) {
+        if (dev.bIsSoftwareDevice)
+            continue;
         dbgassert(dev.stream);
 
         /* see if there is application midi data to process */
@@ -440,6 +416,7 @@ template <typename T, typename T2>
 std::vector<midi_channel> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
     std::vector<midi_channel> toOpen;
     for (auto& input : cfg) {
+        // check if device is already opened
         auto it = std::find_if(openedDevs.cbegin(), openedDevs.cend(), [&](const auto& openedDevice) {
             return openedDevice.deviceName == input.deviceName;
         });
@@ -450,6 +427,10 @@ std::vector<midi_channel> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
     auto it = openedDevs.begin();
     while (it != openedDevs.end()) {
         midihost::opened_device_t& dev = *it;
+        if (dev.bIsHiddenDevice) {
+            it++;
+            continue;
+        }
         auto it2 = std::find_if(cfg.cbegin(), cfg.cend(), [&dev](const midi_channel& iocfg) {
             return iocfg.deviceName == dev.deviceName;
         });
@@ -472,6 +453,21 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
     }
     auto& settings = daw_tls::getSettings();
     app_iomidiconfig& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
+    if (this->devicesInput.empty()) {
+        // insert software device
+        this->devicesInput.push_back(
+            opened_device_t{
+                {},
+                {},
+                nullptr,
+                "Software MIDI Input",
+                -1,
+                0,
+                false,
+                true,
+                true
+            });
+    }
     {
 
         std::vector<midi_channel> toOpen = syncOpenCloseDeviceList(midiSettings.inputs, this->devicesInput);
@@ -498,7 +494,7 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
                                to the MIDI THRU port. You may not want to do this.
                              */
                             Pm_SetFilter(newStream, 0);
-                            this->devicesInput.push_back(opened_device_t{{}, {}, {}, newStream, info->name, deviceIdx, 0, false});
+                            this->devicesInput.push_back(opened_device_t{{}, {}, newStream, info->name, deviceIdx, 0, false});
                         }
                         break;
                     }
@@ -529,7 +525,7 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
                                 Pm_Close(newStream);
                             }
                         } else {
-                            this->devicesOutput.push_back(opened_device_t{{}, {}, {}, newStream, info->name, deviceIdx, 1, false});
+                            this->devicesOutput.push_back(opened_device_t{{}, {}, newStream, info->name, deviceIdx, 1, false});
                         }
                         break;
                     }
@@ -555,23 +551,10 @@ bool midihost::startMidi() {
     return isStreaming();
 }
 bool midihost::stopMidi() {
-    log_printf("stopMidi.\n");
     bool ret = !this->devicesInput.empty() || !this->devicesInput.empty();
     std::vector<midi_channel> empty;
     syncOpenCloseDeviceList(empty, this->devicesInput);
     syncOpenCloseDeviceList(empty, this->devicesOutput);
-    return ret;
-}
-
-std::vector<MidiIOEvent> midihost::getInputMessages() {
-    std::vector<MidiIOEvent> ret;
-    for (auto& dev : devicesInput) {
-        ret.insert(ret.end(), dev.midiMsgs.cbegin(), dev.midiMsgs.cend());
-        dev.midiMsgs.clear();
-    }
-    std::sort(ret.begin(), ret.end(), [](auto& a, auto& b) {
-        return a.timestamp < b.timestamp;
-    });
     return ret;
 }
 

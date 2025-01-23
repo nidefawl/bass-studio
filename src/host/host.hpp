@@ -86,6 +86,8 @@ struct midi_realtime_notes_t {
     std::vector<note_miditime_t> m_list;
 };
 struct midi_data_t {
+    String name;
+    bool bIsSoftwareDevice = false;
     midi_realtime_notes_t notes;
     midi_input_events_t events;
 };

@@ -42,6 +42,7 @@ enum class audiostageflags_t : int32_t {
     RECORD_OUTPUT         = 1 << 4,
     CONVERT_OUTPUT        = 1 << 5,
     RECORD_FORCE          = 1 << 6,
+    TRACK_UI_SELECTED     = 1 << 7,
 };
 
 enum class audiostagerouting_state_t : int32_t {
