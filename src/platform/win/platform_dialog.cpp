@@ -59,7 +59,9 @@ int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, S
     if (fileTypes.types.size() > 1 && multiFilter.size() > 0) {
         multiFilter.pop_back();
         desc.pop_back();
-        filterItems.insert(filterItems.begin(), {StringAsCStr(desc), StringAsCStr(multiFilter)});
+        if (mode == 0) {
+            filterItems.insert(filterItems.begin(), {StringAsCStr(desc), StringAsCStr(multiFilter)});
+        }
     }
     filterItems.emplace_back( L"All Files", L"*" );
 
@@ -84,6 +86,13 @@ int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, S
     if (mode == 0) {
         OPENFILENAMEW ofn;
         wchar_t szFileName[MAX_PATH] = L"";
+        // copy _out to szFileName
+        if (!_out.empty()) {
+            auto outW = StringU8ToW(_out);
+            if (outW.length() < MAX_PATH) {
+                wcscpy(szFileName, outW.c_str());
+            }
+        }
         ZeroMemory(&ofn, sizeof(ofn));
         ofn.lStructSize = sizeof(ofn);
         ofn.hwndOwner   = getMainHWND();
@@ -110,9 +119,13 @@ int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, S
     if (mode == 1) {
         OPENFILENAMEW ofn;
         wchar_t szFileName[MAX_PATH] = L"";
-        std::vector<wchar_t> szFileTitle;
-        szFileTitle.resize(MAX_PATH);
-        szFileTitle[0] = 0;
+        // copy _out to szFileName
+        if (!_out.empty()) {
+            auto outW = StringU8ToW(_out);
+            if (outW.length() < MAX_PATH) {
+                wcscpy(szFileName, outW.c_str());
+            }
+        }
         ZeroMemory(&ofn, sizeof(ofn));
         ofn.lStructSize = sizeof(ofn);
         ofn.hwndOwner   = getMainHWND();

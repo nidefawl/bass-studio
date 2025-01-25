@@ -13,7 +13,6 @@
 #include "plugins/stereowidth/stereowidth-plugin.hpp"
 #include "plugins/info/info-plugin.hpp"
 #include "plugins/synth/synth-plugin.hpp"
-#include "file/projectfile.hpp"
 #include "seq_util.hpp"
 #include "types.hpp"
 #include "host/automation/automation.hpp"
@@ -37,6 +36,7 @@
 #include "plugins/plugin-base.hpp"
 #include "plugins/plugin-window.hpp"
 #include "host/audiobuffer/audioblock.hpp"
+#include "file/projectfile-v2.hpp"
 #include "vst2wrapper.hpp"
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
@@ -266,7 +266,7 @@ class PluginInternalVST2 final : public BasePluginVST2 {
             plugin_snapshot_t ps;
             effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
             auto spVec = std::make_shared<std::vector<uint8_t>>();
-            serializePluginSnapshot(ps, *spVec);
+            DAW::ProjectFileV2::serializePluginSnapshot(ps, *spVec);
             *data = spVec->data();
             addDataChunkKeepAlive(spVec);
             return static_cast<VstInt32>(spVec->size());
@@ -278,9 +278,10 @@ class PluginInternalVST2 final : public BasePluginVST2 {
             }
             std::vector<uint8_t> buf;
             buf.assign(reinterpret_cast<uint8_t*>(data), reinterpret_cast<uint8_t*>(data) + byteSize);
-            auto ps = deserializePluginSnapshot(buf);
-            if (ps) {
-                effect->loadSnapshot(*ps);
+            auto res = DAW::ProjectFileV2::deserializePluginSnapshot(buf);
+            if (std::holds_alternative<std::shared_ptr<plugin_snapshot_t>>(res)) {
+                auto pluginSnapshot = std::get<std::shared_ptr<plugin_snapshot_t>>(res);
+                effect->loadSnapshot(*pluginSnapshot);
             }
             return 0;
         }

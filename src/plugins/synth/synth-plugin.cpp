@@ -53,6 +53,7 @@
 #include "sse.hpp"
 #include "str_util.hpp"
 #include "synth-snapshot.hpp"
+#include "snapshot/plugin-snapshot.hpp"
 #include "threads/playbackthread.hpp"
 #include "threads/threadlock.hpp"
 #include "tls.hpp"
@@ -3534,8 +3535,12 @@ void PluginVST2_Synth::setUiSnapshot(snapshot_t& snapshot) {
 }
 
 int32_t SynthImplUnison::loadPreset(const String& presetPath) {
-    std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(presetPath);
-    dbgassert(pluginSnapshot);
+    auto res = DAW::ProjectFileV2::loadPluginSnapshot(presetPath);
+    if (std::holds_alternative<String>(res)) {
+        log_lf(Log::L_ERROR, "Error loading preset: %s\n", std::get<String>(res).c_str());
+        return -4;
+    }
+    std::shared_ptr<plugin_snapshot_t> pluginSnapshot = std::get<std::shared_ptr<plugin_snapshot_t>>(res);
     if (pluginSnapshot) {
         std::shared_ptr<std::vector<std::byte>> buf;
         auto sizeData = static_cast<size_t>(pluginSnapshot->dataChunk.size());

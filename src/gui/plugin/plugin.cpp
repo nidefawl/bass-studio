@@ -149,7 +149,7 @@ void guiplugin::buttonClicked(guibase* _button) {
         }
         auto [pathFile, nameFile] = dawCtrl->getDaw()->createUniqueNonExistingFilename(path);
         // save file first, then spawn popup to rename
-        savePluginSnapshot(ps, pathFile);
+        DAW::ProjectFileV2::savePluginSnapshot(ps, pathFile);
         auto popupPos  = buttonSave.toScreenSpace(ivec2(buttonSave.size.x, 0));
         auto popupSize = ivec2(size.x - buttonSave.size.x, theme->get(GuiConstant::CONST_ROW_HEIGHT));
         auto daw = dawCtrl->getDaw();

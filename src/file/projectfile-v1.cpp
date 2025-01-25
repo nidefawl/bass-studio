@@ -1,4 +1,5 @@
-#include "projectfile.hpp"
+#include "projectfile-v1.hpp"
+#include "groovefile.hpp"
 
 #include "snapshot/snapshot.hpp"
 #include "snapshot/trackrouting-snapshot.hpp"
@@ -8,6 +9,7 @@
 #include "gui/container/container_layout_types.hpp"
 
 #include <exception>
+#include <optional>
 #include <vector>
 #include <sstream>
 #include <algorithm>
@@ -813,8 +815,9 @@ CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 2);
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
 
+namespace DAW::ProjectFileV1 {
 
-bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
+std::optional<String> saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
     using namespace cereal;
     try {
         Stringstream sstream;
@@ -824,16 +827,13 @@ bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
         }
         sstream.flush();
         writeStringStream(App::Platform::toUserdataPath("data/" + path), sstream);
-        return true;
-    } catch (const FileIOException& e) {
-        log_printf("savePluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+        return std::nullopt;
     } catch (const std::exception& e) {
-        log_printf("savePluginSnapshot exception: %s\n", e.what());
+        return e.what();
     }
-    return false;
 }
 
-std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) {
+std::variant<std::shared_ptr<dawview_layout_t>, String> loadDawViewLayoutSnapshot(const String& path) {
     using namespace cereal;
     try {
         std::vector<uint8_t> vec;
@@ -845,7 +845,7 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
             if (FileExists(fileTemplateProgramPath)) {
                 ReadFileVector(fileTemplateProgramPath, vec);
             } else {
-                return nullptr;
+                return "File not found " + path;
             }
         }
         Stringstream sstream(std::string(vec.cbegin(), vec.cend()));
@@ -856,12 +856,9 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
             ar(make_nvp("layout", ref));
         }
         return snapshot;
-    } catch (const FileIOException& e) {
-        log_printf("loadDawViewLayoutSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     } catch (const std::exception& e) {
-        log_printf("loadDawViewLayoutSnapshot exception: %s\n", e.what());
+        return e.what();
     }
-    return nullptr;
 }
 
 /**
@@ -896,6 +893,21 @@ bool validateProjectFile(const std::shared_ptr<project_file>& projectfile) {
     return true;
 }
 
+std::optional<String> saveProject(const std::shared_ptr<project_file>& f, std::vector<uint8_t>& bufferOut) {
+    try {
+        Stringstream sstream;
+        {
+            JSONOutputArchive ar(sstream);
+            ar(make_nvp("project", f));
+        }
+        sstream.flush();
+        bufferOut.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
+        return std::nullopt;
+    } catch (const std::exception& e) {
+        return e.what();
+    }
+}
+
 std::variant<std::shared_ptr<project_file>, String> loadProject(const std::vector<uint8_t>& vec) {
     try {
         Stringstream sstream(std::string(vec.begin(), vec.end()));
@@ -920,55 +932,47 @@ std::variant<std::shared_ptr<project_file>, String> loadProject(const std::vecto
     }
 }
 
-bool saveProject(const std::shared_ptr<project_file>& f, std::vector<uint8_t>& bufferOut) {
+std::optional<String> saveProjectToJsonFile(const std::shared_ptr<project_file>& f, const String& path) {
+    try {
+        std::vector<uint8_t> buf;
+        auto err = saveProject(f, buf);
+        if (err)
+            return err;
+        WriteFileVector(path, buf);
+        return std::nullopt;
+    } catch (const std::exception& e) {
+        return e.what();
+    }
+}
+
+
+std::variant<std::shared_ptr<project_file>, String> loadProjectFromJsonFile(const String& path) {
+    try {
+        std::vector<uint8_t> vec;
+        ReadFileVector(path, vec);
+        return loadProject(vec);
+    } catch (const std::exception& e) {
+        return e.what();
+    }
+}
+
+std::optional<String> saveTrackContainer(const trackcontainer_snapshot_t& container, const String& path) {
+
     try {
         Stringstream sstream;
         {
             JSONOutputArchive ar(sstream);
-            ar(make_nvp("project", f));
+            ar(make_nvp("tracks", container));
         }
         sstream.flush();
-        bufferOut.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
-        return true;
+        writeStringStream(path, sstream);
+        return std::nullopt;
     } catch (const std::exception& e) {
-        log_printf("saveProject exception: %s\n", e.what());
+        return e.what();
     }
-    return false;
 }
 
-std::shared_ptr<project_file> loadProjectFromJsonFile(const String& path) {
-    try {
-        std::vector<uint8_t> vec;
-        ReadFileVector(path, vec);
-        auto f = loadProject(vec);
-        if (std::holds_alternative<std::shared_ptr<project_file>>(f)) {
-            return std::get<std::shared_ptr<project_file>>(f);
-        } else {
-            log_lf(Log::L_WARN, "loadProjectFromJsonFile: %s\n", StringAsCStr(std::get<String>(f)));
-        }
-    } catch (const FileIOException& e) {
-        log_printf("loadProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
-    }
-    return nullptr;
-}
-
-bool saveProjectToJsonFile(const std::shared_ptr<project_file>& f, const String& path) {
-
-    try {
-        std::vector<uint8_t> buf;
-        if (saveProject(f, buf)) {
-            WriteFileVector(path, buf);
-            return true;
-        }
-    } catch (const FileIOException& e) {
-        log_printf("saveProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
-    } catch (const std::exception& e) {
-        log_printf("saveProject exception: %s\n", e.what());
-    }
-    return false;
-}
-
-std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path) {
+std::variant<std::shared_ptr<trackcontainer_snapshot_t>, String> loadTrackContainer(const String& path) {
     try {
         std::vector<uint8_t> vec;
         ReadFileVector(path, vec);
@@ -979,34 +983,12 @@ std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path
             ar(make_nvp("tracks", *snapshot.get()));
         }
         return snapshot;
-    } catch (const FileIOException& e) {
-        log_printf("loadTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     } catch (const std::exception& e) {
-        log_printf("loadTrackContainer exception: %s\n", e.what());
+        return e.what();
     }
-    return nullptr;
 }
 
-bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String& path) {
-
-    try {
-        Stringstream sstream;
-        {
-            JSONOutputArchive ar(sstream);
-            ar(make_nvp("tracks", container));
-        }
-        sstream.flush();
-        writeStringStream(path, sstream);
-        return true;
-    } catch (const FileIOException& e) {
-        log_printf("saveTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
-    } catch (const std::exception& e) {
-        log_printf("saveTrackContainer exception: %s\n", e.what());
-    }
-    return false;
-}
-
-bool serializePluginSnapshot(const plugin_snapshot_t& snapshot, std::vector<uint8_t>& buf) {
+std::optional<String> serializePluginSnapshot(const plugin_snapshot_t& snapshot, std::vector<uint8_t>& buf) {
     try {
         Stringstream sstream;
         {
@@ -1016,29 +998,13 @@ bool serializePluginSnapshot(const plugin_snapshot_t& snapshot, std::vector<uint
         sstream.flush();
         buf.resize(sstream.tellp());
         buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
-        return true;
+        return std::nullopt;
     } catch (const std::exception& e) {
-        log_printf("savePluginSnapshot exception: %s\n", e.what());
+        return e.what();
     }
-    return false;
 }
 
-bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path) {
-
-    try {
-        std::vector<uint8_t> buf;
-        serializePluginSnapshot(snapshot, buf);
-        WriteFileVector(path, buf);
-        return true;
-    } catch (const FileIOException& e) {
-        log_printf("savePluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
-    } catch (const std::exception& e) {
-        log_printf("savePluginSnapshot exception: %s\n", e.what());
-    }
-    return false;
-}
-
-std::shared_ptr<plugin_snapshot_t> deserializePluginSnapshot(std::vector<uint8_t>& vec) {
+std::variant<std::shared_ptr<plugin_snapshot_t>, String> deserializePluginSnapshot(std::vector<uint8_t>& vec) {
     try {
         Stringstream sstream(std::string(vec.begin(), vec.end()));
         std::shared_ptr<plugin_snapshot_t> snapshot = std::make_shared<plugin_snapshot_t>();
@@ -1048,57 +1014,45 @@ std::shared_ptr<plugin_snapshot_t> deserializePluginSnapshot(std::vector<uint8_t
         }
         return snapshot;
     } catch (const std::exception& e) {
-        log_printf("loadPluginSnapshot exception: %s\n", e.what());
+        return e.what();
     }
-    return nullptr;
 }
 
-std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
+std::variant<groove_file_t, String> loadGrooveFile(const String& path) {
     try {
-        std::vector<uint8_t> vec;
-        ReadFileVector(path, vec);
-        return deserializePluginSnapshot(vec);
-    } catch (const FileIOException& e) {
-        log_printf("loadPluginSnapshot File IO exception: %s: %s (%d)\n", e.what(), StringAsCStr(path), e.GetErrorCode());
-    } catch (const std::exception& e) {
-        log_printf("loadPluginSnapshot exception: %s\n", e.what());
-    }
-    return nullptr;
-}
-
-bool saveGrooveFile(const std::vector<groove_data_t>& allGrooves, const String& path) {
-    try {
-        Stringstream sstream;
-        {
-            JSONOutputArchive ar(sstream);
-            ar(make_nvp("grooves", allGrooves));
-        }
-        sstream.flush();
-        writeStringStream(path, sstream);
-        return true;
-    } catch (const FileIOException& e) {
-        log_printf("saveGrooveFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
-    } catch (const std::exception& e) {
-        log_printf("saveGrooveFile exception: %s\n", e.what());
-    }
-    return false;
-}
-
-std::vector<groove_data_t> loadGrooveFile(const String& path) {
-    std::vector<groove_data_t> allGrooves;
-    try {
+        groove_file_t grooveFile;
         std::vector<uint8_t> vec;
         ReadFileVector(path, vec);
         Stringstream sstream(std::string(vec.begin(), vec.end()));
         {
             JSONInputArchive ar(sstream);
-            ar(make_nvp("grooves", allGrooves));
+            ar(make_nvp("grooves", grooveFile.grooves));
         }
-        return allGrooves;
-    } catch (const FileIOException& e) {
-        log_printf("loadGrooveFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+        return grooveFile;
     } catch (const std::exception& e) {
-        log_printf("loadGrooveFile exception: %s\n", e.what());
+        return e.what();
     }
-    return allGrooves;
 }
+
+std::optional<String> savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path) {
+    try {
+        std::vector<uint8_t> buf;
+        serializePluginSnapshot(snapshot, buf);
+        WriteFileVector(path, buf);
+        return std::nullopt;
+    } catch (const std::exception& e) {
+        return e.what();
+    }
+}
+
+std::variant<std::shared_ptr<plugin_snapshot_t>, String> loadPluginSnapshot(const String& path) {
+    try {
+        std::vector<uint8_t> vec;
+        ReadFileVector(path, vec);
+        return deserializePluginSnapshot(vec);
+    } catch (const std::exception& e) {
+        return e.what();
+    }
+}
+
+} // namespace DAW::ProjectFileV1

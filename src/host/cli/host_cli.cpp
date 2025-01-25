@@ -4,7 +4,7 @@
 #include "exceptions.hpp"
 #include "platform.hpp"
 #include "appsettings.hpp"
-#include "file/projectfile.hpp"
+#include "file/projectfile-v2.hpp"
 #include "tls.hpp"
 #include "snapshot/track-snapshot.hpp"
 #include "host/project/project.hpp"
@@ -192,15 +192,12 @@ int runCommandLineHost(const std::vector<String>& args) {
         std::shared_ptr<project_file> projectFile;
         ProjectFileType projectFileType = ProjectFileType::PROJECT_FILETYPE_JSON;
         if (!file.empty()) {
-            try {
-                projectFile = loadProjectFromJsonFile(file);
-            } catch (std::exception& e) {
-                log_printf("exception %s\n", e.what());
-                return EXIT_FAILURE;
-            } catch (...) {
-                log_printf("unhandled exception\n");
+            auto res = DAW::ProjectFileV2::loadProjectFromJsonFile(file);
+            if (std::holds_alternative<String>(res)) {
+                log_printf("failed loading project file %s: %s\n", file.c_str(), std::get<String>(res).c_str());
                 return EXIT_FAILURE;
             }
+            projectFile = std::get<std::shared_ptr<project_file>>(res);
             if (!projectFile) {
                 fprintf(stderr, "Error: failed loading file\n");
                 return EXIT_FAILURE;
@@ -332,10 +329,14 @@ int runCommandLineHost(const std::vector<String>& args) {
 
                 String pathTracks = "test.tracks";
 
-                std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(pathTracks);
+                auto res = DAW::ProjectFileV2::loadTrackContainer(pathTracks);
+                std::shared_ptr<trackcontainer_snapshot_t> ctr;
+                if (std::holds_alternative<String>(res)) {
+                    log_printf("failed loading track container %s: %s\n", pathTracks.c_str(), std::get<String>(res).c_str());
+                } else {
+                    ctr = std::get<std::shared_ptr<trackcontainer_snapshot_t>>(res);
+                }
                 std::vector<track_t*> loadedChildTracks;
-
-                dbgassert(ctr);
                 if (ctr) {
                     for (track_snapshot_t& ts : ctr->tracks) {
                         track_t* tr = new track_t(ts);

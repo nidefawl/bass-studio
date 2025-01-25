@@ -1,7 +1,6 @@
 #pragma once
 #include "types.hpp"
 #include "dragdrop.hpp"
-#include "file/projectfile.hpp"
 #include "gui/container/container_dnd_layout.hpp"
 #include "host/aux-source.hpp"
 #include "host/daw/clipboard.hpp"
@@ -45,6 +44,8 @@ class MainCtrl;
 class CompanionCtrl;
 class DawCtrl;
 class guictr_menubar;
+class project_file;
+class project_to_load_t;
 
 enum clip_dragtype_t {
     DRAG_NONE,
@@ -717,6 +718,6 @@ public:
     void fileSeachStart(std::shared_ptr<DAW::SearchFileTask> task);
 private:
     void onDawCompanionWindowClose(DawWindowCompanion& entry);
-    void saveProjectBundle(const String& path);
+    std::optional<String> saveProjectBundle(const String& path);
 };
 

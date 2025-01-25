@@ -8,7 +8,9 @@
 #include <GLFW/glfw3.h>
 #include <memory>
 #include <nanovg.h>
+#include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 #include "appconfig.hpp"
 #include "appsettings.hpp"
@@ -16,6 +18,7 @@
 #include "basectrl.hpp"
 #include "color_util.hpp"
 #include "commands.hpp"
+#include "config.hpp"
 #include "cursor.hpp"
 #include "daw_async_project_load.hpp"
 #include "daw.hpp"
@@ -23,7 +26,7 @@
 #include "error.hpp"
 #include "event.hpp"
 #include "exceptions.hpp"
-#include "file/projectfile.hpp"
+#include "file/projectfile-v2.hpp"
 #include "fileio.hpp"
 #include "fileloader.hpp"
 #include "glheaders.h"
@@ -124,11 +127,12 @@ String getProjectAutosaveFilename(String projectPath) {
 }
 }// namespace DAW
 
-static SupportedFileType FILE_TYPE_PROJECT{ "Project File", PROJECT_FILE_EXT };
+static SupportedFileType FILE_TYPE_PROJECT{ "Bass Studio Project", PROJECT_FILE_EXT };
+static SupportedFileType FILE_TYPE_PROJECT_LEGACY{ "Legacy Project", PROJECT_LEGACY_FILE_EXT };
 static SupportedFileType FILE_TYPE_PROJECT_BUNDLE{ "Project Bundle", PROJECT_BUNDLE_FILE_EXT };
-SupportedFileTypes FILE_TYPES_PROJECT = SupportedFileTypes{PROJECT_FILE_TYPE_DESC " (json)", std::vector<SupportedFileType>{ FILE_TYPE_PROJECT } };
+SupportedFileTypes FILE_TYPES_PROJECT_SAVE = SupportedFileTypes{PROJECT_FILE_TYPE_DESC " (json)", std::vector<SupportedFileType>{ FILE_TYPE_PROJECT } };
 SupportedFileTypes FILE_TYPES_BUNDLE = SupportedFileTypes{PROJECT_FILE_TYPE_DESC " (bundle)", { FILE_TYPE_PROJECT_BUNDLE } };
-SupportedFileTypes FILE_TYPES_PROJECTS = SupportedFileTypes{PROJECT_FILE_TYPE_DESC "s", { FILE_TYPE_PROJECT, FILE_TYPE_PROJECT_BUNDLE } };
+SupportedFileTypes FILE_TYPES_PROJECT_LOAD = SupportedFileTypes{PROJECT_FILE_TYPE_DESC "s", { FILE_TYPE_PROJECT, FILE_TYPE_PROJECT_LEGACY, FILE_TYPE_PROJECT_BUNDLE } };
 
 MainCtrl* DawInstance::getMainControl() {
     return this->tls.mainCtrl;
@@ -179,7 +183,7 @@ void DawInstance::triggerAutoSave() {
     projectPathAutosave = DAW::getProjectAutosaveFilename(projectPath);
 
     std::shared_ptr<project_file> f = createProjectFile();
-    saveProjectToJsonFile(f, projectPathAutosave);
+    DAW::ProjectFileV2::saveProjectToJsonFile(f, projectPathAutosave);
 }
 
 String DawInstance::getAutoSaveFilename() {
@@ -441,25 +445,33 @@ void DawInstance::loadFileCStr(const char* str) {
 
 void DawInstance::saveFile(const String& path) {
     if (!path.empty()) {
-        bool bSuccess = false;
-        if (projectFileType == PROJECT_FILETYPE_JSON) {
+        std::optional<String> error = std::nullopt;
+        if (projectFileType == PROJECT_FILETYPE_JSON || projectFileType == PROJECT_FILETYPE_JSON_LEGACY) {
             std::shared_ptr<project_file> f = createProjectFile();
-            bSuccess = saveProjectToJsonFile(f, path);
+            error = DAW::ProjectFileV2::saveProjectToJsonFile(f, path);
+            projectFileType = PROJECT_FILETYPE_JSON;
         } else {
-            saveProjectBundle(path);
-            bSuccess = true;
+            error = saveProjectBundle(path);
         }
-        if (tls.mainCtrl) {
-            if (bSuccess) {
-                tls.mainCtrl->setStatusText(StringFormat("Saved project to %s", StringAsCStr(path)));
-            } else {
-                tls.mainCtrl->setStatusText(StringFormat("Failed to save project to %s", StringAsCStr(path)), GuiColor::COL_INVALID_INPUT);
+        if (!error && tls.mainCtrl) {
+            tls.mainCtrl->setStatusText(StringFormat("Saved project to %s", StringAsCStr(path)));
+        } else if (error) {
+            if (tls.mainCtrl) {
+                String fullError = "Failed saving '";
+                fullError += path;
+                fullError += "':\n\n";
+                fullError += *error;
+                tls.mainCtrl->openDialog(new guidialog_message_box("Failed saving project", fullError));
+                tls.mainCtrl->setStatusText("Failed saving " + FileNameFromPath(path) + ": " + *error);
             }
+            log_lf(Log::L_ERROR, "Failed saving %s: %s\n", StringAsCStr(path), StringAsCStr(*error));
         }
         projectPath = path;
-        String projectFileName;
-        SplitPath(path, &lastProjectDirectory, &projectFileName, nullptr, nullptr);
-        tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::PRODUCT_NAME_DISPLAY, StringAsCStr(projectFileName)));
+        if (tls.mainCtrl) {
+            String projectFileName;
+            SplitPath(path, &lastProjectDirectory, &projectFileName, nullptr, nullptr);
+            tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::PRODUCT_NAME_DISPLAY, StringAsCStr(projectFileName)));
+        }
         tls.settings->recentfiles.add(path);
     }
 }
@@ -491,7 +503,7 @@ void DawInstance::loadFile(String path, int flags) {
             ReadFileVector(path, projJsonData);
         }
         timer.reset(); 
-        fileOrErr = loadProject(projJsonData);
+        fileOrErr = DAW::ProjectFileV2::loadProject(projJsonData);
     } catch (const std::exception& e) {
         fileOrErr = e.what();
     }
@@ -603,7 +615,7 @@ bool DawInstance::onChildOverlayWindowClose(window_main* window) {
     return false;
 }
 
-void DawInstance::saveProjectBundle(const String& path) {
+std::optional<String> DawInstance::saveProjectBundle(const String& path) {
     String ext;
     String projectFileName;
     String parentDir;
@@ -614,12 +626,6 @@ void DawInstance::saveProjectBundle(const String& path) {
     }
     String projFileName = projectFileName + "." PROJECT_FILE_EXT;
     
-    std::function<void(const String& msg, const String& file)> onError = [this](const String& msg, const String& file) {
-        log_lf(Log::L_ERROR, "Failed saving project to %s: %s\n", StringAsCStr(file), StringAsCStr(msg));
-        if (tls.mainCtrl) {
-            tls.mainCtrl->setStatusText(msg);
-        }
-    };
     std::function<void(const String&, int32_t, int32_t)> onProgress = [path](const String& curFile, int32_t i, int32_t total) {
         log_lf(Log::L_ERROR, "[%d/%d] Saving %s to %s\n", i, total, StringAsCStr(curFile), StringAsCStr(path));
     };
@@ -629,29 +635,31 @@ void DawInstance::saveProjectBundle(const String& path) {
     // create a new archive
     struct archive* ar = archive_write_new();
     if (!ar || ARCHIVE_OK != archive_write_set_format_zip(ar)) {
-        onError("Failed to create archive", bundlePath);
-        return;
+        return "Failed to create archive";
     }
     if (ARCHIVE_OK != archive_write_zip_set_compression_deflate(ar)) {
-        onError("Failed to compress archive", bundlePath);
-        return;
+        return "Failed to compress archive";
     }
     if (ARCHIVE_OK != archive_write_open_filename(ar, bundlePath.c_str())) {
-        onError("Failed to open archive for writing", bundlePath);
-        return;
+        return "Failed to open archive for writing";
     }
+    std::optional<String> audioCacheError = std::nullopt;
+    std::function<void(const String& msg, const String& file)> onError = [&audioCacheError](const String& msg, const String& file) {
+        audioCacheError = "Failed writing " + file + ": " + msg;
+    };
     if (ARCHIVE_OK != getAudioCache()->writeToArchive(uniqueSampleIds, ar, onProgress, onError)) {
-        onError("Failed to write audio cache to archive", bundlePath);
-        return;
+        if (audioCacheError) {
+            return audioCacheError;
+        }
+        return "Failed to write audio cache to archive";
     }
     std::shared_ptr<project_file> f = createProjectFile();
     std::vector<uint8_t> buffer;
-    saveProject(f, buffer);
+    DAW::ProjectFileV2::saveProject(f, buffer);
     // // add a file to the archive
     struct archive_entry* entry = archive_entry_new();
     if (!entry) {
-        onError("Failed to create archive entry", bundlePath);
-        return;
+        return "Failed to create archive entry";
     }
     auto bufSize = int64_t(buffer.size());
     archive_entry_set_pathname(entry, projFileName.c_str());
@@ -660,24 +668,21 @@ void DawInstance::saveProjectBundle(const String& path) {
     archive_entry_set_filetype(entry, AE_IFREG);
     archive_entry_set_perm(entry, 0644);
     if (ARCHIVE_OK != archive_write_header(ar, entry)) {
-        onError("Failed to write archive header", bundlePath);
-        return;
+        return "Failed to write archive header";
     }
     auto sizeWritten = archive_write_data(ar, buffer.data(), buffer.size());
     if (sizeWritten != bufSize) {
-        onError("Failed to write archive data", bundlePath);
-        return;
+        return "Failed to write archive data";
     }
     archive_entry_free(entry);
     // finish writing the archive
     if (ARCHIVE_OK != archive_write_close(ar)) {
-        onError("Failed to close archive", bundlePath);
-        return;
+        return "Failed to close archive";
     }
     if (ARCHIVE_OK != archive_write_free(ar)) {
-        onError("Failed to free archive", bundlePath);
-        return;
+        return "Failed to free archive";
     }
+    return std::nullopt;
 }
 
 bool DawInstance::menuCommand(const menucmd_t& command) {
@@ -688,8 +693,13 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 String path;
                 auto importDir = getProjectDirectory();
                 if (promptUserFilePath(mainCtrl->window, 0, FILE_TYPES_TRACKSNAPSHOT, path, importDir)) {
-                    std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
-                    dbgassert(ctr);
+                    auto res = DAW::ProjectFileV2::loadTrackContainer(path);
+                    std::shared_ptr<trackcontainer_snapshot_t> ctr;
+                    if (std::holds_alternative<String>(res)) {
+                        log_lf(Log::L_ERROR, "Failed to load track snapshot from %s\n", StringAsCStr(path));
+                    } else {
+                        ctr = std::get<std::shared_ptr<trackcontainer_snapshot_t>>(res);
+                    }
                     if (ctr) {
                         auto* pluginMgr = getPluginManager();
                         ThreadLock lock = getPlayThread()->lockThread();
@@ -790,7 +800,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             case CMD_FILE_OPEN: {
                 if (command.arg1.empty()) {
                     String path;
-                    if (promptUserFilePath(mainCtrl->window, 0, FILE_TYPES_PROJECTS, path, lastProjectDirectory)) {
+                    if (promptUserFilePath(mainCtrl->window, 0, FILE_TYPES_PROJECT_LOAD, path, lastProjectDirectory)) {
                         loadFile(path, DAW::PluginLoadFlags::FLAG_INVOKE_USER_CB_DEFERLOAD);
                     }
                 } else {
@@ -823,7 +833,8 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 std::vector<int32_t> uniqueSampleIds;
                 DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
                 getAudioCache()->rellocateSamples(uniqueSampleIds, bundlePath);
-                projectPath = bundlePath + FILE_PATHSEP_STR + dirName + ".project";
+                projectPath = bundlePath + FILE_PATHSEP_STR + dirName + "." PROJECT_FILE_EXT;
+                projectFileType = PROJECT_FILETYPE_JSON;
                 saveFile(projectPath);
                 return true;
             }
@@ -836,8 +847,16 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                     return true;
                 }
                 String path = projectPath;
-                if (command.command == CMD_FILE_SAVEAS || path.empty()) {
-                    if (!promptUserFilePath(mainCtrl->window, 1, FILE_TYPES_PROJECT, path, lastProjectDirectory)) {
+                if (command.command == CMD_FILE_SAVEAS || path.empty() || projectFileType == PROJECT_FILETYPE_JSON_LEGACY) {
+                    if (projectFileType == PROJECT_FILETYPE_JSON_LEGACY) {
+                        // update extension
+                        String ext;
+                        SplitPath(path, nullptr, nullptr, &ext);
+                        if (ext == PROJECT_LEGACY_FILE_EXT) {
+                            path = path.substr(0, path.size() - strlen(PROJECT_LEGACY_FILE_EXT)) + PROJECT_FILE_EXT;
+                        }
+                    }
+                    if (!promptUserFilePath(mainCtrl->window, 1, FILE_TYPES_PROJECT_SAVE, path, lastProjectDirectory)) {
                         return true;
                     }
                     String ext;
@@ -1127,7 +1146,9 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& spFile) {
 
     String loadFileExt, loadFileDirectory;
     SplitPath(file->path, &loadFileDirectory, nullptr, &loadFileExt);
-    if (loadFileExt == PROJECT_BUNDLE_FILE_EXT) {
+    if (loadFileExt == PROJECT_LEGACY_FILE_EXT) {
+        this->projectFileType = PROJECT_FILETYPE_JSON_LEGACY;
+    } else if (loadFileExt == PROJECT_BUNDLE_FILE_EXT) {
         this->projectFileType = PROJECT_FILETYPE_BUNDLE;
     } else {
         this->projectFileType = PROJECT_FILETYPE_JSON;

@@ -25,6 +25,7 @@
 #include "tls.hpp"
 #include "appsettings.hpp"
 #include "gui/track/trackcontent.hpp"
+#include "file/projectfile-v2.hpp"
 
 static const std::map<String, int> extensionToIcon = {
     { "preset", ICON_EFFECT },
@@ -118,19 +119,22 @@ namespace {
         return false;
     }
 
-    bool ExportTrackToFile(DawInstance* daw, track_t* track, const String& exportDir, String& outFilename) {
+    std::optional<String> ExportTrackToFile(DawInstance* daw, track_t* track, const String& exportDir, String& outFilename) {
         track_snapshot_t snapshot(track, tracksnapshot_store_opts_t::All());
         trackcontainer_snapshot_t trackContainerSnapshot;
         trackContainerSnapshot.tracks.push_back(snapshot);
         auto exportFilename = track->name + "." + FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
         String path = exportDir + FILE_PATHSEP_STR + exportFilename;
         auto [pathFile, nameFile] = daw->createUniqueNonExistingFilename(path);
+        auto res = DAW::ProjectFileV2::saveTrackContainer(trackContainerSnapshot, pathFile);
+        if (res) {
+            return res;
+        }
         outFilename = pathFile;
-        bool bStatus = saveTrackContainer(trackContainerSnapshot, pathFile);
-        return bStatus;
+        return std::nullopt;
     }
 
-    bool ExportPluginSnapshotToFile(DawInstance* daw, effectbase* effect, const String& exportDir, String& outFilename) {
+    std::optional<String> ExportPluginSnapshotToFile(DawInstance* daw, effectbase* effect, const String& exportDir, String& outFilename) {
         ThreadLock lock = daw->lockPlayThread();
         plugin_snapshot_t ps;
         effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
@@ -147,9 +151,12 @@ namespace {
         }
         auto [pathFile, nameFile] = daw->createUniqueNonExistingFilename(path);
         // save file first, then spawn popup to rename
-        bool bStatus = savePluginSnapshot(ps, pathFile);
+        auto res = DAW::ProjectFileV2::savePluginSnapshot(ps, pathFile);
+        if (res) {
+            return res;
+        }
         outFilename = pathFile;
-        return bStatus;
+        return std::nullopt;
     }
 
     bool ExportClipToFile(DawInstance* daw, clip_t* clip, const String& exportDir, String& outFilename) {
@@ -278,7 +285,8 @@ public:
     }
     void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         String pathFile;
-        if (ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getPathAbs(), pathFile)) {
+        auto res = ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getPathAbs(), pathFile);
+        if (!res) {
             if (!pathFile.empty()) {
                 auto popupPos = this->toScreenSpace(ivec2(0));
                 auto popupSize = this->size;
@@ -291,7 +299,7 @@ public:
                 });
             }
         } else {
-            log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
+            log_lf(Log::L_ERROR, "Failed to export track to file %s: %s\n", StringAsCStr(pathFile), StringAsCStr(res.value()));
         }
     }
     void clipDragMove(gui_clip* g, ivec2 mousepos) override {
@@ -414,7 +422,8 @@ public:
     }
     void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         String pathFile;
-        if (ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getWorkingDirAbsPath(), pathFile)) {
+        auto res = ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getWorkingDirAbsPath(), pathFile);
+        if (res) {
             if (!pathFile.empty()) {
                 auto popupPos = this->toScreenSpace(ivec2(0));
                 auto popupSize = this->size;
@@ -427,7 +436,7 @@ public:
                 });
             }
         } else {
-            log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
+            log_lf(Log::L_ERROR, "Failed to export track to file %s: %s\n", StringAsCStr(pathFile), StringAsCStr(res.value()));
         }
     }
     void clipDragMove(gui_clip* g, ivec2 mousepos) override {
@@ -814,7 +823,8 @@ public:
 
 void gui_userlibrary_list_entry_t::trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) {
     String pathFile;
-    if (ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getPathAbs(), pathFile)) {
+    auto res = ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getPathAbs(), pathFile);
+    if (res) {
         if (!pathFile.empty()) {
             auto popupPos = this->toScreenSpace(ivec2(0));
             auto popupSize = this->size;
@@ -827,7 +837,7 @@ void gui_userlibrary_list_entry_t::trackEntryDragRelease(track_gui_entry_t* trac
             });
         }
     } else {
-        log_lf(Log::L_WARN, "Failed to export track to file %s\n", StringAsCStr(pathFile));
+        log_lf(Log::L_ERROR, "Failed to export track to file %s: %s\n", StringAsCStr(pathFile), StringAsCStr(res.value()));
     }
 }
 

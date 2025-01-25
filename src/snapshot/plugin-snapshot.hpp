@@ -60,5 +60,14 @@ struct plugin_snapshot_t {
 
 
 extern const SupportedFileTypes FILE_TYPES_PLUGINSNAPSHOT;
-bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path);
-std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path);
+
+namespace DAW::ProjectFileV1 {
+    std::optional<String> savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path);
+    std::variant<std::shared_ptr<plugin_snapshot_t>, String> loadPluginSnapshot(const String& path);
+} // namespace DAW::ProjectFileV1
+
+namespace DAW::ProjectFileV2 {
+    std::optional<String> savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path);
+    std::variant<std::shared_ptr<plugin_snapshot_t>, String> loadPluginSnapshot(const String& path);
+} // namespace DAW::ProjectFileV2
+            

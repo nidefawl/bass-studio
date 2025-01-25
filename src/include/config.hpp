@@ -6,7 +6,8 @@
 
 #define FILE_FORMAT_VERSION 3
 #define PROJECT_FILE_TYPE_DESC "Project File"
-#define PROJECT_FILE_EXT "project"
+#define PROJECT_FILE_EXT "bsp"
+#define PROJECT_LEGACY_FILE_EXT "project"
 #define TRACKCONTAINER_FILE_EXT "tracks"
 #define PRESET_FILE_EXT "preset"
 #define PROJECT_BUNDLE_FILE_EXT "zip"

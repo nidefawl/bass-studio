@@ -76,4 +76,5 @@ struct trackcontainer_snapshot_t {
 
     // -1 if track has no parent, otherwise the index points to the parent track in the tracks vector
     std::vector<int32_t> hierachy;
+    int32_t version = -1;
 };

@@ -5,6 +5,7 @@
 #include "host/track/track.hpp"
 #include "host/track/track_impl.hpp"
 #include "host/daw/mainctrl.hpp"
+#include "snapshot/project-snapshot.hpp"
 
 void releaseTrackContainer(track_vector& vec) {
     for (auto track : vec) {

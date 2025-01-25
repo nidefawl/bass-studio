@@ -22,11 +22,13 @@
 #include "math/vec.hpp"
 #include "saferef.hpp"
 #include "snapshot/track-snapshot.hpp"
+#include "snapshot/plugin-snapshot.hpp"
 #include "str_util.hpp"
 #include "str_util.hpp"
 #include "host/track/track_impl.hpp"
 #include "host/track/track.hpp"
 #include <cstdint>
+#include <variant>
 
 
 guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
@@ -489,9 +491,13 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
         String pathPresets = App::Platform::toUserdataPath("presets");
         if (promptUserFilePath(window, 0, FILE_TYPES_PLUGINSNAPSHOT, path, pathPresets)) {
             auto daw = dawCtrl->getDaw();
-            std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
-            dbgassert(pluginSnapshot);
-            if (pluginSnapshot) {
+            auto res = DAW::ProjectFileV2::loadPluginSnapshot(path);
+            if (std::holds_alternative<String>(res)) {
+                log_lf(Log::L_ERROR, "Failed to load plugin snapshot: %s\n", std::get<String>(res).c_str());
+                return false;
+            }
+            if (std::holds_alternative<std::shared_ptr<plugin_snapshot_t>>(res)) {
+                auto pluginSnapshot = std::get<std::shared_ptr<plugin_snapshot_t>>(res);
                 auto* pluginMgr = daw->getPluginManager();
                 DAW::assignFreeStageIds(pluginMgr, *pluginSnapshot);
                 auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);

@@ -53,6 +53,7 @@
 #include "midi-event.hpp"
 #include "fileio.hpp"
 #include "host/clip/clip.hpp"
+#include "snapshot/project-snapshot.hpp"
 #include "assert_dbg.h"
 
 

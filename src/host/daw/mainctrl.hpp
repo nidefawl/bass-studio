@@ -40,7 +40,6 @@
 #include "threads/workerthread.hpp"
 #include "threads/playbackthread.hpp"
 #include "edithistory.hpp"
-#include "file/projectfile.hpp"
 #include "hires_timer.hpp"
 #include "rand.hpp"
 #include "dragdrop.hpp"

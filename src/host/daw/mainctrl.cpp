@@ -8,6 +8,7 @@
 #include <memory>
 #include <nanovg.h>
 #include <utility>
+#include <variant>
 #include <vector>
 #include "appconfig.hpp"
 #include "appsettings.hpp"
@@ -23,7 +24,8 @@
 #include "error.hpp"
 #include "event.hpp"
 #include "exceptions.hpp"
-#include "file/projectfile.hpp"
+#include "file/projectfile-v2.hpp"
+#include "file/groovefile.hpp"
 #include "fileio.hpp"
 #include "fileloader.hpp"
 #include "glheaders.h"
@@ -904,7 +906,13 @@ public:
 
 void DawCtrl::setupView() {
     for (size_t i = 0; i < layouts.size(); i++) {
-        std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("view%zu.layout", i));
+        auto layoutFile = StringFormat("view%zu.layout", i);
+        auto res = DAW::ProjectFileV2::loadDawViewLayoutSnapshot(layoutFile);
+        if (std::holds_alternative<String>(res)) {
+            if (i < 4) log_lf(Log::L_ERROR, "Failed to load view layout %zu: %s\n", i, layoutFile.c_str());
+            continue;
+        }
+        std::shared_ptr<dawview_layout_t> viewLayout = std::get<std::shared_ptr<dawview_layout_t>>(res);
         if (viewLayout) {
             layouts[i] = *viewLayout.get();
         }
@@ -1114,7 +1122,7 @@ bool DawCtrl::menuCommand(const menucmd_t& command) {
                     path += ".";
                     path += FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
                 }
-                saveTrackContainer(trackContainerSnapshot, path);
+                DAW::ProjectFileV2::saveTrackContainer(trackContainerSnapshot, path);
             }
             return true;
         }
@@ -1237,7 +1245,7 @@ void MainCtrl::initApp(const std::vector<String>& args) {
             i++;
             continue;
         }
-        if (StrEndsWith(args[i], "." PROJECT_FILE_EXT)) {
+        if (StrEndsWith(args[i], "." PROJECT_FILE_EXT) || StrEndsWith(args[i], "." PROJECT_LEGACY_FILE_EXT)) {
             loadProject = args[i];
             continue;
         }
@@ -1711,7 +1719,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                     bool store    = (kevt.mods & KB_MOD_SHIFT);
                     if (store) {
                         view->storeLayout(layouts[index]);
-                        saveDawViewLayoutSnapshot(layouts[index], StringFormat("view%d.layout", index));
+                        DAW::ProjectFileV2::saveDawViewLayoutSnapshot(layouts[index], StringFormat("view%d.layout", index));
                     } else {
                         if (this->layoutIndex >= 0 && this->layoutIndex < CtrSize(layouts)) {
                             view->storeLayout(layouts[this->layoutIndex]);
@@ -2631,7 +2639,7 @@ bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
     for (auto path : files) {
         String ext;
         SplitPath(path, nullptr, nullptr, &ext);
-        if (stl_contains(std::array{ PROJECT_BUNDLE_FILE_EXT, PROJECT_FILE_EXT }, ext)) {
+        if (stl_contains(std::array{ PROJECT_BUNDLE_FILE_EXT, PROJECT_FILE_EXT, PROJECT_LEGACY_FILE_EXT }, ext)) {
             continue;
         }
         if (ext.empty() && PathIsDirectory(path)) {
@@ -2702,26 +2710,34 @@ bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
             }
         } else if (ext == PRESET_FILE_EXT) {
             dragdropclip.type = Type::TYPE_PLUGIN_PRESET;
-            std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
-            if (pluginSnapshot) {
+            auto res = DAW::ProjectFileV2::loadPluginSnapshot(path);
+            if (std::holds_alternative<std::shared_ptr<plugin_snapshot_t>>(res)) {
                 dragdropclip.path = path;
-                dragdropclip.pluginSnapshot = pluginSnapshot;
+                dragdropclip.pluginSnapshot = std::get<std::shared_ptr<plugin_snapshot_t>>(res);
                 dragdropclip.state = State::STATE_LOADED;
                 return true;
             } else {
-                log_lf(Log::L_ERROR, "Failed to load plugin preset %s\n", path.c_str());
+                auto fullError = "Failed to load plugin preset " + path;
+                fullError += ": ";
+                fullError += std::get<String>(res);
+                log_lf(Log::L_ERROR, "%s\n", StringAsCStr(fullError));
+                tls.mainCtrl->openDialog(new guidialog_message_box("Error", fullError));
                 dragdropclip.state = State::STATE_FAILED_LOADING;
             }
         } else if (ext == TRACKCONTAINER_FILE_EXT) {
             dragdropclip.type = Type::TYPE_TRACK_CONTAINER;
-            std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
-            if (ctr) {
+            auto res = DAW::ProjectFileV2::loadTrackContainer(path);
+            if (std::holds_alternative<std::shared_ptr<trackcontainer_snapshot_t>>(res)) {
                 dragdropclip.path = path;
-                dragdropclip.trackcontainer = ctr;
+                dragdropclip.trackcontainer = std::get<std::shared_ptr<trackcontainer_snapshot_t>>(res);
                 dragdropclip.state = State::STATE_LOADED;
                 return true;
             } else {
-                log_lf(Log::L_ERROR, "Failed to load track container %s\n", path.c_str());
+                auto fullError = "Failed to load track container " + path;
+                fullError += ": ";
+                fullError += std::get<String>(res);
+                log_lf(Log::L_ERROR, "%s\n", StringAsCStr(fullError));
+                tls.mainCtrl->openDialog(new guidialog_message_box("Error", fullError));
                 dragdropclip.state = State::STATE_FAILED_LOADING;
             }
         } else if (ext == "mid") {
@@ -2797,9 +2813,12 @@ void GrooveLibrary::loadGrooves() {
     this->grooves.clear();
     for (auto& file : filesFound) {
         String groovePath = file.path;
-        auto vectorGrooves = loadGrooveFile(groovePath);
-        if (!vectorGrooves.empty()) {
-            this->grooves.insert(this->grooves.end(), vectorGrooves.begin(), vectorGrooves.end());
+        auto res = DAW::ProjectFileV2::loadGrooveFile(groovePath);
+        if (std::holds_alternative<groove_file_t>(res)) {
+            auto grooveFile = std::get<groove_file_t>(res);
+            this->grooves.insert(this->grooves.end(), grooveFile.grooves.begin(), grooveFile.grooves.end());
+        } else {
+            log_lf(Log::L_WARN, "Failed to load groove file %s\n", groovePath.c_str());
         }
     }
     filesFound.clear();
@@ -2819,7 +2838,7 @@ void GrooveLibrary::loadGrooves() {
     });
     // String samplePath = App::Platform::toUserdataPath("grooves/sample.groove");
     // if (!FileExists(samplePath)) {
-    //     saveGrooveFile(this->grooves, samplePath);
+    //     DAW::ProjectFileV2::saveGrooveFile(groove_file_t{-1, this->grooves}, samplePath);
     // }
 }
 
