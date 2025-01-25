@@ -19,6 +19,6 @@ if __name__ == '__main__':
             for line in f:
                 lineNr += 1
                 # search for log statements
-                match = re.search(r'(log.*\(.+".*\))', line)
+                match = re.search(r'(log_.*\(.+".*\))', line)
                 if match and not "\\n" in line and not "log_message" in line:
                     print(f'{file}:{lineNr} -> {line.strip()}')
