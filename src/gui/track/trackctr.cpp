@@ -935,6 +935,7 @@ guictr_tracks::guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::Track
       trackTimeline(m_grid),
       loophandles(_project, _projectGlobals, m_grid),
       scrollbar(1, 0.0f, *this) {
+    m_grid.setGridMaxDens(7);
     padding = 2;
     margin  = 2;
     setGuiType(gui_type::CTR_TYPE_TRACKS);

@@ -11,6 +11,7 @@
 
 struct grid_div {
     tick_t time;
+    double dTime;
     beatbar16th_t pos;
     double screenpos;
     int8_t color;

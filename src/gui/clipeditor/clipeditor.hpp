@@ -835,7 +835,7 @@ public:
           view(_view),
           timeline(m_grid) {
         setCanMouseHit(true);
-        m_grid.setGridMaxDens(6);
+        m_grid.setGridMaxDens(7);
     }
     ~guictr_editor_base() override {
         removeGuis();

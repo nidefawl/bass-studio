@@ -35,7 +35,13 @@ void scaled_grid::notifyChange() {
 }
 
 double scaled_grid::getTickLength() const {
-    return stepWidthTicks;
+    auto& gridList = grid_dens.triplets ? this->gridListTriplets : this->gridList;
+    if (gridList.size() < 2) { return stepWidthTicks; }
+
+    //TODO: way too hacky
+    auto first  = gridList[0];
+    auto second = gridList[1];
+    return second.dTime - first.dTime;
 }
 void scaled_grid::setOffset(double newOffset) {
     newOffset = newOffset < 0 ? 0 : newOffset;
@@ -177,6 +183,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 
             grid_div div  = {};
             div.time      = timeBar;
+            div.dTime     = timeBar;
             div.pos       = project->toBeatBar16th(timeBar, false);
             div.screenpos = pos;
             div.width     = denum_step > 0 ? (denum_substep > 0 ? denom_sub_size : denom_size) : barSize * step;
@@ -197,6 +204,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
                 if (bar_denom > 0) {
                     grid_div div_quarter  = {};
                     div_quarter.time      = timeQuarter;
+                    div_quarter.dTime     = timeQuarterDouble;
                     div_quarter.pos       = project->toBeatBar16th(timeQuarter, false);
                     div_quarter.screenpos = pos_denom;
                     div_quarter.width     = denum_substep > 0 ? denom_sub_size : denom_size;
@@ -207,18 +215,20 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
                     gridList.push_back(div_quarter);
                 }
                 for (int bar_denom_sub = 1; bar_denom_sub < denum_substep; bar_denom_sub++) {
-                    const auto timeSmall = math::rounddS32(timeQuarterDouble + double(bar_denom_sub * denum_step_ticks) / denum_substep);
+                    const auto timeNthDouble = timeQuarterDouble + double(bar_denom_sub * denum_step_ticks) / denum_substep;
+                    const auto timeNth = math::rounddS32(timeNthDouble);
                     minStep = denum_step_ticks / denum_substep;
 
                     grid_div div_smaller  = {};
-                    div_smaller.time      = timeSmall;
-                    div_smaller.pos       = project->toBeatBar16th(timeSmall, false);
+                    div_smaller.time      = timeNth;
+                    div_smaller.dTime     = timeNthDouble;
+                    div_smaller.pos       = project->toBeatBar16th(timeNth, false);
                     div_smaller.screenpos = pos_denom + bar_denom_sub * denom_sub_size;
                     div_smaller.width     = denom_sub_size;
                     div_smaller.color     = 2;
                     div_smaller.thickness = 0.6f;
-                    dbgassert(gridListTicks.empty() || timeSmall > gridListTicks.back());
-                    gridListTicks.push_back(timeSmall);
+                    dbgassert(gridListTicks.empty() || timeNth > gridListTicks.back());
+                    gridListTicks.push_back(timeNth);
                     gridList.push_back(div_smaller);
                 }
             }
