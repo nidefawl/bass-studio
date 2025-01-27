@@ -423,7 +423,7 @@ public:
     void trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) override {
         String pathFile;
         auto res = ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getWorkingDirAbsPath(), pathFile);
-        if (res) {
+        if (!res) {
             if (!pathFile.empty()) {
                 auto popupPos = this->toScreenSpace(ivec2(0));
                 auto popupSize = this->size;
@@ -824,7 +824,7 @@ public:
 void gui_userlibrary_list_entry_t::trackEntryDragRelease(track_gui_entry_t* trackEntry, ivec2 mousepos) {
     String pathFile;
     auto res = ExportTrackToFile(dawCtrl->getDaw(), trackEntry->track, getPathAbs(), pathFile);
-    if (res) {
+    if (!res) {
         if (!pathFile.empty()) {
             auto popupPos = this->toScreenSpace(ivec2(0));
             auto popupSize = this->size;
