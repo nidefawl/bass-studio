@@ -1,0 +1,999 @@
+{
+    "layout": {
+        "grid": {
+            "offset": 0.0,
+            "zoom": 0.39731315529312483
+        },
+        "scrollOffsetX": 1.0
+    },
+    "layouts": [
+        {
+            "center": {
+                "activePosition": -1,
+                "ctrLayout": 1,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": 0,
+                        "ctrLayout": 3,
+                        "data": "",
+                        "entries": [
+                            {
+                                "activePosition": -1,
+                                "ctrLayout": 0,
+                                "data": "",
+                                "entries": [],
+                                "entryTag": 105,
+                                "label": "Tracks",
+                                "splitterPositions": [],
+                                "type": 129
+                            }
+                        ],
+                        "entryTag": 103,
+                        "label": "Layout",
+                        "splitterPositions": [],
+                        "type": 101
+                    },
+                    {
+                        "activePosition": 0,
+                        "ctrLayout": 3,
+                        "data": "",
+                        "entries": [
+                            {
+                                "activePosition": -1,
+                                "ctrLayout": 0,
+                                "data": "",
+                                "entries": [],
+                                "entryTag": 107,
+                                "label": "Clip Editor",
+                                "splitterPositions": [],
+                                "type": 114
+                            },
+                            {
+                                "activePosition": -1,
+                                "ctrLayout": 0,
+                                "data": "",
+                                "entries": [],
+                                "entryTag": 108,
+                                "label": "Plugins",
+                                "splitterPositions": [],
+                                "type": 124
+                            }
+                        ],
+                        "entryTag": 104,
+                        "label": "Layout",
+                        "splitterPositions": [],
+                        "type": 101
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [
+                    0.5
+                ],
+                "type": 0
+            },
+            "left": {
+                "activePosition": -1,
+                "ctrLayout": 1,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Export Audio",
+                        "splitterPositions": [],
+                        "type": 113
+                    },
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Plugin Library",
+                        "splitterPositions": [],
+                        "type": 107
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [
+                    0.5
+                ],
+                "type": 0
+            },
+            "right": {
+                "activePosition": 0,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            },
+            "splitterPositions": [
+                0.17851562798023224,
+                1.0
+            ],
+            "version": 2
+        }
+    ],
+    "projectdata": {
+        "exportSettings": {
+            "exportLen": 131072,
+            "exportPath": "",
+            "exportPos": 131072,
+            "isLocked": true
+        },
+        "globals": {
+            "cursor": {
+                "cursorPos": 155648,
+                "cursorSubTrack": -1,
+                "cursorTrack": 0,
+                "selRange": 8192,
+                "selSubTrackRange": 0,
+                "selTrackRange": 0
+            },
+            "grooveData": [],
+            "loopEnabled": true,
+            "loopLen": 131072,
+            "loopStart": 131072,
+            "playbackPos": 190896,
+            "signatureDenom": 2,
+            "signatureNum": 4,
+            "tempo100": 12000
+        },
+        "masterTracks": {
+            "hierachy": [
+                -1
+            ],
+            "tracklist": [
+                {
+                    "clips": [],
+                    "data": {
+                        "arp": {
+                            "automatedParams": [],
+                            "params": [
+                                {
+                                    "flags": 0,
+                                    "idx": 4101,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4100,
+                                    "val": 1.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4099,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4098,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4097,
+                                    "val": 0.25
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4096,
+                                    "val": 0.625
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 1,
+                                    "val": 1.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 0,
+                                    "val": 0.0
+                                }
+                            ]
+                        },
+                        "io": {
+                            "input": {
+                                "dstChannelOffset": 0,
+                                "externalInputIdx": 0,
+                                "externalInputType": 1,
+                                "projectGlobalId": 0,
+                                "srcChannelOffset": 0,
+                                "stageEndPointType": 2,
+                                "stageId": -1,
+                                "type": 0
+                            },
+                            "midiInputs": [
+                                {
+                                    "dstChannel": -1,
+                                    "inputName": "None",
+                                    "srcChannel": -1,
+                                    "stageEndPointType": 2,
+                                    "stageId": -1,
+                                    "type": 1
+                                }
+                            ],
+                            "output": {
+                                "dstChannelOffset": 0,
+                                "externalInputIdx": 0,
+                                "externalInputType": 1,
+                                "projectGlobalId": 0,
+                                "srcChannelOffset": 0,
+                                "stageEndPointType": 2,
+                                "stageId": -1,
+                                "type": 0
+                            }
+                        },
+                        "modulation": {
+                            "arp": [],
+                            "mixer": [],
+                            "modulations": []
+                        },
+                        "plugins": [],
+                        "routing": {
+                            "inputRoutingEffects": [],
+                            "inputRoutingOutputStage": [
+                                {
+                                    "dstChannelOffset": 0,
+                                    "externalInputIdx": 0,
+                                    "externalInputType": 1,
+                                    "projectGlobalId": 0,
+                                    "srcChannelOffset": 0,
+                                    "stageEndPointType": 2,
+                                    "stageId": -1,
+                                    "type": 0
+                                }
+                            ],
+                            "routingState": 1
+                        },
+                        "track": {
+                            "automatedParams": [],
+                            "params": [
+                                {
+                                    "flags": 0,
+                                    "idx": 4127,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4111,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4126,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4110,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4125,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4109,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4124,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4108,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4123,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4107,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4122,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4106,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4105,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4104,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4103,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4102,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4101,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4116,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4100,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4099,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4121,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4098,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4113,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4120,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4097,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4112,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4119,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 2,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4096,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4115,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4118,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 1,
+                                    "val": 0.7373871207237244
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4114,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4117,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 0,
+                                    "val": 1.0
+                                }
+                            ]
+                        }
+                    },
+                    "idx": 0,
+                    "layouts": [
+                        [
+                            0,
+                            {
+                                "layout": {
+                                    "foldTrack": false,
+                                    "height": 4,
+                                    "hideSubtracks": false
+                                },
+                                "subtracks": []
+                            }
+                        ]
+                    ],
+                    "layouts_mixer": [
+                        [
+                            0,
+                            {
+                                "layout": {
+                                    "width": 8
+                                }
+                            }
+                        ]
+                    ],
+                    "settings": {
+                        "name": "Master 1",
+                        "rgb": -3002324,
+                        "type": 0
+                    },
+                    "stage_ids": {
+                        "input_stageid": 5,
+                        "output_stageid": 6,
+                        "outputpost_stageid": 7,
+                        "stageid": 4
+                    },
+                    "store_opts": {
+                        "store_automation": true,
+                        "store_clips": true,
+                        "store_layouts": true,
+                        "store_plugin_preset": true
+                    }
+                }
+            ],
+            "version": 2
+        },
+        "quantizeSettings": {
+            "quantizeEnd": 0,
+            "quantizeStart": 0
+        },
+        "record": [],
+        "returnTracks": {
+            "hierachy": [],
+            "tracklist": [],
+            "version": 2
+        },
+        "samplerate": 44100,
+        "solo": [],
+        "tracks": {
+            "hierachy": [
+                -1
+            ],
+            "tracklist": [
+                {
+                    "clips": [
+                        {
+                            "clip_audio": {
+                                "fadeIn": {
+                                    "duration": 0.0,
+                                    "type": {
+                                        "flags": 22,
+                                        "name": "Inverse Saw",
+                                        "pts": [
+                                            {
+                                                "s": 0.5,
+                                                "x": 0.0,
+                                                "y": 0.0
+                                            },
+                                            {
+                                                "s": 0.5,
+                                                "x": 1.0,
+                                                "y": 1.0
+                                            }
+                                        ]
+                                    }
+                                },
+                                "fadeOut": {
+                                    "duration": 0.0,
+                                    "type": {
+                                        "flags": 22,
+                                        "name": "Saw",
+                                        "pts": [
+                                            {
+                                                "s": 0.5,
+                                                "x": 0.0,
+                                                "y": 1.0
+                                            },
+                                            {
+                                                "s": 0.5,
+                                                "x": 1.0,
+                                                "y": 0.0
+                                            }
+                                        ]
+                                    }
+                                },
+                                "flags": 0,
+                                "id": -1,
+                                "pitch": 0.0,
+                                "stretch": 1.0
+                            },
+                            "clip_notes": {
+                                "data": "QAEAAAAAAAABAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAmAAAAZAAAAAAAAAAAIAAAAQAAAAAAAAAAAAAAAAAAADUAAABkAAAAAAAAAAAgAAABAAAAAAAAAAAAAAAAAAAAJwAAAGQAAAAAIAAAACAAAAEAAAAAAAAAAAAAAAAAAAA2AAAAZAAAAAAgAAAAIAAAAQAAAAAAAAAAAAAAAAAAACQAAABkAAAAAEAAAAAgAAABAAAAAAAAAAAAAAAAAAAAMwAAAGQAAAAAQAAAACAAAAEAAAAAAAAAAAAAAAAAAAAjAAAAZAAAAABgAAAAIAAAAQAAAAAAAAAAAAAAAAAAADIAAABkAAAAAGAAAAAgAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                                "size": 320
+                            },
+                            "editorLayout": {
+                                "layoutGrid": {
+                                    "offset": 0.0,
+                                    "zoom": 0.03212851285934448
+                                },
+                                "layoutPianoRoll": {
+                                    "fold": false,
+                                    "offset": 76.0,
+                                    "scale": 6.0
+                                },
+                                "noLayout": false
+                            },
+                            "enabled": true,
+                            "len": 131072,
+                            "len_samples": 0,
+                            "loop_enabled": true,
+                            "loop_length": 32768,
+                            "loop_start": 0,
+                            "name": "",
+                            "offset_start": 0,
+                            "rgb": 4289850718,
+                            "time": 131072,
+                            "type": 0
+                        }
+                    ],
+                    "data": {
+                        "arp": {
+                            "automatedParams": [],
+                            "params": [
+                                {
+                                    "flags": 0,
+                                    "idx": 4101,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4100,
+                                    "val": 1.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4099,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4098,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4097,
+                                    "val": 0.34499990940093994
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4096,
+                                    "val": 0.6200000047683716
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 1,
+                                    "val": 1.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 0,
+                                    "val": 1.0
+                                }
+                            ]
+                        },
+                        "io": {
+                            "input": {
+                                "dstChannelOffset": 0,
+                                "externalInputIdx": 0,
+                                "externalInputType": 1,
+                                "projectGlobalId": 0,
+                                "srcChannelOffset": 0,
+                                "stageEndPointType": 2,
+                                "stageId": -1,
+                                "type": 1
+                            },
+                            "midiInputs": [
+                                {
+                                    "dstChannel": -1,
+                                    "inputName": "Default",
+                                    "srcChannel": -1,
+                                    "stageEndPointType": 0,
+                                    "stageId": -1,
+                                    "type": 0
+                                }
+                            ],
+                            "output": {
+                                "dstChannelOffset": 0,
+                                "externalInputIdx": 0,
+                                "externalInputType": 1,
+                                "projectGlobalId": 0,
+                                "srcChannelOffset": 0,
+                                "stageEndPointType": 2,
+                                "stageId": -1,
+                                "type": 0
+                            }
+                        },
+                        "modulation": {
+                            "arp": [],
+                            "mixer": [],
+                            "modulations": []
+                        },
+                        "plugins": [
+                            {
+                                "automatedParams": [],
+                                "clapId": "",
+                                "currentProgram": -1,
+                                "currentProgramName": "",
+                                "effectRouting": {
+                                    "inputRoutingEffects": [],
+                                    "inputRoutingOutputStage": [],
+                                    "routingState": 0
+                                },
+                                "enabled": true,
+                                "ioChannels": {
+                                    "input": [
+                                        {
+                                            "count": 2,
+                                            "name": "Stereo Input",
+                                            "offset": 0
+                                        }
+                                    ]
+                                },
+                                "localDbId": 0,
+                                "modulationRouting": {
+                                    "arp": [],
+                                    "mixer": [],
+                                    "modulations": []
+                                },
+                                "moduleType": 4,
+                                "name": "Synth Shaper",
+                                "params": [],
+                                "pluginData": {
+                                    "data": "",
+                                    "size": 0
+                                },
+                                "pluginSnapshots": [],
+                                "programData": {
+                                    "data": "AAEAAAAAAAACAAAACAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAOA/AQAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAwAAAAAAAAAAAOA/BAAAAAAAAAAAAOA/BQAAAAAAAAAAAOA/BgAAAAAAAAAAAPA/BwAAAAAAAAAAAPA/AgAAAAAAAAACAAAAAwAAAAMAAABTYXcCAAAAAAAAAAAAAD8AAIA/AAAAPwAAgD8AAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                                    "size": 256
+                                },
+                                "projectGlobalId": 65999,
+                                "slot": 0,
+                                "stageIds": {
+                                    "input_stageid": -1,
+                                    "output_stageid": -1,
+                                    "outputpost_stageid": -1,
+                                    "stageid": -1
+                                },
+                                "uId": 19,
+                                "uiSnapshots": [
+                                    [
+                                        1,
+                                        {
+                                            "layoutMode": 0,
+                                            "parameterListVisible": false
+                                        }
+                                    ]
+                                ],
+                                "vendorVersion": 0,
+                                "version": 18,
+                                "windowLayout": {
+                                    "isWindowOpen": false,
+                                    "windowPosSize": {
+                                        "w": 0,
+                                        "x": 0,
+                                        "y": 0,
+                                        "z": 0
+                                    },
+                                    "windowPosSizeValid": false,
+                                    "windowSize": {
+                                        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                                        "type": 0,
+                                        "valid": 0
+                                    }
+                                }
+                            }
+                        ],
+                        "routing": {
+                            "inputRoutingEffects": [
+                                [
+                                    65999,
+                                    [
+                                        {
+                                            "dstChannelOffset": 0,
+                                            "externalInputIdx": 0,
+                                            "externalInputType": 1,
+                                            "projectGlobalId": 0,
+                                            "srcChannelOffset": 0,
+                                            "stageEndPointType": 2,
+                                            "stageId": -1,
+                                            "type": 0
+                                        }
+                                    ]
+                                ]
+                            ],
+                            "inputRoutingOutputStage": [
+                                {
+                                    "dstChannelOffset": 0,
+                                    "externalInputIdx": 0,
+                                    "externalInputType": 1,
+                                    "projectGlobalId": 0,
+                                    "srcChannelOffset": 0,
+                                    "stageEndPointType": 2,
+                                    "stageId": -1,
+                                    "type": 0
+                                }
+                            ],
+                            "routingState": 1
+                        },
+                        "track": {
+                            "automatedParams": [],
+                            "params": [
+                                {
+                                    "flags": 0,
+                                    "idx": 4127,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4111,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4126,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4110,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4125,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4109,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4124,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4108,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4123,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4107,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4122,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4106,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4105,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4104,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4103,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4102,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4101,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4116,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4100,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4099,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4121,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4098,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4113,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4120,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4097,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4112,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4119,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 2,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4096,
+                                    "val": 0.0
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4115,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4118,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 1,
+                                    "val": 0.7373871207237244
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4114,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 4117,
+                                    "val": 0.5
+                                },
+                                {
+                                    "flags": 0,
+                                    "idx": 0,
+                                    "val": 1.0
+                                }
+                            ]
+                        }
+                    },
+                    "idx": 0,
+                    "layouts": [
+                        [
+                            0,
+                            {
+                                "layout": {
+                                    "foldTrack": false,
+                                    "height": 4,
+                                    "hideSubtracks": false
+                                },
+                                "subtracks": []
+                            }
+                        ]
+                    ],
+                    "layouts_mixer": [
+                        [
+                            0,
+                            {
+                                "layout": {
+                                    "width": 6
+                                }
+                            }
+                        ]
+                    ],
+                    "settings": {
+                        "name": "Synth Shaper",
+                        "rgb": -5116578,
+                        "type": 2
+                    },
+                    "stage_ids": {
+                        "input_stageid": 1,
+                        "output_stageid": 2,
+                        "outputpost_stageid": 3,
+                        "stageid": 0
+                    },
+                    "store_opts": {
+                        "store_automation": true,
+                        "store_clips": true,
+                        "store_layouts": true,
+                        "store_plugin_preset": true
+                    }
+                }
+            ],
+            "version": 2
+        }
+    },
+    "samples": {
+        "list": []
+    },
+    "version": 3
+}

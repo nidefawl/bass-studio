@@ -4,12 +4,16 @@
 #include "common/test_common.hpp"
 #include "host/host_pluginmanager.hpp"
 #include "host/host.hpp"
+#include "thread.hpp"
 #include "tls.hpp"
 #include "appconfig.hpp"
+#include "buildinfo.h"
 #include <memory>
 
 
 int main(int argc, char* argv[]) {
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
+    App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     auto host = std::make_unique<DAW::Host::Host>();
     auto pluginMgr = host.get();
     DAW::Host::PluginManager::assignMasterCallback(pluginMgr);

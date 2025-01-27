@@ -9,7 +9,7 @@
 
 int main(int, char*[]) {
     std::vector<String> args{
-        "-f", TEST_PATH("projects/test-vst.project"),
+        "-f", TEST_PATH("projects/test-project.bsp"),
         "-o", "test-render",
         "--render"
     };
