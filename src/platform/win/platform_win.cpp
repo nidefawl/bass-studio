@@ -265,7 +265,6 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
     String errMsg = msg;
     errMsg += ": ";
     errMsg += fmtMsg;
-    log_lf(Log::L_ERROR, "%s\n", errMsg.c_str());
     return errMsg;
 }
 
