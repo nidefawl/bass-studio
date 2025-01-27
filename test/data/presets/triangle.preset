@@ -1,0 +1,74 @@
+{
+    "automatedParams": [],
+    "clapId": "",
+    "currentProgram": -1,
+    "currentProgramName": "",
+    "effectRouting": {
+        "inputRoutingEffects": [],
+        "inputRoutingOutputStage": [],
+        "routingState": 0
+    },
+    "enabled": true,
+    "ioChannels": {
+        "input": [
+            {
+                "count": 2,
+                "name": "Stereo Input",
+                "offset": 0
+            }
+        ]
+    },
+    "localDbId": 0,
+    "modulationRouting": {
+        "arp": [],
+        "mixer": [],
+        "modulations": []
+    },
+    "moduleType": 4,
+    "name": "Synth Shaper",
+    "params": [],
+    "pluginData": {
+        "data": "",
+        "size": 0
+    },
+    "pluginSnapshots": [],
+    "programData": {
+        "data": "AAEAAAAAAAACAAAACAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAOA/AQAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAwAAAAAAAAAAAOA/BAAAAAAAAAAAAOA/BQAAAAAAAAAAAOA/BgAAAAAAAAAAAPA/BwAAAAAAAAAAAPA/AgAAAAAAAAACAAAAAwAAAAMAAABTYXcCAAAAAAAAAAAAAD8AAIA/AAAAPwAAgD8AAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+        "size": 256
+    },
+    "projectGlobalId": 65537,
+    "slot": 0,
+    "stageIds": {
+        "input_stageid": -1,
+        "output_stageid": -1,
+        "outputpost_stageid": -1,
+        "stageid": -1
+    },
+    "uId": 19,
+    "uiSnapshots": [
+        [
+            1,
+            {
+                "layoutMode": 0,
+                "parameterListVisible": false
+            }
+        ]
+    ],
+    "vendorVersion": 0,
+    "version": 18,
+    "windowLayout": {
+        "isWindowOpen": false,
+        "windowPosSize": {
+            "w": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "windowPosSizeValid": false,
+        "windowSize": {
+            "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "type": 0,
+            "valid": 0
+        }
+    }
+}

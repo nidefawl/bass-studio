@@ -1,0 +1,428 @@
+{
+    "hierachy": [],
+    "tracklist": [
+        {
+            "clips": [],
+            "data": {
+                "arp": {
+                    "automatedParams": [],
+                    "params": [
+                        {
+                            "flags": 0,
+                            "idx": 4101,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4100,
+                            "val": 1.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4099,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4098,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4097,
+                            "val": 0.25
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4096,
+                            "val": 0.625
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 1,
+                            "val": 1.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 0,
+                            "val": 0.0
+                        }
+                    ]
+                },
+                "io": {
+                    "input": {
+                        "dstChannelOffset": 0,
+                        "externalInputIdx": 0,
+                        "externalInputType": 1,
+                        "projectGlobalId": 0,
+                        "srcChannelOffset": 0,
+                        "stageEndPointType": 2,
+                        "stageId": -1,
+                        "type": 1
+                    },
+                    "midiInputs": [
+                        {
+                            "dstChannel": -1,
+                            "inputName": "Default",
+                            "srcChannel": -1,
+                            "stageEndPointType": 0,
+                            "stageId": -1,
+                            "type": 0
+                        }
+                    ],
+                    "output": {
+                        "dstChannelOffset": 0,
+                        "externalInputIdx": 0,
+                        "externalInputType": 1,
+                        "projectGlobalId": 0,
+                        "srcChannelOffset": 0,
+                        "stageEndPointType": 2,
+                        "stageId": -1,
+                        "type": 0
+                    }
+                },
+                "modulation": {
+                    "arp": [],
+                    "mixer": [],
+                    "modulations": []
+                },
+                "plugins": [
+                    {
+                        "automatedParams": [],
+                        "clapId": "",
+                        "currentProgram": -1,
+                        "currentProgramName": "",
+                        "effectRouting": {
+                            "inputRoutingEffects": [],
+                            "inputRoutingOutputStage": [],
+                            "routingState": 0
+                        },
+                        "enabled": true,
+                        "ioChannels": {
+                            "input": [
+                                {
+                                    "count": 2,
+                                    "name": "Stereo Input",
+                                    "offset": 0
+                                }
+                            ]
+                        },
+                        "localDbId": 0,
+                        "modulationRouting": {
+                            "arp": [],
+                            "mixer": [],
+                            "modulations": []
+                        },
+                        "moduleType": 4,
+                        "name": "Synth Shaper",
+                        "params": [
+                            {
+                                "flags": 1,
+                                "idx": 4097,
+                                "val": 0.0
+                            }
+                        ],
+                        "pluginData": {
+                            "data": "",
+                            "size": 0
+                        },
+                        "pluginSnapshots": [],
+                        "programData": {
+                            "data": "AAEAAAAAAAACAAAACAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAOA/AQAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAwAAAAAAAAAAAOA/BAAAAAAAAAAAAOA/BQAAAAAAAAAAAOA/BgAAAAAAAAAAAPA/BwAAAAAAAAAAAPA/AgAAAAAAAAACAAAAAwAAAAMAAABTYXcCAAAAAAAAAAAAgD4AAIA/hqPoPhzzdD8AAAAAiKPoPgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                            "size": 256
+                        },
+                        "projectGlobalId": 65541,
+                        "slot": 0,
+                        "stageIds": {
+                            "input_stageid": -1,
+                            "output_stageid": -1,
+                            "outputpost_stageid": -1,
+                            "stageid": -1
+                        },
+                        "uId": 19,
+                        "uiSnapshots": [
+                            [
+                                1,
+                                {
+                                    "layoutMode": 0,
+                                    "parameterListVisible": true
+                                }
+                            ]
+                        ],
+                        "vendorVersion": 0,
+                        "version": 18,
+                        "windowLayout": {
+                            "isWindowOpen": false,
+                            "windowPosSize": {
+                                "w": 0,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "windowPosSizeValid": false,
+                            "windowSize": {
+                                "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                                "type": 0,
+                                "valid": 0
+                            }
+                        }
+                    }
+                ],
+                "routing": {
+                    "inputRoutingEffects": [
+                        [
+                            65541,
+                            [
+                                {
+                                    "dstChannelOffset": 0,
+                                    "externalInputIdx": 0,
+                                    "externalInputType": 1,
+                                    "projectGlobalId": 0,
+                                    "srcChannelOffset": 0,
+                                    "stageEndPointType": 2,
+                                    "stageId": -1,
+                                    "type": 0
+                                }
+                            ]
+                        ]
+                    ],
+                    "inputRoutingOutputStage": [
+                        {
+                            "dstChannelOffset": 0,
+                            "externalInputIdx": 0,
+                            "externalInputType": 1,
+                            "projectGlobalId": 0,
+                            "srcChannelOffset": 0,
+                            "stageEndPointType": 2,
+                            "stageId": -1,
+                            "type": 0
+                        }
+                    ],
+                    "routingState": 1
+                },
+                "track": {
+                    "automatedParams": [],
+                    "params": [
+                        {
+                            "flags": 0,
+                            "idx": 4127,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4111,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4126,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4110,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4125,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4109,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4124,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4108,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4123,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4107,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4122,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4106,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4105,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4104,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4103,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4102,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4101,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4116,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4100,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4099,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4121,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4098,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4113,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4120,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4097,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4112,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4119,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 2,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4096,
+                            "val": 0.0
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4115,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4118,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 1,
+                            "val": 0.7373871207237244
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4114,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 4117,
+                            "val": 0.5
+                        },
+                        {
+                            "flags": 0,
+                            "idx": 0,
+                            "val": 1.0
+                        }
+                    ]
+                }
+            },
+            "idx": 0,
+            "layouts": [
+                [
+                    0,
+                    {
+                        "layout": {
+                            "foldTrack": false,
+                            "height": 4,
+                            "hideSubtracks": false
+                        },
+                        "subtracks": []
+                    }
+                ]
+            ],
+            "layouts_mixer": [
+                [
+                    0,
+                    {
+                        "layout": {
+                            "width": 6
+                        }
+                    }
+                ]
+            ],
+            "settings": {
+                "name": "Synth Shaper",
+                "rgb": -12398036,
+                "type": 2
+            },
+            "stage_ids": {
+                "input_stageid": 1,
+                "output_stageid": 2,
+                "outputpost_stageid": 3,
+                "stageid": 0
+            },
+            "store_opts": {
+                "store_automation": true,
+                "store_clips": true,
+                "store_layouts": true,
+                "store_plugin_preset": true
+            }
+        }
+    ],
+    "version": 2
+}
