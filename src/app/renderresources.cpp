@@ -155,6 +155,14 @@ namespace RenderResources {
             load(vg, "icons/icon_file_midi.png", imgIconsBuf[ICON_FILE_MIDI]);
             load(vg, "icons/checkbox_unchecked.png", imgIconsBuf[ICON_CHECKBOX_UNCHECKED]);
             load(vg, "icons/checkbox_checked.png", imgIconsBuf[ICON_CHECKBOX_CHECKED]);
+            load(vg, "icons/search.png", imgIconsBuf[ICON_SEARCH]);
+            load(vg, "icons/debug.png", imgIconsBuf[ICON_DEBUG]);
+            load(vg, "icons/history.png", imgIconsBuf[ICON_HISTORY]);
+            load(vg, "icons/keyboard.png", imgIconsBuf[ICON_KEYBOARD]);
+            load(vg, "icons/export.png", imgIconsBuf[ICON_EXPORT]);
+            load(vg, "icons/settings.png", imgIconsBuf[ICON_SETTINGS]);
+            load(vg, "icons/performance.png", imgIconsBuf[ICON_PERFORMANCE]);
+            load(vg, "icons/theme.png", imgIconsBuf[ICON_THEME]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];
