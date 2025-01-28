@@ -779,7 +779,8 @@ void save(Archive& archive, const guictrlayout_entry_snapshot_t& m, const std::u
 
 template<class Archive>
 void serialize(Archive& archive, dawview_layout_t& m) {
-    archive(m.left, m.right, m.splitterPositions);
+    std::shared_ptr<guictrlayout_entry_snapshot_t> dummy;
+    archive(dummy, m.right, m.splitterPositions);
     make_optional_nvp(archive, "center", m.center);
 }
 

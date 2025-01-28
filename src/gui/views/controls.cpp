@@ -735,6 +735,7 @@ guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t&
       zoom(&globalZoom) {
     padding = 0;
     margin = 0;
+    setBackgroundRendered(false);
     cursorPos.setRef(toRef(), &projectGlobals.cursor.cursorPos);
     songPos.setRef(toRef(), &projectGlobals.playbackPos);
     loopPos.setRef(toRef(), &projectGlobals.loopStart);
@@ -904,19 +905,9 @@ void guictr_daw_controls::layout() {
     }
 }
 void guictr_daw_controls::render(NVGcontext* vg) {
-    if (!isRenderableSizeAndContext(vg))
-        return;
-    //guictr_base::setScissorTransform(vg);
-
     bool bIsLockedUiLayout = daw_tls::getSettings().dawsettings.uiLayoutLocked;
     btnUiLayoutLock.drawParm = bIsLockedUiLayout ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
-    ivec2 posInset = getPosContent();
-    nvgTranslate(vg, posInset.x, posInset.y);
-    for (guibase* gui : guis) {
-        nvgSave(vg);
-        gui->render(vg);
-        nvgRestore(vg);
-    }
+    guictr_base::render(vg);
 }
 void gui_timeinput_field::setNewValue(int32_t val) {
     auto ptr = parentInput->getSafeIntRef();

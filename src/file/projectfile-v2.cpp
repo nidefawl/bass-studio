@@ -647,9 +647,10 @@ void from_json(const json& j, guictrlayout_entry_snapshot_t& m) {
 
 void to_json(json& j, const dawview_layout_t& m) {
     j = json{
-        {"version", 2},
+        {"version", 3},
         {"splitterPositions", m.splitterPositions},
-        {"left", m.left},
+        {"sidebarSnapshots", m.sidebarSnapshots},
+        {"sidebarSelected", m.sidebarSelected},
         {"right", m.right},
         {"center", m.center}
     };
@@ -662,9 +663,12 @@ void from_json(const json& j, dawview_layout_t& m) {
     }
     j.at("version").get_to(m.version);
     j.at("splitterPositions").get_to(m.splitterPositions);
-    j.at("left").get_to(m.left);
     j.at("right").get_to(m.right);
     j.at("center").get_to(m.center);
+    j.at("sidebarSnapshots").get_to(m.sidebarSnapshots);
+    if (m.version >= 3) {
+        j.at("sidebarSelected").get_to(m.sidebarSelected);
+    }
 }
 JSON_FROM_TO(samplefile_entry_t, id, name)
 JSON_FROM_TO(samplefile_index_t, list)

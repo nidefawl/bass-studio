@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <variant>
+#include <map>
 
 struct guictrlayout_entry_snapshot_t {
     gui_type type;
@@ -20,7 +21,8 @@ struct guictrlayout_entry_snapshot_t {
 
 struct dawview_layout_t {
     int32_t version = -1;
-    std::shared_ptr<guictrlayout_entry_snapshot_t> left;
+    int32_t sidebarSelected = -1;
+    std::map<int32_t, guictrlayout_entry_snapshot_t> sidebarSnapshots;
     std::shared_ptr<guictrlayout_entry_snapshot_t> right;
     std::shared_ptr<guictrlayout_entry_snapshot_t> center;
     std::vector<float> splitterPositions;

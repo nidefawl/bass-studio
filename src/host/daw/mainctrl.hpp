@@ -71,6 +71,22 @@ enum EditAreaLayout : uint32_t {
     EDIT_AREA_SPLIT_VERTICAL,
     EDIT_AREA_SPLIT_HORIZONTAL,
 };
+enum SidebarAreaType : uint32_t {
+    SIDEBAR_AREA_HIDDEN,
+    SIDEBAR_AREA_EFFECTLIBRARY,
+    SIDEBAR_AREA_USERLIBRARY_BROWSER,
+    SIDEBAR_AREA_USERLIBRARY_SEARCH,
+    SIDEBAR_AREA_EXPORT,
+    SIDEBAR_AREA_HISTORY,
+    SIDEBAR_AREA_MIDI_MONITOR,
+    SIDEBAR_AREA_PERFORMANCE,
+    SIDEBAR_AREA_KEYBINDS,
+    SIDEBAR_AREA_THEME,
+    SIDEBAR_AREA_SETTINGS,
+    SIDEBAR_AREA_DEBUG_0,
+    SIDEBAR_AREA_DEBUG_1,
+    SIDEBAR_AREA_DEBUG_2,
+};
 }
 
 class DawViewContainers {
@@ -261,6 +277,8 @@ public:
     view_mode_t getViewMode() const;
     void setViewMode(view_mode_t mode);
     void toggleViewModeEditArea();
+    void setSidebarAreaType(DAW::SidebarAreaType type);
+    DAW::SidebarAreaType getSidebarAreaType() const;
     void setEditAreaLayout(DAW::EditAreaLayout layout);
     void setEditAreaType(DAW::EditAreaType editAreaType);
     void storeLayout(dawview_layout_t& layout);

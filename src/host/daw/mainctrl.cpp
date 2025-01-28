@@ -83,9 +83,11 @@
 #include "msgbox.hpp"
 #include "note.hpp"
 #include "platform.hpp"
+#include "renderresources.hpp"
 #include "saferef.hpp"
 #include "seq_time.hpp"
 #include "seq_util.hpp"
+#include "snapshot/snapshot.hpp"
 #include "str_util.hpp"
 #include "thread.hpp"
 #include "threads/playbackthread.hpp"
@@ -195,6 +197,161 @@ std::shared_ptr<guictr_layout> makeTabListCtr2(DawCtrl* const dawCtrl) {
     return ctr;
 }
 
+class guictr_daw_sidebar final : public guictr_base {
+    class guibutton_show_view : public guibutton {
+    public:
+        const DAW::SidebarAreaType sidebarType;
+        explicit guibutton_show_view(DAW::SidebarAreaType _type) : guibutton(), sidebarType(_type) {
+        }
+        bool getState() const override {
+            return dawCtrl->getSidebarAreaType() == sidebarType;
+        }
+        void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const override {
+            int n = 0;
+            auto bgPos  = pos + ivec2(n);
+            auto bgSize = size - ivec2(n * 2);
+            if (bgSize.x > 0 && bgSize.y > 0) {
+                NVGcolor bgColor = theme->getColor(getBackgroundColor());
+                nvgBeginPath(vg);
+                nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+                nvgFillColor(vg, bgColor);
+                if (flags & FLG_RENDER_BACKGROUND_INSET) {
+                    nvgFillCustomPar(vg, (flags&FLG_BG_SHADING)?-2:-1);
+                }
+                nvgFill(vg);
+            }
+        }
+        
+    };
+    std::vector<guibutton_show_view*> btnViews;
+public:
+    guibase* getFocusedContainer() override {
+        return nullptr;
+    }
+    guictr_daw_sidebar() {
+        using DAW::SidebarAreaType;
+        setBackgroundRendered(true);
+        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
+        padding = 0;
+        margin  = 0;
+        std::array order = {
+            SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY,
+            SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_BROWSER,
+            SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_SEARCH,
+            SidebarAreaType::SIDEBAR_AREA_EXPORT,
+            SidebarAreaType::SIDEBAR_AREA_HISTORY,
+            SidebarAreaType::SIDEBAR_AREA_MIDI_MONITOR,
+            SidebarAreaType::SIDEBAR_AREA_PERFORMANCE,
+            SidebarAreaType::SIDEBAR_AREA_KEYBINDS,
+            SidebarAreaType::SIDEBAR_AREA_THEME,
+            SidebarAreaType::SIDEBAR_AREA_SETTINGS,
+            SidebarAreaType::SIDEBAR_AREA_DEBUG_0,
+            SidebarAreaType::SIDEBAR_AREA_DEBUG_1,
+            SidebarAreaType::SIDEBAR_AREA_DEBUG_2,
+        };
+        std::array sidebarNames = {
+            "Effect Library",
+            "User Library",
+            "Search",
+            "Export",
+            "History",
+            "MIDI Monitor",
+            "Performance",
+            "Keybinds",
+            "Theme",
+            "Settings",
+            "Debug 0",
+            "Debug 1",
+            "Debug 2",
+        };
+        for (auto& sidebarType : order) {
+            auto idx = &sidebarType - order.data();
+            auto btn = new guibutton_show_view(sidebarType);
+            btn->setTooltipText("Show " + String(sidebarNames[idx]));
+            btn->setText("");
+            btn->id = static_cast<int32_t>(sidebarType);
+            btn->drawFn   = drawTextureSymbol;
+            btn->drawParm = ICON_WARNING;
+            switch (sidebarType) {
+                case SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_SEARCH:
+                    btn->drawParm = ICON_SEARCH;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY:
+                    btn->drawParm = ICON_EFFECT;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_BROWSER:
+                    btn->drawParm = ICON_FOLDER;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_HISTORY:
+                    btn->drawParm = ICON_HISTORY;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_DEBUG_0:
+                case SidebarAreaType::SIDEBAR_AREA_DEBUG_1:
+                case SidebarAreaType::SIDEBAR_AREA_DEBUG_2:
+                    btn->drawParm = ICON_DEBUG;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_KEYBINDS:
+                    btn->drawParm = ICON_KEYBOARD;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_MIDI_MONITOR:
+                    btn->drawParm = ICON_MIDIPLUG;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_EXPORT:
+                    btn->drawParm = ICON_EXPORT;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_THEME:
+                    btn->drawParm = ICON_THEME;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_SETTINGS:
+                    btn->drawParm = ICON_SETTINGS;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_PERFORMANCE:
+                    btn->drawParm = ICON_PERFORMANCE;
+                    break;
+                default:
+                    break;
+            }
+            btn->setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
+            btnViews.push_back(btn);
+            add(btn);
+        }
+    }
+    ~guictr_daw_sidebar() override {
+        removeGuis();
+        for (auto btn : btnViews) {
+            delete btn;
+        }
+    }
+    void layout() override {
+        auto pos = ivec2(0, 0);
+        for (auto gui : btnViews) {
+            gui->pos = pos;
+            gui->size = ivec2(size.x);
+            pos = gui->getLeftBottom();
+        }
+        for (guibase* gui : guis) {
+            gui->layout();
+        }
+    }
+    int32_t getNumButtons() const {
+        return CtrSize(btnViews);
+    }
+    void buttonClicked(guibase* button) override {
+        for (auto btn : btnViews) {
+            if (btn == button) {
+                auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_SHOW_LEFT_PANEL, {}};
+                temp.kevt.mods = parentCtrl->lastMouseEvent.kbmods;
+                temp.argInt0 = btn->id;
+                dawCtrl->handleGlobalCommand(temp);
+                break;
+            }
+        }
+        if (parent) {
+            parent->buttonClicked(this);
+        }
+    }
+};
+
 class DawViewContainersMain final : public DawViewContainers {
     enum SplitterPos : uint32_t {
         LEFT = 0,
@@ -207,6 +364,8 @@ public:
     std::shared_ptr<guictr_layout> ctr_Left;
     std::shared_ptr<guictr_layout> ctr_Center;
     std::shared_ptr<guictr_layout> ctr_Right;
+    DAW::SidebarAreaType guiTypeLeftSideBar = DAW::SidebarAreaType::SIDEBAR_AREA_HIDDEN;
+    std::map<DAW::SidebarAreaType, guictrlayout_entry_snapshot_t> sidebarSnapshots;
     SPLayoutEntry ctrEntryTracks;
     SPLayoutEntry ctrEntryMixers;
     SPLayoutEntry ctrEntryNodes;
@@ -216,10 +375,12 @@ public:
 
     guictr_menubar ctr_menu;
     guictr_daw_controls ctr_dawcontrols;
+    guictr_daw_sidebar ctr_dawsidebar;
     gui_statusbar ctr_statusbar;
     guictr_pluginview ctr_pluginview;
     guictr_clipeditorview ctr_clipeditorview;
     std::vector<std::shared_ptr<Splitter>> splitters;
+    std::array<float, 2> splitterPositionsFolded = {0.15f, 0.85f};
     DAW::EditAreaType editAreaType = DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER;
 
 private:
@@ -284,6 +445,7 @@ public:
           ctrEntryPlugins(createGuiCtrLayoutEntry(std::make_shared<guictr_plugins>(instanceId))),
           ctr_menu(menubar),
           ctr_dawcontrols(_project, _projectGlobals),
+          ctr_dawsidebar(),
           ctr_pluginview(),
           ctr_clipeditorview()
     {
@@ -661,6 +823,96 @@ public:
             dawCtrl->relayout();
         }
     }
+    DAW::SidebarAreaType getSidebarAreaType() const {
+        return guiTypeLeftSideBar;
+    }
+    void setSidebarAreaType(DAW::SidebarAreaType type) {
+        using DAW::SidebarAreaType;
+        if (guiTypeLeftSideBar == type || type == SidebarAreaType::SIDEBAR_AREA_HIDDEN) {
+            closeSidebarView();
+            return;
+        }
+        std::shared_ptr<guictr_base> ctr;
+        auto context = ContainerInstanceContext{dawCtrl->getDaw(), dawCtrl, {}};
+
+        auto guiType = gui_type::GUI_TYPE_UNKNOWN;
+        switch (type) {
+            case DAW::SIDEBAR_AREA_EFFECTLIBRARY:
+                guiType = gui_type::CTR_TYPE_EFFECTLIBRARY;
+                break;
+            case DAW::SIDEBAR_AREA_USERLIBRARY_BROWSER:
+                guiType = gui_type::CTR_TYPE_USERLIBRARY_BROWSER;
+                break;
+            case DAW::SIDEBAR_AREA_USERLIBRARY_SEARCH:
+                guiType = gui_type::CTR_TYPE_USERLIBRARY_SEARCH;
+                break;
+            case DAW::SIDEBAR_AREA_EXPORT:
+                guiType = gui_type::CTR_TYPE_EXPORT;
+                break;
+            case DAW::SIDEBAR_AREA_HISTORY:
+                guiType = gui_type::CTR_TYPE_HISTORY;
+                break;
+            case DAW::SIDEBAR_AREA_MIDI_MONITOR:
+                guiType = gui_type::CTR_TYPE_MIDI_MONITOR;
+                break;
+            case DAW::SIDEBAR_AREA_PERFORMANCE:
+                guiType = gui_type::CTR_TYPE_PERFORMANCE;
+                break;
+            case DAW::SIDEBAR_AREA_KEYBINDS:
+                guiType = gui_type::CTR_TYPE_KEYBINDS;
+                break;
+            case DAW::SIDEBAR_AREA_THEME:
+                guiType = gui_type::CTR_TYPE_THEME;
+                break;
+            case DAW::SIDEBAR_AREA_SETTINGS:
+                guiType = gui_type::CTR_TYPE_SETTINGS;
+                break;
+            case DAW::SIDEBAR_AREA_DEBUG_0:
+                guiType = gui_type::CTR_TYPE_DEBUG_0;
+                break;
+            case DAW::SIDEBAR_AREA_DEBUG_1:
+                guiType = gui_type::CTR_TYPE_DEBUG_1;
+                break;
+            case DAW::SIDEBAR_AREA_DEBUG_2:
+                guiType = gui_type::CTR_TYPE_DEBUG_2;
+                break;
+                break;
+            case DAW::SIDEBAR_AREA_HIDDEN:
+            default:
+                break;
+        }
+        auto ctrLayoutLeft = this->ctr_Left;
+        if (guiTypeLeftSideBar != SidebarAreaType::SIDEBAR_AREA_HIDDEN) {
+            sidebarSnapshots[guiTypeLeftSideBar] = guictrlayout_entry_snapshot_t{};
+            storeContainerSnapshot(ctrLayoutLeft.get(), &sidebarSnapshots[guiTypeLeftSideBar]);
+        }
+        ctrLayoutLeft->removeAllEntries();
+        guiTypeLeftSideBar = type;
+        auto itSnapshot = sidebarSnapshots.find(type);
+        if (itSnapshot != sidebarSnapshots.end()) {
+            loadContainerSnapshot(getContainerFactory(), context, ctrLayoutLeft.get(), &itSnapshot->second);
+        }
+        if (ctrLayoutLeft->getEntries().empty()) {
+            if (guiType != gui_type::GUI_TYPE_UNKNOWN && makeContainer(context, guiType, ctr)) {
+                auto entry = createGuiCtrLayoutEntry(ctr);
+                ctrLayoutLeft->addEntry(entry);
+            }
+        }
+        dawCtrl->dragContainerRelayout({ BaseCtrl::drag_ctr_event_type::DRAG_END });
+        dawCtrl->relayout();
+    }
+
+    void closeSidebarView() {
+        if (guiTypeLeftSideBar != DAW::SidebarAreaType::SIDEBAR_AREA_HIDDEN) {
+            auto ctrLayoutLeft = this->ctr_Left;
+            sidebarSnapshots[guiTypeLeftSideBar] = guictrlayout_entry_snapshot_t{};
+            storeContainerSnapshot(ctrLayoutLeft.get(), &sidebarSnapshots[guiTypeLeftSideBar]);
+            ctrLayoutLeft->removeAllEntries();
+            guiTypeLeftSideBar = DAW::SidebarAreaType::SIDEBAR_AREA_HIDDEN;
+            dawCtrl->dragContainerRelayout({ BaseCtrl::drag_ctr_event_type::DRAG_END });
+            dawCtrl->relayout();
+        }
+    }
 
     SPLayoutEntry findActiveClipEditor() {
         SPLayoutEntry firstMatch = nullptr;
@@ -689,7 +941,7 @@ public:
     }
 
     void layout(int32_t winW, int32_t winH) override {
-        int winX      = 0;
+        int widthSidebarLeft = 42;
         int winY      = 0;
         int winBottom = winH;
 #if USE_GUI_MENU
@@ -702,38 +954,56 @@ public:
         auto leftSplitter  = getSplitter(SplitterPos::LEFT);
         auto rightSplitter = getSplitter(SplitterPos::RIGHT);
         if (ctr_Left->getEntries().empty()) {
+            if (splitterPositionsFolded[0] < 0) {
+                splitterPositionsFolded[0] = leftSplitter->getScale();
+            }
             leftSplitter->setScale(0);
         } else if (leftSplitter->getScale() < leftSplitter->getMin()) {
-            leftSplitter->setScale(leftSplitter->getDefault());
+            auto splitterPos = leftSplitter->getDefault();
+            if (splitterPositionsFolded[0] >= 0) {
+                splitterPos = splitterPositionsFolded[0];
+            }
+            leftSplitter->setScale(splitterPos);
+            splitterPositionsFolded[0] = -1;
         }
         if (ctr_Right->getEntries().empty()) {
+            if (splitterPositionsFolded[1] < 0) {
+                splitterPositionsFolded[1] = rightSplitter->getScale();
+            }
             rightSplitter->setScale(1);
         } else if (rightSplitter->getScale() > rightSplitter->getMax()) {
-            rightSplitter->setScale(rightSplitter->getDefault());
+            auto splitterPos = rightSplitter->getDefault();
+            if (splitterPositionsFolded[1] >= 0) {
+                splitterPos = splitterPositionsFolded[1];
+            }
+            rightSplitter->setScale(splitterPos);
+            splitterPositionsFolded[1] = -1;
         }
         int hTopControls     = 42;
         int heightViewSelect = 60;
         int heightStatusBar = 16;
         int hCenter      = winH - hTopControls - heightViewSelect - heightStatusBar;
         int hContent     = winH - hTopControls - heightStatusBar;
-        int widthLeft           = leftSplitter->leftOrTop(winW);
-        int widthRight          = rightSplitter->rightOrBottom(winW);
-        int widthCenter         = winW - widthLeft - widthRight;
+        int widthLeft           = leftSplitter->leftOrTop(winW - widthSidebarLeft);
+        int widthRight          = rightSplitter->rightOrBottom(winW - widthSidebarLeft);
+        int widthCenter         = (winW - widthSidebarLeft) - widthLeft - widthRight;
 
-        ctr_Center->size = vec2(widthCenter, hCenter);
-        ctr_Center->pos  = vec2(widthLeft, winY + hTopControls);
+        ctr_dawcontrols.pos    = { 0, winY };
         ctr_dawcontrols.size   = { winW, hTopControls };
-        ctr_clipeditorview.size = { widthCenter/2, heightViewSelect };
         ctr_statusbar.size = { winW, heightStatusBar };
-        ctr_dawcontrols.pos    = { winX, winY };
-        ctr_statusbar.pos      = { winX, winBottom - heightStatusBar };
-        ctr_Left->pos          = { winX, winY + hTopControls };
+        ctr_statusbar.pos      = { 0, winBottom - heightStatusBar };
+        ctr_dawsidebar.pos  = vec2(0, winY + hTopControls);
+        ctr_dawsidebar.size = vec2(widthSidebarLeft, hContent);
+        ctr_Center->size = vec2(widthCenter, hCenter);
+        ctr_Center->pos  = vec2(widthSidebarLeft + widthLeft, winY + hTopControls);
+        ctr_clipeditorview.size = { widthCenter/2, heightViewSelect };
+        ctr_Left->pos          = { widthSidebarLeft, winY + hTopControls };
         ctr_Left->size         = { widthLeft, hContent };
 
-        leftSplitter->pos    = ivec2(widthLeft - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
+        leftSplitter->pos    = ivec2(widthSidebarLeft + widthLeft - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
         leftSplitter->size   = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
 
-        ctr_Right->pos  = { widthLeft + widthCenter, winY + hTopControls };
+        ctr_Right->pos  = { widthSidebarLeft + widthLeft + widthCenter, winY + hTopControls };
         ctr_Right->size = { widthRight, hContent };
 
         rightSplitter->pos  = ivec2(ctr_Right->pos.x - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
@@ -742,7 +1012,7 @@ public:
         rightSplitter->setWindowPosSize(ctr_Left->getLeftTop(), ctr_Right->getRightBottom() - ctr_Left->getLeftTop());
         leftSplitter->setWindowPosSize(ctr_Left->getLeftTop(), ctr_Right->getRightBottom() - ctr_Left->getLeftTop());
 
-        ctr_clipeditorview.pos = { widthLeft, winBottom - heightViewSelect - heightStatusBar };
+        ctr_clipeditorview.pos = { widthSidebarLeft + widthLeft, winBottom - heightViewSelect - heightStatusBar };
         ctr_pluginview.pos     = { ctr_clipeditorview.right(), winBottom - heightViewSelect - heightStatusBar };
         ctr_pluginview.size    = { ctr_Center->right()-ctr_pluginview.left(), heightViewSelect };
     }
@@ -751,6 +1021,7 @@ public:
         for (auto& s : splitters)
             v.push_back(s.get());
         v.push_back(&ctr_dawcontrols);
+        v.push_back(&ctr_dawsidebar);
         v.push_back(&ctr_pluginview);
         v.push_back(&ctr_clipeditorview);
         visitLayoutContainers([&](std::shared_ptr<guictr_layout>& ctr) {
@@ -768,6 +1039,8 @@ public:
         auto rightSplitter = getSplitter(SplitterPos::RIGHT);
         leftSplitter->setScale(leftSplitter->getDefault());
         rightSplitter->setScale(rightSplitter->getDefault());
+        splitterPositionsFolded[0] = leftSplitter->getDefault();
+        splitterPositionsFolded[1] = rightSplitter->getDefault();
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
         init();
@@ -824,10 +1097,9 @@ public:
         context.entriesPreconstructed[GuiContainerTag::TAG_TAB_TOP] = { ctrCtrTop };
         context.entriesPreconstructed[GuiContainerTag::TAG_TAB_BOTTOM] = { ctrCtrBottom };
 
-        if (viewLayout.left && viewLayout.right) {
+        if (viewLayout.right) {
             auto& fac = getContainerFactory();
             loadContainerSnapshot(fac, context, ctr_Right.get(), viewLayout.right.get());
-            loadContainerSnapshot(fac, context, ctr_Left.get(), viewLayout.left.get());
         }
         if (viewLayout.center) {
             auto& fac = getContainerFactory();
@@ -868,7 +1140,17 @@ public:
             }
             dbgassert(!!findByGuiType(tagGuiType.type) == !!findByTagEntry(tagGuiType.tag));
         }
-
+        for (auto& [tag, snapshot] : viewLayout.sidebarSnapshots) {
+            sidebarSnapshots[DAW::SidebarAreaType(tag)] = snapshot;
+        }
+        guiTypeLeftSideBar = DAW::SidebarAreaType(viewLayout.sidebarSelected);
+        if (guiTypeLeftSideBar != DAW::SidebarAreaType::SIDEBAR_AREA_HIDDEN) {
+            auto ctrLayoutLeft = this->ctr_Left;
+            auto itSnapshot = sidebarSnapshots.find(guiTypeLeftSideBar);
+            if (itSnapshot != sidebarSnapshots.end()) {
+                loadContainerSnapshot(getContainerFactory(), context, ctrLayoutLeft.get(), &itSnapshot->second);
+            }
+        }
         for (size_t i = 0; i < viewLayout.splitterPositions.size() && i < splitters.size(); i++) {
             splitters[i]->setScaleClamped(viewLayout.splitterPositions[i]);
         }
@@ -891,15 +1173,25 @@ public:
         dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
         dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
         dbgassert(ctrEntryMixers->getEntryTag() == GuiContainerTag::TAG_MIXERS);
-        layout.left  = std::make_shared<guictrlayout_entry_snapshot_t>();
         layout.right = std::make_shared<guictrlayout_entry_snapshot_t>();
         layout.center = std::make_shared<guictrlayout_entry_snapshot_t>();
         storeContainerSnapshot(ctr_Center.get(), layout.center.get());
         storeContainerSnapshot(ctr_Right.get(), layout.right.get());
-        storeContainerSnapshot(ctr_Left.get(), layout.left.get());
+        sidebarSnapshots[guiTypeLeftSideBar] = guictrlayout_entry_snapshot_t{};
+        storeContainerSnapshot(ctr_Left.get(), &sidebarSnapshots[guiTypeLeftSideBar]);
+        for (auto& [tag, snapshot] : sidebarSnapshots) {
+            layout.sidebarSnapshots[int32_t(tag)] = snapshot;
+        }
+        layout.sidebarSelected = int32_t(guiTypeLeftSideBar);
         layout.splitterPositions.resize(splitters.size());
         for (size_t i = 0; i < splitters.size(); i++) {
             layout.splitterPositions[i] = splitters[i]->getScale();
+        }
+        if (ctr_Left->getEntries().empty() && splitterPositionsFolded[0] >= 0) {
+            layout.splitterPositions[0] = splitterPositionsFolded[0];
+        }
+        if (ctr_Right->getEntries().empty() && splitterPositionsFolded[1] >= 0) {
+            layout.splitterPositions[1] = splitterPositionsFolded[1];
         }
     }
 };
@@ -932,6 +1224,7 @@ void DawCtrl::setupView() {
     setViewMode(view_mode_t::NODE_EDITOR);
     setViewMode(view_mode_t::TRACK_TIMELINE);
     setEditAreaLayout(DAW::EditAreaLayout::EDIT_AREA_SPLIT_HORIZONTAL);
+    setSidebarAreaType(DAW::SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY);
 }
 
 std::shared_ptr<guictr_layout> DawCtrl::replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer) {                         
@@ -965,6 +1258,12 @@ void DawCtrl::showMixer() {
 
 void DawCtrl::setEditAreaType(DAW::EditAreaType editAreaType) {
     view->setEditAreaType(editAreaType);
+}
+void DawCtrl::setSidebarAreaType(DAW::SidebarAreaType type) {
+    view->setSidebarAreaType(type);
+}
+DAW::SidebarAreaType DawCtrl::getSidebarAreaType() const {
+    return view->getSidebarAreaType();
 }
 
 void DawCtrl::setEditAreaLayout(DAW::EditAreaLayout layout) {
@@ -1732,6 +2031,11 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
             }
             return true;
         }
+        case CMD_SHOW_LEFT_PANEL:
+            if (kevt.type == KeyboardState::K_PRESS) {
+                setSidebarAreaType(static_cast<DAW::SidebarAreaType>(ctxt.argInt0));
+            }
+            return true;
         case CMD_SWITCH_VIEW: {
             if (kevt.type != KeyboardState::K_RELEASE) {
                 auto newMode = view_mode_t::NODE_EDITOR;

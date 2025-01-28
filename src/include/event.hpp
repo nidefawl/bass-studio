@@ -310,6 +310,7 @@ enum GlobalCommandType {
     CMD_REVERSE,
     CMD_REVEAL_IN_EXPLORER,
     CMD_SHOW_CONSOLE,
+    CMD_SHOW_LEFT_PANEL,
     NUM_COMMANDS
 };
 
