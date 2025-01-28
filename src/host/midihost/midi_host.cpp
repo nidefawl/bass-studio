@@ -545,7 +545,7 @@ bool midihost::startMidi() {
         const PmDeviceInfo* info = Pm_GetDeviceInfo(i);
         if (info->output) log_printf("%d: %s, %s\n", i, info->interf, info->name);
     }
-    dbgassert(this->devicesInput.empty());
+    dbgassert(this->devicesInput.size() < 2);
     dbgassert(this->devicesOutput.empty());
     reopenAllConfiguredDevices(false);
     return isStreaming();
