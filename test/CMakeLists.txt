@@ -197,3 +197,5 @@ DEFINE_TEST(
   test_vector FALSE 
   test_vector.cpp
 )
+
+DEFINE_TEST(test_renderresources TRUE test_renderresources.cpp common/test_common.cpp)

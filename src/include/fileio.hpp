@@ -83,6 +83,7 @@ inline int64_t FileSize(const String& fileName) {
 }
 
 int64_t ReadImage(const String& Filename, ImageBuf& ref);
+int64_t ReadImageFromBuffer(const ByteBuf& Buffer, ImageBuf& ref);
 inline int64_t ReadFileFully(const String& Filename, ByteBuf& ref) {
     if (FileExists(Filename)) {
         int64_t size = FileSize(Filename);

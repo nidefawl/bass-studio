@@ -53,7 +53,6 @@ enum ICON : int32_t {
     ICON_THEME,
     NUM_IMGS,
 };
-#define MAX_FONTS 256
 
 struct NVGcontext;
 namespace RenderResources {

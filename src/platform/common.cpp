@@ -350,3 +350,15 @@ int64_t ReadImage(const String& Filename, ImageBuf& ref) {
     stbi_image_free(data);
     return bufSize;
 }
+
+int64_t ReadImageFromBuffer(const ByteBuf& Buffer, ImageBuf& ref) {
+    unsigned char* data = stbi_load_from_memory(Buffer.data(), Buffer.size(), &ref.w, &ref.h, &ref.bitdepth, 4);
+    if (!data) {
+        throw FileIOException(StringFormat("stbi_load_from_memory failed: %s", stbi_failure_reason()));
+    }
+    int64_t bufSize = ref.w * ref.h * 4;
+    ref.bytes.reserve(bufSize);
+    ref.bytes.assign(data, data + bufSize);
+    stbi_image_free(data);
+    return bufSize;
+}

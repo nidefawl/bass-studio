@@ -1,7 +1,12 @@
+#include "archive.h"
+#include "archive_entry.h"
 #include "logging.hpp"
+#include "renderresources_zip.hpp"
 #include "types.hpp"
 #include <exception>
+#include <map>
 #include <memory>
+#include <variant>
 #include <vector>
 #include <nanovg.h>
 
@@ -49,14 +54,83 @@ namespace {
 } // namespace
 
 namespace RenderResources {
+    using ResourceMap = std::map<String, std::vector<uint8_t>>;
+    ResourceMap resources;
     NvgImageTexture imgDashedLine;
     NvgImageTexture imgIcons[NUM_IMGS];
     std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;
     std::vector<FontDesc> fontsInstalled;
     std::unordered_map<String, NvgImageTexture> perContextTextures;
     LoadedFont emojiFont{};
+
+    std::variant<ResourceMap, String> loadEmbeddedRenderResources() {
+        auto resData = RenderResources::getResData();
+        std::map<String, std::vector<uint8_t>> files;
+        // unpack inmemory using libarchive
+        // read the archive
+        struct archive* a = archive_read_new();
+        if (!a) {
+            return "archive_read_new() failed";
+        }
+        if (ARCHIVE_OK != archive_read_support_filter_all(a)) {
+            return "archive_read_support_filter_all() failed";
+        }
+        if (ARCHIVE_OK != archive_read_support_format_all(a)) {
+            return "archive_read_support_format_all() failed";
+        }
+        if (ARCHIVE_OK != archive_read_open_memory(a, resData.data(), resData.size())) {
+            return "archive_read_open_memory() failed";
+        }
+        // iterate over all files in the archive
+        for (;;) {
+            // read the next archive entry
+            struct archive_entry* entry;
+            int r = archive_read_next_header(a, &entry);
+            if (r == ARCHIVE_EOF) {
+                break;
+            }
+            if (r != ARCHIVE_OK) {
+                auto errorMsg = archive_error_string(a);
+                archive_read_free(a);
+                return String("archive_read_next_header() failed: ") + errorMsg;
+            }
+            auto pathName = archive_entry_pathname(entry);
+            if (archive_entry_filetype(entry) == AE_IFREG) {
+                auto size = archive_entry_size(entry);
+                if (size <= 0) {
+                    continue;
+                }
+                if (!pathName) {
+                    continue;
+                }
+                auto pathNameStr = String(pathName);
+                auto buffer = std::vector<uint8_t>(size);
+                auto readsize = archive_read_data(a, buffer.data(), buffer.size());
+                if (readsize != ssize_t(buffer.size())) {
+                    continue;
+                }
+                files[pathNameStr] = buffer;
+            }
+        }
+        archive_read_free(a);
+        return files;
+    }
+
+    
     namespace {
         void load(NVGcontext* vg, const char* path, ImageBuf& out) {
+            auto it = resources.find(path);
+            if (it != resources.end()) {
+                try {
+                    if (ReadImageFromBuffer(it->second, out) < 0) {
+                        log_lf(Log::L_ERROR, "Error loading image %s\n", path);
+                    } else {
+                        return;
+                    }
+                } catch (FileIOException& e) {
+                    log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", path, e.what());
+                }
+            }
             try {
                 if (ReadImage(path, out) < 0) {
                     log_lf(Log::L_ERROR, "Error loading image %s\n", path);
@@ -70,30 +144,51 @@ namespace RenderResources {
     void reloadFonts(NVGcontext* vg) {
         emojiFont = {};
         String emojiFontFile = "EmojiOneBW.otf";
-        auto emojiFontPath = App::Platform::toResourcePath("fonts/gui/" + emojiFontFile);
-        if (FileExists(emojiFontPath)) {
+        auto emojiFontPath = "fonts/gui/" + emojiFontFile;
+        auto fileEmojiFontPath = App::Platform::toResourcePath(emojiFontPath);
+        if (0&&FileExists(fileEmojiFontPath)) {
             emojiFont.nvgId = nvgCreateFont(vg, "emoji", emojiFontPath.c_str());
             emojiFont.font = { "emoji", emojiFontPath };
             emojiFont.loaded = emojiFont.nvgId >= 0;
             emojiFont.name = "emoji";
+        } else {
+            // try loading emojiFontPath from resources
+            auto it = resources.find(emojiFontPath);
+            if (it != resources.end()) {
+                emojiFont.nvgId = nvgCreateFontMem(vg, "emoji", it->second.data(), it->second.size(), 0);
+                emojiFont.font = { "emoji", emojiFontPath };
+                emojiFont.loaded = emojiFont.nvgId >= 0;
+                emojiFont.name = "emoji";
+            }
+        }
+        NvgFonts fonts;
+        fonts.fontsInstalled.clear();
+        fonts.fontsLoaded.clear();
+        {
+            for (auto& [path, data] : resources) {
+                String fileExt;
+                String filenameNoExt;
+                SplitPath(path, nullptr, &filenameNoExt, &fileExt);
+                if (fileExt == "ttf" || fileExt == "otf") {
+                    LoadedFont lf;
+                    lf.loaded = false;
+                    lf.name = filenameNoExt;
+                    lf.font.name = filenameNoExt;
+                    lf.font.path = path;
+                    fonts.fontsLoaded.push_back(lf);
+                    fonts.fontsInstalled.push_back({ filenameNoExt, path });
+                }
+            }
+            perContextFonts[vg] = fonts;
         }
         {
-            NvgFonts fonts;
             std::vector<FileFound> files;
             findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "ttf", true, files);
             findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "otf", true, files);
-            if (files.empty()) {
-                throw appexception("Please install ttf fonts to fonts/gui");
-            }
-            fonts.fontsInstalled.clear();
-            fonts.fontsInstalled.resize(files.size());
             for (size_t i = 0; i < files.size(); i++) {
-                fonts.fontsInstalled[i].name = files[i].name;
-                fonts.fontsInstalled[i].path = files[i].path;
+                fonts.fontsInstalled.push_back({ files[i].name, files[i].path });
             }
-            fontsInstalled = fonts.fontsInstalled;
-            fonts.fontsLoaded.clear();
-            for (size_t i = 0; i < MAX_FONTS && i < files.size(); i++) {
+            for (size_t i = 0; i < files.size(); i++) {
                 LoadedFont lf;
                 lf.loaded    = lf.nvgId >= 0;
                 lf.name      = files[i].name;
@@ -101,11 +196,18 @@ namespace RenderResources {
                 lf.font.path = files[i].path;
                 fonts.fontsLoaded.push_back(lf);
             }
-            perContextFonts[vg] = fonts;
         }
+        perContextFonts[vg] = fonts;
+        fontsInstalled = fonts.fontsInstalled;
     }
 
     void initResources(NVGcontext* vg) {
+        auto loadRes = loadEmbeddedRenderResources();
+        if (std::holds_alternative<String>(loadRes)) {
+            log_lf(Log::L_ERROR, "Failed loading embedded resources: %s\n", std::get<String>(loadRes).c_str());
+        } else {
+            resources = std::get<ResourceMap>(loadRes);
+        }
         {
             ImageBuf imgIconsBuf[NUM_IMGS];
 #ifndef NDEBUG
