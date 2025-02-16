@@ -22,7 +22,7 @@ struct grid_density {
     bool enabled          = true;
     bool isfixed          = false;
     int8_t fixedBars      = 2;
-    int8_t dynamicDensity = 0;
+    int8_t dynamicDensity = 2;
     bool triplets = false;
     template<class Archive>
     void serialize(Archive& ar) {
