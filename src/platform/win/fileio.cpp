@@ -83,7 +83,8 @@ bool DeleteDirectoryW(const WString& DirPathW, bool bRecursive) {
         SHFILEOPSTRUCTW fileOp;
         fileOp.hwnd   = nullptr;
         fileOp.wFunc  = FO_DELETE;
-        fileOp.pFrom  = StringAsCStr(DirPathW + L"\\*");
+        auto pathW    = DirPathW + L"\\*";
+        fileOp.pFrom  = StringAsCStr(pathW);
         fileOp.pTo    = nullptr;
         fileOp.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR;
         fileOp.fAnyOperationsAborted = FALSE;
