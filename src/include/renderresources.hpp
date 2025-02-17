@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <unordered_map>
 #include "fileio.hpp"
 
@@ -59,6 +60,7 @@ namespace RenderResources {
     struct FontDesc {
         String name;
         String path;
+        bool isEmbedded = false;
     };
     struct LoadedFont {
         FontDesc font;
@@ -76,6 +78,9 @@ namespace RenderResources {
         std::vector<FontDesc> fontsInstalled;
         std::vector<LoadedFont> fontsLoaded;
     };
+    
+    using ResourceMap = std::map<String, std::vector<uint8_t>>;
+    extern ResourceMap resources;
     extern LoadedFont emojiFont;
     extern NvgImageTexture imgDashedLine;
     extern NvgImageTexture imgIcons[NUM_IMGS];

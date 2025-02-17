@@ -191,7 +191,15 @@ void guitheme_t::bindFont(NVGcontext* ctx, UIFont::font_type_t _fonttype) const 
                 return;
             }
             const String& fontPath = itFont->path;
-            bindFont.nvgId = nvgCreateFont(ctx, StringAsCStr(font.name), StringAsCStr(fontPath));
+            if (itFont->isEmbedded) {
+                auto it = RenderResources::resources.find(fontPath);
+                if (it != RenderResources::resources.end()) {
+                    bindFont.nvgId = nvgCreateFontMem(ctx, StringAsCStr(font.name), it->second.data(), it->second.size(), 0);
+                }
+            }
+            if (bindFont.nvgId < 0) {
+                bindFont.nvgId = nvgCreateFont(ctx, StringAsCStr(font.name), StringAsCStr(fontPath));
+            }
             if (bindFont.nvgId < 0) {
                 log_lf(Log::L_WARN, "Failed to load font '%s' from '%s'\n", StringAsCStr(font.name), StringAsCStr(fontPath));
                 // try binding second font if loaded

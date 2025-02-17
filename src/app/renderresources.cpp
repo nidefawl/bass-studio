@@ -176,7 +176,7 @@ namespace RenderResources {
                     lf.font.name = filenameNoExt;
                     lf.font.path = path;
                     fonts.fontsLoaded.push_back(lf);
-                    fonts.fontsInstalled.push_back({ filenameNoExt, path });
+                    fonts.fontsInstalled.push_back({ filenameNoExt, path, true });
                 }
             }
             perContextFonts[vg] = fonts;
@@ -186,7 +186,7 @@ namespace RenderResources {
             findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "ttf", true, files);
             findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "otf", true, files);
             for (size_t i = 0; i < files.size(); i++) {
-                fonts.fontsInstalled.push_back({ files[i].name, files[i].path });
+                fonts.fontsInstalled.push_back({ files[i].name, files[i].path, false });
             }
             for (size_t i = 0; i < files.size(); i++) {
                 LoadedFont lf;
