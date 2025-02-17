@@ -896,6 +896,7 @@ namespace DAW::ProjectFileV2 {
             {
                 json j;
                 to_json(j, snapshot);
+                sstream << j.dump(4);
             }
             sstream.flush();
             writeStringStream(App::Platform::toUserdataPath("data/" + path), sstream);
