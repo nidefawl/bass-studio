@@ -117,29 +117,30 @@ namespace RenderResources {
     }
 
     
-    namespace {
-        void load(NVGcontext* vg, const char* path, ImageBuf& out) {
-            auto it = resources.find(path);
-            if (it != resources.end()) {
-                try {
-                    if (ReadImageFromBuffer(it->second, out) < 0) {
-                        log_lf(Log::L_ERROR, "Error loading image %s\n", path);
-                    } else {
-                        return;
-                    }
-                } catch (FileIOException& e) {
-                    log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", path, e.what());
-                }
-            }
+    bool loadImageResource(const char* path, ImageBuf& out) {
+        auto it = resources.find(path);
+        if (it != resources.end()) {
             try {
-                if (ReadImage(path, out) < 0) {
+                if (ReadImageFromBuffer(it->second, out) < 0) {
                     log_lf(Log::L_ERROR, "Error loading image %s\n", path);
+                } else {
+                    return true;
                 }
             } catch (FileIOException& e) {
                 log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", path, e.what());
             }
         }
-    } // namespace
+        try {
+            if (ReadImage(path, out) < 0) {
+                log_lf(Log::L_ERROR, "Error loading image %s\n", path);
+                return false;
+            }
+            return true;
+        } catch (FileIOException& e) {
+            log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", path, e.what());
+        }
+        return true;
+    }
 
     void reloadFonts(NVGcontext* vg) {
         emojiFont = {};
@@ -167,16 +168,16 @@ namespace RenderResources {
         {
             for (auto& [path, data] : resources) {
                 String fileExt;
-                String filenameNoExt;
-                SplitPath(path, nullptr, &filenameNoExt, &fileExt);
+                String filenameExt;
+                SplitPath(path, nullptr, nullptr, &fileExt, &filenameExt);
                 if (fileExt == "ttf" || fileExt == "otf") {
                     LoadedFont lf;
                     lf.loaded = false;
-                    lf.name = filenameNoExt;
-                    lf.font.name = filenameNoExt;
+                    lf.name = filenameExt;
+                    lf.font.name = filenameExt;
                     lf.font.path = path;
                     fonts.fontsLoaded.push_back(lf);
-                    fonts.fontsInstalled.push_back({ filenameNoExt, path, true });
+                    fonts.fontsInstalled.push_back({ filenameExt, path, true });
                 }
             }
             perContextFonts[vg] = fonts;
@@ -217,54 +218,54 @@ namespace RenderResources {
             }
 #endif
             //TODO: organize this betters
-            load(vg, "icons/synth.png", imgIconsBuf[ICON_SYNTH]);
-            load(vg, "icons/effect.png", imgIconsBuf[ICON_EFFECT]);
-            load(vg, "icons/folder.png", imgIconsBuf[ICON_FOLDER]);
-            load(vg, "icons/folder_open.png", imgIconsBuf[ICON_FOLDER_OPEN]);
-            load(vg, "icons/file.png", imgIconsBuf[ICON_FILE]);
-            load(vg, "icons/save.png", imgIconsBuf[ICON_SAVE]);
-            load(vg, "icons/copy.png", imgIconsBuf[ICON_COPY]);
-            load(vg, "icons/paste.png", imgIconsBuf[ICON_PASTE]);
-            load(vg, "icons/cut.png", imgIconsBuf[ICON_CUT]);
-            load(vg, "icons/delete.png", imgIconsBuf[ICON_DELETE]);
-            load(vg, "icons/adjust.png", imgIconsBuf[ICON_ADJUST]);
-            load(vg, "icons/close.png", imgIconsBuf[ICON_CLOSE]);
-            load(vg, "icons/bypass.png", imgIconsBuf[ICON_BYPASS]);
-            load(vg, "icons/loop.png", imgIconsBuf[ICON_LOOP]);
-            load(vg, "icons/arr_down.png", imgIconsBuf[ICON_ARR_DOWN]);
-            load(vg, "icons/arr_left.png", imgIconsBuf[ICON_ARR_LEFT]);
-            load(vg, "icons/arr_right.png", imgIconsBuf[ICON_ARR_RIGHT]);
-            load(vg, "icons/arr_up.png", imgIconsBuf[ICON_ARR_UP]);
-            load(vg, "icons/plus.png", imgIconsBuf[ICON_PLUS]);
-            load(vg, "icons/minus.png", imgIconsBuf[ICON_MINUS]);
-            load(vg, "icons/automation.png", imgIconsBuf[ICON_AUTOMATION]);
-            load(vg, "led.png", imgIconsBuf[IMG_LED]);
-            load(vg, "led_off.png", imgIconsBuf[IMG_LED_OFF]);
-            load(vg, "led_glow.png", imgIconsBuf[IMG_LED_GLOW]);
-            load(vg, "icons/speaker.png", imgIconsBuf[ICON_SPEAKER]);
-            load(vg, "icons/x.png", imgIconsBuf[ICON_X]);
-            load(vg, "icons/daw_icon.png", imgIconsBuf[ICON_DAW_EXE]);
-            load(vg, "icons/opt_unlocked.png", imgIconsBuf[ICON_OPT_UNLOCKED]);
-            load(vg, "icons/opt_locked.png", imgIconsBuf[ICON_OPT_LOCKED]);
-            load(vg, "icons/midiplug.png", imgIconsBuf[ICON_MIDIPLUG]);
-            load(vg, "icons/duplicate.png", imgIconsBuf[ICON_DUPLICATE]);
-            load(vg, "icons/synth_small.png", imgIconsBuf[ICON_SYNTH_SMALL]);
-            load(vg, "icons/warning.png", imgIconsBuf[ICON_WARNING]);
-            load(vg, "icons/modulation.png", imgIconsBuf[ICON_MODULATION]);
-            load(vg, "icons/loading.png", imgIconsBuf[ICON_LOADING]);
-            load(vg, "icons/modulation_input.png", imgIconsBuf[ICON_MODULATION_INPUT]);
-            load(vg, "icons/icon_file_audio.png", imgIconsBuf[ICON_FILE_AUDIO]);
-            load(vg, "icons/icon_file_midi.png", imgIconsBuf[ICON_FILE_MIDI]);
-            load(vg, "icons/checkbox_unchecked.png", imgIconsBuf[ICON_CHECKBOX_UNCHECKED]);
-            load(vg, "icons/checkbox_checked.png", imgIconsBuf[ICON_CHECKBOX_CHECKED]);
-            load(vg, "icons/search.png", imgIconsBuf[ICON_SEARCH]);
-            load(vg, "icons/debug.png", imgIconsBuf[ICON_DEBUG]);
-            load(vg, "icons/history.png", imgIconsBuf[ICON_HISTORY]);
-            load(vg, "icons/keyboard.png", imgIconsBuf[ICON_KEYBOARD]);
-            load(vg, "icons/export.png", imgIconsBuf[ICON_EXPORT]);
-            load(vg, "icons/settings.png", imgIconsBuf[ICON_SETTINGS]);
-            load(vg, "icons/performance.png", imgIconsBuf[ICON_PERFORMANCE]);
-            load(vg, "icons/theme.png", imgIconsBuf[ICON_THEME]);
+            loadImageResource("icons/synth.png", imgIconsBuf[ICON_SYNTH]);
+            loadImageResource("icons/effect.png", imgIconsBuf[ICON_EFFECT]);
+            loadImageResource("icons/folder.png", imgIconsBuf[ICON_FOLDER]);
+            loadImageResource("icons/folder_open.png", imgIconsBuf[ICON_FOLDER_OPEN]);
+            loadImageResource("icons/file.png", imgIconsBuf[ICON_FILE]);
+            loadImageResource("icons/save.png", imgIconsBuf[ICON_SAVE]);
+            loadImageResource("icons/copy.png", imgIconsBuf[ICON_COPY]);
+            loadImageResource("icons/paste.png", imgIconsBuf[ICON_PASTE]);
+            loadImageResource("icons/cut.png", imgIconsBuf[ICON_CUT]);
+            loadImageResource("icons/delete.png", imgIconsBuf[ICON_DELETE]);
+            loadImageResource("icons/adjust.png", imgIconsBuf[ICON_ADJUST]);
+            loadImageResource("icons/close.png", imgIconsBuf[ICON_CLOSE]);
+            loadImageResource("icons/bypass.png", imgIconsBuf[ICON_BYPASS]);
+            loadImageResource("icons/loop.png", imgIconsBuf[ICON_LOOP]);
+            loadImageResource("icons/arr_down.png", imgIconsBuf[ICON_ARR_DOWN]);
+            loadImageResource("icons/arr_left.png", imgIconsBuf[ICON_ARR_LEFT]);
+            loadImageResource("icons/arr_right.png", imgIconsBuf[ICON_ARR_RIGHT]);
+            loadImageResource("icons/arr_up.png", imgIconsBuf[ICON_ARR_UP]);
+            loadImageResource("icons/plus.png", imgIconsBuf[ICON_PLUS]);
+            loadImageResource("icons/minus.png", imgIconsBuf[ICON_MINUS]);
+            loadImageResource("icons/automation.png", imgIconsBuf[ICON_AUTOMATION]);
+            loadImageResource("led.png", imgIconsBuf[IMG_LED]);
+            loadImageResource("led_off.png", imgIconsBuf[IMG_LED_OFF]);
+            loadImageResource("led_glow.png", imgIconsBuf[IMG_LED_GLOW]);
+            loadImageResource("icons/speaker.png", imgIconsBuf[ICON_SPEAKER]);
+            loadImageResource("icons/x.png", imgIconsBuf[ICON_X]);
+            loadImageResource("icons/daw_icon.png", imgIconsBuf[ICON_DAW_EXE]);
+            loadImageResource("icons/opt_unlocked.png", imgIconsBuf[ICON_OPT_UNLOCKED]);
+            loadImageResource("icons/opt_locked.png", imgIconsBuf[ICON_OPT_LOCKED]);
+            loadImageResource("icons/midiplug.png", imgIconsBuf[ICON_MIDIPLUG]);
+            loadImageResource("icons/duplicate.png", imgIconsBuf[ICON_DUPLICATE]);
+            loadImageResource("icons/synth_small.png", imgIconsBuf[ICON_SYNTH_SMALL]);
+            loadImageResource("icons/warning.png", imgIconsBuf[ICON_WARNING]);
+            loadImageResource("icons/modulation.png", imgIconsBuf[ICON_MODULATION]);
+            loadImageResource("icons/loading.png", imgIconsBuf[ICON_LOADING]);
+            loadImageResource("icons/modulation_input.png", imgIconsBuf[ICON_MODULATION_INPUT]);
+            loadImageResource("icons/icon_file_audio.png", imgIconsBuf[ICON_FILE_AUDIO]);
+            loadImageResource("icons/icon_file_midi.png", imgIconsBuf[ICON_FILE_MIDI]);
+            loadImageResource("icons/checkbox_unchecked.png", imgIconsBuf[ICON_CHECKBOX_UNCHECKED]);
+            loadImageResource("icons/checkbox_checked.png", imgIconsBuf[ICON_CHECKBOX_CHECKED]);
+            loadImageResource("icons/search.png", imgIconsBuf[ICON_SEARCH]);
+            loadImageResource("icons/debug.png", imgIconsBuf[ICON_DEBUG]);
+            loadImageResource("icons/history.png", imgIconsBuf[ICON_HISTORY]);
+            loadImageResource("icons/keyboard.png", imgIconsBuf[ICON_KEYBOARD]);
+            loadImageResource("icons/export.png", imgIconsBuf[ICON_EXPORT]);
+            loadImageResource("icons/settings.png", imgIconsBuf[ICON_SETTINGS]);
+            loadImageResource("icons/performance.png", imgIconsBuf[ICON_PERFORMANCE]);
+            loadImageResource("icons/theme.png", imgIconsBuf[ICON_THEME]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];
@@ -309,7 +310,7 @@ namespace RenderResources {
                 if (ReadImage(path, imgBuf) < 0) {
                     log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
                 }
-                load(vg, StringAsCStr(path), imgBuf);
+                loadImageResource(StringAsCStr(path), imgBuf);
                 // NVG_IMAGE_GENERATE_MIPMAPS
                 int32_t nvgid = nvgCreateImageRGBA(vg, imgBuf.w, imgBuf.h, flags, (const unsigned char*)imgBuf.bytes.data());
                 nvgImageSize(vg, nvgid, &tex.width, &tex.height);

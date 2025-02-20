@@ -87,6 +87,7 @@ namespace RenderResources {
     extern std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;
     extern std::vector<FontDesc> fontsInstalled;
     const NvgImageTexture* loadTexture(NVGcontext* vg, const String& path, const int flags);
+    bool loadImageResource(const char* path, ImageBuf& out);
 }// namespace RenderResources
 
 extern const SupportedFileTypes FILE_TYPES_IMAGES;

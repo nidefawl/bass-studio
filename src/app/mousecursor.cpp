@@ -7,26 +7,14 @@
 #include "mouse.hpp"
 #include "mousecursor.hpp"
 #include "exceptions.hpp"
-
 #include <GLFW/glfw3.h>
-
 #include "assert_dbg.h"
+#include "renderresources.hpp"
 
 
 using ImgData = std::shared_ptr<uint8_t>;
 namespace MouseCursors {
     MouseCursorIcon* cursors[NUM_CURSORS]{0};
-    namespace {
-        void load(const String& path, ImageBuf& out) {
-            try {
-                if (ReadImage(path, out) < 0) {
-                    log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
-                }
-            } catch (std::exception& e) {
-                log_lf(Log::L_ERROR, "Failed loading cursor %s: %s\n", StringAsCStr(path), e.what());
-            }
-        }
-    } // namespace
     void initCursors() {
         {
             ImageBuf imgCursors[NUM_CURSORS];
@@ -37,7 +25,8 @@ namespace MouseCursors {
             }
 #endif
             for (int i = 0; i < 6; i++) {
-                load(StringFormat("cursors/cursor%02d.png", i), imgCursors[i]);
+                auto path = StringFormat("cursors/cursor%02d.png", i);
+                RenderResources::loadImageResource(StringAsCStr(path), imgCursors[i]);
             }
             cursors[0] = NULL;
             for (int i = 0; i < NUM_CURSORS; i++) {

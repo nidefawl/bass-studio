@@ -1761,7 +1761,7 @@ void appwindow::createBaseWindow(int flags, const char* title, int w, int h, GLF
     dbgassert(glfwGetCurrentContext());
 
     ImageBuf imgBufDawIcon;
-    if (ReadImage(StringFormat("icons/daw_icon.png"), imgBufDawIcon) > 0) {
+    if (RenderResources::loadImageResource("icons/daw_icon.png", imgBufDawIcon)) {
         GLFWimage images[1];
         images[0].width  = imgBufDawIcon.w;
         images[0].height = imgBufDawIcon.h;
