@@ -1864,7 +1864,7 @@ void DawCtrl::addTrackToView(track_t* track, int flags) {
         if (entry->getType() == gui_type::CTR_TYPE_MIXERS) {
             guictr_cast<guictr_mixers>(entry)->addTrack(track, flags);
         }
-        if (entry->getType() == gui_type::CTR_TYPE_NODES) {
+        if (entry->getType() == gui_type::CTR_TYPE_NODES && !(flags & FLG_TRK_CHANGE_LOAD)) {
             guictr_cast<guictr_nodes_splitview>(entry)->refresh();
         }
         return true;
