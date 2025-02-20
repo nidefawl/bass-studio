@@ -234,40 +234,26 @@ public:
         setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         padding = 0;
         margin  = 0;
+        using PairTypeName = std::pair<SidebarAreaType, String>;
         std::array order = {
-            SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY,
-            SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_BROWSER,
-            SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_SEARCH,
-            SidebarAreaType::SIDEBAR_AREA_EXPORT,
-            SidebarAreaType::SIDEBAR_AREA_HISTORY,
-            SidebarAreaType::SIDEBAR_AREA_MIDI_MONITOR,
-            SidebarAreaType::SIDEBAR_AREA_PERFORMANCE,
-            SidebarAreaType::SIDEBAR_AREA_KEYBINDS,
-            SidebarAreaType::SIDEBAR_AREA_THEME,
-            SidebarAreaType::SIDEBAR_AREA_SETTINGS,
-            SidebarAreaType::SIDEBAR_AREA_DEBUG_0,
-            SidebarAreaType::SIDEBAR_AREA_DEBUG_1,
-            SidebarAreaType::SIDEBAR_AREA_DEBUG_2,
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY, "Effect Library"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_BROWSER, "User Library"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_SEARCH, "Search"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_EXPORT, "Export"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_HISTORY, "History"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_LOADED_PLUGINS, "Loaded Plugins"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_MIDI_MONITOR, "MIDI Monitor"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_PERFORMANCE, "Performance"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_KEYBINDS, "Keybinds"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_THEME, "Theme"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_SETTINGS, "Settings"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_DEBUG_0, "Debug 0"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_DEBUG_1, "Debug 1"},
+            PairTypeName{SidebarAreaType::SIDEBAR_AREA_DEBUG_2, "Debug 2"},
         };
-        std::array sidebarNames = {
-            "Effect Library",
-            "User Library",
-            "Search",
-            "Export",
-            "History",
-            "MIDI Monitor",
-            "Performance",
-            "Keybinds",
-            "Theme",
-            "Settings",
-            "Debug 0",
-            "Debug 1",
-            "Debug 2",
-        };
-        for (auto& sidebarType : order) {
-            auto idx = &sidebarType - order.data();
+        for (auto& [sidebarType, name] : order) {
             auto btn = new guibutton_show_view(sidebarType);
-            btn->setTooltipText("Show " + String(sidebarNames[idx]));
+            btn->setTooltipText("Show " + name);
             btn->setText("");
             btn->id = static_cast<int32_t>(sidebarType);
             btn->drawFn   = drawTextureSymbol;
@@ -275,6 +261,9 @@ public:
             switch (sidebarType) {
                 case SidebarAreaType::SIDEBAR_AREA_USERLIBRARY_SEARCH:
                     btn->drawParm = ICON_SEARCH;
+                    break;
+                case SidebarAreaType::SIDEBAR_AREA_LOADED_PLUGINS:
+                    btn->drawParm = ICON_EFFECT;
                     break;
                 case SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY:
                     btn->drawParm = ICON_EFFECT;
@@ -845,6 +834,9 @@ public:
                 break;
             case DAW::SIDEBAR_AREA_USERLIBRARY_SEARCH:
                 guiType = gui_type::CTR_TYPE_USERLIBRARY_SEARCH;
+                break;
+            case DAW::SIDEBAR_AREA_LOADED_PLUGINS:
+                guiType = gui_type::CTR_TYPE_PLUGINSLOADED;
                 break;
             case DAW::SIDEBAR_AREA_EXPORT:
                 guiType = gui_type::CTR_TYPE_EXPORT;
