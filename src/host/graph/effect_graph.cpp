@@ -316,14 +316,14 @@ namespace DAW {
                 if (isChannelConnected(inputChannel)) {
                     if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                         audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
-                        dbgassert(src);
-                        auto outputPostStageId = src->stageId.inputStageId;
-                        effect_node_t& trackSrcCfg = makeOrGetTrackNode(audioStageInputs, track_node_type_t::AUDIOSTAGE, outputPostStageId, 0);
-                        trackCfg.dependencies.push_back(outputPostStageId);
-                        trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, src->flags });
-                        trackCfg.children.push_back(&trackSrcCfg);
-                        trackSrcCfg.parents.push_back(&trackCfg);
-
+                        if (src) {
+                            auto outputPostStageId = src->stageId.inputStageId;
+                            effect_node_t& trackSrcCfg = makeOrGetTrackNode(audioStageInputs, track_node_type_t::AUDIOSTAGE, outputPostStageId, 0);
+                            trackCfg.dependencies.push_back(outputPostStageId);
+                            trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, src->flags });
+                            trackCfg.children.push_back(&trackSrcCfg);
+                            trackSrcCfg.parents.push_back(&trackCfg);
+                        }
                     } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
                         effectbase* effSrc = host->getPluginById(inputChannel.projectGlobalId);
                         if (effSrc) {
