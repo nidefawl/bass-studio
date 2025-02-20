@@ -1,9 +1,7 @@
 #pragma once
-#include <list>
 #include <optional>
 #include <utility>
 #include <vector>
-#include <set>
 #include "assert_dbg.h"
 #include "commands.hpp"
 #include "gui/gui.hpp"
