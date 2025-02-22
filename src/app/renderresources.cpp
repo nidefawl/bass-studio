@@ -165,6 +165,7 @@ namespace RenderResources {
         NvgFonts fonts;
         fonts.fontsInstalled.clear();
         fonts.fontsLoaded.clear();
+        if (false)
         {
             for (auto& [path, data] : resources) {
                 String fileExt;
