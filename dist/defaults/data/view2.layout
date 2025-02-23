@@ -1,70 +1,177 @@
 {
-    "layout": {
-        "value0": {
-            "ptr_wrapper": {
-                "id": 2147483649,
-                "data": {
-                    "cereal_class_version": 1,
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": -1,
-                    "entries": [],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
+    "center": {
+        "activePosition": -1,
+        "ctrLayout": 1,
+        "data": "",
+        "entries": [
+            {
+                "activePosition": 1,
+                "ctrLayout": 3,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 105,
+                        "label": "Tracks",
+                        "splitterPositions": [],
+                        "type": 129
+                    },
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 106,
+                        "label": "Nodes",
+                        "splitterPositions": [],
+                        "type": 130
+                    }
+                ],
+                "entryTag": 103,
+                "label": "Layout",
+                "splitterPositions": [],
+                "type": 101
+            },
+            {
+                "activePosition": 0,
+                "ctrLayout": 3,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 107,
+                        "label": "Clip Editor",
+                        "splitterPositions": [],
+                        "type": 114
+                    },
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 109,
+                        "label": "Mixers",
+                        "splitterPositions": [],
+                        "type": 140
+                    },
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 108,
+                        "label": "Plugins",
+                        "splitterPositions": [],
+                        "type": 124
+                    }
+                ],
+                "entryTag": 104,
+                "label": "Layout",
+                "splitterPositions": [],
+                "type": 101
             }
-        },
-        "value1": {
-            "ptr_wrapper": {
-                "id": 2147483650,
-                "data": {
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": 0,
-                    "entries": [],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
-            }
-        },
-        "value2": [
-            0.0,
-            1.0
         ],
-        "center": {
-            "ptr_wrapper": {
-                "id": 2147483651,
-                "data": {
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": 0,
-                    "entries": [
-                        {
-                            "ptr_wrapper": {
-                                "id": 2147483652,
-                                "data": {
-                                    "type": 133,
-                                    "label": "Audio Visualizer",
-                                    "ctrLayout": 0,
-                                    "activePosition": -1,
-                                    "entries": [],
-                                    "splitterPositions": [],
-                                    "entryTag": -1,
-                                    "data": "{\n    \"visualizerPreset\": {\n        \"currentPresetIdx\": 2220,\n        \"presets\": [\n            {\n                \"cereal_class_version\": 3,\n                \"name\": \"\",\n                \"samples\": 300,\n                \"mode\": 5,\n                \"rgba\": 1797658970,\n                \"linewidth\": 38,\n                \"degree\": 4,\n                \"randrange\": 100,\n                \"fadeoutstrength\": 0.9889050126075745,\n                \"antialias\": 1.0,\n                \"bloomstrength\": 1.1621040105819703,\n                \"cyclecolor\": 0.0,\n                \"gain\": 1.0,\n                \"numfftbands\": 32,\n                \"freqMin\": 20,\n                \"freqMax\": 22000,\n                \"blurfeedback\": 0.10000000149011612,\n                \"blendmode\": 0,\n                \"expression\": \"\",\n                \"nRenderer\": 2,\n                \"nSplineType\": 1,\n                \"nBlurDownsample\": 0,\n                \"nBlurPasses\": 0,\n                \"nOversample\": 1,\n                \"pythonFunc\": \"\"\n            }\n        ]\n    }\n}"
-                                }
-                            }
-                        }
-                    ],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
+        "entryTag": -1,
+        "label": "",
+        "splitterPositions": [
+            0.5
+        ],
+        "type": 0
+    },
+    "right": {
+        "activePosition": 0,
+        "ctrLayout": 0,
+        "data": "",
+        "entries": [
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "Preferences",
+                "splitterPositions": [],
+                "type": 106
             }
-        }
-    }
+        ],
+        "entryTag": -1,
+        "label": "",
+        "splitterPositions": [],
+        "type": 0
+    },
+    "sidebarSelected": 10,
+    "sidebarSnapshots": [
+        [
+            -1,
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ],
+        [
+            5,
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Export Audio",
+                        "splitterPositions": [],
+                        "type": 113
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ],
+        [
+            10,
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Theme",
+                        "splitterPositions": [],
+                        "type": 103
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ]
+    ],
+    "splitterPositions": [
+        0.20976562798023224,
+        0.7161874175071716
+    ],
+    "version": 3
 }

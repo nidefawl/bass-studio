@@ -1,136 +1,174 @@
 {
-    "layout": {
-        "value0": {
-            "ptr_wrapper": {
-                "id": 2147483649,
-                "data": {
-                    "cereal_class_version": 1,
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": -1,
-                    "entries": [
-                        {
-                            "ptr_wrapper": {
-                                "id": 2147483650,
-                                "data": {
-                                    "type": 103,
-                                    "label": "Theme",
-                                    "ctrLayout": 0,
-                                    "activePosition": -1,
-                                    "entries": [],
-                                    "splitterPositions": [],
-                                    "entryTag": -1,
-                                    "data": ""
-                                }
-                            }
-                        }
-                    ],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
+    "center": {
+        "activePosition": -1,
+        "ctrLayout": 0,
+        "data": "",
+        "entries": [
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "Shader Test",
+                "splitterPositions": [],
+                "type": 105
             }
-        },
-        "value1": {
-            "ptr_wrapper": {
-                "id": 2147483651,
-                "data": {
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": 0,
-                    "entries": [],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
-            }
-        },
-        "value2": [
-            0.20546874403953553,
-            1.0
         ],
-        "center": {
-            "ptr_wrapper": {
-                "id": 2147483652,
-                "data": {
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 2,
-                    "activePosition": -1,
-                    "entries": [
-                        {
-                            "ptr_wrapper": {
-                                "id": 2147483653,
-                                "data": {
-                                    "type": 109,
-                                    "label": "Debug 0",
-                                    "ctrLayout": 0,
-                                    "activePosition": -1,
-                                    "entries": [],
-                                    "splitterPositions": [],
-                                    "entryTag": -1,
-                                    "data": ""
-                                }
-                            }
-                        },
-                        {
-                            "ptr_wrapper": {
-                                "id": 2147483654,
-                                "data": {
-                                    "type": 101,
-                                    "label": "Layout",
-                                    "ctrLayout": 2,
-                                    "activePosition": -1,
-                                    "entries": [
-                                        {
-                                            "ptr_wrapper": {
-                                                "id": 2147483655,
-                                                "data": {
-                                                    "type": 125,
-                                                    "label": "Midi Monitor",
-                                                    "ctrLayout": 0,
-                                                    "activePosition": -1,
-                                                    "entries": [],
-                                                    "splitterPositions": [],
-                                                    "entryTag": -1,
-                                                    "data": ""
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "ptr_wrapper": {
-                                                "id": 2147483656,
-                                                "data": {
-                                                    "type": 112,
-                                                    "label": "Performance",
-                                                    "ctrLayout": 0,
-                                                    "activePosition": -1,
-                                                    "entries": [],
-                                                    "splitterPositions": [],
-                                                    "entryTag": -1,
-                                                    "data": ""
-                                                }
-                                            }
-                                        }
-                                    ],
-                                    "splitterPositions": [
-                                        0.5
-                                    ],
-                                    "entryTag": -1,
-                                    "data": ""
-                                }
-                            }
-                        }
-                    ],
-                    "splitterPositions": [
-                        0.16679687798023225
-                    ],
-                    "entryTag": -1,
-                    "data": ""
-                }
+        "entryTag": -1,
+        "label": "",
+        "splitterPositions": [],
+        "type": 0
+    },
+    "right": {
+        "activePosition": 0,
+        "ctrLayout": 0,
+        "data": "",
+        "entries": [
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "Performance",
+                "splitterPositions": [],
+                "type": 112
             }
-        }
-    }
+        ],
+        "entryTag": -1,
+        "label": "",
+        "splitterPositions": [],
+        "type": 0
+    },
+    "sidebarSelected": 0,
+    "sidebarSnapshots": [
+        [
+            -1,
+            {
+                "activePosition": 0,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ],
+        [
+            0,
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ],
+        [
+            1,
+            {
+                "activePosition": 0,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Plugin Library",
+                        "splitterPositions": [],
+                        "type": 107
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ],
+        [
+            5,
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Export Audio",
+                        "splitterPositions": [],
+                        "type": 113
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ],
+        [
+            8,
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Midi Monitor",
+                        "splitterPositions": [],
+                        "type": 125
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ],
+        [
+            10,
+            {
+                "activePosition": 0,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Theme",
+                        "splitterPositions": [],
+                        "type": 103
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ]
+    ],
+    "splitterPositions": [
+        0.27422788739204407,
+        0.8500000238418579
+    ],
+    "version": 3
 }

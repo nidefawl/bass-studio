@@ -1,86 +1,142 @@
 {
-    "layout": {
-        "value0": {
-            "ptr_wrapper": {
-                "id": 2147483649,
-                "data": {
-                    "cereal_class_version": 1,
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": -1,
-                    "entries": [],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
+    "center": {
+        "activePosition": -1,
+        "ctrLayout": 1,
+        "data": "",
+        "entries": [
+            {
+                "activePosition": 1,
+                "ctrLayout": 3,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 105,
+                        "label": "Tracks",
+                        "splitterPositions": [],
+                        "type": 129
+                    },
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 106,
+                        "label": "Nodes",
+                        "splitterPositions": [],
+                        "type": 130
+                    }
+                ],
+                "entryTag": 103,
+                "label": "Layout",
+                "splitterPositions": [],
+                "type": 101
+            },
+            {
+                "activePosition": 1,
+                "ctrLayout": 3,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 107,
+                        "label": "Clip Editor",
+                        "splitterPositions": [],
+                        "type": 114
+                    },
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 109,
+                        "label": "Mixers",
+                        "splitterPositions": [],
+                        "type": 140
+                    },
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": 108,
+                        "label": "Plugins",
+                        "splitterPositions": [],
+                        "type": 124
+                    }
+                ],
+                "entryTag": 104,
+                "label": "Layout",
+                "splitterPositions": [],
+                "type": 101
             }
-        },
-        "value1": {
-            "ptr_wrapper": {
-                "id": 2147483650,
-                "data": {
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": -1,
-                    "entries": [],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
-            }
-        },
-        "value2": [
-            0.0,
-            1.0
         ],
-        "center": {
-            "ptr_wrapper": {
-                "id": 2147483651,
-                "data": {
-                    "type": 0,
-                    "label": "",
-                    "ctrLayout": 0,
-                    "activePosition": 0,
-                    "entries": [
-                        {
-                            "ptr_wrapper": {
-                                "id": 2147483652,
-                                "data": {
-                                    "type": 101,
-                                    "label": "Layout",
-                                    "ctrLayout": 3,
-                                    "activePosition": 0,
-                                    "entries": [
-                                        {
-                                            "ptr_wrapper": {
-                                                "id": 2147483653,
-                                                "data": {
-                                                    "type": 130,
-                                                    "label": "Nodes",
-                                                    "ctrLayout": 0,
-                                                    "activePosition": -1,
-                                                    "entries": [],
-                                                    "splitterPositions": [],
-                                                    "entryTag": 106,
-                                                    "data": ""
-                                                }
-                                            }
-                                        }
-                                    ],
-                                    "splitterPositions": [],
-                                    "entryTag": 103,
-                                    "data": ""
-                                }
-                            }
-                        }
-                    ],
-                    "splitterPositions": [],
-                    "entryTag": -1,
-                    "data": ""
-                }
+        "entryTag": -1,
+        "label": "",
+        "splitterPositions": [
+            0.5
+        ],
+        "type": 0
+    },
+    "right": {
+        "activePosition": -1,
+        "ctrLayout": 0,
+        "data": "",
+        "entries": [],
+        "entryTag": -1,
+        "label": "",
+        "splitterPositions": [],
+        "type": 0
+    },
+    "sidebarSelected": 5,
+    "sidebarSnapshots": [
+        [
+            -1,
+            {
+                "activePosition": 0,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
             }
-        }
-    }
+        ],
+        [
+            5,
+            {
+                "activePosition": -1,
+                "ctrLayout": 0,
+                "data": "",
+                "entries": [
+                    {
+                        "activePosition": -1,
+                        "ctrLayout": 0,
+                        "data": "",
+                        "entries": [],
+                        "entryTag": -1,
+                        "label": "Export Audio",
+                        "splitterPositions": [],
+                        "type": 113
+                    }
+                ],
+                "entryTag": -1,
+                "label": "",
+                "splitterPositions": [],
+                "type": 0
+            }
+        ]
+    ],
+    "splitterPositions": [
+        0.17997869849205017,
+        0.8500000238418579
+    ],
+    "version": 3
 }
