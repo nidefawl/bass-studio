@@ -13,9 +13,10 @@ namespace DAW {
     struct export_project_task final : public async_task_t {
         DawInstance* daw;
         export_settings_t settings;
-        export_project_task(DawInstance* daw)
-            : daw(daw)
-            , settings(daw->getExportSettings()) {
+        export_project_task(DawInstance* daw) 
+            : daw(daw),
+            settings(daw->getExportSettings())
+        {
         }
         String getTaskName() const override {
             return "Rendering Audio";
@@ -122,11 +123,8 @@ public:
             return;
         }
 
-        setFont(vg, TEXT_FONT_SIZE, THEMECOL_TEXT, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
-        nvgText(vg, 0, this->tmTickStart.bottom(), StringAsCStr(this->tmTickStart.getLabel()), NULL);
-        nvgText(vg, this->tmTickStart.right() + 10, this->tmTickLen.bottom(), StringAsCStr(this->tmTickLen.getLabel()), NULL);
-
-
+        renderTextLabel(vg, vec2(0, tmTickStart.pos.y+tmTickStart.size.y/2), vec2(tmTickStart.left(), tmTickStart.size.y), tmTickStart.getLabel(), theme, TEXT_FONT_SIZE, theme->getColor(GuiColor::COL_TEXT), NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+        renderTextLabel(vg, vec2(tmTickStart.right() + 10, tmTickLen.pos.y+tmTickLen.size.y/2), vec2(tmTickLen.left()-tmTickStart.right(), tmTickLen.size.y), tmTickLen.getLabel(), theme, TEXT_FONT_SIZE, theme->getColor(GuiColor::COL_TEXT), NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
         for (auto* g : guis) {
             nvgSave(vg);
             g->render(vg);
@@ -207,8 +205,8 @@ public:
         selectFolder.pos    = ivec2(cs.x - inset * 2 - buttonW, inset);
         tmFrameExport.size  = ivec2(cs.x, height * 3);
         tmFrameExport.pos   = ivec2(0, selectFolder.bottom() + inset);
-        selectFolder.pos.x  = tmFrameExport.tmTickStart.pos.x;
-        selectFolder.size.x = cs.x - selectFolder.pos.x;
+        // selectFolder.pos.x  = tmFrameExport.tmTickStart.pos.x;
+        // selectFolder.size.x = cs.x - selectFolder.pos.x;
         for (guibase* gui : guis) {
             gui->layout();
         }
