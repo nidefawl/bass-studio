@@ -665,8 +665,8 @@ void from_json(const json& j, dawview_layout_t& m) {
     j.at("splitterPositions").get_to(m.splitterPositions);
     j.at("right").get_to(m.right);
     j.at("center").get_to(m.center);
-    j.at("sidebarSnapshots").get_to(m.sidebarSnapshots);
     if (m.version >= 3) {
+        j.at("sidebarSnapshots").get_to(m.sidebarSnapshots);
         j.at("sidebarSelected").get_to(m.sidebarSelected);
     }
 }

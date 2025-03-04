@@ -815,7 +815,7 @@ public:
     DAW::SidebarAreaType getSidebarAreaType() const {
         return guiTypeLeftSideBar;
     }
-    void setSidebarAreaType(DAW::SidebarAreaType type) {
+    void setSidebarAreaType(DAW::SidebarAreaType type, bool bResetSnapshot) {
         using DAW::SidebarAreaType;
         if (guiTypeLeftSideBar == type || type == SidebarAreaType::SIDEBAR_AREA_HIDDEN) {
             closeSidebarView();
@@ -881,7 +881,7 @@ public:
         ctrLayoutLeft->removeAllEntries();
         guiTypeLeftSideBar = type;
         auto itSnapshot = sidebarSnapshots.find(type);
-        if (itSnapshot != sidebarSnapshots.end()) {
+        if (itSnapshot != sidebarSnapshots.end() && !bResetSnapshot) {
             loadContainerSnapshot(getContainerFactory(), context, ctrLayoutLeft.get(), &itSnapshot->second);
         }
         if (ctrLayoutLeft->getEntries().empty()) {
@@ -1216,7 +1216,7 @@ void DawCtrl::setupView() {
     setViewMode(view_mode_t::NODE_EDITOR);
     setViewMode(view_mode_t::TRACK_TIMELINE);
     setEditAreaLayout(DAW::EditAreaLayout::EDIT_AREA_SPLIT_HORIZONTAL);
-    setSidebarAreaType(DAW::SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY);
+    setSidebarAreaType(DAW::SidebarAreaType::SIDEBAR_AREA_EFFECTLIBRARY, true);
 }
 
 std::shared_ptr<guictr_layout> DawCtrl::replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer) {                         
@@ -1251,8 +1251,8 @@ void DawCtrl::showMixer() {
 void DawCtrl::setEditAreaType(DAW::EditAreaType editAreaType) {
     view->setEditAreaType(editAreaType);
 }
-void DawCtrl::setSidebarAreaType(DAW::SidebarAreaType type) {
-    view->setSidebarAreaType(type);
+void DawCtrl::setSidebarAreaType(DAW::SidebarAreaType type, bool bResetSnapshot) {
+    view->setSidebarAreaType(type, bResetSnapshot);
 }
 DAW::SidebarAreaType DawCtrl::getSidebarAreaType() const {
     return view->getSidebarAreaType();
@@ -2025,7 +2025,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
         }
         case CMD_SHOW_LEFT_PANEL:
             if (kevt.type == KeyboardState::K_PRESS) {
-                setSidebarAreaType(static_cast<DAW::SidebarAreaType>(ctxt.argInt0));
+                setSidebarAreaType(static_cast<DAW::SidebarAreaType>(ctxt.argInt0), ctxt.kevt.mods & KB_MOD_SHIFT);
             }
             return true;
         case CMD_SWITCH_VIEW: {

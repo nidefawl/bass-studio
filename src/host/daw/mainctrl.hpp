@@ -276,7 +276,7 @@ public:
     view_mode_t getViewMode() const;
     void setViewMode(view_mode_t mode);
     void toggleViewModeEditArea();
-    void setSidebarAreaType(DAW::SidebarAreaType type);
+    void setSidebarAreaType(DAW::SidebarAreaType type, bool bResetSnapshot = false);
     DAW::SidebarAreaType getSidebarAreaType() const;
     void setEditAreaLayout(DAW::EditAreaLayout layout);
     void setEditAreaType(DAW::EditAreaType editAreaType);
