@@ -484,46 +484,6 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/defaults"
     COMMAND ${CMAKE_COMMAND} -E tar "cfv" "${PATH_DIST}/defaults/data.zip" --format=zip .)
 
-  # copy the following list
-  # res/fonts -> dist/res/fonts
-  # res/icons -> dist/res/icons
-  # res/cursors -> dist/res/cursors
-  # res/shaders -> dist/res/shaders
-  # res/*.png -> dist/res/
-  add_custom_target(dist-copy-resources
-    ALL
-    VERBATIM
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_RES}"
-    COMMAND ${CMAKE_COMMAND}
-      -E copy_directory
-      "${PROJECT_SOURCE_DIR}/res/fonts"
-      "${PATH_RES}/fonts"
-    COMMAND ${CMAKE_COMMAND}
-      -E copy_directory
-      "${PROJECT_SOURCE_DIR}/res/icons"
-      "${PATH_RES}/icons"
-    COMMAND ${CMAKE_COMMAND}
-      -E copy_directory
-      "${PROJECT_SOURCE_DIR}/res/cursors"
-      "${PATH_RES}/cursors"
-    COMMAND ${CMAKE_COMMAND}
-      -E copy_directory
-      "${PROJECT_SOURCE_DIR}/res/shaders"
-      "${PATH_RES}/shaders"
-    COMMAND ${CMAKE_COMMAND}
-      -E copy
-      "${PROJECT_SOURCE_DIR}/res/led.png"
-      "${PATH_RES}"
-    COMMAND ${CMAKE_COMMAND}
-      -E copy
-      "${PROJECT_SOURCE_DIR}/res/led_off.png"
-      "${PATH_RES}"
-    COMMAND ${CMAKE_COMMAND}
-      -E copy
-      "${PROJECT_SOURCE_DIR}/res/led_glow.png"
-      "${PATH_RES}"
-  )
   if (APPLE AND CLANG)
     set(PROJECT_INSTALLER_NAME_APPLE "${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-macos-x86_64")
     set(LIST_RUNTIMES "")
@@ -547,7 +507,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     set(PATH_PACK_MACOS "${CMAKE_BINARY_DIR}/pack/${PROJECT_INSTALLER_NAME_APPLE}.app")
     add_custom_target(dist-create-macos-bundle
       VERBATIM
-      DEPENDS dist-strip dist-copy-resources dist-create-defaults-zip
+      DEPENDS dist-strip dist-create-defaults-zip
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMAND rm -Rf ${CMAKE_BINARY_DIR}/pack 
       COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/pack"
@@ -596,7 +556,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       set(PROJECT_INSTALLER_NAME_UNIX "${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-linux-python-${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}-x86_64")
     endif()
     set(LIST_RUNTIMES "")
-    set(DIST_LINUX_INSTALLER_DEPENDS dist-strip dist-copy-resources dist-create-defaults-zip)
+    set(DIST_LINUX_INSTALLER_DEPENDS dist-strip dist-create-defaults-zip)
 
     if (PROJECT_DIST_INCLUDE_RUNTIMES)
       execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)

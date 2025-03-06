@@ -60,6 +60,10 @@ def main():
       {
         "PATH": "textured_fullscreen.vsh",
         "VAR_NAME": "TEXTURED_FULLSCREEN_GLSL_VERT"
+      },
+      {
+        "PATH": "shaders/gpu_synth.glsl",
+        "VAR_NAME": "GPUSYNTH_GLSL_COMPUTE"
       }
     ]
 

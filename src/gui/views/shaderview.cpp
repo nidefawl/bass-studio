@@ -27,6 +27,7 @@
 #include "seq_time.hpp"
 #include "str_util.hpp"
 #include "util/presetmanager.hpp"
+#include "gl/builtin_shaders.h"
 
 struct testshader final : gl_shader_pipeline {
     const String fnameVsh;
@@ -70,7 +71,13 @@ struct testshader final : gl_shader_pipeline {
     template<typename T>
     int load(T* srcParser) {
         storeGlContext();
-        int newprogram = compileShaderCombo(srcParser, fnameVsh.c_str(), fnameFsh.c_str(), -1);
+        auto glSourceLoader = std::make_unique<glshader_srcloader>();
+        if (!glSourceLoader->setStageSrc(GL_VERTEX_SHADER, "<buitin-vsh>", TEXTURED_FULLSCREEN_GLSL_VERT))
+            return -2;
+        if (!glSourceLoader->addStageSrc(GL_FRAGMENT_SHADER, fnameFsh.c_str(), -1))
+            return -2;
+        srcParser->preprocessSources(glSourceLoader->sources);
+        int newprogram = buildShaderProgram(glSourceLoader->sources);
         if (newprogram < 0) {
             log_lf(Log::L_WARN, "failed loading shaders: %s %s\n", fnameVsh.c_str(), fnameFsh.c_str());
             return -1;

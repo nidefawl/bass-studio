@@ -116,18 +116,6 @@ SetOutPath "$INSTDIR\docs"
 File "${PROJ_LOC}\dist\docs\licenses-thirdparty.pdf"
 SetOutPath "$INSTDIR\defaults"
 File "${DIST_LOC}\defaults\data.zip"
-SetOutPath "$INSTDIR\res"
-SetOutPath "$INSTDIR\res\fonts"
-SetOutPath "$INSTDIR\res\fonts\gui"
-File "${PROJ_LOC}\res\fonts\gui\OpenSans-Regular.ttf"
-File "${PROJ_LOC}\res\fonts\gui\Roboto-Black.ttf"
-File "${PROJ_LOC}\res\fonts\gui\Roboto-Bold.ttf"
-File "${PROJ_LOC}\res\fonts\gui\Roboto-Medium.ttf"
-File "${PROJ_LOC}\res\fonts\gui\Roboto-Regular.ttf"
-File "${PROJ_LOC}\res\fonts\gui\EmojiOneBW.otf"
-SetOutPath "$INSTDIR\res\shaders"
-File "${PROJ_LOC}\res\shaders\fullscreen_quad.vsh"
-File "${PROJ_LOC}\res\shaders\gpu_synth.glsl"
 
 SectionEnd
 

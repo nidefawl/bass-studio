@@ -7,6 +7,7 @@
 #include "platform.hpp"
 #include "str_util.hpp"
 #include "types.hpp"
+#include "gl/builtin_shaders.h"
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <variant>
@@ -14,7 +15,7 @@
 namespace DAW::GPU {
 
 struct gpu_program_definitions_t {
-    samplecount_t blocksize1024Fixed = 0;
+    samplecount_t blocksize1024Fixed = 1024;
     samplecount_t channels = 2;
     samplecount_t polyVoices = 16;
     samplecount_t unisonVoices = 4;
@@ -135,8 +136,7 @@ inline std::variant<gpu_program, String> compileGPUProgram(const glshader_src& s
     if (posLastProcessedDefine >= glslSourceCode.size()) {
         return String("Failed to insert program defines");
     }
-    auto processedSrc = glslSourceCode.substr(0, posLastProcessedDefine) + defBlock + glslSourceCode.substr(posLastProcessedDefine);
-    // log_lf(Log::L_DEBUG, "Processed source code:\n%s\n", StringAsCStr(processedSrc));
+    auto processedSrc = glslSourceCode.substr(0, posLastProcessedDefine) + String("\n") + defBlock + String("\n") +  glslSourceCode.substr(posLastProcessedDefine);
     for (size_t i = 0; i < programNr; i++) {
         auto programSynth = compileProgram(processedSrc, i, false);
         if (std::holds_alternative<String>(programSynth)) {
@@ -188,7 +188,6 @@ inline std::variant<gpu_program, String> loadshader(const gpu_program_definition
     StrUtil::StringReplace(file0Source, "#define N_CHANNELS 0", "#define N_CHANNELS " + std::to_string(defs.channels));
     StrUtil::StringReplace(file0Source, "#define N_SAMPLES 0", "#define N_SAMPLES " + std::to_string(defs.blocksize1024Fixed));
     sourcefiles[0].source += sourcefiles[1].source;
-    log_lf(Log::L_DEBUG, "Source code:\n%s\n", StringAsCStr(sourcefiles[0].source));
     auto newShader = compileGPUProgram(sourcefiles[0], defs);
     if (std::holds_alternative<gpu_program>(newShader)) {
         previous.destroy();
@@ -218,7 +217,10 @@ inline gpu_program_loadresult loadGPUProgram(gpu_program_definitions_t defs, gpu
     }
     lastModTimeGpuSoundShader = timeDiskGpuSoundShader;
     auto glSourceLoader = std::make_unique<glshader_srcloader>();
-    if (!glSourceLoader->addStageSrc(GL_COMPUTE_SHADER, filenameGpuSoundShader.c_str(), 0) || glSourceLoader->sources.empty()) {
+    if (timeDiskGpuSoundShader == 0) {
+        if (!glSourceLoader->setStageSrc(GL_COMPUTE_SHADER, "<buitin-compute-shader>", GPUSYNTH_GLSL_COMPUTE))
+            return {gpu_program_loadresult::Type::PROGRAM_LOAD_ERROR, "Failed to get file time", previous};
+    } else if (!glSourceLoader->addStageSrc(GL_COMPUTE_SHADER, filenameGpuSoundShader.c_str(), 0) || glSourceLoader->sources.empty()) {
         auto errMessage = StringFormat("Failed to load compute shader source file %s", StringAsCStr(filenameGpuSoundShader));
         return {gpu_program_loadresult::Type::PROGRAM_LOAD_ERROR, errMessage, previous};
     }

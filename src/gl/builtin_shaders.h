@@ -18,6 +18,7 @@ extern const char* const DARKEN_GLSL_FRAG;
 extern const char* const POLYLINE2D_GLSL_FRAG;
 extern const char* const POLYLINE2D_GLSL_VERT;
 extern const char* const TEXTURED_FULLSCREEN_GLSL_VERT;
+extern const char* const GPUSYNTH_GLSL_COMPUTE;
 
 #ifdef __cplusplus
 }
