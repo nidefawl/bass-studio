@@ -165,7 +165,7 @@ namespace RenderResources {
         NvgFonts fonts;
         fonts.fontsInstalled.clear();
         fonts.fontsLoaded.clear();
-        if (false)
+        if (true)
         {
             for (auto& [path, data] : resources) {
                 String fileExt;
@@ -181,8 +181,8 @@ namespace RenderResources {
                     fonts.fontsInstalled.push_back({ filenameExt, path, true });
                 }
             }
-            perContextFonts[vg] = fonts;
         }
+        if (true)
         {
             std::vector<FileFound> files;
             findFilesWithExt(App::Platform::toResourcePath("fonts/gui/"), "ttf", true, files);
@@ -204,11 +204,13 @@ namespace RenderResources {
     }
 
     void initResources(NVGcontext* vg) {
-        auto loadRes = loadEmbeddedRenderResources();
-        if (std::holds_alternative<String>(loadRes)) {
-            log_lf(Log::L_ERROR, "Failed loading embedded resources: %s\n", std::get<String>(loadRes).c_str());
-        } else {
-            resources = std::get<ResourceMap>(loadRes);
+        if (resources.empty()) {
+            auto loadRes = loadEmbeddedRenderResources();
+            if (std::holds_alternative<String>(loadRes)) {
+                log_lf(Log::L_ERROR, "Failed loading embedded resources: %s\n", std::get<String>(loadRes).c_str());
+            } else {
+                resources = std::get<ResourceMap>(loadRes);
+            }
         }
         {
             ImageBuf imgIconsBuf[NUM_IMGS];
