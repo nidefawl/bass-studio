@@ -19,4 +19,3 @@
 #define GRID_OFF 100
 #define SNAP_OFF 0
 #define SNAP_ON 1
-#define SNAP_UNCLAMPED_ZERO 2

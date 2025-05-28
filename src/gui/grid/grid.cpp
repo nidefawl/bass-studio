@@ -44,7 +44,9 @@ double scaled_grid::getTickLength() const {
     return second.dTime - first.dTime;
 }
 void scaled_grid::setOffset(double newOffset) {
-    newOffset = newOffset < 0 ? 0 : newOffset;
+    if (!bNegative && newOffset < 0) {
+        newOffset = 0;
+    }
     this->offset = newOffset;
 }
 tick_t scaled_grid::next(tick_t tick) const {
@@ -79,7 +81,7 @@ tick_t scaled_grid::tickSnapExact(tick_t tick, int snap) const {
         tick_t p = math::abs(distPrev(tick));
         tick_t n = math::abs(distNext(tick));
         auto closestTick = p < n ? prev(tick) : next(tick);
-        return (snap & SNAP_UNCLAMPED_ZERO) ? closestTick : math::max<tick_t>(0, closestTick);
+        return bNegative ? closestTick : math::max<tick_t>(0, closestTick);
     }
     return tick;
 }
@@ -87,7 +89,7 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) const {
     return screenToTickSnapExact(x, snap);
 }
 
-void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
+void scaled_grid::calcLen(double fzoom, int contentWidth) {
     //TODO: very important: make sure grid is never empty
     auto* project = project_controller_t::get();
     using float_type = decltype(grid_div::screenpos);
@@ -167,11 +169,12 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
             denum_substep  = denum_substep / 2;
             denom_sub_size = denom_size / denum_substep;
         }
-        float_type bar_offset    = -fmod((double) offset, (double) (barSize * step));
-        int numBarsOnScreen      = math::ceildS32(contentWidth / barSize) + 1;//todo: maybe make this optimal
-        int firstBarLeftOfScreen = math::floordS32(offset / (barSize));
-        firstBarLeftOfScreen     = (firstBarLeftOfScreen / step) * step;
-        
+        double barSizeStep = barSize * step;
+        double d = fmod((double) offset, barSizeStep);
+        d = fmod(d + barSizeStep, barSizeStep);
+        float_type bar_offset    = -(d);
+        int numBarsOnScreen      = math::ceildS32(contentWidth / barSize) + 1;
+        int firstBarLeftOfScreen = math::floordS32(offset / barSizeStep) * step;
         if (pass == 1 && this->grid_dens.triplets && denum_substep > 1) {
             this->incr_bg *= 4;
             this->incr_bg /= 3;

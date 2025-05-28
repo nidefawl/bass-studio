@@ -92,7 +92,6 @@ void guitrack_timeline::render(NVGcontext* vg) {
     if (gridList.empty())
         return;
 
-    int printoffset = 1;
     int gap         = 16;
 
     grid_div& last = gridList.back();
@@ -155,14 +154,14 @@ void guitrack_timeline::render(NVGcontext* vg) {
                             fontSize = 14;
                             if (notePos.th != 0) {
                                 color = GuiColor::COL_LABEL_INACTIVE;
-                                text  = StringFormat(".%d.%d", notePos.beat + printoffset, notePos.th + printoffset);
+                                text  = StringFormat(".%d.%d", notePos.beat + 1, notePos.th + 1);
                             } else {
-                                text = StringFormat("%d.%d", notePos.bar + printoffset, notePos.beat + printoffset);
+                                text = StringFormat("%d.%d", notePos.bar + (notePos.bar < 0 ? 0 : 1), notePos.beat + 1);
                             }
 
                         } else {
                             fontSize = 16;
-                            text     = StringFormat("%d", notePos.bar + printoffset);
+                            text     = StringFormat("%d", notePos.bar + (notePos.bar < 0 ? 0 : 1));
                         }
                         nvgFontSize(vg, fontSize * scale);
                         nvgFillColor(vg, theme->getColor(color));

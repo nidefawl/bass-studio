@@ -50,8 +50,8 @@ class scaled_grid final : public layout_grid_t {
 protected:
     std::vector<grid_changed_cb*> callbacks;
     int lastW       = 200;
-    bool dirty      = false;
     uint8_t gridMaxDens = 8;
+    bool bNegative  = false;
 public:
     grid_density grid_dens;
     std::vector<tick_t> gridListTicks;
@@ -74,6 +74,9 @@ public:
     void setGridMaxDens(uint8_t dens) {
         gridMaxDens = math::clamp<uint8_t>(dens, 1, 8);
     }
+    void setNegativeGrid(bool bNegative) {
+        this->bNegative = bNegative;
+    }
     void addCallback(grid_changed_cb* cb) {
         this->callbacks.push_back(cb);
     }
@@ -83,8 +86,7 @@ public:
         notifyChange();
     }
     void update(ivec2 contentsize) {
-        dirty = false;
-        calcLen(offset, zoom, contentsize.x);
+        calcLen(zoom, contentsize.x);
         lastW      = contentsize.x;
     }
     double getTickLength() const;
@@ -149,7 +151,7 @@ public:
         return math::rounddS32(x);
     }
     void showRange(tick_t start, tick_t end);
-    void calcLen(int scrollOffsetX, double zoom, int contentWidth);
+    void calcLen(double zoom, int contentWidth);
     void makeTickVisible(tick_t tickTime);
     tick_t prev(tick_t tickTime) const;
     tick_t next(tick_t tickTime) const;
