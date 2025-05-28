@@ -179,8 +179,14 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
         double minStep = TICKS_BAR;
         for (int bar = 0; bar < numBarsOnScreen; bar += step) {
             const float_type pos = bar_offset + bar * barSize;
-            const tick_t timeBar = (firstBarLeftOfScreen + bar) * TICKS_BAR;
-
+            const auto timeBar_i64 = (int64_t(firstBarLeftOfScreen) + bar) * TICKS_BAR;
+            if (timeBar_i64 < std::numeric_limits<int32_t>::min()) {
+                continue; // skip bars that are out of range
+            }
+            if (timeBar_i64 > std::numeric_limits<int32_t>::max()) {
+                continue; // skip bars that are out of range
+            }
+            const tick_t timeBar = tick_t(timeBar_i64);
             grid_div div  = {};
             div.time      = timeBar;
             div.dTime     = timeBar;
@@ -197,7 +203,13 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
             for (int bar_denom = 0; bar_denom < denum_step; bar_denom++) {
                 const auto denum_step_ticks = ticksBar / double(denum_step);
                 minStep = denum_step_ticks;
-                const auto timeQuarterDouble = timeBar + double(bar_denom * ticksBar) / double(denum_step);
+                const auto timeQuarterDouble = timeBar_i64 + double(bar_denom * ticksBar) / double(denum_step);
+                if (timeQuarterDouble < std::numeric_limits<int32_t>::min()) {
+                    continue; // skip denoms that are out of range
+                }
+                if (timeQuarterDouble > std::numeric_limits<int32_t>::max()) {
+                    continue; // skip denoms that are out of range
+                }
                 const auto timeQuarter = math::rounddS32(timeQuarterDouble);
 
                 const float_type pos_denom = pos + bar_denom * denom_size;
@@ -216,6 +228,12 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
                 }
                 for (int bar_denom_sub = 1; bar_denom_sub < denum_substep; bar_denom_sub++) {
                     const auto timeNthDouble = timeQuarterDouble + double(bar_denom_sub * denum_step_ticks) / denum_substep;
+                    if (timeNthDouble < std::numeric_limits<int32_t>::min()) {
+                        continue; // skip nth that are out of range
+                    }
+                    if (timeNthDouble > std::numeric_limits<int32_t>::max()) {
+                        continue; // skip nth that are out of range
+                    }
                     const auto timeNth = math::rounddS32(timeNthDouble);
                     minStep = denum_step_ticks / denum_substep;
 
