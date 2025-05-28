@@ -11,7 +11,8 @@ class PlaybackThread final : public seqthreads::thread_base {
 public:
     enum RequestType {
         REQ_PLAYBACK_STATE = 1,
-        REQ_INVOKE_FN = 2
+        REQ_INVOKE_FN = 2,
+        REQ_PLAYBACK_THREAD_EXIT = 3
     };
 private:
     class Impl;

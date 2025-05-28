@@ -1,7 +1,7 @@
 #include "playbackthread.hpp"
 #include "types.hpp"
 #include <atomic>
-#include <queue>
+#include <cstddef>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -15,7 +15,7 @@
 #include "seq_time.hpp"
 #include "hires_timer.hpp"
 #include <readerwriterqueue/readerwriterqueue.hpp>
-#include "host/daw/mainctrl.hpp"
+#include "host/project/projectcontroller.hpp"
 #include "host/host.hpp"
 #include "host/midihost/midi_host.hpp"
 #include "logging.hpp"
@@ -28,9 +28,6 @@
 
 using namespace moodycamel;
 
-#define PLAYBACK_THREAD_EXIT 255
-
-
 class PlaybackThreadReq {
     std::mutex m_mtx;
     std::condition_variable m_cond;
@@ -41,7 +38,7 @@ public:
     int32_t param = 0;
     std::function<void()> fn;
     PlaybackThreadReq(int32_t _msgId, int32_t _param, std::function<void()>&& _fn)
-        : msgId(_msgId), param(_param), fn(_fn) {
+        : msgId(_msgId), param(_param), fn(std::move(_fn)) {
     }
     PlaybackThreadReq(int32_t _msgId, int32_t _param)
         : msgId(_msgId), param(_param) {
@@ -96,7 +93,7 @@ public:
             dbgassert(m_threadTls.tlsInitialized);
             daw_tls::setTls(m_threadTls);
 #ifdef _WIN32
-            HANDLE h = reinterpret_cast<HANDLE*>(GetCurrentThread());
+            HANDLE h = reinterpret_cast<HANDLE>(GetCurrentThread());
             SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
 #ifdef __linux__
@@ -123,7 +120,7 @@ public:
     void stop() {
         dbgassert(m_t.joinable());
         if (!m_exited) {
-            auto req = std::make_shared<PlaybackThreadReq>(PLAYBACK_THREAD_EXIT, 0);
+            auto req = std::make_shared<PlaybackThreadReq>(PlaybackThread::REQ_PLAYBACK_THREAD_EXIT, 0);
             if (!m_q.enqueue(req)) {
                 dbgassert(0 && "Failed enqeueing req");
             }
@@ -166,7 +163,7 @@ private:
         try {
             while (true) {
                 if (m_q.try_dequeue(req)) {
-                    switch (req->msgId) {
+                    switch (RequestType(req->msgId)) {
                         case PlaybackThread::REQ_PLAYBACK_STATE: {
                             auto reqState = static_cast<playback_state>(req->param);
                             if (m_status == playback_state::status_render && reqState != playback_state::status_render) {
@@ -230,7 +227,7 @@ private:
                         case PlaybackThread::REQ_INVOKE_FN:
                             req->fn();
                             break;
-                        case PLAYBACK_THREAD_EXIT:
+                        case PlaybackThread::REQ_PLAYBACK_THREAD_EXIT:
 #ifndef NDEBUG
                             log_printf("PLAYBACK_THREAD_EXIT\n");
                             seqthreads::threadSleep(200);
@@ -275,7 +272,7 @@ private:
 
 
                     const samplerate_t sampleRate = host->m_sampleFormatInternal.sampleRate;
-                    const int32_t blockSize       = host->m_sampleFormatInternal.blockSize;
+                    const blocksize_t  blockSize  = host->m_sampleFormatInternal.blockSize;
 
                     const int32_t bpm100 = projGlobals.tempo100;
 
@@ -306,7 +303,7 @@ private:
                     }
 
                     if (numBlocksProcessed) {
-                        samplePos += blockSize * numBlocksProcessed;
+                        samplePos += samplecount_t(blockSize) * numBlocksProcessed;
                         tickPos += props.ticksPerBlock * numBlocksProcessed;
                         /* auto tickPosFromSample = sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, sampleRate);
                         auto errorTicks = tickPos - tickPosFromSample;
