@@ -81,8 +81,6 @@ public:
         if (stream) {
             auto meterPos = ivec2{inset, y};
             auto meterSize = ivec2{cs.x - inset, theme->get(GuiConstant::CONST_METER_WIDTH)};
-            auto metersInput = stream->getMeterInput().getSubChannelMeter(0, 2);
-            auto metersOutput = stream->getMeterOutput().getSubChannelMeter(0, 2);
             auto metersInputHost = host->getMeterInput();
             auto metersOutputHost = host->getMeterOutput();
             auto meterCallbackInput = stream->getMeterCallbackInput();
@@ -92,9 +90,12 @@ public:
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, meterCallbackInput, &label);
                 y += meterSize.y + 5;
             }
-            printL(0, "Audio Stream Input", StringFormat("%.3f", metersInput.getMaxRMS()));
-            renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersInput, &label);
-            y += meterSize.y + 5;
+            if (stream->getMeterInput().getNumChannels() > 0) {
+                auto metersInput = stream->getMeterInput().getSubChannelMeter(0, 2);
+                printL(0, "Audio Stream Input", StringFormat("%.3f", metersInput.getMaxRMS()));
+                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersInput, &label);
+                y += meterSize.y + 5;
+            }
             if (metersInputHost) {
                 auto subMeter = metersInputHost->getSubChannelMeter(0, 2);
                 printL(0, "Host Input", StringFormat("%.3f", subMeter.getMaxRMS()));
@@ -107,11 +108,12 @@ public:
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &subMeter, &label);
                 y += meterSize.y + 5;
             }
-
-            printL(0, "Audio Stream Output", StringFormat("%.3f", metersOutput.getMaxRMS()));
-            renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersOutput, &label);
-            y += meterSize.y + 5;
-
+            if (stream->getMeterOutput().getNumChannels() > 0) {
+                auto metersOutput = stream->getMeterOutput().getSubChannelMeter(0, 2);
+                printL(0, "Audio Stream Output", StringFormat("%.3f", metersOutput.getMaxRMS()));
+                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersOutput, &label);
+                y += meterSize.y + 5;
+            }
             if (meterCallbackOutput) {
                 printL(0, "Audio Callback Output", StringFormat("%.3f", meterCallbackOutput->getMaxRMS()));
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, meterCallbackOutput, &label);
