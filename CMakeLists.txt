@@ -371,7 +371,7 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
 
 target_link_libraries(${LINK_TARGET} PUBLIC glfw)
 target_link_libraries(${LINK_TARGET} PUBLIC SQLiteCpp)
-target_link_libraries(${LINK_TARGET} PUBLIC PortAudio::PortAudio)
+target_link_libraries(${LINK_TARGET} PUBLIC PortAudio::portaudio)
 target_link_libraries(${LINK_TARGET} PUBLIC PortMidi::portmidi)
 target_link_libraries(${LINK_TARGET} PUBLIC kissfft::kissfft-float)
 target_link_libraries(${LINK_TARGET} PUBLIC ${SOXR_LIB})
