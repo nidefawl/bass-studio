@@ -966,8 +966,8 @@ gui_track_drop_position_t GetTrackMixerSlotFromCoord(guictr_mixers* parent, cons
         if (tracksTop.empty() && tracksBottom.empty()) {
             return minSlot;
         }
-        auto lastTopTrack = tracksTop.back();
-        auto firstBottomTrack = tracksBottom.front();
+        auto lastTopTrack = tracksTop.empty() ? nullptr : tracksTop.back();
+        auto firstBottomTrack = tracksBottom.empty() ? nullptr : tracksBottom.front();
         if (lastTopTrack && !firstBottomTrack && _pos.x > lastTopTrack->trackMixer->pos.x + lastTopTrack->trackMixer->size.x) {
             return minSlot;
         }

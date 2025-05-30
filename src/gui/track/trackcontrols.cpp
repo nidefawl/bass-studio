@@ -1685,8 +1685,8 @@ gui_track_drop_position_t GetTrackSlotFromCoord(guictr_tracks* parent, const ive
         if (tracksTop.empty() && tracksBottom.empty()) {
             return minSlot;
         }
-        auto lastTopTrack = tracksTop.back();
-        auto firstBottomTrack = tracksBottom.front();
+        auto lastTopTrack = tracksTop.empty() ? nullptr : tracksTop.back();
+        auto firstBottomTrack = tracksBottom.empty() ? nullptr : tracksBottom.front();
         if (lastTopTrack && !firstBottomTrack && _pos.y > lastTopTrack->trackControls->pos.y + lastTopTrack->trackControls->size.y) {
             return minSlot;
         }
