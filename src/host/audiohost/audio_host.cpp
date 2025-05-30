@@ -642,7 +642,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         for (channelnum_t i = 0; devInfoInput && i < inputParams.channelCount;) {
             io_cfg_channel channels;
             channels.idx = chIdx++;
-            if (i + 1 < outputParams.channelCount) {
+            if (i + 1 < inputParams.channelCount) {
                 channels.type = channel_pairing::STEREO;
             } else {
                 channels.type = channel_pairing::MONO;
