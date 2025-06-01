@@ -12,12 +12,12 @@ struct track_id_snapshot_t {
 };
 
 struct io_midi_snapshot_t {
-    int32_t type                = 0;
+    int32_t type                = 1;
     int32_t stageId             = -1;
-    int32_t stageEndPointType   = 0;
-    int32_t srcChannel          = 0;
-    int32_t dstChannel          = 0;
-    String inputName;
+    int32_t stageEndPointType   = 2;
+    int32_t srcChannel          = -1;
+    int32_t dstChannel          = -1;
+    String inputName            = "None";
 };
 struct io_configuration_snapshot_t {
     int32_t type                = 0;
@@ -33,6 +33,7 @@ struct track_io_configuration_snapshot_t {
     io_configuration_snapshot_t input;
     io_configuration_snapshot_t output;
     std::vector<io_midi_snapshot_t> midiInputs;
+   io_midi_snapshot_t midiOutput; 
 };
 struct track_effect_routing_snapshot_t {
     int32_t routingState = 0;

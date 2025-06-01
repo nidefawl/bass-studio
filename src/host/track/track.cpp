@@ -816,6 +816,7 @@ void track_impl_t::createIOSnapshot(track_io_configuration_snapshot_t& snapshot)
     for (size_t i = 0; i < numInputs; i++) {
         createMidiChannelRefSnapshot(midiInputChannels[i], snapshot.midiInputs[i]);
     }
+    createMidiChannelRefSnapshot(midiOutputChannel, snapshot.midiOutput);
 }
 
 void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& snapshot) {
@@ -830,6 +831,7 @@ void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& 
     for (size_t i = 0; i < numInputs; i++) {
         loadMidiChannelRefSnapshot(snapshot.midiInputs[i], midiInputChannels[i]);
     }
+    loadMidiChannelRefSnapshot(snapshot.midiOutput, midiOutputChannel);
 }
 
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList) {
@@ -1489,6 +1491,23 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
     updateProfilingTime(procMidiStats.tm7ValidateMidi, tmr.getTimeReset());
 #endif
 
+}
+void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency,  std::map<String, DAW::Host::noteevent_buffer>& midiRealtimeDeviceOutputs) {
+    using namespace DAW;
+    using namespace DAW::Host;
+    if (midiOutputChannel.type == midistage_type::INPUT_EXTERNAL_MIDI) {
+        auto itMapEntry = midiRealtimeDeviceOutputs.find(midiOutputChannel.name);
+        if (itMapEntry == midiRealtimeDeviceOutputs.end()) {
+            midiRealtimeDeviceOutputs[midiOutputChannel.name] = noteevent_buffer{};
+            itMapEntry = midiRealtimeDeviceOutputs.find(midiOutputChannel.name);
+        }
+        auto& midiData = itMapEntry->second;
+        const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize, prjGlobals.tempo100, sampleFormat.sampleRate);
+
+        getNotesDelayed(start, end, ticksPerBlock, midiData.noteEvts, midiData.ctrlEvts, true, midiOutputChannel.srcChannel, midiOutputChannel.dstChannel);
+        // sortNoteEvents(midiData.noteEvts);
+        // sortControlEvents(midiData.ctrlEvts);
+    }
 }
 
 void audio_stage_t::getNotesDelayed(tick_t blockStart, tick_t blockEnd, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost, int32_t midiChannelMatch, int32_t midiChannelRewrite) {
@@ -2444,6 +2463,7 @@ void noteevent_buffer::getNotesDelayed(tick_t blockStart, tick_t blockEnd, const
     }
     if (!ctrlEvts.empty()) {
         for (auto& evt : ctrlEvts) {
+            evt.tickOffsetInBlock = (evt.tick - blockStart);
             if (midiChannelMatch != -1 && midiChannelMatch != int32_t(evt.message & 0x0F)) {
                 continue;
             }

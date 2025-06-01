@@ -283,7 +283,7 @@ private:
 
 
                     if (m_status != playback_state::status_render) {
-                        midiHost->processMidi(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
+                        midiHost->processMidiInput(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
                         if (!host->bypassPlaybackProcessing) {
                             numBlocksProcessed = host->processPlayback(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
                             timer2.reset();
@@ -295,6 +295,7 @@ private:
                                 timer2.reset();
                             }
                         }
+                        midiHost->processMidiOutput();
                     }
 
                     if (m_status == playback_state::status_render) {

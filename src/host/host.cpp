@@ -20,6 +20,7 @@
 #include "host/plugin/modules.hpp"
 #include "note.hpp"
 #include "plugin/vst3/vst3plugin.hpp"
+#include "plugins/synth/IPlugMidi.hpp"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "str_util.hpp"
 #include "seq_util.hpp"
@@ -627,7 +628,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
     constexpr bool logProcessedNotes = false;
     const bool bLowLatencyMode = this->impl->bIsLowLatencyMode;
     // // incoming events are shifted 1 block into the future
-    const auto realtimeMidiDelayTicks = bLowLatencyMode ? 0 : audioProperties.ticksPerBlock;
+    const auto realtimeMidiDelayTicks = bLowLatencyMode ? 0 : audioProperties.ticksPerBlock; //TODO: we should probably use ticksPerBlockExternal here, since this function is only called once per external block
 
     // incoming events are kept in buffer for 9 blocks
     const auto realtimeMidiTrackingTime = audioProperties.ticksPerBlock * 9;
@@ -739,6 +740,56 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
                 log_lf(Log::L_DEBUG, "Block %f: ctrlEvtsOut %s\n", dTickPosBlockStart, msg.ToString().c_str());
             }
         } */
+    }
+}
+
+void Host::processMidiRealtimeOutput(project_controller_t* ctrl, double dTickPosBlockStart, playback_state state) {
+    auto midihost = midihost::getInstance();
+    auto& outputDevices = midihost->getDevicesOutput();
+    const auto midiTimeNow = midihost->getMidiStreamTime();
+    const auto ticksToMs_ = ticksToMs(1.0, prjGlobals.tempo100);
+    for (size_t devIdx = 0; devIdx < outputDevices.size(); devIdx++) {
+        auto& device = outputDevices[devIdx];
+        auto itMapEntry = midiRealtimeDeviceOutputs.find(device.deviceName);
+        if (itMapEntry == midiRealtimeDeviceOutputs.end()) {
+            continue; // unused output device, skip
+        }
+        DAW::Host::noteevent_buffer& midiData = itMapEntry->second;
+        for (auto& noteEvent : midiData.noteEvts) {
+            uint8_t status = noteEvent.isNoteOn ? MIDI_ON_NOTE : MIDI_OFF_NOTE;
+            uint8_t pitch = noteEvent.pitch;
+            uint8_t velocity = noteEvent.velocity;
+            if (noteEvent.isNoteOn && velocity == 0) {
+                status = MIDI_OFF_NOTE;
+            }
+            if (noteEvent.isNoteOn && velocity > 127) {
+                velocity = 127; // clamp to max MIDI velocity
+            } else if (!noteEvent.isNoteOn && velocity > 0) {
+                velocity = 0; // for note off events, set velocity to 0
+            }
+            uint8_t mStatus = noteEvent.channel | status;
+            uint8_t mData1  = pitch;
+            uint8_t mData2  = velocity;
+            uint32_t msg = mStatus | (mData1 << 8) | (mData2 << 16);
+            auto t = math::rounddS32(midiTimeNow + ticksToMs_ * noteEvent.tickOffsetInBlock);
+            // String strNote = noteNameAndNumber(pitch);
+            // log_lf(Log::L_DEBUG, "Note %s %s at ms %f\n",
+            //        noteEvent.isNoteOn ? "On" : "Off",
+            //        StringAsCStr(strNote),
+            //        t / 1000.0);
+            MidiIOEvent evt{msg, t};
+            device.midiMsgs.push_back(evt);
+        }
+        for (auto& ctrlEvt : midiData.ctrlEvts) {
+            uint32_t msg = ctrlEvt.message;
+            MidiIOEvent evt{msg, math::rounddS32(midiTimeNow + ticksToMs_ * ctrlEvt.tickOffsetInBlock)};
+            device.midiMsgs.push_back(evt);
+        }
+        // clear midiData after sending
+        midiData.noteEvts.clear();
+        midiData.ctrlEvts.clear();
+        samplecount_t samplesTotal = samplecount_t(audioProperties.numBlocksInternal) * m_sampleFormatInternal.blockSize;
+        midihost->getInstance()->incrementMidiStreamTime(double(samplesTotal) / m_sampleFormatInternal.sampleRate);
     }
 }
 
@@ -1339,6 +1390,9 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             stats.timings["Block.TrackOutputRouting"] = timeRouting/audioProp.numBlocksInternal;
             stats.timings["Block.ResampleOutput"] = timeResampleOutput/audioProp.numBlocksInternal;
         }
+
+        processMidiRealtimeOutput(ctrl, posDouble, state);
+
 #if ENABLE_ALLOCATION_TRACKING != 0
         static DebugAlloc::AllocStats lastAllocStats;
         lastAllocStats = DebugAlloc::endTrace();
@@ -1691,6 +1745,9 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             MixWithGainAndPanAutomation(this, tmp, &trackImpl->output, &trackImpl->outputPost, autParGain, autParPan, postStageTickLatencyCompensated, postStageTickEnd, playbackState, dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS);
         }
     }
+
+
+    trackImpl->processMidiOutput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, trackNode.inputLatency, midiRealtimeDeviceOutputs);
 
     /* Store block in audioOutput memory */
     if (DAW::isPlaybackState(playbackState)) {
@@ -2047,6 +2104,7 @@ void Host::onStopPlayback(project_controller_t* ctrl) {
     getHostCallback()->isOfflineRendering = false;
     for (auto device : midiRealtimeDeviceInputs) {
         device.second.notes.m_list.clear();
+        device.second.events.m_list.clear();
     }
     visitAudioStageInstances([](auto stageImpl) {
         //if (!trackImpl->heldNotes.empty())

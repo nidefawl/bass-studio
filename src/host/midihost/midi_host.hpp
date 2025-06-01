@@ -35,16 +35,20 @@ private:
     bool pmIsInitalized    = false;
     bool enableProcessing  = true;
     bool inputInSysex      = false;
-    bool outputInSysex     = false;
-    int32_t last_timestamp = 0;
+    double pmTimeBeginMs = 0.0;
+    double streamTimeMs = 0.0;
     void handleMessage(PmMessage data, PmTimestamp timestamp, std::vector<MidiIOEvent>& messages);
 
 public:
     midihost() = default;
     static midihost* getInstance();
-    int32_t processMidi(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop);
+    int32_t processMidiInput(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop);
+    void processMidiOutput();
     std::vector<opened_device_t>& getDevicesInput() {
         return devicesInput;
+    }
+    std::vector<opened_device_t>& getDevicesOutput() {
+        return devicesOutput;
     }
     void reopenAllConfiguredDevices(bool forceClose);
     bool initPm();
@@ -64,4 +68,6 @@ public:
 
     void setInspection(bool bInput, bool bInspectionEnabled);
     std::vector<MidiIOEvent> getInspectionInputMessages();
+    double getMidiStreamTime();
+    void incrementMidiStreamTime(double deltaMs);
 };

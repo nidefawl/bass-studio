@@ -72,9 +72,10 @@ namespace DAW::Host {
     };
 
     struct midievent_ctrl_t {
-        tick_t tick;
-        uint32_t message;
-        int32_t midiTime;
+        tick_t tick = 0;
+        uint32_t message = 0;
+        int32_t midiTime = 0;
+        tick_t tickOffsetInBlock = 0; // TODO: should be float/double for sub-tick precision
     };
     struct midi_input_events_t {
         std::vector<midievent_ctrl_t> m_list;

@@ -573,9 +573,12 @@ public:
           stageEndpoint(_dstStage) 
     {
         this->dawCtrl = _dawCtrl;
+        
         auto& list  = stageEndpoint.buffer == stage_bufferpoint::INPUT ? midiCfg.inputs : midiCfg.outputs;
-        String labelAll = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "All Inputs" : "All Outputs";
-        addEntry(new ctxtmenu_entry_external_midi_channel(0, {255, labelAll, {}}, _dstStage.buffer));
+        if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
+            String labelAll = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "All Inputs" : "All Outputs";
+            addEntry(new ctxtmenu_entry_external_midi_channel(0, {255, labelAll, {}}, _dstStage.buffer));
+        }
         int32_t idx = 0;
         for (auto& channel : list) {
             addEntry(new ctxtmenu_entry_external_midi_channel(idx + 1, {idx, channel.deviceName, {}}, _dstStage.buffer));
@@ -591,19 +594,23 @@ public:
         int32_t idx      = 0;
         String inputName = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "External input" : "External output";
         addEntry(new ctxtmenu_entry_stage_midi_channel(0, "None", AudioChannelRefNULL()));
-        addEntry(new ctxtmenu_entry_default_midi_channel(1, "Default"));
-        addEntry(new ctxtmenu_entry_default_midi_channel(3, "Custom"));
+        if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
+            addEntry(new ctxtmenu_entry_default_midi_channel(1, "Default"));
+            addEntry(new ctxtmenu_entry_default_midi_channel(3, "Custom"));
+        }
         addEntry(new ctxtmenu_splitter());
         addEntry(new ctxtmenu_entry_bus_external(2, inputName, stageEndpoint));
-        addEntry(new ctxtmenu_splitter());
-        project_t* project = dawCtrl->getDaw()->getProject();
-        dbgassert(project);
-        if (project) {
-            auto& tracks = project->trackList;
-            for (track_t* track : tracks) {
-                dbgassert(track->audio);
-                addEntry(new ctxtmenu_entry_bus_internal(idx, track->name, track->audio->toRef(), stageEndpoint));
-                idx++;
+        if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
+            addEntry(new ctxtmenu_splitter());
+            project_t* project = dawCtrl->getDaw()->getProject();
+            dbgassert(project);
+            if (project) {
+                auto& tracks = project->trackList;
+                for (track_t* track : tracks) {
+                    dbgassert(track->audio);
+                    addEntry(new ctxtmenu_entry_bus_internal(idx, track->name, track->audio->toRef(), stageEndpoint));
+                    idx++;
+                }
             }
         }
     }
@@ -632,7 +639,8 @@ public:
             trImpl->midiInputChannels.clear();
             trImpl->midiInputChannels.push_back(ep);
         } else {
-            // trImpl->outputChannel = entry->getEndpoint();
+            auto lock = dawCtrl->lockPlayThread();
+            trImpl->midiOutputChannel = entry->getEndpoint();
         }
         dawCtrl->closeAllContextMenus();
         return true;
@@ -668,8 +676,12 @@ public:
     }
     String getString() override {
         track_impl_t* trImpl = track->audio;
-        dbgassert(trImpl);
-        if (trImpl && trImpl->midiInputChannels.size()) {
+        if (!assert_expr(trImpl))
+            return "<Invalid Track>";
+        if (!isInput) {
+            return trImpl->midiOutputChannel.name;
+        }
+        if (trImpl->midiInputChannels.size()) {
             return trImpl->midiInputChannels.front().name;
         }
         return "<Invalid Track>";
@@ -691,22 +703,27 @@ class gui_trackcontrols_io final : public guictr_base {
     guidropdown_select_bus selectOutput;
     guidropdown_select_bus selectInput;
     guidropdown_select_midi_input selectMidiInput;
+    guidropdown_select_midi_input selectMidiOutput;
 
 public:
     explicit gui_trackcontrols_io(track_gui_entry_t* _entry)
         : guictr_base(),
           selectOutput(_entry, false),
           selectInput(_entry, true),
-          selectMidiInput(_entry, true) {
+          selectMidiInput(_entry, true),
+          selectMidiOutput(_entry, false) {
         add(&selectOutput);
         add(&selectInput);
         add(&selectMidiInput);
+        add(&selectMidiOutput);
         selectInput.setLabel("Audio In");
         selectOutput.setLabel("Audio Out");
         selectMidiInput.setLabel("Midi In");
+        selectMidiOutput.setLabel("Midi Out");
         padding = 0;
     }
     ~gui_trackcontrols_io() override {
+        remove(&selectMidiOutput);
         remove(&selectMidiInput);
         remove(&selectInput);
         remove(&selectOutput);
@@ -719,10 +736,12 @@ public:
         selectOutput.pos    = ivec2(inset, inset);
         selectInput.pos   = ivec2(inset, TRACK_HEIGHT_STEP + inset);
         selectMidiInput.pos   = ivec2(inset, (TRACK_HEIGHT_STEP + inset)*2);
+        selectMidiOutput.pos = ivec2(inset, (TRACK_HEIGHT_STEP + inset)*3);
         selectInput.size   = getSizeContent() - ivec2(inset * 2);
         selectInput.size.y = TRACK_HEIGHT_STEP - inset * 2;
         selectOutput.size  = selectInput.size;
         selectMidiInput.size  = selectInput.size;
+        selectMidiOutput.size = selectInput.size;
         for (auto gui : guis) {
             gui->layout();
         }

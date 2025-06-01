@@ -66,6 +66,10 @@ inline double toSecondsDD(double tick, double oneOverBPM100) {
     return tick * MINUTE_100_OVER_TPQ * oneOverBPM100;
 }
 
+inline double ticksToMs(double ticks, int32_t bpm100) {
+    return toSecondsDD(ticks, 1.0 / bpm100) * 1000.0;
+}
+
 inline double toSeconds(double tick, int32_t bpm100) {
     return toSecondsDD(tick, 1.0 / bpm100);
 }

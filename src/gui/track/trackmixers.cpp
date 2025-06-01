@@ -249,8 +249,8 @@ namespace DAW {
                 trackIO->setVisible(m_parent->bShowIO);
                 if (trackIO->isVisible()) {
                     trackIO->pos = ivec2(inset, posY + inset);
-                    trackIO->size = ivec2(csX - i2, MIXER_SIZE_STEP*3 - i2);
-                    posY += MIXER_SIZE_STEP*3;
+                    trackIO->size = ivec2(csX - i2, MIXER_SIZE_STEP*4 - i2);
+                    posY += MIXER_SIZE_STEP*4;
                     lastGui = trackIO;
                 }
             }

@@ -409,6 +409,7 @@ struct track_impl_t final : public audio_stage_t {
     DAW::channel_ref_t inputChannel;
     DAW::channel_ref_t outputChannel;
     std::vector<DAW::midichannel_ref_t> midiInputChannels;
+    DAW::midichannel_ref_t midiOutputChannel;
     std::vector<track_gui_entry_t*> guiInstances;
     std::vector<midievent_note_t> noteEventsProcessed;
     clip_notes_t* midiValidation = nullptr;
@@ -422,6 +423,7 @@ struct track_impl_t final : public audio_stage_t {
     void onStopPlayback() override;
     void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;
     void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency, const std::map<String, DAW::Host::midi_data_t>& midiRealtimeDeviceInputs);
+    void processMidiOutput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency,  std::map<String, DAW::Host::noteevent_buffer>& midiRealtimeDeviceOutputs);
     void validateProcessedMidi(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
     void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t readPos, samplecount_t readLen, AudioBlock& outBuffer);
     void addAudio(const AudioBlock& src, float fGain);

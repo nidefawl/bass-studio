@@ -8,11 +8,11 @@
 #include "seq_util.hpp"
 #include "str_util.hpp"
 #include <portmidi.h>
+#include <porttime.h>
 #include "tls.hpp"
 #include "types.hpp"
 
-#define IN_QUEUE_SIZE  1024
-#define OUT_QUEUE_SIZE 1024
+#define OUT_QUEUE_SIZE 256
 
 
 bool error(const char* msg, PmError err) {
@@ -265,7 +265,7 @@ int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
 }
 
 
-int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state,
+int32_t midihost::processMidiInput(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state,
                               bool inLoop) {
     PmError result;
     PmEvent buffer; /* just one message at a time */
@@ -283,8 +283,9 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
         if (dev.bIsSoftwareDevice) {
             continue;
         }
+        if (!assert_expr(dev.stream != nullptr))
+            continue;
         auto streamIn = dev.stream;
-        dbgassert(streamIn);
         std::vector<MidiIOEvent> messages;
         do {
             result = Pm_Poll(streamIn);
@@ -292,10 +293,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
                 int status;
                 int rslt = Pm_Read(streamIn, &buffer, 1);
                 if (rslt == pmBufferOverflow) continue;
-                dbgassert(rslt == 1);
-
-                /* record timestamp of most recent data */
-                last_timestamp = current_timestamp;
+                dbgassert(rslt == pmGotData);
 
                 /* the data might be the end of a sysex message that
                 has timed out, in which case we must ignore it.
@@ -307,13 +305,6 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
                 }
 
                 handleMessage(buffer.message, buffer.timestamp, messages);
-
-                /* send the message to the application */
-                /* you might want to filter clock or active sense messages here
-                to avoid sending a bunch of junk to the application even if
-                you want to send it to MIDI THRU
-                */
-                //                Pm_Enqueue(in_queue, &buffer);
 
                 /* sysex processing */
                 if (status == MIDI_SYSEX) {
@@ -344,50 +335,29 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
         }
     }
 
+    return 0;
+}
 
+void midihost::processMidiOutput() {
     for (auto& dev : devicesOutput) {
         if (dev.bIsSoftwareDevice)
             continue;
-        dbgassert(dev.stream);
-
-        /* see if there is application midi data to process */
-        while (!dev.midiMsgs.empty()) {
-            //        /* see if it is time to output the next message */
-            MidiIOEvent& next = dev.midiMsgs.back();
-            if (next.timestamp <= current_timestamp) {
-                /* time to send a message, first make sure it's not blocked */
-                int status = Pm_MessageStatus(next.message);
-                bool isRealTime = (status & 0xF8) == 0xF8;
-                /* real-time messages are not blocked */
-                if (!isRealTime && inputInSysex) {
-                    /* maybe sysex has timed out (output becomes unblocked) */
-                    if (last_timestamp + 5000 < current_timestamp) {
-                        inputInSysex = FALSE;
-                    } else
-                        break; /* output is blocked, so exit loop */
-                }
-                dev.midiMsgs.pop_back();
-//                Pm_Dequeue(out_queue, &buffer);
+        if (!assert_expr(dev.stream != nullptr))
+            continue;
+        for (size_t i = 0; i < dev.midiMsgs.size(); i++) {
+            MidiIOEvent& next = dev.midiMsgs[i];
+            int status = Pm_MessageStatus(next.message);
+            if (status == MIDI_SYSEX) {
+                PmEvent buffer;
+                buffer.message = next.message;
+                buffer.timestamp = next.timestamp;
                 Pm_Write(dev.stream, &buffer, 1);
-
-
-                /* inspect message to update app_sysex_in_progress */
-                if (status == MIDI_SYSEX) outputInSysex = TRUE;
-                else if ((status & 0xF8) != 0xF8) {
-                    /* not MIDI_SYSEX and not real-time, so */
-                    outputInSysex = FALSE;
-                }
-                if (outputInSysex && /* look for EOX */
-                    (((buffer.message & 0xFF) == MIDI_EOX) || (((buffer.message >> 8) & 0xFF) == MIDI_EOX) ||
-                     (((buffer.message >> 16) & 0xFF) == MIDI_EOX) || (((buffer.message >> 24) & 0xFF) == MIDI_EOX))) {
-                    outputInSysex = FALSE;
-                }
-            } else
-                break; /* wait until indicated timestamp */
+            } else {
+                Pm_WriteShort(dev.stream, next.timestamp, next.message);
+            }
         }
+        dev.midiMsgs.clear();
     }
-
-    return 0;
 }
 
 bool midihost::initPm() {
@@ -397,6 +367,11 @@ bool midihost::initPm() {
             Pm_Terminate();
             error("Pa_Initialize", err);
         } else {
+            if (!Pt_Started()) {
+                Pt_Start(1, nullptr, nullptr);
+            }
+            pmTimeBeginMs = Pt_Time();
+            streamTimeMs = 0.0;
             pmIsInitalized = true;
         }
     }
@@ -516,9 +491,9 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
                                                  deviceIdx,
                                                  nullptr /* driver info */,
                                                  OUT_QUEUE_SIZE,
-                                                 &getMidiTime,
+                                                 nullptr,
                                                  nullptr /* time info */,
-                                                 0 /* Latency */);
+                                                 10 /* Latency */);
                         if (err != pmNoError) {
                             error("Pm_OpenOutput", err);
                             if (newStream) {
@@ -583,4 +558,10 @@ void midihost::setInspection(bool bInput, bool bEnabled) {
             dev.midiBufferInspect.clear();
         }
     }
+}
+double midihost::getMidiStreamTime() {
+    return pmTimeBeginMs + streamTimeMs;
+}
+void midihost::incrementMidiStreamTime(double deltaMs) {
+    streamTimeMs += deltaMs;
 }
