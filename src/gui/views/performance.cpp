@@ -90,7 +90,7 @@ public:
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, meterCallbackInput, &label);
                 y += meterSize.y + 5;
             }
-            if (stream->getMeterInput().getNumChannels() > 0) {
+            if (stream->getMeterInput().getNumChannels() > 1) {
                 auto metersInput = stream->getMeterInput().getSubChannelMeter(0, 2);
                 printL(0, "Audio Stream Input", StringFormat("%.3f", metersInput.getMaxRMS()));
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersInput, &label);
@@ -108,7 +108,7 @@ public:
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &subMeter, &label);
                 y += meterSize.y + 5;
             }
-            if (stream->getMeterOutput().getNumChannels() > 0) {
+            if (stream->getMeterOutput().getNumChannels() > 1) {
                 auto metersOutput = stream->getMeterOutput().getSubChannelMeter(0, 2);
                 printL(0, "Audio Stream Output", StringFormat("%.3f", metersOutput.getMaxRMS()));
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersOutput, &label);
