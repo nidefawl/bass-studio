@@ -332,6 +332,7 @@ bool gui_textfield::keyboardEvent(KeyboardKey key, int /* scancode */, KeyboardS
                             }
                         }
                     }
+                    onChange();
                 } else if (key == KeyboardKey::DAW_KB_DELETE) {
                     if (!deleteSelection()) {
                         if (filter && filter->isReplaceInput()) {
@@ -340,27 +341,30 @@ bool gui_textfield::keyboardEvent(KeyboardKey key, int /* scancode */, KeyboardS
                                 mValueTemp.erase(mValueTemp.begin() + mCursorPos);
                         }
                     }
+                    onChange();
                 } else if (key == KeyboardKey::DAW_KB_A && isCtrl(modifiers)) {
                     mCursorPos    = (int) mValueTemp.length();
                     mSelectionPos = 0;
                 } else if (key == KeyboardKey::DAW_KB_X && isCtrl(modifiers)) {
                     copySelection();
                     deleteSelection();
+                    onChange();
                 } else if (key == KeyboardKey::DAW_KB_C && isCtrl(modifiers)) {
                     copySelection();
                 } else if (key == KeyboardKey::DAW_KB_V && isCtrl(modifiers)) {
                     deleteSelection();
                     pasteFromClipboard();
+                    onChange();
                 } else if (key == KeyboardKey::DAW_KB_ESCAPE) {
                     endEdit(false);
                 } else if (mReturnCommits && (key == KeyboardKey::DAW_KB_ENTER || key == KeyboardKey::DAW_KB_KP_ENTER)) {
                     endEdit(true);
+                    onChange();
                 }
                 return true;
             } else {
                 if (mReturnCommits && (key == KeyboardKey::DAW_KB_ENTER || key == KeyboardKey::DAW_KB_KP_ENTER)) {
                     beginEdit();
-                    onChange();
                     return true;
                 }
             }
