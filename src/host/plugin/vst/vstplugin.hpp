@@ -109,7 +109,7 @@ public:
 
     // automatable_t interface
     String getAutomatableName() override;
-    String getParamName(int32_t idx) override;
+    const String& getParamName(int32_t idx) override;
     float getParamValue(int32_t idx) override;
     automatable_param_t* getParam(int32_t idx) override;
     param_unit_t getParamValueDisplay(int32_t idx) override;

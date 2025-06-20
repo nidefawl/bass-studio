@@ -147,7 +147,7 @@ uint32_t guictr_base::getTitlebarColorFromState(int32_t flags) {
     }
     return c;
 }
-void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, const GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
+void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, const String& text, const GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
     auto colorU32 = getTitlebarColorFromState(flags);
     const auto hpt = theme->get(constantHeight);
     if (hpt <= 0) {
@@ -182,7 +182,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
     if (textMaxWidth - 5 <= 0) {
         return;
     }
-    if (text[0]) {
+    if (!text.empty()) {
         const auto fontScaled = hpt * 0.8f;
         if (isHorizontalTitle) {
             nvgSave(vg);

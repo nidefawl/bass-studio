@@ -547,7 +547,7 @@ public:
     size_t getNumParameters() const {
         return mapParams.size();
     }
-    virtual String getParamName(int32_t paramIdx) {
+    virtual const String& getParamName(int32_t paramIdx) {
         auto it = mapParams.find(paramIdx);
         dbgassert(it != mapParams.end());
         auto& param = it->second;

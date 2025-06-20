@@ -627,7 +627,7 @@ param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
     return effectbase::getParamValueDisplay(param->idx);
 }
 
-String vstplugin::getParamName(int32_t idx) {
+const String& vstplugin::getParamName(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
     if (param->internalIdx >= 0) {

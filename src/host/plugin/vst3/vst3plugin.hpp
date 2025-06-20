@@ -813,7 +813,7 @@ public:
         }
     }
 
-    String getParamName(int32_t idx) override {
+    const String& getParamName(int32_t idx) override {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->internalIdx >= 0) {

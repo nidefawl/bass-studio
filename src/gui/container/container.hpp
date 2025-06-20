@@ -129,7 +129,7 @@ public:
     }
 
     virtual uint32_t getTitlebarColorFromState(int32_t flags);
-    void renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, const GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
+    void renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, const String& text, const GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
     void renderFrameBase(NVGcontext* vg);
     void renderFrameOutline(NVGcontext* vg);
     virtual void renderBackground(NVGcontext* vg);
