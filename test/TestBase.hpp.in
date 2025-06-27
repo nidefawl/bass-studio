@@ -37,7 +37,7 @@ inline std::string stringify(T* val) {
         stringBuf[MAX_LEN - 1] = '\0';
     }
 #else
-    std::snprintf(stringBuf, MAX_LEN, "%012ZX", reinterpret_cast<size_t>(val));
+    std::snprintf(stringBuf, MAX_LEN, "%012zx", reinterpret_cast<size_t>(val));
 #endif
     return std::string(stringBuf);
 }
