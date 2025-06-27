@@ -142,7 +142,7 @@ bool restoreX11WindowPos(Display* display, Window window, appwindow_size_t* appw
         SetWindowMaximizedFlag(display, window, "_NET_WM_STATE_MAXIMIZED_VERT", true);
     }
 
-    if (!placement->vmax && !placement->hmax) {
+    if (!placement->vmax && !placement->hmax && placement->w > 0 && placement->h > 0) {
         XResizeWindow(display, window, placement->w, placement->h);
     }
     return true;
@@ -168,7 +168,7 @@ bool saveX11WindowPos(Display* display, Window window, appwindow_size_t* appwind
       return false;
   }
 
-  if (xwa.width < 0 || xwa.height < 0) {
+  if (xwa.width <= 0 || xwa.height <= 0) {
       return false;
   }
   appwindow_size_linux_t* placement = (appwindow_size_linux_t*) appwindowsize->data;
