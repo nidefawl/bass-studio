@@ -22,6 +22,7 @@
 #include "types.hpp"
 #include <cstdio>
 #include <algorithm>
+#include <optional>
 #include "logging.hpp"
 
 /** Encapsulates a MIDI message and provides helper functions

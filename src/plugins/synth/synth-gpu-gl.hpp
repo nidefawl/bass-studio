@@ -11,6 +11,7 @@
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <variant>
+#include <array>
 
 namespace DAW::GPU {
 
@@ -354,7 +355,7 @@ protected:
     int64_t timeLastShaderError = 0;
 
     //TODO: make these user runtime options
-    bool bUseGlFinish = true;
+    bool bUseGlFinish = false;
     bool bUseMemoryBarriers = true;
 
     /* Set ssbo to size of host_buffer_t::buffer */
