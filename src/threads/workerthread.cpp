@@ -1,8 +1,10 @@
 #include <atomic>
+#include <deque>
 #include <queue>
 #include <exception>
 #include <functional>
 #include <memory>
+#include <readerwriterqueue/readerwritercircularbuffer.hpp>
 #include <thread>
 #include <condition_variable>
 #include <mutex>
@@ -67,6 +69,7 @@ public:
         task->destruct();
     }
 };
+
 WorkerThread::ThreadTask::~ThreadTask() {
     delete m_taskImpl;
 }
@@ -84,9 +87,7 @@ bool WorkerThread::ThreadTask::isCompleted() const {
 }
 class WorkerThread::Impl {
     std::thread t;
-    std::queue<ThreadTaskImpl*> m_q;
-    std::mutex m_mtx;
-    std::condition_variable m_cond;
+    moodycamel::BlockingReaderWriterCircularBuffer<ThreadTaskImpl*> m_q;
     std::atomic<bool> m_stop{};
     int32_t threadid = 0;
 #if BUILD_DAW_HOST
@@ -94,7 +95,9 @@ class WorkerThread::Impl {
 #endif
     bool isRealtimePriority = false;
 public:
-
+    Impl() : m_q(32)
+    {
+    }
 #if BUILD_DAW_HOST
     void setTls(daw_tls::tlsinstance tls) {
         dbgassert(!t.joinable());
@@ -116,7 +119,7 @@ public:
                 SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
 #ifdef __linux__
-            set_thread_priority_realtime();
+                set_thread_priority_realtime();
 #endif
             }
             this->run();
@@ -133,20 +136,20 @@ public:
         return threadid;
     }
     bool push(ThreadTaskImpl* task) {
-        std::unique_lock<std::mutex> lock(m_mtx);
+        dbgassert(task != nullptr);
         if (!m_stop) {
             task->setInQueue();
-            m_q.push(task);
-            m_cond.notify_one();
+            m_q.wait_enqueue(task);
             return true;
         }
         return false;
     }
 
     void stop() {
-        std::unique_lock<std::mutex> lock(m_mtx);
         m_stop = true;
-        m_cond.notify_all();
+        // enqueue a nullptr to signal the thread to stop
+        ThreadTaskImpl* stopTask = nullptr;
+        m_q.wait_enqueue(stopTask);
     }
 
 private:
@@ -169,15 +172,13 @@ private:
         }
     }
     ThreadTaskImpl* pop() {
-        std::unique_lock<std::mutex> lock(m_mtx);
-        m_cond.wait(lock, [&]() { return !m_q.empty() || m_stop; });
-
-        if (m_stop && m_q.empty()) {
+        ThreadTaskImpl* task = nullptr;
+        m_q.wait_dequeue(task);
+        if (task == nullptr) {
+            dbgassert(m_stop);
             return nullptr;
         }
-
-        ThreadTaskImpl* task = m_q.front();
-        m_q.pop();
+        dbgassert(task != nullptr);
         return task;
     }
 };
