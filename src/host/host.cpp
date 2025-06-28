@@ -1319,7 +1319,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     }
 
     if (canProcess && impl->processingGraph) {
-#if ENABLE_ALLOCATION_TRACKING != 0
+#if ENABLE_ALLOCATION_TRACING_AUDIO_THREAD != 0
         DebugAlloc::beginTrace();
 #endif
         int64_t timeRouting = 0;
@@ -1393,12 +1393,9 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
 
         processMidiRealtimeOutput(ctrl, posDouble, state);
 
-#if ENABLE_ALLOCATION_TRACKING != 0
-        static DebugAlloc::AllocStats lastAllocStats;
-        lastAllocStats = DebugAlloc::endTrace();
-        static int ticks = 0;
-        if (++ticks > 50) {
-            ticks = 0;
+#if ENABLE_ALLOCATION_TRACING_AUDIO_THREAD != 0
+        DebugAlloc::AllocStats lastAllocStats = DebugAlloc::endTrace();
+        if (lastAllocStats.single.numAllocations > 0 || lastAllocStats.array.numAllocations > 0 || lastAllocStats.malloc.numAllocations > 0) {
             String stats = lastAllocStats.toString();
             log_lf(Log::L_DEBUG, "AllocStats: %s\n", StringAsCStr(stats));
         }

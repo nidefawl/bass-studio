@@ -1976,6 +1976,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
         checkGLError("mainloop pre");
         while (!fatalError) {
+#if ENABLE_ALLOCATION_TRACING_MAIN_THREAD != 0
+        DebugAlloc::beginTrace();
+#endif
 #ifdef _WIN32
             hiresTimer1.reset();
             /*auto timeoutResult = */MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLINPUT);
@@ -2069,6 +2072,17 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #else
             (void)tmLRNow;
 #endif
+        
+#if ENABLE_ALLOCATION_TRACING_MAIN_THREAD != 0
+            static DebugAlloc::AllocStats lastAllocStats;
+            lastAllocStats = DebugAlloc::endTrace();
+            static int ticks = 0;
+            if (++ticks > 50 && (lastAllocStats.array.numAllocations > 0 || lastAllocStats.single.numAllocations > 0)) {
+                ticks = 0;
+                String stats = lastAllocStats.toString();
+                log_lf(Log::L_DEBUG, "AllocStats: %s\n", StringAsCStr(stats));
+            }
+#endif
         }
         mainWindow->destroy();
 
@@ -2105,9 +2119,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
 void windowTickTimerRun() {
     std::vector<appwindow*> localWindowTimerHandleList = windowTimerHandleList;
-#if ENABLE_ALLOCATION_TRACKING != 0
-    DebugAlloc::beginTrace();
-#endif
     for (appwindow* window : localWindowTimerHandleList) {
         if (STL_CONTAINS(windowTimerHandleList, window)) {
             if (window->isWindowNotHidden()) {
@@ -2115,16 +2126,6 @@ void windowTickTimerRun() {
             }
         }
     }
-#if ENABLE_ALLOCATION_TRACKING != 0
-    static DebugAlloc::AllocStats lastAllocStats;
-    lastAllocStats = DebugAlloc::endTrace();
-    static int ticks = 0;
-    if (++ticks > 50) {
-        ticks = 0;
-        String stats = lastAllocStats.toString();
-        log_lf(Log::L_DEBUG, "AllocStats: %s\n", StringAsCStr(stats));
-    }
-#endif
 }
 
 #if BUILD_DAW_HOST
