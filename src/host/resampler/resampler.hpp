@@ -138,7 +138,6 @@ struct resampler_t {
             releaseBuffers();
         }
         buf_t* buf = getFreeOutputBuffer();
-        //TODO: avoid this copy step by setting the resamplers channel count equal to the external input/output channel count
 
         uint32_t nOutputProcessed = 0;
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
@@ -150,6 +149,7 @@ struct resampler_t {
         if (numChannels == 0) {
             nOutputProcessed = resampler.numSamplesResampled;
         } else {
+            //TODO: avoid this copy step by setting the resamplers channel count equal to the external input/output channel count
             bufScratch.copyFrom(&block);
             if (!resampler.runResample(bufScratch, *buf->block, nOutputProcessed)) {
                 return false;
