@@ -1916,7 +1916,8 @@ int32_t Host::processGraph(project_controller_t* ctrl,
     if (!useThreading) {
         for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
             auto const ptrProcessingNode = *itAudioStage;
-            Host::track_block_processing_task_t blockProcTask;
+            TrackBlockProcessTask& task = impl->tasks[0];
+            auto& blockProcTask = task.getTask();
             blockProcTask.audioProp = audioProp;
             blockProcTask.projectGlobals = ctrl->getGlobals();
             blockProcTask.trackNode = ptrProcessingNode;
