@@ -1,6 +1,7 @@
 #include "visualizer-plugin.hpp"
 #include "assert_dbg.h"
 #include "gui/gui.hpp"
+#include "host/audiobuffer/audiobuffer.hpp"
 #include "host/automation/automation.hpp"
 #include "dsp_util.hpp"
 #include "event.hpp"
@@ -32,7 +33,7 @@ namespace DAW::UI {
 namespace PluginVisualizer {
 
     module_visualizer::module_visualizer(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internalplugin("Visualizer", _projectGlobalId, _hostCallback)
+        : internalplugin("Visualizer", _projectGlobalId, _hostCallback), audioQueue(RING_BUF_SIZE)
     {
         allocRingBuffer(ringbuffer, 2);
     }
@@ -54,7 +55,7 @@ namespace PluginVisualizer {
         qBuf->output->realloc(buf->samples);
         qBuf->output->copyFrom(buf);
         qBuf->inUse = true;
-        this->audioQueue.enqueue(qBuf);
+        this->audioQueue.try_enqueue(qBuf);
     }
 
     bool module_visualizer::try_dequeue(AudioBuffer*& buf) {

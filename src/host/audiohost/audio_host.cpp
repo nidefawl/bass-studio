@@ -269,7 +269,9 @@ static void StreamFinished(void* userData) {
 using DAW::channel_pairing;
 
 audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, DAW::AudioIO::io_cfg_tracks& cfg, channelnum_t _nOutputChannels, channelnum_t _nInputChannels)
-    : meterDataInput(_nInputChannels),
+    : audioQueue(RING_BUF_SIZE),
+      audioQueueInput(RING_BUF_SIZE),
+      meterDataInput(_nInputChannels),
       meterDataOutput(_nOutputChannels),
       metersInput(meterDataInput.data(), meterDataInput.size()),
       metersOutput(meterDataOutput.data(), meterDataOutput.size()),
@@ -389,7 +391,7 @@ void audiohost::HostIOStream::enqueueInput(AudioBuffer* buf) {
         });
     }
     buf->time.samplePosInput = inputSamplePos;
-    this->audioQueueInput.enqueue(buf);
+    this->audioQueueInput.try_enqueue(buf);
     inputSamplePos += blockIn->samples;
 }
 
@@ -415,7 +417,7 @@ void audiohost::HostIOStream::enqueue(AudioBuffer* buf) {
             return offset + dstIdx;
         });
     }
-    always_assert(this->audioQueue.enqueue(buf));
+    always_assert(this->audioQueue.try_enqueue(buf));
 }
 
 bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {

@@ -3,7 +3,7 @@
 #include "host/plugin/modules.hpp"
 #include "host/plugin/internal/internal-plugin.hpp"
 #include "host/audiobuffer/audiobuffer.hpp"
-#include <readerwriterqueue/readerwriterqueue.hpp>
+#include <readerwriterqueue/readerwritercircularbuffer.hpp>
 
 namespace PluginVisualizer {
 class module_visualizer final : public internalplugin {
@@ -20,7 +20,7 @@ public:
     }
 private:
     audiothread_ringbuffer_t ringbuffer;
-    moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
+    moodycamel::BlockingReaderWriterCircularBuffer<AudioBuffer*> audioQueue;
     samplecount_t audioQueueSamplePos = 0;
 };
 }

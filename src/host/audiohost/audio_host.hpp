@@ -9,7 +9,7 @@
 #include "seq_time.hpp"
 #include "dsp_util.hpp"
 #include "host/audiobuffer/audiobuffer.hpp"
-#include <readerwriterqueue/readerwriterqueue.hpp>
+#include <readerwriterqueue/readerwritercircularbuffer.hpp>
 #include "host/meter/meter.hpp"
 #include "host/audio_config.hpp"
 #include "appsettings.hpp"
@@ -41,8 +41,8 @@ public:
         };
 
         audiothread_ringbuffer_t ringbuffer;
-        moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
-        moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueueInput;
+        moodycamel::BlockingReaderWriterCircularBuffer<AudioBuffer*> audioQueue;
+        moodycamel::BlockingReaderWriterCircularBuffer<AudioBuffer*> audioQueueInput;
 
         std::vector<DAW::meter_runningsum> meterDataInput;
         std::vector<DAW::meter_runningsum> meterDataOutput;

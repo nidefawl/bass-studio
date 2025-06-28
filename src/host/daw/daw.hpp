@@ -418,10 +418,10 @@ namespace DAW {
 class AudioPreviewStream : public AuxOutputSource {
     static constexpr channelnum_t numChannels = 2;
     audiothread_ringbuffer_t ringbuffer;
-    moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
+    moodycamel::BlockingReaderWriterCircularBuffer<AudioBuffer*> audioQueue;
     seq_rand rnd;
 public:
-    AudioPreviewStream() {
+    AudioPreviewStream() : audioQueue(RING_BUF_SIZE) {
         allocRingBuffer(ringbuffer, numChannels);
     }
     ~AudioPreviewStream() override {
@@ -444,7 +444,7 @@ public:
             bufferWrite->output->fillNoise(rnd, dsp_util::fromdBFS(-24.0 + 6.0));
             bufferWrite->inUse = true;
             bufferWrite->time.inputTimeSeconds = posDouble;
-            audioQueue.enqueue(bufferWrite);
+            audioQueue.try_enqueue(bufferWrite);
             writePos++;
             writePos &= RING_BUF_MASK;
         }

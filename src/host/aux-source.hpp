@@ -5,7 +5,7 @@
 #include "host/project/project.hpp"
 #include "rand.hpp"
 #include "seq_time.hpp"
-#include <readerwriterqueue/readerwriterqueue.hpp>
+#include <readerwriterqueue/readerwritercircularbuffer.hpp>
 
 namespace DAW {
 
@@ -28,10 +28,10 @@ public:
 class AuxOutputNoiseSource : public AuxOutputSource {
     static constexpr channelnum_t numChannels = 2;
     audiothread_ringbuffer_t ringbuffer;
-    moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
+    moodycamel::BlockingReaderWriterCircularBuffer<AudioBuffer*> audioQueue;
     seq_rand rnd;
 public:
-    AuxOutputNoiseSource() {
+    AuxOutputNoiseSource() : audioQueue(RING_BUF_SIZE) {
         allocRingBuffer(ringbuffer, numChannels);
     }
     ~AuxOutputNoiseSource() override {
@@ -54,7 +54,7 @@ public:
             bufferWrite->output->fillNoise(rnd, dsp_util::fromdBFS(-24.0 + 6.0));
             bufferWrite->inUse = true;
             bufferWrite->time.inputTimeSeconds = posDouble;
-            audioQueue.enqueue(bufferWrite);
+            audioQueue.try_enqueue(bufferWrite);
             writePos++;
             writePos &= RING_BUF_MASK;
         }
