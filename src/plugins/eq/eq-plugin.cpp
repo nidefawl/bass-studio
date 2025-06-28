@@ -443,7 +443,7 @@ namespace {
             }
         }
                                 
-        dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
+        dbgassert(static_cast<size_t>(out.fftlen)/2+1 == out.mags[0].size());
     }
 
     void ReadAutomation(const DAW::Host::Host* const host, module_eq* eq, double tick, playback_state state, samplecount_t samplePos, samplerate_t nOversample) {
@@ -908,7 +908,17 @@ namespace PluginEQ {
                 auto bandValue = spectrumBands[bandIdx];
                 auto bandFreq = impl->freq[bandIdx];
                 float posX = (log10(bandFreq) - log10(PLOT_HZ_MIN)) / (log10(PLOT_HZ_MAX) - log10(PLOT_HZ_MIN)) * graphSize.x;
-                float posY = (bandValue) * graphSize.y;
+
+                constexpr float TILT_DB_PER_OCT = 4.5f;  // 4.5dB/oct tilt
+                constexpr float TILT_REF_FREQ = 1000.0f; // 1kHz reference
+                constexpr float SPECTRUM_DB_OFFSET = 6.0f; // Offset to apply to the spectrum
+                float dbfs = bandValue * PLOT_DB_RANGE + PLOT_DB_MIN;
+                float tilt = TILT_DB_PER_OCT * log2f(bandFreq / TILT_REF_FREQ);
+                dbfs += tilt;
+                dbfs += SPECTRUM_DB_OFFSET;
+                dbfs = math::clamp(dbfs, PLOT_DB_MIN, PLOT_DB_MAX);
+                float posY = (dbfs - PLOT_DB_MIN) / PLOT_DB_RANGE * graphSize.y;
+
                 nvgLineTo(vg, graphPos.x + posX, graphPos.y + graphSize.y - posY);
             }
             nvgLineTo(vg, graphPos.x + graphSize.x + outsetPos, graphPos.y + graphSize.y + outsetPos);

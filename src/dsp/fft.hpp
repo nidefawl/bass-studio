@@ -10,13 +10,10 @@
 
 constexpr float MIN_FREQ = 20;
 constexpr float MAX_FREQ = 20000;
-// constexpr size_t INPUTLEN = 512*8;
-
 
 void applyWindowAndPadding(float* in, samplecount_t inLen, std::vector<float>& windowedPadded, samplecount_t fftlen, float fGain = 1.0f);
-void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, std::vector<float>& bands, samplecount_t fftlen, double srOverFFT);
+void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, std::vector<float>& bands, samplecount_t fftlen, double srOverFFT, float smoothingFactor = 0.85f);
 
-// using fft_input_array = std::array<float, INPUTLEN>;
 template <samplecount_t INPUTLEN>
 struct fft_ctxt_t {
     kiss_fftr_cfg cfg;
@@ -24,7 +21,8 @@ struct fft_ctxt_t {
     const double srOverFFT;
     std::vector<kiss_fft_cpx> tmp{};
     fft_ctxt_t(samplecount_t _fftLen, double _srOverFFT) : fftLen(_fftLen), srOverFFT(_srOverFFT) {
-        tmp.resize(fftLen);
+        // For real FFT, output size is (fftLen/2 + 1)
+        tmp.resize(fftLen / 2 + 1);
         cfg = kiss_fftr_alloc(fftLen, 0 /*is_inverse_fft*/, NULL, NULL);
         if (!cfg) {
             log_lf(Log::L_ERROR, "kiss_fftr_alloc returned nullptr\n");
@@ -33,17 +31,25 @@ struct fft_ctxt_t {
     ~fft_ctxt_t() { kiss_fftr_free(cfg); }
     void processFFT(std::vector<float> const& fftIn, std::vector<float>& mags) {
         kiss_fftr(cfg, fftIn.data(), tmp.data());
+        
+        // Ensure mags has correct size for real FFT output
+        const size_t numOutputBins = fftLen / 2 + 1;
+        dbgassert(mags.size() == numOutputBins);
+        
         auto it = mags.begin();
-        float f = 1.0f / (float)INPUTLEN;
-        //    float f3 = INPUTLEN / (float)fftLen;
-        //    f*=f3;
-        for (kiss_fft_cpx& pt : tmp) {
+        float f = 1.0f / (float)fftLen;  // Fixed: use fftLen instead of INPUTLEN
+        
+        // Skip DC component (bin 0) and process remaining bins
+        *it++ = 0.0f;  // Set DC to 0
+        for (size_t i = 1; i < numOutputBins; ++i) {
+            const auto& pt = tmp[i];
             const float magnitudeSq = pt.r * pt.r + pt.i * pt.i;
-            const float f2          = sqrtf(magnitudeSq);
-            *it++                   = (2.0f * f2 * f);
+            const float f2 = sqrtf(magnitudeSq);
+            *it++ = (2.0f * f2 * f);
         }
     }
 };
+
 template <samplecount_t INPUTLEN, channelnum_t NUM_CHANNELS>
 struct overlap_buffer_t {
     AudioBlock blockA;
@@ -73,6 +79,7 @@ struct overlap_buffer_t {
         return processBlock;
     }
 };
+
 class audio_spectrum {
 public:
     static constexpr channelnum_t NUM_CHANNELS = 2;
@@ -85,6 +92,7 @@ public:
     int32_t maxFreq = 0;
     std::array<std::vector<float>, NUM_CHANNELS> bands{};
     std::array<std::vector<float>, NUM_CHANNELS> mags{};
+    
     audio_spectrum() = default;
     audio_spectrum(const audio_spectrum& ref)
         : samplerate(ref.samplerate), blocksize(ref.blocksize), fftlen(ref.fftlen), srOverFFT(ref.srOverFFT), numBands(ref.numBands),
@@ -120,9 +128,11 @@ public:
         }
     }
 };
+
 inline float lerpf32(float a, float b, float c) {
     return a + (b - a) * c;
 }
+
 inline void mixSpectrum(const audio_spectrum* lf, const audio_spectrum* hf, audio_spectrum& out) {
     for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
         out.mags[i] = lf->mags[i];
@@ -138,8 +148,9 @@ inline void mixSpectrum(const audio_spectrum* lf, const audio_spectrum* hf, audi
             bandsM[j]     = lerpf32(bandsA[j], bandsB[j], fInterp);
         }
     }
-    dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
+    dbgassert(static_cast<size_t>(out.fftlen / 2 + 1) == out.mags[0].size());
 }
+
 inline void mixDbfsScaleBands(const audio_spectrum* lf, const audio_spectrum* hf, audio_spectrum& out) {
     constexpr float fstep = 0.22f;
     for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
@@ -155,9 +166,9 @@ inline void mixDbfsScaleBands(const audio_spectrum* lf, const audio_spectrum* hf
             bandsM[j]   = dsp_util::scaledRange(dsp_util::dBFS(mixedBand), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
         }
     }
-                            
-    dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
+    dbgassert(static_cast<size_t>(out.fftlen / 2 + 1) == out.mags[0].size());
 }
+
 template <int INPUTLEN, int T>
 class fft_processor final : public audio_spectrum {
 public:
@@ -170,34 +181,27 @@ public:
     std::vector<float> freq{};
     std::array<DAW::meter_runningsum, NUM_CHANNELS> meterData;
     DAW::rmsmeter meter;
-    //  audio_spectrum_t(const int32_t _blocksize, const int32_t _samplerate);
-    //  ~audio_spectrum_t();
-    //  void setNumBands(int bands);
-    //
-    //  void processSlice(double time, AudioBlock* block);
-    //  void processBuffer(double time, AudioBlock* block);
-    //  void onTick(double time);
-    //
-    //  void getLogScaleBins(std::vector<float>& out, int outputBins, float minFreq, float maxFreq);
+    float smoothingFactor = 0.85f;  // Made configurable
 
     void getLogScaleBins(std::vector<float>& out, int outputBins, float minFreq, float maxFreq) {
         const float minLog10 = log10(minFreq);
         const float maxLog10 = log10(maxFreq);
         const float range    = maxLog10 - minLog10;
         auto it              = out.begin();
+        const size_t numFFTBins = fftlen / 2 + 1;
+        
         for (int i = 0; i < outputBins; i++) {
-            float step = i / (float)outputBins; //-1?
+            float step = i / (float)(outputBins - 1);  // Fixed: use (outputBins - 1)
             float freq = math::powf(10, range * step + minLog10);
             double f   = freq / srOverFFT;
             int binIdx = math::floorfS32(f);
             if (binIdx < 1) continue;
-            if (binIdx + 1 >= fftlen / 2 + 1) {
+            if (binIdx + 1 >= static_cast<int>(numFFTBins)) {
                 break;
             }
             float delta = f - binIdx;
             float fout  = 0.0f;
             for (channelnum_t ch = 0; ch < NUM_CHANNELS; ch++) {
-                // bad cache locality, maybe store interleaved for mono mixdown
                 auto& channelMags = mags[ch];
                 fout += channelMags[binIdx] + (channelMags[binIdx + 1] - channelMags[binIdx]) * delta;
             }
@@ -212,6 +216,10 @@ public:
         this->minFreq = _minFreq;
         this->maxFreq = _maxFreq;
     }
+    void setSmoothingFactor(float factor) { 
+        smoothingFactor = math::clamp(factor, 0.0f, 1.0f); 
+    }
+    
     void updateBands() {
         dbgassert(numBands > 0);
         dbgassert(minFreq > 0);
@@ -231,6 +239,7 @@ public:
             freq[i]   = fX;
         }
     }
+    
     fft_processor(const blocksize_t _blocksize, const samplerate_t _samplerate)
         : audio_spectrum(_blocksize, _samplerate, INPUTLEN * T, 128),
         fftctxt(new fft_ctxt_t<INPUTLEN>(fftlen, srOverFFT)),
@@ -240,28 +249,14 @@ public:
         dbgassert(freq.size() == bands[0].size());
         for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
             memset(ins[i].data(), 0, sizeof(float) * ins[i].size());
-            this->mags[i].resize(this->fftlen);
+            // Fixed: mags size should be (fftlen/2 + 1) for real FFT
+            this->mags[i].resize(this->fftlen / 2 + 1);
         }
     }
     ~fft_processor() { delete fftctxt; }
     void onTick(double since) { meter.onTick(since); }
-    void processSlice(AudioBlock* block) {
-        std::vector<float> paddedInput(this->fftlen);
-        for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
-            if (i > 0) {
-                memset(paddedInput.data(), 0, sizeof(float) * paddedInput.size());
-            }
-            dbgassert(mags[i].size() == this->fftlen && "fftlen must not change at runtime");
-            memset(mags[i].data(), 0, sizeof(float) * this->fftlen);
-            applyWindowAndPadding(block->buf[i], block->samples, paddedInput, fftlen);
-            fftctxt->processFFT(paddedInput, mags[i]);
-            fillbands(mags[i], freq, bands[i], fftlen, srOverFFT);
-        }
-        blocksProcessed++;
-    }
     void processBuffer(AudioBlock* block, float fGain = 1.0f) {
         dbgassert(block->channels >= NUM_CHANNELS && "block->channels >= NUM_CHANNELS");
-        // dbgassert(INPUTLEN % block->samples == 0 && "blocksize must be multiple of INPUTLEN");
         dbgassert(block->samples == this->blocksize && "blocksize must not change during runtime");
         if (INPUTLEN < block->samples) {
             return;
@@ -277,13 +272,14 @@ public:
             processBlock = buffer.feed(block, this->ins);
         }
         if (processBlock) {
-            std::vector<float> paddedInput(this->fftlen);
+            static DAW_CXX_CONSTINIT thread_local std::vector<float> paddedInput;
+            paddedInput.resize(this->fftlen);
             for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
-                dbgassert(static_cast<size_t>(this->fftlen) == mags[i].size() && "fftlen must not change at runtime");
-                memset(mags[i].data(), 0, sizeof(float) * this->fftlen);
+                dbgassert(static_cast<size_t>(this->fftlen / 2 + 1) == mags[i].size() && "fftlen must not change at runtime");
+                memset(mags[i].data(), 0, sizeof(float) * mags[i].size());
                 applyWindowAndPadding(ins[i].data(), ins[i].size(), paddedInput, fftlen, fGain);
                 fftctxt->processFFT(paddedInput, mags[i]);
-                fillbands(mags[i], freq, bands[i], fftlen, srOverFFT);
+                fillbands(mags[i], freq, bands[i], fftlen, srOverFFT, smoothingFactor);
             }
             blocksProcessed++;
         }
