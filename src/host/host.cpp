@@ -368,9 +368,8 @@ public:
         stats.timeEnd = getTimeMicros();
     }
 
-    void setTask(Host::track_block_processing_task_t task) {
+    void setTask() {
         reset();
-        this->blockProcTask = task;
         inUse = true;
     }
 
@@ -1974,7 +1973,7 @@ int32_t Host::processGraph(project_controller_t* ctrl,
                         TrackBlockProcessTask& task = impl->tasks[i];
                         if (!task.isInUse()) {
                             trackNode.state = DAW::processing_track_node_state_t::PROCESSING;
-                            Host::track_block_processing_task_t blockProcTask;
+                            auto& blockProcTask = task.getTask();
                             blockProcTask.audioProp = audioProp;
                             blockProcTask.projectGlobals = ctrl->getGlobals();
                             blockProcTask.trackNode = &trackNode;
@@ -1991,7 +1990,7 @@ int32_t Host::processGraph(project_controller_t* ctrl,
                             impl->atomicWorkerCount.fetch_add(1, std::memory_order_relaxed);
                             blockProcTask.atomicWorkerCount = &impl->atomicWorkerCount;
 #endif
-                            task.setTask(blockProcTask);
+                            task.setTask();
                             impl->threads[i].pushTask(&task);
                             tasksRunning++;
                             numNodesQueued++;
