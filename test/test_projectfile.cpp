@@ -38,6 +38,7 @@ namespace {
         auto res             = DAW::ProjectFileV2::loadProjectFromJsonFile(testNewFormat);
         if (std::holds_alternative<String>(res)) {
             log_lf(Log::L_ERROR, "Failed to load project file %s: %s\n", StringAsCStr(testNewFormat), StringAsCStr(std::get<String>(res)));
+            return;
         }
         TEST_ASSERT_EQUAL(std::holds_alternative<String>(res), false);
         auto projectFile = std::get<std::shared_ptr<project_file>>(res);
@@ -69,6 +70,7 @@ namespace {
         auto res = DAW::ProjectFileV2::loadPluginSnapshot(testPreset);
         if (std::holds_alternative<String>(res)) {
             log_lf(Log::L_ERROR, "Failed to load preset file %s: %s\n", StringAsCStr(testPreset), StringAsCStr(std::get<String>(res)));
+            return;
         }
         TEST_ASSERT_EQUAL(std::holds_alternative<String>(res), false);
         auto snapshot = std::get<std::shared_ptr<plugin_snapshot_t>>(res);
@@ -98,6 +100,7 @@ namespace {
         auto res                  = DAW::ProjectFileV2::loadTrackContainer(testTrackContainer);
         if (std::holds_alternative<String>(res)) {
             log_lf(Log::L_ERROR, "Failed to load track container file %s: %s\n", StringAsCStr(testTrackContainer), StringAsCStr(std::get<String>(res)));
+            return;
         }
         TEST_ASSERT_EQUAL(std::holds_alternative<String>(res), false);
         auto snapshot = std::get<std::shared_ptr<trackcontainer_snapshot_t>>(res);
@@ -127,6 +130,7 @@ namespace {
         auto res = DAW::ProjectFileV2::loadGrooveFile(testGroove);
         if (std::holds_alternative<String>(res)) {
             log_lf(Log::L_ERROR, "Failed to load groove file %s: %s\n", StringAsCStr(testGroove), StringAsCStr(std::get<String>(res)));
+            return;
         }
         TEST_ASSERT_EQUAL(std::holds_alternative<String>(res), false);
         auto grooveFile = std::get<groove_file_t>(res);
