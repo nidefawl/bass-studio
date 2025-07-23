@@ -836,7 +836,6 @@ public:
           timeline(m_grid) {
         setCanMouseHit(true);
         m_grid.setGridMaxDens(7);
-        m_grid.setNegativeGrid(true);
     }
     ~guictr_editor_base() override {
         removeGuis();
