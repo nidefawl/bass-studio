@@ -717,13 +717,13 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     const auto uId = req.uId;
     int32_t globalId = req.globalId;
 
-    String path, name, nameWithoutExt, fileExt;
-    SplitPath(filepath, &path, &nameWithoutExt, &fileExt, &name);
+    String path, name, nameWithoutExt;
+    SplitPath(filepath, &path, &nameWithoutExt, nullptr, &name);
     auto moduleFormat = req.moduleFormat;
-    if (fileExt == "clap") {
+    if (StrEndsWith(name, ".clap")) {
         moduleFormat = 1;
     }
-    if (fileExt == "vst3") {
+    if (StrEndsWith(name, ".vst3")) {
         moduleFormat = 2;
     }
     auto libResult = loadLib(filepath, moduleFormat);
