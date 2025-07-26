@@ -60,7 +60,7 @@ public:
     ~guictr_dragged_plugins() override = default;
     void layout() override {
     }
-    virtual audio_stage_t* getTrackLink() {
+    audio_stage_t* getTrackLink() {
         return trackImpl;
     }
     void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;

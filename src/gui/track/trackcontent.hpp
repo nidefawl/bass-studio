@@ -333,7 +333,7 @@ public:
     void renderTrackFolded(NVGcontext* vg);
     void renderTrack(NVGcontext* vg);
     void render(NVGcontext* vg) override;
-    virtual void updateVisibleTrackContents(scaled_grid& grid);
+    void updateVisibleTrackContents(scaled_grid& grid);
 
     bool handleKeyInput(KeyEvent& kevt) override {
         return parent->handleKeyInput(kevt);

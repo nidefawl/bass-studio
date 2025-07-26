@@ -28,7 +28,7 @@ class SafeRefStorage final : public SafeRefHandler<T> {
 
 public:
     SafeRefStorage() = default;
-    virtual ~SafeRefStorage() {
+    ~SafeRefStorage() {
         for (auto& ref : refs) {
             if (ref->ptr)
                 ref->ptr->safeRef.handler = nullptr;
