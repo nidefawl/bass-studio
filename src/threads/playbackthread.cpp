@@ -420,14 +420,14 @@ playback_state PlaybackThread::getState() {
     return _M_impl->getState();
 }
 ThreadLock PlaybackThread::lockThread() {
-    if (daw_tls::getTls().tlsInitialized)
+    if (daw_tls::isTlsInitialized())
         daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
     return _M_impl->lockThread();
 }
 
 ThreadLock PlaybackThread::tryLockThread() {
     ThreadLock t = _M_impl->tryLockThread();
-    if (t.isLocked()) {
+    if (t.isLocked() && daw_tls::isTlsInitialized()) {
         daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
     }
     return t;
