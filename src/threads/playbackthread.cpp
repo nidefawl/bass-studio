@@ -420,7 +420,8 @@ playback_state PlaybackThread::getState() {
     return _M_impl->getState();
 }
 ThreadLock PlaybackThread::lockThread() {
-    daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
+    if (daw_tls::getTls().tlsInitialized)
+        daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
     return _M_impl->lockThread();
 }
 
