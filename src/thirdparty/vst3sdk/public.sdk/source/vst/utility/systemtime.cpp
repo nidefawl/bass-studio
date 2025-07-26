@@ -70,7 +70,7 @@ static Steinberg::Vst::SystemTime::GetImplFunc makeNativeGetSystemTimeFunc ()
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
+#include <windows.h>
 
 //------------------------------------------------------------------------
 struct WinmmDll
