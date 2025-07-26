@@ -26,13 +26,6 @@ public:
           valBefore(_oldVal),
           valAfter(_newVal) {
         this->desc = std::move(_desc);
-
-        automatable_t* at = tryGetAt(DawInstance::get());
-        dbgassert(at);
-        log_lf(Log::L_DEBUG, "Undo modify parameter task: set %s::%s (idx %d) from %f to %f\n",
-                   StringAsCStr(at->getAutomatableName()),
-                   StringAsCStr(at->getParamName(_ref.paramIdx)),
-                   _ref.paramIdx, _oldVal, _newVal);
     }
 
     //TODO: this shouldn't be here
