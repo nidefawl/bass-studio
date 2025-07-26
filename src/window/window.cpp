@@ -2030,7 +2030,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             int64_t tmHRNow = hiresRuntime.getTime();
             int64_t tmLRNow = tmHRNow/1000L;
             if (tmHRNow - tmHRLastTick >= GUI_TICK_DELAY_MICROS) {//TODO: figure out good tick rate
-                appStats.tickTimerDelay = tmHRNow - tmHRLastTick - GUI_TICK_DELAY_MICROS;
+                appStats.tickTimerDelay = tmHRNow - tmHRLastTick;
                 tmHRLastTick            = tmHRNow;
                 hiresTimer1.reset();
                 windowTickTimerRun();
