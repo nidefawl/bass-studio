@@ -78,7 +78,7 @@ void sendExposeEvent(GLFWwindow* glfw);
 #endif
 
 
-const int64_t GUI_TICK_DELAY_MICROS = 20000L; // GUI Tick Rate: 20ms
+const int64_t GUI_TICK_DELAY_MICROS = 10000L; // GUI Tick Rate: 10ms
 
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
