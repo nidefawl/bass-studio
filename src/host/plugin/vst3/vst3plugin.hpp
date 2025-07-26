@@ -11,6 +11,7 @@
 #include "host/track/track_impl.hpp"
 #include "math/vec.hpp"
 #include "host/plugin/modules.hpp"
+#include "platform.hpp"
 #include "pluginterfaces/base/ftypes.h"
 #include "pluginterfaces/base/funknown.h"
 #include "pluginterfaces/base/ibstream.h"
@@ -39,6 +40,11 @@
 #include "thread.hpp"
 #include "tls.hpp"
 #include "types.hpp"
+
+#ifdef __linux__
+#include <cerrno>
+#include <sys/epoll.h>
+#endif
 
 class track_t;
 class guibase;
@@ -76,18 +82,23 @@ class vst3plugin final : public effectbase {
     bool bIsInSuspend      = true;
     class ComponentHandler : public Steinberg::Vst::IComponentHandler
     {
-        vst3plugin* plugin;
+        DawInstance* const daw;
+        vst3plugin* const plugin;
         struct param_editing_t {
             uint32_t paramIdx = 0;
             float   valBefore = 0;
         };
         param_editing_t paramEditing;
     public:
-        ComponentHandler(vst3plugin* plugin) : plugin(plugin) {
+        ComponentHandler(DawInstance* daw, vst3plugin* plugin) : daw(daw), plugin(plugin) {
         }
 
         tresult PLUGIN_API beginEdit (ParamID id) override
         {
+            if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
+                // log_lf(Log::L_ERROR, "%s: Requires Main Thread!\n", StringAsCStr(plugin->getName()));
+                return Steinberg::kResultFalse;
+            }
             auto* effParam = plugin->getEffectParam(id);
             if (!effParam) {
                 log_printf("%s audioMasterAutomate unknown param index %u\n", StringAsCStr(plugin->getName()), id);
@@ -100,6 +111,10 @@ class vst3plugin final : public effectbase {
 
         tresult PLUGIN_API performEdit (ParamID id, ParamValue valueNormalized) override
         {
+            if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
+                // log_lf(Log::L_ERROR, "%s: Requires Main Thread!\n", StringAsCStr(plugin->getName()));
+                return Steinberg::kResultFalse;
+            }
             auto* effParam = plugin->getEffectParam(id);
             if (!effParam) {
                 log_printf("%s audioMasterAutomate unknown param index %u %f\n", StringAsCStr(plugin->getName()), id, valueNormalized);
@@ -115,6 +130,10 @@ class vst3plugin final : public effectbase {
 
         tresult PLUGIN_API endEdit (ParamID id) override
         {
+            if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
+                // log_lf(Log::L_ERROR, "%s: Requires Main Thread!\n", StringAsCStr(plugin->getName()));
+                return Steinberg::kResultFalse;
+            }
             if (paramEditing.paramIdx == id) {
                 auto* effParam = plugin->getEffectParam(id);
                 if (!effParam) {
@@ -125,7 +144,6 @@ class vst3plugin final : public effectbase {
                     track_t* track              = plugin->trackImpl->getTrack();
                     automatable_param_ref_t ref = plugin->toRef();
                     parameter_ref_t p           = { track->projectIdx, ref.type, plugin->projectGlobalId, effParam->idx };
-                    auto daw = daw_tls::getTls().dawInstance;
                     daw->pushHist(new action_modify_effect_parameter("Modify parameter", p, oldVal, newVal));
                 }
             }
@@ -137,25 +155,17 @@ class vst3plugin final : public effectbase {
         {
             if ((flags & Steinberg::Vst::RestartFlags::kParamValuesChanged) ||
                 (flags & Steinberg::Vst::RestartFlags::kParamTitlesChanged)) {
-                if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
-                    log_lf(Log::L_ERROR, "%s: Requires Main Thread!\n", StringAsCStr(plugin->getName()));
-                    return Steinberg::kResultFalse;
-                }
-                auto& tls = daw_tls::getTls();
-                auto lock = tls.dawInstance->lockPlayThread();
+                // normally we would not allow this to be called from non-main thread,
+                // but yabridge does call this from their own ui thread, so we allow it
+                // but we have to be careful what state we modify here
+                auto lock = daw->lockPlayThread();
                 plugin->visitParams([editController=plugin->editController](auto& mapEntry) {
                     automatable_param_t& param = mapEntry.second;
                     if (param.internalIdx >= 0) {
                         param.paramNameState |= PARAM_FLAG_DIRTY;
                         param.paramDisplayValState |= PARAM_FLAG_DIRTY;
                         if (editController) {
-                            if (param.name.find("A CoarsePit") != std::string::npos) {
-                                auto f = editController->getParamNormalized(param.internalIdx);
-                                log_lf(Log::L_DEBUG, "A CoarsePit: %f\n", f);
-                                param.setValue(f);
-                            } else {
-                                param.setValue(editController->getParamNormalized(param.internalIdx));
-                            }
+                            param.setValue(editController->getParamNormalized(param.internalIdx));
                             param.paramValueState = PARAM_FLAG_SET;
                         }
                     }
@@ -189,8 +199,9 @@ class vst3plugin final : public effectbase {
         }
 
     private:
-        tresult PLUGIN_API queryInterface (const Steinberg::TUID /*_iid*/, void** /*obj*/) override
+        tresult PLUGIN_API queryInterface (const Steinberg::TUID _iid, void** obj) override
         {
+            QUERY_INTERFACE(_iid, obj, Steinberg::Vst::IComponentHandler::iid, Steinberg::Vst::IComponentHandler)
             return Steinberg::kNoInterface;
         }
         // we do not care here of the ref-counting. A plug-in call of release should not destroy this
@@ -198,14 +209,133 @@ class vst3plugin final : public effectbase {
         Steinberg::uint32 PLUGIN_API addRef () override { return 1000; }
         Steinberg::uint32 PLUGIN_API release () override { return 1000; }
     };
+#ifdef __linux__
+    class RunLoopLinux : public Steinberg::Linux::IRunLoop
+    {
+        struct RunLoopTimer {
+            Steinberg::Linux::ITimerHandler* handler;
+            int64_t periodInMs;
+            int64_t lastCallTimeInMs;
+        };
+        struct RunLoopFDEventHandler
+        {
+            Steinberg::Linux::IEventHandler* handler;
+            int epollfd;
+            int pluginfd;
+        };
+        std::vector<RunLoopTimer> timers;
+        std::vector<RunLoopFDEventHandler> fdEventHandlers;
+    public:
+        virtual ~RunLoopLinux() = default;
+        tresult PLUGIN_API registerEventHandler (Steinberg::Linux::IEventHandler* handler, Steinberg::Linux::FileDescriptor pluginFd) override {
+            int epollfd = epoll_create1(0);
+            if (epollfd < 0) {
+                log_lf(Log::L_ERROR, "RunLoopLinux: Failed to create epoll instance!\n");
+                return Steinberg::kNoInterface;
+            }
+            struct ::epoll_event ev = {};
+            ev.events = EPOLLIN|EPOLLOUT;
+            ev.data.fd = pluginFd;
 
+            if (::epoll_ctl(epollfd, EPOLL_CTL_ADD, pluginFd, &ev) < 0)
+            {
+                ::close(epollfd);
+                return Steinberg::kInternalError;
+            }
+            fdEventHandlers.push_back(RunLoopFDEventHandler{ handler, epollfd, pluginFd });
+            log_lf(Log::L_DEBUG, "RunLoopLinux: Registered event handler for fd %d\n", pluginFd);
+            return Steinberg::kResultOk;
+        }
+        tresult PLUGIN_API unregisterEventHandler (Steinberg::Linux::IEventHandler* handler) override {
+            for (auto it = fdEventHandlers.begin(); it != fdEventHandlers.end(); ++it) {
+                if (it->handler == handler) {
+                    epoll_ctl(it->epollfd, EPOLL_CTL_DEL, it->pluginfd, nullptr);
+                    close(it->epollfd);
+                    fdEventHandlers.erase(it);
+                    log_lf(Log::L_DEBUG, "RunLoopLinux: Unregistered event handler %p for fd %d\n", (void*)handler, it->pluginfd);
+                    return Steinberg::kResultOk;
+                }
+            }
+            log_lf(Log::L_ERROR, "RunLoopLinux: Event handler %p not found!\n", (void*)handler);
+            return Steinberg::kNoInterface;
+        }
+
+        tresult PLUGIN_API registerTimer (Steinberg::Linux::ITimerHandler* handler, Steinberg::Linux::TimerInterval milliseconds) override {
+            if (milliseconds <= 0) {
+                log_lf(Log::L_ERROR, "RunLoopLinux: Invalid timer interval %zu\n", milliseconds);
+                return Steinberg::kInvalidArgument;
+            }
+            for (auto& timer : timers) {
+                if (timer.handler == handler) {
+                    log_lf(Log::L_ERROR, "RunLoopLinux: Timer %p registered (%zu, requested: %zu)!\n", (void*)handler, timer.periodInMs, milliseconds);
+                    return Steinberg::kResultFalse;
+                }
+            }
+            timers.push_back({ handler, static_cast<int64_t>(milliseconds), 0 });
+            log_lf(Log::L_DEBUG, "RunLoopLinux: Registered timer %p with interval %zu ms\n", (void*)handler, milliseconds);
+            return Steinberg::kResultOk;
+        }
+        tresult PLUGIN_API unregisterTimer (Steinberg::Linux::ITimerHandler* handler) override {
+            for (auto it = timers.begin(); it != timers.end(); ++it) {
+                if (it->handler == handler) {
+                    log_lf(Log::L_DEBUG, "RunLoopLinux: Unregistered timer %p\n", (void*)handler);
+                    timers.erase(it);
+                    return Steinberg::kResultOk;
+                }
+            }
+            log_lf(Log::L_ERROR, "RunLoopLinux: Timer %p not found!\n", (void*)handler);
+            return Steinberg::kNoInterface;
+        }
+        void updateTimersFromMainThread() {
+            int64_t currentTimeInMs = getTimeMillis();
+            for (auto& timer : timers) {
+                if (timer.lastCallTimeInMs == 0 ||
+                    currentTimeInMs - timer.lastCallTimeInMs >= timer.periodInMs) {
+                    timer.handler->onTimer();
+                    timer.lastCallTimeInMs = currentTimeInMs;
+                }
+            }
+            for (auto it = fdEventHandlers.begin(); it != fdEventHandlers.end(); ++it) {
+                struct epoll_event events{};
+                for (int i = 20; i > 0; --i) {
+                    int ret = epoll_wait(it->epollfd, &events, 1, 0);
+                    if (ret < 0) {
+                        String err = FormatErrorMessage(errno, "RunLoopLinux: epoll_wait failed");
+                        log_lf(Log::L_ERROR, "%s\n", StringAsCStr(err));
+                    } else if (ret == 0) {
+                        i = 0; // no events, exit loop
+                    } else {
+                        it->handler->onFDIsSet(it->pluginfd);
+                    }
+                }
+            }
+        }
+    private:
+        tresult PLUGIN_API queryInterface (const Steinberg::TUID _iid, void** obj) override
+        {
+            QUERY_INTERFACE(_iid, obj, Steinberg::Linux::IRunLoop::iid, Steinberg::Linux::IRunLoop)
+            return Steinberg::kNoInterface;
+        }
+        // we do not care here of the ref-counting. A plug-in call of release should not destroy this
+        // class!
+        Steinberg::uint32 PLUGIN_API addRef () override { return 1000; }
+        Steinberg::uint32 PLUGIN_API release () override { return 1000; }
+    //------------------------------------------------------------------------
+    };
+#endif // __linux__
     class PlugFrame : public Steinberg::IPlugFrame
     {
-        vst3plugin* plugin;
+        vst3plugin* const plugin;
+#ifdef __linux__
+        RunLoopLinux& runLoopLinux;
+    public:
+        PlugFrame(vst3plugin* plugin, RunLoopLinux& runLoopLinux) : plugin(plugin), runLoopLinux(runLoopLinux) {
+        }
+#else
     public:
         PlugFrame(vst3plugin* plugin) : plugin(plugin) {
         }
-
+#endif
 	    tresult PLUGIN_API resizeView (Steinberg::IPlugView* view, Steinberg::ViewRect* newSize) override {
             if (plugin->windowHost && newSize)
                 plugin->windowHost->resize(ivec2(newSize->right - newSize->left, newSize->bottom - newSize->top));
@@ -214,8 +344,17 @@ class vst3plugin final : public effectbase {
             return Steinberg::kResultOk;
         }
     private:
-        tresult PLUGIN_API queryInterface (const Steinberg::TUID /*_iid*/, void** /*obj*/) override
+        tresult PLUGIN_API queryInterface (const Steinberg::TUID _iid, void** obj) override
         {
+            QUERY_INTERFACE(_iid, obj, Steinberg::IPlugFrame::iid, Steinberg::IPlugFrame)
+#ifdef __linux__
+            if (::Steinberg::FUnknownPrivate::iidEqual(_iid, Steinberg::Linux::IRunLoop::iid))
+            {
+                addRef();
+                *obj = &runLoopLinux;
+                return Steinberg::kResultOk;
+            }
+#endif // __linux__
             return Steinberg::kNoInterface;
         }
         // we do not care here of the ref-counting. A plug-in call of release should not destroy this
@@ -225,6 +364,9 @@ class vst3plugin final : public effectbase {
     };
 
     ComponentHandler componentHandler;
+#ifdef __linux__
+    RunLoopLinux runLoop;
+#endif
     PlugFrame plugFrame;
     Steinberg::Vst::ParameterChanges inputParameterChanges;
     Steinberg::Vst::ParameterChanges outputParameterChanges;
@@ -242,8 +384,12 @@ public:
             uid(uid),
             module(_module),
             pluginProvider(_pluginProvider),
-            componentHandler(this),
+            componentHandler(daw_tls::getTls().dawInstance, this),
+#ifdef __linux__
+            plugFrame(this, runLoop)
+#else
             plugFrame(this)
+#endif
     {
         processData.inputParameterChanges = &inputParameterChanges;
         processData.outputParameterChanges = &outputParameterChanges;
@@ -537,6 +683,10 @@ private:
         checkForMainThread();
         using namespace Steinberg;
         using namespace Steinberg::Vst;
+        if (view) {
+            view->release();
+            view = nullptr;
+        }
         if (vst3Component) {
             auto numInAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kInput);
             auto numOutAudioBuses = vst3Component->getBusCount(MediaTypes::kAudio, BusDirections::kOutput);
@@ -759,6 +909,12 @@ public:
             }
         }
         setupProcessingImpl();
+    }
+
+    void updateVst3FromMainThread() {
+#ifdef __linux__
+        runLoop.updateTimersFromMainThread();
+#endif
     }
 
     automatable_param_t* getParam(int32_t idx) override {
@@ -1138,21 +1294,24 @@ public:
         return false;
 #endif
 
-        if (view || windowHost) {
-            return false;
-        }
-
-        view = editController->createView(Vst::ViewType::kEditor);
         if (!view) {
-            return false;
+            view = editController->createView(Vst::ViewType::kEditor);
+            if (!view) {
+                log_lf(Log::L_ERROR, "%s: Failed to create editor view\n", StringAsCStr(sName));
+                return false;
+            }
+            if (view->isPlatformTypeSupported(platformWindowType) != Steinberg::kResultTrue) {
+                view->release();
+                view = nullptr; // Clean up on failure
+                log_lf(Log::L_ERROR, "%s: Editor view does not support platform type %s\n", StringAsCStr(sName), platformWindowType);
+                return false;
+            }
         }
-
         ViewRect viewRect = {};
         if (view->getSize(&viewRect) != kResultOk) {
-            return false;
-        }
-
-        if (view->isPlatformTypeSupported(platformWindowType) != Steinberg::kResultTrue) {
+            view->release();
+            view = nullptr; // Clean up on failure
+            log_lf(Log::L_ERROR, "%s: Failed to get editor view size\n", StringAsCStr(sName));
             return false;
         }
 
@@ -1170,12 +1329,21 @@ public:
     }
 
     bool onShow(host_plugin_window* _window) override {
-        if (this->windowHost == _window) {
+        if (this->windowHost == _window && view) {
             bEditOpen = true;
             this->updateFromMainThread();
             view->setFrame(&plugFrame);
             auto voidWindowHandle = reinterpret_cast<void*>(_window->getWindowHandle());
-            if (view->attached(voidWindowHandle, Steinberg::kPlatformTypeHWND) != Steinberg::kResultOk) {
+#ifdef _WIN32
+            auto platformWindowType = Steinberg::kPlatformTypeHWND;
+#elif defined(__linux__)
+            auto platformWindowType = Steinberg::kPlatformTypeX11EmbedWindowID;
+#elif defined(__APPLE__)
+            auto platformWindowType = Steinberg::kPlatformTypeNSView;
+#else
+            return false;
+#endif
+            if (view->attached(voidWindowHandle, platformWindowType) != Steinberg::kResultOk) {
                 log_lf(Log::L_ERROR, "%s: Failed to attach editor view to HWND\n", StringAsCStr(sName));
                 return false;
             }
@@ -1190,10 +1358,11 @@ public:
                 if (Steinberg::kResultOk != view->removed()) {
                     log_lf(Log::L_ERROR, "%s: Failed to remove editor view\n", StringAsCStr(sName));
                 }
-                view->setFrame(nullptr);
+                if (Steinberg::kResultOk != view->setFrame(nullptr)) {
+                    log_lf(Log::L_ERROR, "%s: Failed to set editor view frame to nullptr\n", StringAsCStr(sName));
+                }
             }
         }
-        view = nullptr;
         bEditOpen = false;
         return true;
     }

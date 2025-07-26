@@ -69,7 +69,6 @@ public:
     bool bSupportsWindowResize     = false;
     bool isSynth                   = false;
     bool bWindowPosSizeValid       = false;
-    bool bInEditIdle               = false;
     bool bOpenWindowOnEnable       = false;
     int32_t slot                   = -1;
     int midiEventsDispatched       = 0;

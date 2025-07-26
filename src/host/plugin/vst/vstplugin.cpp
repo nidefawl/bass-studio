@@ -53,8 +53,7 @@ bool vstplugin::onClose() {
     if (this->windowHost != nullptr && bEditOpen) {
         this->dispatch(effEditClose);
     }
-    bEditOpen = false;
-    return true;
+    return effectbase::onClose();
 }
 
 ivec2 vstplugin::constrainWindowSize(host_plugin_window*, ivec2 size) {

@@ -95,13 +95,11 @@ public:
     void unload(DAW::Host::PluginManager* host) override;
     void load(DAW::Host::PluginManager* host) override;
     void initBuffers() override;
-    void updateFromMainThread() override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     automatable_param_t* getParam(int32_t idx) override;
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
     void onWindowResize(ivec2 size) override;
     bool onShow(host_plugin_window* window) override;
-    bool onClose() override;
     ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) override;
     bool hasWindowEditor() override;
     bool showWindow(bool bResetPosition) override;
@@ -127,6 +125,7 @@ public:
     void unloadClapPlugin();
 
     bool canActivate() const;
+    void updateClapFromMainThread();
 private:
     bool getIsAudioTheadOverride() const;
     void activate(sampleformat_t sampleFormat);
@@ -144,7 +143,6 @@ private:
     void processCC(int sampleOffset, int channel, int cc, int value);
     void processEnd(int nframes);
 
-    void updateClapFromMainThread();
 
     void initPluginExtensions();
     void initThreadPool();

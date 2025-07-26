@@ -419,26 +419,24 @@ bool PluginManager::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int3
 }
 
 void PluginManager::onTick() {
-    // Currently no lock
+    checkScanner();
+
     for (auto* current : pluginInstances) {
-        //TODO: should we skip dispatching if current->bWantsEffIdle == false ?!
-        if (current->bEditOpen && !current->bInEditIdle) {
-            current->bInEditIdle = true;
-            current->bInEditIdle = false;
-            if (current->windowHost) {
-                //current->window->captureWindowFrame();
-                current->updateFromMainThread();
-            }
+        if (current->bEditOpen && current->windowHost) {
+            current->updateFromMainThread();
         }
     }
+
     auto daw = mgrImpl->tls.dawInstance;
     if (!daw)
         return;
     ThreadLock lock = daw->lockPlayThread();
     for (auto* clapPlugin : pluginInstancesClap) {
-        clapPlugin->updateFromMainThread();
+        clapPlugin->updateClapFromMainThread();
     }
-    checkScanner();
+    for (auto* vst3Plugin : pluginInstancesVST3) {
+        vst3Plugin->updateVst3FromMainThread();
+    }
 }
 
 bool PluginManager::postPluginLoaded(audio_stage_t* trp, effectbase* plugin) {

@@ -1861,11 +1861,6 @@ void clapplugin::initBuffers() {
 
 }
 
-void clapplugin::updateFromMainThread() {
-    effectbase::updateFromMainThread();
-    updateClapFromMainThread();
-}
-
 bool clapplugin::hasWindowEditor() {
     return canUsePluginGui();
 }
@@ -1910,14 +1905,6 @@ bool clapplugin::showWindow(bool bResetPosition) {
     //     return false;
     // }
     this->openWindow(bResetPosition, { width, height });
-    return true;
-}
-
-bool clapplugin::onClose() {
-    if (this->windowHost != nullptr && bEditOpen) {
-        // this->dispatch(effEditClose);
-    }
-    bEditOpen = false;
     return true;
 }
 
