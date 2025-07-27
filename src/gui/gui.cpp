@@ -665,23 +665,45 @@ void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
 
 void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
     int n       = theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
-    if (n != 0) {
-        nvgBeginPath(vg);
-        nvgRect(vg, pos.x, pos.y, size.x, size.y);
-        nvgFillColor(vg, theme->getBgStrokeColor(flags));
-        nvgFill(vg);
-    }
-    auto bgPos  = pos + ivec2(n);
-    auto bgSize = size - ivec2(n * 2);
-    if (bgSize.x > 0 && bgSize.y > 0) {
-        NVGcolor bgColor = theme->getColor(getBackgroundColor());
-        nvgBeginPath(vg);
-        nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
-        nvgFillColor(vg, bgColor);
-        if (flags & FLG_RENDER_BACKGROUND_INSET) {
-            nvgFillCustomPar(vg, (flags&FLG_BG_SHADING)?-2:-1);
+    if constexpr(true) { // rectangluar border
+        if (n != 0) {
+            nvgBeginPath(vg);
+            nvgRect(vg, pos.x, pos.y, size.x, size.y);
+            nvgFillColor(vg, theme->getBgStrokeColor(flags));
+            nvgFill(vg);
         }
-        nvgFill(vg);
+        auto bgPos  = pos + ivec2(n);
+        auto bgSize = size - ivec2(n * 2);
+        if (bgSize.x > 0 && bgSize.y > 0) {
+            NVGcolor bgColor = theme->getColor(getBackgroundColor());
+            nvgBeginPath(vg);
+            nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+            nvgFillColor(vg, bgColor);
+            if (flags & FLG_RENDER_BACKGROUND_INSET) {
+                nvgFillCustomPar(vg, (flags&FLG_BG_SHADING)?-2:-1);
+            }
+            nvgFill(vg);
+        }
+    } else { // rounded border
+        int borderRadius = 6;
+        if (n != 0) {
+            nvgBeginPath(vg);
+            nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, borderRadius);
+            nvgFillColor(vg, theme->getBgStrokeColor(flags));
+            nvgFill(vg);
+        }
+        auto bgPos  = pos + ivec2(n);
+        auto bgSize = size - ivec2(n * 2);
+        if (bgSize.x > 0 && bgSize.y > 0) {
+            NVGcolor bgColor = theme->getColor(getBackgroundColor());
+            nvgBeginPath(vg);
+            nvgRoundedRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y, borderRadius);
+            nvgFillColor(vg, bgColor);
+            if (flags & FLG_RENDER_BACKGROUND_INSET) {
+                nvgFillCustomPar(vg, (flags & FLG_BG_SHADING) ? -2 : -1);
+            }
+            nvgFill(vg);
+        }
     }
 }
 
