@@ -74,6 +74,13 @@ void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mo
 void guictr_menubar_entry::handleDraggedBegin(MouseEvent& evt) {
     parentMenuBar->openMenu(this);
 }
+void guictr_menubar_entry::handleDraggedRelease(MouseEvent& evt) {
+#ifdef __linux__
+    if (getenv("WAYLAND_DISPLAY")) {
+        parentMenuBar->openMenu(this);
+    }
+#endif
+}
 
 bool guictr_menubar_entry::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {

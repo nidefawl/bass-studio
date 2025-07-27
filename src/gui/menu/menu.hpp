@@ -50,6 +50,7 @@ public:
     void render(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
     guibase* getFocusedControl() override {
         return nullptr;
     }
