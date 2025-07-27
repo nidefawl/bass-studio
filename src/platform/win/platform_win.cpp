@@ -37,6 +37,39 @@ void setMainHWND(HWND hwnd) {
 }
 }
 
+namespace {
+bool LoadNtDllAndCheckForWineVersion(String& wineVersion ) {
+    static const char *(CDECL *pwine_get_version)(void);
+    wineVersion.clear();
+    HMODULE hntdll = GetModuleHandle("ntdll.dll");
+    if(!hntdll)
+    {
+        return false;
+    }
+
+    pwine_get_version = (const char *(*)())GetProcAddress(hntdll, "wine_get_version");
+    if(pwine_get_version)
+    {
+        wineVersion = pwine_get_version();
+        return true;
+    }
+    return false;
+}
+}
+static bool bIsRunningOnWine = false;
+bool isRunningOnWine() {
+    static bool bInit = false;
+    if (!bInit) {
+        bInit = true;
+        String wineVersion;
+        bIsRunningOnWine = LoadNtDllAndCheckForWineVersion(wineVersion);
+        if (bIsRunningOnWine) {
+            log_lf(Log::L_INFO, "Running on Wine: %s\n", wineVersion.c_str());
+        }
+    }
+    return bIsRunningOnWine;
+}
+
 /* windows typedefs LONGLONG as __int64_t */
 struct time_perf_count {
     int64_t count;

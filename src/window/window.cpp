@@ -1133,7 +1133,9 @@ public:
         //TODO: add this function to GLFW
         //glfwBringWindowToTop(glfw);
 #ifdef _WIN32
-        // BringWindowToTop(hwnd);
+        if (isRunningOnWine()) {
+            BringWindowToTop(hwnd);
+        }
         // if ((getCreationFlags() & WINDOW_IS_DIALOG) && parent) {
         //     SetActiveWindow(hwnd);
         // }
@@ -1342,9 +1344,6 @@ public:
 };
 
 window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl, ivec2 windowSize, int flags) {
-
-
-    //TODO: document lifetime of control
     std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, overlayCtrl);
     dbgassert(windowSize.x > 0 && windowSize.y > 0);
     windowSize = math::maxvec2(windowSize, ivec2(1));
