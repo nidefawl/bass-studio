@@ -91,6 +91,9 @@ int main(int argc, char** argv) {
     try {
         glfwSetErrorCallback(glfw_error_callback);
         glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
+#ifdef __linux__
+        glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
         if (!glfwInit()) {
             exit(EXIT_FAILURE);
         }

@@ -304,6 +304,9 @@ void onModuleLoad() {
         }
 #endif
 
+#ifdef __linux__
+        glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
         if (!glfwInit()) {
 #ifndef NDEBUG
             daw_tls::getTls().runtime->printWindowFps = true;

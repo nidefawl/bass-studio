@@ -156,6 +156,9 @@ int main(int argc, char** argv) {
     App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
 
+#ifdef __linux__
+        glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
     glfwInit();
     auto dawInstance = std::make_shared<DawInstance>();
     try {

@@ -247,6 +247,9 @@ int main(int, char*[]) {
 
         glfwInitHint(GLFW_COCOA_MENUBAR, GLFW_FALSE);
 
+#ifdef __linux__
+        glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
         if (!glfwInit())
             return 1;
 

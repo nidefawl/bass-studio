@@ -303,7 +303,6 @@ private:
         glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);
-        glfwSwapInterval(-1);
         // glfwSwapInterval(0);
         int flags = NVG_ANTIALIAS;
 #ifndef NDEBUG
@@ -1915,6 +1914,10 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         }
 #endif
         // glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
+
+#ifdef __linux__
+        glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
 
         auto glfwInitRet = glfwInit();
         if (!glfwInitRet) {
