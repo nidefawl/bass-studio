@@ -100,7 +100,7 @@ void guictr_pluginlibrary::update() {
         }
         textField2.setValue("");
     } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "Error: %s\n", e.what());
+        log_lf(Log::L_ERROR, "db->query: %s\n", e.what());
         String strValue = e.what();
         textField2.setValue(strValue);
     }

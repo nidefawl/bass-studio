@@ -589,17 +589,21 @@ namespace DAW {
             log_printf("Loading Plugin '%s'\n", StringAsCStr(pluginSnapshot.name));
             plugindatabase_t* db = plugindatabase_t::getInstance();
             pluginentry_t resolvedPlugin;
-            if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-                auto loadResult = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat, pluginSnapshot.clapId});
-                Host::LoadResultPluginImpl& res = *loadResult;
-                if (res.library.isSuccess()) {
-                    res.plugin->localDbId = resolvedPlugin.localDbId;
-                    effect = res.plugin;
+            try {
+                if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
+                    auto loadResult = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat, pluginSnapshot.clapId});
+                    Host::LoadResultPluginImpl& res = *loadResult;
+                    if (res.library.isSuccess()) {
+                        res.plugin->localDbId = resolvedPlugin.localDbId;
+                        effect = res.plugin;
+                    } else {
+                        log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, static_cast<int32_t>(res.library.state));
+                    }
                 } else {
-                    log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, static_cast<int32_t>(res.library.state));
+                    log_printf("Failed loading: Unknown plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
                 }
-            } else {
-                log_printf("Failed loading: Unknown plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
+            } catch (std::exception& e) {
+                log_lf(Log::L_ERROR, "db->resolvePlugin: %s\n", e.what());
             }
         } else {
             effect = host->makeModuleInstance(pluginSnapshot.moduleType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
