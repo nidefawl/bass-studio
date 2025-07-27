@@ -404,12 +404,12 @@ void clapplugin::activate(sampleformat_t sampleFormat) {
     if (!_plugin || !canActivate())
         return;
 
-    dawHandles->currentLatency = _pluginLatency ? _pluginLatency->get(_plugin) : 0;
 
     if (!_plugin->activate(_plugin, sampleFormat.sampleRate, sampleFormat.blockSize, sampleFormat.blockSize)) {
         setPluginState(InactiveWithError);
         return;
     }
+    dawHandles->currentLatency = _pluginLatency ? _pluginLatency->get(_plugin) : 0;
 
     _scheduleProcess = true;
     setPluginState(ActiveAndSleeping);
