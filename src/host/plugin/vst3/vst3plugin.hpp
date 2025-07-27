@@ -234,7 +234,7 @@ class vst3plugin final : public effectbase {
                 return Steinberg::kNoInterface;
             }
             struct ::epoll_event ev = {};
-            ev.events = EPOLLIN|EPOLLOUT;
+            ev.events = EPOLLIN;
             ev.data.fd = pluginFd;
 
             if (::epoll_ctl(epollfd, EPOLL_CTL_ADD, pluginFd, &ev) < 0)
@@ -297,7 +297,8 @@ class vst3plugin final : public effectbase {
             }
             for (auto it = fdEventHandlers.begin(); it != fdEventHandlers.end(); ++it) {
                 struct epoll_event events{};
-                for (int i = 20; i > 0; --i) {
+                int i = 40;
+                for (; i > 0; --i) {
                     int ret = epoll_wait(it->epollfd, &events, 1, 0);
                     if (ret < 0) {
                         String err = FormatErrorMessage(errno, "RunLoopLinux: epoll_wait failed");
@@ -308,6 +309,7 @@ class vst3plugin final : public effectbase {
                         it->handler->onFDIsSet(it->pluginfd);
                     }
                 }
+                ;
             }
         }
     private:
