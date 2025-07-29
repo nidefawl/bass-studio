@@ -5,6 +5,7 @@
 #include <utility>
 #include "appconfig.hpp"
 #include "assert_dbg.h"
+#include "grid.hpp"
 #include "gui/tooltip/tooltip.hpp"
 #include "guiglobals.hpp"
 #include "math/vec.hpp"
