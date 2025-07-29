@@ -59,7 +59,7 @@ public:
         }
         void wait();
         void reset();
-        bool isCompleted() const;
+        bool isCompleted();
         virtual void run() = 0;
         virtual void notifyCustom() {};
         virtual void destruct() {};

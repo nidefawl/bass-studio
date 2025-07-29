@@ -47,7 +47,8 @@ public:
     void setCompleted() {
         task->status = status_complete;
     }
-    bool isCompleted() const {
+    bool isCompleted() {
+        std::unique_lock<std::mutex> lock(m_mtx);
         return m_finished;
     }
     void wait() {
@@ -82,7 +83,7 @@ void WorkerThread::ThreadTask::wait() {
 void WorkerThread::ThreadTask::reset() {
     this->m_taskImpl->reset();
 }
-bool WorkerThread::ThreadTask::isCompleted() const {
+bool WorkerThread::ThreadTask::isCompleted() {
     return this->m_taskImpl->isCompleted();
 }
 class WorkerThread::Impl {
