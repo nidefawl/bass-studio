@@ -135,7 +135,7 @@ int main(int, char*[]) {
             };
             channelnum_t channels = stream->getNumOutputChannels();
             seq_rand noiseRng;
-            constexpr size_t LOCAL_RING_BUF_SIZE = 128;
+            constexpr size_t LOCAL_RING_BUF_SIZE = 16;
             struct local_ringbuffer_t {
                 uint32_t writePos = 0;
                 AudioBuffer* buffers[LOCAL_RING_BUF_SIZE] = { 0 };
@@ -172,7 +172,6 @@ int main(int, char*[]) {
             auto timeStart = getTimeSecondsD();
             auto timeRenderStart = timeStart;
             auto timeLastPerfLog = timeStart;
-            int32_t warmupBlocks = 0;
             double tmComputeAvg = -1.0;
             while(window && !glfwWindowShouldClose(window)) {
                 glfwPollEvents();
@@ -245,18 +244,8 @@ int main(int, char*[]) {
                 for (samplecount_t i = 0; i < channels; i++) {
                     memcpy(audioblock->buf[i], &outputBuffer[i * audioblock->samples], audioblock->samples * sizeof(float));
                 }
-                if (warmupBlocks >= 0) {
-                    warmupBlocks++;
-                    if (warmupBlocks >= int32_t(LOCAL_RING_BUF_SIZE/4)) {
-                        for (int i = 0; i < warmupBlocks; i++) {
-                            auto ringBufIdx = ringbuffer.writePos - warmupBlocks + i;
-                            stream->enqueue(ringbuffer.buffers[ringBufIdx%LOCAL_RING_BUF_SIZE]);
-                        }
-                        warmupBlocks = -1;
-                    }
-                } else {
-                    stream->enqueue(buf);
-                }
+
+                stream->enqueue(buf);
 
                 auto tmNow_ms = getTimeSecondsD();
                 GLuint64 result;
