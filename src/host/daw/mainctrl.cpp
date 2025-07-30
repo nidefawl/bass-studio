@@ -2838,7 +2838,6 @@ public:
 
     void setCancelled() {
         m_cancelled = true;
-        setError();
     }
 
     bool isCancelled() const {
@@ -2894,6 +2893,7 @@ void DawInstance::updateLoadAudioTasks() {
 void DawInstance::updateAudioProcessingTask() {
     if (this->processAudioTaskRunning 
         && this->processAudioTaskRunning->isCompleted()) {
+
         if (!this->processAudioTaskRunning->isCancelled()) {
             auto lock = getPlayThread()->lockThread();
             this->processAudioTaskRunning->finishMainThread(this);
@@ -3042,20 +3042,20 @@ bool DawInstance::preloadDraggedFiles(const std::vector<String>& files) {
             if (!workerThread.pushTask(&task)) {
                 return false;
             }
-            if (task.isInQueue()) {
-                task.wait();
-                if (task.isGood()) {
-                    std::shared_ptr<clip_clipboard> fileloadedClipboard = task.getClipboard();
-                    if (fileloadedClipboard) {
-                        dragdropclip.path = path;
-                        dragdropclip.clipboard = fileloadedClipboard;
-                        dragdropclip.state = State::STATE_LOADED;
-                        return true;
-                    } else {
-                        log_lf(Log::L_WARN, "Failed loading drag-drop clipboard\n");
-                        dragdropclip.state = State::STATE_FAILED_LOADING;
-                    }
-                }
+            task.wait();
+            if (task.hasException()) {
+                task.logException();
+                return false;
+            }
+            std::shared_ptr<clip_clipboard> fileloadedClipboard = task.getClipboard();
+            if (fileloadedClipboard) {
+                dragdropclip.path = path;
+                dragdropclip.clipboard = fileloadedClipboard;
+                dragdropclip.state = State::STATE_LOADED;
+                return true;
+            } else {
+                log_lf(Log::L_WARN, "Failed loading drag-drop clipboard\n");
+                dragdropclip.state = State::STATE_FAILED_LOADING;
             }
         }
     }

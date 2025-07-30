@@ -1,15 +1,11 @@
 #pragma once
 
-#cmakedefine CMAKE_SOURCE_DIR         "@CMAKE_SOURCE_DIR@"
-#cmakedefine CMAKE_CURRENT_BINARY_DIR "@CMAKE_CURRENT_BINARY_DIR@"
-#cmakedefine CMAKE_PROJECT_BINARY_DIR "@CMAKE_PROJECT_BINARY_DIR@"
-
-#cmakedefine CMAKE_MAJOR_VERSION      "@CMAKE_MAJOR_VERSION@"
-#cmakedefine CMAKE_MINOR_VERSION      "@CMAKE_MINOR_VERSION@"
-#cmakedefine CMAKE_PATCH_VERSION      "@CMAKE_PATCH_VERSION@"
-#cmakedefine PROJECT_CTEST_DATA_PATH  "@PROJECT_CTEST_DATA_PATH@"
+#ifndef PROJECT_CTEST_DATA_PATH
+#define PROJECT_CTEST_DATA_PATH "/data/dev/daw/test/data"
+#endif // PROJECT_CTEST_DATA_PATH
 
 #define TEST_PATH(entry) PROJECT_CTEST_DATA_PATH "/" entry
+
 #include <iostream>
 #include <stdexcept>
 #include <string>

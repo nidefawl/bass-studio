@@ -7,6 +7,7 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 
 enum ModuleType : int32_t {
+    MODULE_TYPE_UNKNOWN = 0,
     MODULE_TYPE_VST2 = 1,
     MODULE_TYPE_CLAP = 2,
     MODULE_TYPE_VST3 = 3,
@@ -14,6 +15,17 @@ enum ModuleType : int32_t {
     MODULE_TYPE_DEFERRED = 5,
     MODULE_TYPE_AU = 6,
 };
+inline constexpr String ModuleTypeToString(ModuleType type) {
+    switch (type) {
+        case MODULE_TYPE_VST2: return "VST2";
+        case MODULE_TYPE_CLAP: return "CLAP";
+        case MODULE_TYPE_VST3: return "VST3";
+        case MODULE_TYPE_INTERNAL_EFFECT: return "Internal Effect";
+        case MODULE_TYPE_DEFERRED: return "Deferred Plugin";
+        case MODULE_TYPE_AU: return "Audio Unit";
+        default: return "Unknown";
+    }
+}
 enum PluginType : int32_t {
     PLUGIN_TYPE_GROUP = 3,
     PLUGIN_TYPE_GAIN = 7,

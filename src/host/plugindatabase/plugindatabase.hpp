@@ -1,9 +1,10 @@
 #pragma once
+#include "host/plugin/modules.hpp"
 #include "str_util.hpp"
 #include <vector>
 
 struct pluginentry_t {
-    int32_t moduleFormat;
+    ModuleType moduleType;
     int32_t localDbId;
     uint32_t uid;
     String clapId;

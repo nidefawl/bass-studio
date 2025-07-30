@@ -599,7 +599,7 @@ int guictr_plugins::slotFromCoord(ivec2 _pos) {
     return slot;
 }
 effectbase* gui_pluginlibrary_entry::makeInstance() {
-    auto loadResult = dawCtrl->getDaw()->getPluginManager()->loadPlugin({entry.path, entry.uid, 0, entry.bugfixFlags, entry.moduleFormat, entry.clapId});
+    auto loadResult = dawCtrl->getDaw()->getPluginManager()->loadPlugin({entry.path, entry.uid, 0, entry.bugfixFlags, entry.moduleType, entry.clapId});
     DAW::Host::LoadResultPluginImpl& res = *loadResult;
     if (res.library.isSuccess()) {
         res.plugin->setName(entry.name);

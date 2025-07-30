@@ -1,5 +1,6 @@
 #include "host/host_pluginmanager.hpp"
 #include "assert_dbg.h"
+#include "host/pluginscanner/pluginscanner.hpp"
 #include "str_util.hpp"
 #include "fileio.hpp"
 #include "logging.hpp"
@@ -14,6 +15,7 @@
 #include "host/host_plugin_loadresult.hpp"
 #include "host/track/track_impl.hpp"
 #include "plugin/vst3/vst3plugin.hpp"
+#include "threads/workerthread.hpp"
 #include <pluginterfaces/vst/ivstaudioprocessor.h>
 #include <public.sdk/source/vst/hosting/plugprovider.h>
 #include <public.sdk/source/vst/utility/uid.h>
@@ -22,6 +24,7 @@
 #include <public.sdk/source/vst/hosting/module.h>
 #include <clap/clap.h>
 #include <memory>
+#include <optional>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -54,10 +57,31 @@ public:
 /**
 * pluginmanager internals
 */
+class PluginScannerServerTask : public WorkerThread::ThreadTask {
+    const PluginScanner::pluginscanner_server_options options;
+    std::atomic<bool> m_cancelled{};
+public:
+    explicit PluginScannerServerTask(PluginScanner::pluginscanner_server_options&& options)
+        : options(std::move(options)), m_cancelled(false) {
+    }
+    void run() override {
+        auto server = std::make_unique<PluginScanner::PluginScannerServer>(options, std::nullopt);
+        server->findFiles();
+        server->runScannerServer();
+    }
+    void setCancelled() {
+        m_cancelled = true;
+    }
+
+    bool isCancelled() const {
+        return m_cancelled;
+    }
+};
 class PluginManager::pluginmanager_impl {
 public:
     daw_tls::tlsinstance tls;
-    std::unique_ptr<ProcessThread> threadPluginScannerProcess;
+    std::unique_ptr<WorkerThread> threadScannerServer;
+    std::unique_ptr<PluginScannerServerTask> scannerServerTask;
     int scanningState = 0;
     int32_t vst2TransportStateFlags = 0;
     SafeRefStorage<effectbase> safeRefs;
@@ -602,30 +626,37 @@ void PluginManager::assignNewStageId(audio_stage_t* trp, audio_stage_id_t newId)
 #ifdef _WIN32
 HMODULE safeLoadLib(const char* szLibName);
 #define CLOSE_MODULE_HANDLE(handle) FreeLibrary(handle)
-LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
+LoadResultSharedLibrary loadLib(const String& filepath, ModuleType moduleType) {
     if (!FileExists(filepath)) {
         return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
-    if (moduleFmt == 2) {
+    if (moduleType == ModuleType::MODULE_TYPE_VST3 || moduleType == ModuleType::MODULE_TYPE_UNKNOWN) {
         String error;
         VST3::Hosting::Module::Ptr vst3Module = VST3::Hosting::Module::create(filepath, error);
-        if (!vst3Module) {
+        if (vst3Module) {
+            return LoadResultSharedLibrary::FromSuccessVST3(std::move(vst3Module));
+        }
+        if (moduleType == ModuleType::MODULE_TYPE_VST3) {
+            // If we are specifically looking for a VST3 module, return an error
             return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, error);
         }
-        return LoadResultSharedLibrary::FromSuccessVST3(std::move(vst3Module));
     }
     HMODULE module = safeLoadLib(StringAsCStr(filepath));
     if (!module) {
         auto dwErr = GetLastError();
         return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, FormatErrorMessage(dwErr, "LoadLibrary failed"));
     }
-    if (moduleFmt == -1 || moduleFmt == 1) {
+    if (moduleType == ModuleType::MODULE_TYPE_CLAP || moduleType == ModuleType::MODULE_TYPE_UNKNOWN) {
         auto symbolClapEntry = reinterpret_cast<void*>(GetProcAddress(module, "clap_entry"));
         if (symbolClapEntry) {
             return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::CLAP, module, symbolClapEntry);
         }
+        if (moduleType == ModuleType::MODULE_TYPE_CLAP) {
+            // If we are specifically looking for a CLAP module, return an error
+            return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, "clap_entry not found");
+        }
     }
-    if (moduleFmt == -1 || moduleFmt == 0) {
+    if (moduleType == ModuleType::MODULE_TYPE_VST2 || moduleType == ModuleType::MODULE_TYPE_UNKNOWN) {
         auto symbolVSTPluginMain= reinterpret_cast<void*>(GetProcAddress(module, "VSTPluginMain"));
         if (symbolVSTPluginMain) {
             return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
@@ -633,6 +664,10 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
         auto symbolMain = reinterpret_cast<void*>(GetProcAddress(module, "main"));
         if (symbolMain) {
             return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+        }
+        if (moduleType == ModuleType::MODULE_TYPE_VST2) {
+            // If we are specifically looking for a VST2 module, return an error
+            return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, "VSTPluginMain or main not found");
         }
     }
     CLOSE_MODULE_HANDLE(module);
@@ -646,19 +681,23 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
 
 #define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
 
-LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
+LoadResultSharedLibrary loadLib(const String& filepath, ModuleType moduleType) {
     if (!FileExists(filepath)) {
         return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
-    if (moduleFmt == 2) {
+    if (moduleType == ModuleType::MODULE_TYPE_VST3 || moduleType == ModuleType::MODULE_TYPE_UNKNOWN) {
         String error;
         VST3::Hosting::Module::Ptr vst3Module = VST3::Hosting::Module::create(filepath, error);
-        if (!vst3Module) {
+        if (vst3Module) {
+            return LoadResultSharedLibrary::FromSuccessVST3(std::move(vst3Module));
+        }
+        if (moduleType == ModuleType::MODULE_TYPE_VST3) {
+            // If we are specifically looking for a VST3 module, return an error
             return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, error);
         }
-        return LoadResultSharedLibrary::FromSuccessVST3(std::move(vst3Module));
     }
 #ifdef __APPLE__
+    // TODO: Fix macOS loading of plugins
     void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
     if (!module) {
         auto szStr = reinterpret_cast<const UInt8*>(filepath.c_str());
@@ -683,13 +722,17 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
         auto dl_err = dlerror();
         return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, StringFormat("dlopen failed: %s", dl_err));
     }
-    if (moduleFmt == -1 || moduleFmt == 1) {
+    if (moduleType == ModuleType::MODULE_TYPE_CLAP || moduleType == ModuleType::MODULE_TYPE_UNKNOWN) {
         auto symbolClapEntry = dlsym(module, "clap_entry");
         if (symbolClapEntry) {
             return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::CLAP, module, symbolClapEntry);
         }
+        if (moduleType == ModuleType::MODULE_TYPE_CLAP) {
+            // If we are specifically looking for a CLAP module, return an error
+            return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, "clap_entry not found");
+        }
     }
-    if (moduleFmt == -1 || moduleFmt == 0) {
+    if (moduleType == ModuleType::MODULE_TYPE_VST2 || moduleType == ModuleType::MODULE_TYPE_UNKNOWN) {
         auto symbolVSTPluginMain= dlsym(module, "VSTPluginMain");
         if (symbolVSTPluginMain) {
             return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
@@ -697,6 +740,10 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
         auto symbolMain = dlsym(module, "main");
         if (symbolMain) {
             return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+        }
+        if (moduleType == ModuleType::MODULE_TYPE_VST2) {
+            // If we are specifically looking for a VST2 module, return an error
+            return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, "VSTPluginMain or main not found");
         }
     }
     CLOSE_MODULE_HANDLE(module);
@@ -717,14 +764,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 
     String path, name, nameWithoutExt;
     SplitPath(filepath, &path, &nameWithoutExt, nullptr, &name);
-    auto moduleFormat = req.moduleFormat;
-    if (StrEndsWith(name, ".clap")) {
-        moduleFormat = 1;
-    }
-    if (StrEndsWith(name, ".vst3")) {
-        moduleFormat = 2;
-    }
-    auto libResult = loadLib(filepath, moduleFormat);
+    auto libResult = loadLib(filepath, req.moduleType);
     void* moduleHandle = libResult.module;
 #ifdef _WIN32
     HMODULE hmodule = reinterpret_cast<HMODULE>(libResult.module);
@@ -744,6 +784,12 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         }
         ~RAIIModuleDeleter() { closeNow(); }
     } moduleCloser{hmodule};
+
+    if (libResult.state != SharedLibState::SUCCESS) {
+        moduleCloser.moduleToClose = nullptr;
+        log_lf(Log::L_ERROR, "Failed to load plugin %s: %s\n", StringAsCStr(filepath), StringAsCStr(libResult.error));
+        return LoadResultPluginImpl{libResult};
+    }
 
     if (libResult.state == SharedLibState::SUCCESS && libResult.type == SharedLibPluginType::VST3) {
         dbgassert(libResult.vst3Module);
@@ -826,7 +872,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
             return LoadResultPluginImpl{libResult};
         }
 #ifdef _WIN32
-    } else if (libResult.state == SharedLibState::DL_OPEN_FAILED && moduleFormat <= 0) {
+    } else if (libResult.state == SharedLibState::DL_OPEN_FAILED && (libResult.type == SharedLibPluginType::VST2 || libResult.type == SharedLibPluginType::UNKNOWN)) {
         auto ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, req.bugfixFlags);
         libResult.state = ret == 0 ? SharedLibState::SUCCESS : SharedLibState::DL_UNKNOWN_FORMAT;
         libResult.type = ret == 0 ? SharedLibPluginType::VST2 : SharedLibPluginType::UNKNOWN;
@@ -836,10 +882,6 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 
     mgrImpl->pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     
-    if (libResult.state != SharedLibState::SUCCESS) {
-        moduleCloser.moduleToClose = nullptr;
-        return LoadResultPluginImpl{libResult};
-    }
     if (!aeffect || libResult.type != SharedLibPluginType::VST2) {
         libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
         return LoadResultPluginImpl{libResult};
@@ -891,86 +933,53 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 
 void PluginManager::scanPlugins() {
     if (mgrImpl->scanningState == 0) {
-        try {
-            mgrImpl->threadPluginScannerProcess = std::make_unique<ProcessThread>();
-            
-            auto scannerNames = {
-                "daw-pluginscanner", 
-                "pluginscanner", 
-                "pluginscanner-debug",
-                "pluginscanner-release",
-                "pluginscanner-clang-debug",
-                "pluginscanner-clang-release",
-                "pluginscanner-msvc-debug",
-                "pluginscanner-msvc-release",
-                "daw-pluginscanner", 
-            };
-            String filename = "";
-            for (auto* name : scannerNames) {
-                filename = App::Platform::getCurrentWorkingDirectory();
-                filename += FILE_PATHSEP_STR;
-                filename += name;
-#ifdef _WIN32 
-                filename += ".exe";
-#endif //_WIN32
-                if (FileExists(filename)) {
-                    break;
-                }
-            }
-            mgrImpl->threadPluginScannerProcess->startProcess(filename, "-server -auto", "");
-            seqthreads::threadSleep(200);
-            if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
-                mgrImpl->threadPluginScannerProcess->checkException();
-                log_lf(Log::L_ERROR, "Failed starting pluginscanner\n");
-            } else {
-                mgrImpl->scanningState = 1;
-                log_lf(Log::L_DEBUG, "daw-pluginscanner is running\n");
-            }
-        } catch (std::exception& e) {
-            log_lf(Log::L_ERROR, "Failed starting daw-pluginscanner: %s\n", e.what());
-        }
+        auto workerThread = std::make_unique<WorkerThread>();
+        workerThread->setTls(mgrImpl->tls);
+        workerThread->startThread("PluginScanner", seqthreads::ThreadType::PluginScanner);
+        mgrImpl->threadScannerServer = std::move(workerThread);
+        auto& settings = mgrImpl->tls.settings;
+
+        PluginScanner::pluginscanner_server_options options;
+        options.pluginPathLists[ModuleType::MODULE_TYPE_CLAP] = {settings->pluginsettings.pathClap};
+        options.pluginPathLists[ModuleType::MODULE_TYPE_VST2] = {settings->pluginsettings.pathVst2};
+        options.pluginPathLists[ModuleType::MODULE_TYPE_VST3] = {settings->pluginsettings.pathVst3};
+        options.dryRun             = false;
+        options.fullRescan         = false;
+        options.launchProcess      = true;
+        options.checkDiskTimestamp = true;
+        options.updatePattern = "";
+        options.unresponsiveTimeoutSeconds = 120;
+        auto task = std::make_unique<PluginScannerServerTask>(std::move(options));
+        mgrImpl->threadScannerServer->pushTask(task.get());
+        mgrImpl->scannerServerTask = std::move(task);
+        mgrImpl->scanningState = 1;
     }
 }
 
 void PluginManager::checkScanner() {
-    auto daw = mgrImpl->tls.dawInstance;
-    if (!daw) {
-        return;
-    }
-    try {
-        static int nCalls = 0;
-        if (mgrImpl->scanningState && mgrImpl->threadPluginScannerProcess) {
-            if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
-                mgrImpl->threadPluginScannerProcess->joinProcess();
-                mgrImpl->threadPluginScannerProcess.reset();
-                daw->getPluginDatabase().reopen();
-                this->mgrImpl->scanningState = 0;
-            } else {
-                if (++nCalls >= 10) {
-                    nCalls = 0;
-                    daw->getPluginDatabase().reopen();
-                }
+    if (mgrImpl->scanningState && mgrImpl->threadScannerServer) {
+        auto task = mgrImpl->scannerServerTask.get();
+        if (task->isCompleted()) {
+            if (task->hasException()) {
+                task->logException();
             }
-
+            mgrImpl->scannerServerTask.reset();
+            // stop and join worker thread
+            mgrImpl->threadScannerServer->stopThread();
+            mgrImpl->threadScannerServer->joinThread();
+            mgrImpl->threadScannerServer.reset();
+            auto daw = mgrImpl->tls.dawInstance;
+            if (daw) {
+                daw->getPluginDatabase().reopen();
+            }
+            this->mgrImpl->scanningState = 0;
         }
-    } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "checkScanner: %s\n", e.what());
     }
 }
 
 void PluginManager::stopScanner() {
-    try {
-        if (mgrImpl->scanningState && mgrImpl->threadPluginScannerProcess) {
-            if (mgrImpl->threadPluginScannerProcess->isRunning()) {
-                mgrImpl->threadPluginScannerProcess->killProcess();
-                this->mgrImpl->scanningState = 0;
-                if (mgrImpl->tls.dawInstance)
-                    mgrImpl->tls.dawInstance->getPluginDatabase().reopen();
-            }
-
-        }
-    } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "stopScanner: %s\n", e.what());
+    if (mgrImpl->scanningState && mgrImpl->scannerServerTask) {
+        mgrImpl->scannerServerTask->setCancelled();
     }
 }
 
@@ -1002,10 +1011,6 @@ daw_tls::tlsinstance& PluginManager::getTls() const {
 
 SafeRefStorage<effectbase>* PluginManager::getSafeRefStore() {
     return &mgrImpl->safeRefs;
-}
-
-LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
-    return loadPlugin({ filepath, uId, globalId, bugfixFlags });
 }
 
 int32_t& PluginManager::getTransportStateFlagsVst2() {

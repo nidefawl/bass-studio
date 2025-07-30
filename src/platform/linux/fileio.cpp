@@ -112,11 +112,8 @@ void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
 void findFilesWithExtList(
         const String& strPath,
         const std::vector<String>& vecExt,
-        const int32_t flags,
+        const bool bRecursive,
         std::vector<FileFound>& _out) {
-    const bool bRecursive = flags & LIST_DIR_RECURSIVE;
-    const bool bIncludeDirs = flags & LIST_DIR_DIRS;
-    // const bool bIncludeEmptyDirs = flags & LIST_DIR_EMPTY_DIRS;
     FTS* file_system = nullptr;
     const char* ptr  = StringAsCStr(strPath);
     char* args[2]    = { (char*) ptr, nullptr };
@@ -132,27 +129,31 @@ void findFilesWithExtList(
             continue;
         if (!fs_entry)
             break;
-        if (!(fs_entry->fts_info & FTS_D))
+        if (fs_entry->fts_info == FTS_DP)
             continue;
-        if (bRecursive && bIncludeDirs) {
-            String path = String(fs_entry->fts_path);
-            App::Platform::sanitizePathToDirectory(path);
-            const FileFound f = { std::move(path), fs_entry->fts_name, "", true };
-            _out.push_back(f);
-        }
         FTSENT* child = fts_children(file_system, 0);
-        while (child) {
-            if (!(child->fts_info & FTS_DP)) {
-                String fileName, ext;
-                SplitPath(child->fts_name, nullptr, nullptr, &ext, &fileName);
-                if (vecExt.empty() || std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
-                    String path = String(child->fts_path) + child->fts_name;
-                    App::Platform::sanitizePathToFile(path);
-                    const FileFound f = { std::move(path), child->fts_name, ext, bool(child->fts_info & FTS_D) };
-                    _out.push_back(f);
-                }
+        for (; child; child = child->fts_link) {
+            if (child->fts_info == FTS_D || child->fts_info == FTS_DP || child->fts_info == FTS_DNR) {
+                continue; // skip directories
             }
-            child = child->fts_link;
+            if (child->fts_info == FTS_DC) {
+                continue; // skip cycles
+            }
+            if (child->fts_info == FTS_ERR) {
+                continue;
+            }
+            if (child->fts_info == FTS_NS) {
+                continue; // skip unreadable files
+            }
+
+            String fileName, ext;
+            String path = String(child->fts_path) + child->fts_name;
+            SplitPath(path, nullptr, nullptr, &ext, &fileName);
+            if (vecExt.empty() || std::find(vecExt.cbegin(), vecExt.cend(), ext) != vecExt.cend()) {
+                App::Platform::sanitizePathToFile(path);
+                const FileFound f = { std::move(path), child->fts_name, ext, bool(child->fts_info & FTS_D) };
+                _out.push_back(f);
+            }
         }
         if (!bRecursive)
             break;
@@ -161,14 +162,47 @@ void findFilesWithExtList(
     fts_close(file_system);
 }
 
+void findDirectoriesWithExt(
+        const String& strPath,
+        const String& ext,
+        std::vector<FileFound>& _out) {
+    FTS* file_system = nullptr;
+    const char* ptr  = StringAsCStr(strPath);
+    char* args[2]    = { (char*) ptr, nullptr };
+    
+    file_system = fts_open(args, FTS_LOGICAL | FTS_COMFOLLOW | FTS_NOCHDIR, nullptr);
+    if (!file_system) {
+        throw FileIOException(errno, "fts_open failed: " + strPath);
+    }
+    errno = 0;
+    while (true) {
+        FTSENT* fs_entry = fts_read(file_system);
+        if (!fs_entry && errno) // ignore error and continue
+            continue;
+        if (!fs_entry)
+            break;
+        if (fs_entry->fts_info != FTS_D) {
+            continue; // skip non directories
+        }
+        String fileName, fileExt;
+        SplitPath(fs_entry->fts_name, nullptr, nullptr, &fileExt, &fileName);
+        if (ext == fileExt) {
+            String path = String(fs_entry->fts_path);
+            // App::Platform::sanitizePathToDirectory(path);
+            const FileFound f = { std::move(path), fs_entry->fts_name, ext, true, -1 };
+            _out.push_back(f);
+        }
+    }
+
+    fts_close(file_system);
+}
 
 void findFilesWithExt(
         const String& strPath,
         const String& strExt,
         bool bRecursive,
         std::vector<FileFound>& _out) {
-    int32_t flags = bRecursive ? LIST_DIR_RECURSIVE : 0;
-    findFilesWithExtList(strPath, { strExt }, flags, _out);
+    findFilesWithExtList(strPath, { strExt }, bRecursive, _out);
 }
 
 void listFilesystemNonRecursive(

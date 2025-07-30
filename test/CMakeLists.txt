@@ -1,6 +1,18 @@
 set(PROJECT_CTEST_DATA_PATH ${CMAKE_CURRENT_LIST_DIR}/data)
 get_filename_component(PROJECT_CTEST_DATA_PATH ${PROJECT_CTEST_DATA_PATH} ABSOLUTE)
-configure_file( TestBase.hpp.in ${CMAKE_CURRENT_LIST_DIR}/TestBase.hpp )
+
+# check if we are cross compiling for win32, if so map the path to the wine Z: drive
+if (CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+  set(PROJECT_CTEST_DATA_PATH "Z:${PROJECT_CTEST_DATA_PATH}")
+endif()
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  # and turn it into backslashes
+  string(REPLACE "/" "\\" PROJECT_CTEST_DATA_PATH ${PROJECT_CTEST_DATA_PATH})
+  # double escape backslashes for windows
+  string(REPLACE "\\" "\\\\" PROJECT_CTEST_DATA_PATH ${PROJECT_CTEST_DATA_PATH})
+endif()
+message(STATUS "PROJECT_CTEST_DATA_PATH: ${PROJECT_CTEST_DATA_PATH}")
+
 
 include(CheckCXXCompilerFlag)
 
@@ -40,6 +52,8 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   set_target_properties(${test_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${ABS_WORKING_DIR})
   set_target_properties(${test_name} PROPERTIES OUTPUT_NAME "${test_name}-${BUILD_BINARY_SUFFIX}")
   target_compile_options(${test_name} PRIVATE ${TC_WARNING_FLAGS})
+  # add PROJECT_CTEST_DATA_PATH
+  target_compile_definitions(${test_name} PRIVATE PROJECT_CTEST_DATA_PATH="${PROJECT_CTEST_DATA_PATH}")
   if (${link_lib})
     target_link_libraries(${test_name} PUBLIC dawlib)
   else()

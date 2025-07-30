@@ -5,6 +5,7 @@
 #include "host/host_plugin_loadresult.hpp"
 #include "host/plugin/clap/clap-plugin.hpp"
 #include "host/graph/effect_graph.hpp"
+#include "host/plugin/modules.hpp"
 #include "str_util.hpp"
 #include "common/test_common.hpp"
 #include "host/host_pluginmanager.hpp"
@@ -49,7 +50,7 @@ namespace test_clap_plugin_host {
         std::vector<FileFound> files;
         findFilesWithExt(TEST_PATH("plugins/clap"), PLATFORM_TEST_CLAP_EXT, true, files);
         for (const auto& file : files) {
-            auto loadresult = host->loadPlugin({file.path, 0, 0, 0, 1});
+            auto loadresult = host->loadPlugin({file.path, 0, 0, 0, ModuleType::MODULE_TYPE_CLAP});
             auto res = *loadresult;
             TEST_ASSERT_THROW(res.library.isSuccess());
             TEST_ASSERT_THROW(res.clapPlugin != nullptr);

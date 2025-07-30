@@ -13,6 +13,7 @@ namespace seqthreads {
         AudioThread,
         AudioThreadPool,
         WorkerThread,
+        PluginScanner,
         ChildProcess,
     };
     ThreadType CurrentThreadType() noexcept;

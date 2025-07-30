@@ -8,6 +8,7 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
+#include "logging.hpp"
 #include "thread.hpp"
 #include "workerthread.hpp"
 #include "assert_dbg.h"
@@ -30,7 +31,6 @@ public:
     void reset() {
         m_finished = false;
         task->clearException();
-        task->status = status_init;
     }
     void run() {
         task->run();
@@ -38,14 +38,8 @@ public:
     void setException(std::exception_ptr eptr) {
         task->setException(eptr);
     }
-    void setError() {
-        task->status = status_error;
-    }
-    void setInQueue() {
-        task->status = status_accepted;
-    }
-    void setCompleted() {
-        task->status = status_complete;
+    bool isCompletedNoLock() {
+        return m_finished;
     }
     bool isCompleted() {
         std::unique_lock<std::mutex> lock(m_mtx);
@@ -63,12 +57,6 @@ public:
         m_cond.notify_all();
         task->notifyCustom();
     }
-    bool canRun() const {
-        return task->status <= status_accepted;
-    }
-    void destruct() {
-        task->destruct();
-    }
 };
 
 WorkerThread::ThreadTask::~ThreadTask() {
@@ -85,6 +73,9 @@ void WorkerThread::ThreadTask::reset() {
 }
 bool WorkerThread::ThreadTask::isCompleted() {
     return this->m_taskImpl->isCompleted();
+}
+bool WorkerThread::ThreadTask::isCompletedNoLock() {
+    return this->m_taskImpl->isCompletedNoLock();
 }
 class WorkerThread::Impl {
     std::thread t;
@@ -125,6 +116,7 @@ public:
             }
             this->run();
         });
+        m_stop = false;
     }
     void setRealtimePriority(bool isRealtimePriority) {
         dbgassert(!t.joinable());
@@ -139,7 +131,6 @@ public:
     bool push(ThreadTaskImpl* task) {
         dbgassert(task != nullptr);
         if (!m_stop) {
-            task->setInQueue();
             m_q.wait_enqueue(task);
             return true;
         }
@@ -160,16 +151,12 @@ private:
             if (!task) {
                 break;
             }
-            if (task->canRun()) {
-                try {
-                    task->run();
-                    task->setCompleted();
-                } catch (...) {
-                    task->setException(std::current_exception());
-                }
+            try {
+                task->run();
+            } catch (...) {
+                task->setException(std::current_exception());
             }
             task->notify();
-            task->destruct();
         }
     }
     ThreadTaskImpl* pop() {
@@ -215,8 +202,21 @@ void WorkerThread::setTls(daw_tls::tlsinstance tls) {
 void WorkerThread::setRealtimePriority(bool isRealtimePriority) {
     m_threadImpl->setRealtimePriority(isRealtimePriority);
 }
+
 std::shared_ptr<WorkerThread::ThreadTask> WorkerThread::call(std::function<void()>&& fn) {
     std::shared_ptr<WorkerThread::ThreadTask> task = std::make_shared<ThreadTaskCallStdFn>(fn);
     m_threadImpl->push(task->m_taskImpl);
     return task;
+}
+
+void WorkerThread::ThreadTask::logException() {
+    if (this->eptr) {
+        try {
+            std::rethrow_exception(this->eptr);
+        } catch (const std::exception& e) {
+            log_lf(Log::L_ERROR, "WorkerThread exception: %s\n", e.what());
+        } catch (...) {
+            log_lf(Log::L_ERROR, "WorkerThread unknown exception\n");
+        }
+    }
 }

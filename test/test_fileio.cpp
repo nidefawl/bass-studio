@@ -24,13 +24,29 @@ void test_findFilesWithExt_recursive() {
   TEST_END();
 }
 
-void test_findFilesWithExt_non_recursive() {
-  TEST_BEGIN("test_findFilesWithExt_non_recursive");
+void test_findFilesWithExt() {
+  TEST_BEGIN("test_findFilesWithExt");
   std::vector<FileFound> files;
   auto resPath = TEST_PATH("findfiles");
-  findFilesWithExt(resPath, "zips", false, files);
+  findFilesWithExt(resPath, "zip", false, files);
   log_lf(Log::L_INFO, "findFilesWithExt %zu\n", files.size());
   TEST_ASSERT_EQUAL(files.size(), 0U);
+  findFilesWithExt(resPath, "zip", true, files);
+  TEST_ASSERT_EQUAL(files.size(), 2U);
+  TEST_END();
+}
+
+void test_findDirectoriesWithExt() {
+  TEST_BEGIN("test_findDirectoriesWithExt");
+  std::vector<FileFound> files;
+  auto resPath = TEST_PATH("findfiles");
+  findDirectoriesWithExt(resPath, "test", files);
+  log_lf(Log::L_INFO, "findDirectoriesWithExt %zu\n", files.size());
+  TEST_ASSERT_EQUAL(files.size(), 1U);
+  for (auto &file : files) {
+    log_lf(Log::L_INFO, "%s\n", StringAsCStr(file.path));
+    TEST_ASSERT_EQUAL(PathIsDirectory(file.path), true);
+  }
   TEST_END();
 }
 
@@ -38,7 +54,7 @@ void test_listFilesystemNonRecursive() {
   TEST_BEGIN("test_listFilesystemNonRecursive");
   std::vector<FileFound> files;
   std::vector<String> fileExtensions;
-  auto resPath = TEST_PATH("filebrowser");
+  const auto resPath = TEST_PATH("filebrowser");
   listFilesystemNonRecursive(resPath, fileExtensions, files);
   TEST_ASSERT_EQUAL(files.size(), 3U);
   for (auto& file : files) {
@@ -66,7 +82,7 @@ void test_listFilesystemNonRecursive() {
   fileExtensions.emplace_back("preset");
   files.clear();
   listFilesystemNonRecursive(resPath, fileExtensions, files);
-  TEST_ASSERT_EQUAL(files.size(), 4U);
+  TEST_ASSERT_EQUAL(files.size(), 3U);
   for (auto& file : files) {
     TEST_ASSERT_EQUAL(file.bIsDir, true);
     std::vector<FileFound> filesSub;
@@ -85,8 +101,14 @@ void test_listFilesystemNonRecursive() {
       }
     } else if ("3files-nested" == file.name) {
       TEST_ASSERT_EQUAL(filesSub.size(), 3U);
+      std::vector<FileFound> filesSub2;
       for (auto& fileSub : filesSub) {
         TEST_ASSERT_EQUAL(fileSub.bIsDir, true);
+        listFilesystemNonRecursive(fileSub.path, fileExtensions, filesSub2);
+      }
+      TEST_ASSERT_EQUAL(filesSub2.size(), 2U);
+      for (auto& fileSub : filesSub2) {
+        TEST_ASSERT_EQUAL(fileSub.bIsDir, false);
       }
     }
     log_lf(Log::L_INFO, "%s OK\n", StringAsCStr(file.path));
@@ -98,8 +120,9 @@ void test_listFilesystemNonRecursive() {
 
 int main() {
   App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
+  test_findDirectoriesWithExt();
   test_findFilesWithExt_recursive();
-  test_findFilesWithExt_non_recursive();
+  test_findFilesWithExt();
   test_listFilesystemNonRecursive();
   return 0;
 }

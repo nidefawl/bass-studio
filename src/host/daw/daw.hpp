@@ -153,7 +153,6 @@ namespace DAW {
 
         void setCancelled() {
             m_cancelled = true;
-            setError();
         }
 
         bool isCancelled() const {

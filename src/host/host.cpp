@@ -1777,28 +1777,16 @@ uint32_t Host::finishTreadTasks(uint32_t tasksRunning, bool wait) {
         for (size_t i = 0; i < impl->threadCount; i++) {
             TrackBlockProcessTask& task = impl->tasks[i];
             if (task.isInUse()) {
-                if (!task.isCompleted()) {
+                if (!task.isCompletedNoLock()) {
                     // if (!wait) {
                         continue;
                     // }
                     // task.wait();
                 }
                 finishedTasks++;
-                dbgassert(task.isCompleted());
                 Host::track_block_processing_task_t& procTask = task.getTask();
-                //log_printf("Thread[%d] completed stageId %d\n", i, procTask.trackNode->stageId);
-                if (task.isError()) {
-                    std::exception_ptr eptr = task.getException();
-                    if (eptr != nullptr) {
-                        try {
-                            std::rethrow_exception(eptr);
-                        }
-                        catch(const std::exception &ex) {
-                            log_lf(Log::L_ERROR, "task[%d] had exception: %s\n", (int)i, ex.what());
-                        }
-                    }
-                } else {
-                    dbgassert(task.isGood());
+                if (task.hasException()) {
+                    task.logException();
                 }
 #if DAW_DEBUG_AUDIOGRAPH
                 lastProcessingGraphs[procTask.trackNode->stageId] = procTask.effectProcessingGraph;

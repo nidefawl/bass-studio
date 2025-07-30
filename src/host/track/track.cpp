@@ -591,7 +591,7 @@ namespace DAW {
             pluginentry_t resolvedPlugin;
             try {
                 if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-                    auto loadResult = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat, pluginSnapshot.clapId});
+                    auto loadResult = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleType, pluginSnapshot.clapId});
                     Host::LoadResultPluginImpl& res = *loadResult;
                     if (res.library.isSuccess()) {
                         res.plugin->localDbId = resolvedPlugin.localDbId;

@@ -1,6 +1,8 @@
 #include "pluginlist.hpp"
 #include "gui/table/table.hpp"
 #include "guicolors.hpp"
+#include "host/plugin/modules.hpp"
+#include "str_util.hpp"
 #include <nanovg.h>
 
 template<>
@@ -78,17 +80,12 @@ void guictr_pluginlibrary::update() {
     std::vector<gui_list_entry*> _newList;
     pluginsLibList.clear();
     std::map<String, std::vector<pluginentry_t>> perFolder;
-    std::map<int32_t, String> formatNames;
-    formatNames[2] = "VST3";
-    formatNames[1] = "Clap";
-    formatNames[0] = "VST2";
-    
     try {
         dawCtrl->getDaw()->getPluginDatabase().query(curquery, pluginsLibList);
         for (pluginentry_t& entry : pluginsLibList) {
             switch (groupBy) {
                 case GROUP_BY_FORMAT:
-                    perFolder[formatNames[entry.moduleFormat]].push_back(entry);
+                    perFolder[ModuleTypeToString(entry.moduleType)].push_back(entry);
                     break;
                 case GROUP_BY_VENDOR:
                     perFolder[entry.vendorName].push_back(entry);
@@ -108,7 +105,7 @@ void guictr_pluginlibrary::update() {
     if (groupBy == GROUP_BY_NONE) {
         pluginListCtr.setList(_newList);
     } else {
-        for (auto entry : perFolder) {
+        for (auto& entry : perFolder) {
             gui_list_folder_entry* folder = new gui_list_folder_entry(entry.first);
             folder->setIsOpened(isFolderOpen[folder->getLabel()]);
             _newList.push_back(folder);

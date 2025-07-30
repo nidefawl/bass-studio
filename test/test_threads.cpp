@@ -1,13 +1,9 @@
 #include "TestBase.hpp"
 #include <vector>
 #include "types.hpp"
-#include <chrono>
 #include "common/test_common.hpp"
 #include "thread.hpp"
 #include "threads/workerthread.hpp"
-
-using hp_clock = std::chrono::high_resolution_clock;
-
 
 namespace {
     static test_rng rng;
@@ -24,13 +20,13 @@ namespace {
             for (uint32_t i = 0; i < 500000; i++) {
                 result = ((result * a) >> 1) + rng.randI();
             }
-            seqthreads::threadSleep(20);
-            //        LOG("work on TestTask %d", result);
+            seqthreads::threadSleep(10);
             if (id == 3)
-                throw std::runtime_error("little error hihi");
+                throw std::runtime_error("TestTask exception. This is expected.");
         }
     };
-    static void test() {
+    static void test_workerthread_tasks() {
+        TEST_BEGIN("test_workerthread_tasks");
         std::vector<TestTask> tasks(10);
         uint32_t i = 0;
         for (TestTask& task : tasks) {
@@ -45,59 +41,59 @@ namespace {
         wthread.setTls(tls);
         wthread.startThread("WorkerThread", seqthreads::ThreadType::WorkerThread);
         for (TestTask& task : tasks) {
-            if (task.id == 2) {
-                continue;
-            }
-            wthread.pushTask(&task);
+            TEST_ASSERT_EQUAL(task.hasException(), false);
+            TEST_ASSERT_EQUAL(task.isCompleted(), false);
+            TEST_ASSERT_EQUAL(task.isCompletedNoLock(), false);
+            TEST_ASSERT_THROW(wthread.pushTask(&task));
         }
-        wthread.stopThread();
         for (TestTask& task : tasks) {
-            if (task.id != 2) {
-                continue;
+            task.wait();
+            TEST_ASSERT_EQUAL(task.hasException(), task.id == 3);
+            if (task.hasException()) {
+                task.logException();
             }
-            wthread.pushTask(&task);
         }
-        printf("post wthread.stop\n");
-        auto start = hp_clock::now();
         for (TestTask& task : tasks) {
-            if (task.isInQueue()) {
-                task.wait();
-            }
-            if (task.isError()) {
-                printf("task[%d] iserror: %d\n", task.id, task.result);
-                std::exception_ptr eptr = task.getException();
-                if (eptr != nullptr) {
-                    printf("task[%d] had exception.. rethrowing\n", task.id);
-                    try {
-                        std::rethrow_exception(eptr);
-                    } catch (const std::exception& ex) {
-                        printf("task[%d] had exception: %s\n", task.id, ex.what());
-                    }
-                }
-            } else if (task.isGood()) {
-                printf("task[%d] isGood: %d\n", task.id, task.result);
-            } else {
-                printf("task[%d] was not processed!\n", task.id);
+            task.reset();
+            TEST_ASSERT_EQUAL(task.hasException(), false);
+            TEST_ASSERT_EQUAL(task.isCompleted(), false);
+            TEST_ASSERT_EQUAL(task.isCompletedNoLock(), false);
+            TEST_ASSERT_THROW(wthread.pushTask(&task));
+        }
+        for (TestTask& task : tasks) {
+            task.wait();
+            TEST_ASSERT_EQUAL(task.hasException(), task.id == 3);
+            if (task.hasException()) {
+                task.logException();
             }
         }
-        auto end = hp_clock::now();
-
-        std::chrono::duration<float, std::milli> duration = end - start;
-        printf("%.2f\n", duration.count());
-
         wthread.stopThread();
         wthread.joinThread();
-        printf("end\n");
+        wthread.startThread("WorkerThread", seqthreads::ThreadType::WorkerThread);
+        for (TestTask& task : tasks) {
+            task.reset();
+            TEST_ASSERT_EQUAL(task.hasException(), false);
+            TEST_ASSERT_EQUAL(task.isCompleted(), false);
+            TEST_ASSERT_EQUAL(task.isCompletedNoLock(), false);
+            TEST_ASSERT_THROW(wthread.pushTask(&task));
+        }
+        for (TestTask& task : tasks) {
+            task.wait();
+            TEST_ASSERT_EQUAL(task.hasException(), task.id == 3);
+            if (task.hasException()) {
+                task.logException();
+            }
+        }
+        wthread.stopThread();
+        wthread.joinThread();
+        TEST_END();
     }
-
 }// namespace
 
 int main() {
-    TEST_BEGIN("testThreadWorkerTasks");
     for (int i = 0; i < 10; i++) {
-        test();
-        seqthreads::threadSleep(40);
+        test_workerthread_tasks();
+        seqthreads::threadSleep(20);
     }
-    TEST_END();
     return 0;
 }

@@ -115,7 +115,7 @@ struct PluginLoadParameters {
     uint32_t uId = 0;
     int32_t globalId = 0;
     uint64_t bugfixFlags = 0;
-    int32_t moduleFormat = -1;
+    ModuleType moduleType = ModuleType::MODULE_TYPE_VST2;
     String uIdVst3 = "";
 };
 class PluginManager {
@@ -172,7 +172,6 @@ public:
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
     LoadResultPlugin loadPlugin(const PluginLoadParameters& req);
-    LoadResultPlugin loadPlugin(const String& filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
     effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
     void updateSampleFormat(const sampleformat_t& _sampleFormat);

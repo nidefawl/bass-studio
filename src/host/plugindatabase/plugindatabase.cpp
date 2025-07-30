@@ -11,6 +11,7 @@
 #include "appsettings.hpp"
 #include "snapshot/snapshot.hpp"
 #include "snapshot/plugin-snapshot.hpp"
+#include <SQLiteCpp/Database.h>
 #include <exception>
 #include <memory>
 #include <utility>
@@ -67,6 +68,8 @@ public:
                 if (db) {
                     createTables(*db);
                 }
+                db = nullptr; // reset to nullptr so we can reopen it
+                db = std::make_shared<SQLite::Database>(path, SQLite::OPEN_READONLY);
                 return true;
             } catch (const std::exception& e) {
                 log_lf(Log::L_ERROR, "Failed to open plugin database: %s\n", e.what());
@@ -163,7 +166,7 @@ public:
             while (queryPlugin.executeStep()) {
                 pluginentry_t entry;
                 entry.localDbId    = queryPlugin.getColumn("id").getInt();
-                entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
+                entry.moduleType   = static_cast<ModuleType>(queryPlugin.getColumn("moduleFormat").getInt() + 1);
                 entry.uid          = queryPlugin.getColumn("uid").getUInt();
                 entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
                 entry.name         = queryPlugin.getColumn("name").getString();
@@ -172,7 +175,7 @@ public:
                 entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
                 entry.clapId       = "";
                 entry.vendorName   = queryPlugin.getColumn("vendorName").getString();
-                switch (static_cast<ModuleType>(entry.moduleFormat + 1)) {
+                switch (entry.moduleType) {
                     case ModuleType::MODULE_TYPE_CLAP:
                     case ModuleType::MODULE_TYPE_VST3:
                         entry.clapId = queryPlugin.getColumn("productName").getString();
@@ -252,7 +255,7 @@ public:
         pluginentry_t entry;
         while (queryPlugin.executeStep()) {
             entry.localDbId    = queryPlugin.getColumn("id").getInt();
-            entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
+            entry.moduleType   = static_cast<ModuleType>(queryPlugin.getColumn("moduleFormat").getInt() + 1);
             entry.uid          = queryPlugin.getColumn("uid").getUInt();
             entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
             entry.name         = queryPlugin.getColumn("name").getString();
@@ -261,7 +264,7 @@ public:
             entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
             entry.clapId       = "";
             entry.vendorName   = queryPlugin.getColumn("vendorName").getString();
-            switch (static_cast<ModuleType>(entry.moduleFormat + 1)) {
+            switch (entry.moduleType) {
                 case ModuleType::MODULE_TYPE_CLAP:
                 case ModuleType::MODULE_TYPE_VST3:
                     entry.clapId = queryPlugin.getColumn("productName").getString();

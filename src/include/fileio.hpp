@@ -157,7 +157,6 @@ inline void SplitPathWide(const WString& in, WString* path, WString* name, WStri
             *path = in.substr(0, pathSep);
         }
     }
-    // TODO: We don't want to cut at the dot if the path names a directory
     std::size_t fileExtSep = _nameExt.find_last_of('.');
     if (name) {
         if (fileExtSep == WString::npos || fileExtSep < 1) {
@@ -197,6 +196,10 @@ void findFilesWithExt(
         const String& strPath,
         const String& strExt,
         bool bRecursive,
+        std::vector<FileFound>& _out);
+void findDirectoriesWithExt(
+        const String& strPath,
+        const String& ext,
         std::vector<FileFound>& _out);
 void RevealInExplorer(const String& path);
 
