@@ -239,7 +239,7 @@ namespace MiniApp {
                         nvgFillColor(vg, rgbToNvg(0x0));
                         nvgFill(vg);
                         UTIL_setFont(vg, &themes.getRef(), txt.y - 2, rgbaToNvg(0xffffffff), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                        String str = StringFormat("%llumicros", e.duration);
+                        String str = StringFormat("%zu micros", e.duration);
                         nvgTextBox(vg, 12, wvSize.y - txt.y / 2, txt.x, StringAsCStr(str), nullptr);
 
                         nvgRestore(vg);
@@ -296,7 +296,7 @@ namespace MiniApp {
                         waveformTest.durations[i] += lTook;
                     }
                 }
-                log_printf("took %llu\n", timerAll.getTime());
+                log_printf("took %zu\n", timerAll.getTime());
 
                 renderStep++;
             }
@@ -381,7 +381,7 @@ public:
     delete tls.runtime;
     delete tls.settings;
     for (auto i = 0u; i < NUM_RENDERERS; i++) {
-      log_printf("Renderer %u took %llumicros\n", i, waveformTest.durations[i]);
+      log_printf("Renderer %u took %zu micros\n", i, waveformTest.durations[i]);
     }
     appctrl.reset();
   }

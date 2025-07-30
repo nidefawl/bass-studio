@@ -74,7 +74,7 @@ namespace {
             memset(buf.data(), 'x', buf.size());
             buf.back() = '\0';
             log_printf("%s\n", buf.data());
-            printf("log_printf strlen: %llu, Recv strlen %llu\n", safe_strlen(buf.data(), 1UL << 16U), testLogger.recvdSize);
+            printf("log_printf strlen: %zu, Recv strlen %zu\n", safe_strlen(buf.data(), 1UL << 16U), testLogger.recvdSize);
             if (len < 100) {
                 printf("STR '%s'\n", testLogger.recvdLog);
             }
@@ -85,7 +85,7 @@ namespace {
             memset(buf.data(), 'x', buf.size());
             buf.back() = '\0';
             Log::log_fmt(getGlobalLogger(), Log::L_FATAL, buf.data(), 0x7FFFFFFF, buf.data(), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-            printf("Log::log_fmt strlen: %llu, Recv strlen %llu\n", safe_strlen(buf.data(), 1UL << 16U), testLogger.recvdSize);
+            printf("Log::log_fmt strlen: %zu, Recv strlen %zu\n", safe_strlen(buf.data(), 1UL << 16U), testLogger.recvdSize);
             if (len < 100) {
                 printf("STR '%s'\n", testLogger.recvdLog);
             }
