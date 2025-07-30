@@ -117,21 +117,23 @@ inline void SplitPath(const String& in, String* path, String* name, String* ext,
             *path = in.substr(0, pathSep);
         }
     }
-    // We don't want to cut at the dot if the path names an existing directory
-    bool bIsDir = PathIsDirectory(in);
-    std::size_t fileExtSep = !bIsDir ? _nameExt.find_last_of('.') : String::npos;
-    if (name) {
-        if (fileExtSep == String::npos || fileExtSep < 1) {
-            *name = _nameExt;
-        } else {
-            *name = _nameExt.substr(0, fileExtSep);
+    if (name || ext) {
+        // We don't want to cut at the dot if the path names an existing directory
+        bool bIsDir = PathIsDirectory(in);
+        std::size_t fileExtSep = !bIsDir ? _nameExt.find_last_of('.') : String::npos;
+        if (name) {
+            if (fileExtSep == String::npos || fileExtSep < 1) {
+                *name = _nameExt;
+            } else {
+                *name = _nameExt.substr(0, fileExtSep);
+            }
         }
-    }
-    if (!bIsDir && ext) {
-        if (fileExtSep == String::npos || fileExtSep >= _nameExt.length() - 1) {
-            *ext = "";
-        } else {
-            *ext = _nameExt.substr(fileExtSep + 1);
+        if (!bIsDir && ext) {
+            if (fileExtSep == String::npos || fileExtSep >= _nameExt.length() - 1) {
+                *ext = "";
+            } else {
+                *ext = _nameExt.substr(fileExtSep + 1);
+            }
         }
     }
     if (nameExt) {
