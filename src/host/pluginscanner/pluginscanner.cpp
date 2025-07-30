@@ -819,7 +819,9 @@ public:
                 ModuleType moduleType = static_cast<ModuleType>(queryAll.getColumn(2).getInt() + 1);
                 // make sure that the parent path is in the plugin directory list
                 bool foundPluginPath = false;
-                for (String& pluginPath : options.pluginPathLists[moduleType]) {
+                for (String pluginPath : options.pluginPathLists[moduleType]) {
+                    App::Platform::shellExpandPath(pluginPath);
+                    App::Platform::sanitizePathToDirectory(pluginPath);
                     // check if the path is a subdirectory of the pluginPath
                     if (path.length() > pluginPath.length() && path.find(pluginPath) == 0) {
                         foundPluginPath = true;
