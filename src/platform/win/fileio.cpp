@@ -311,7 +311,6 @@ void findDirectoriesWithExtRecursive(
                     if (fileExt != strExt) {
                         subDirs.push_back(curFilePath);
                     } else {
-                        App::Platform::sanitizePathToDirectoryWide(curFilePath);
                         const FileFound f = { StringWToU8(curFilePath), StringWToU8(fileName), StringWToU8(fileExt), true, depth };
                         _out.push_back(f);
                     }

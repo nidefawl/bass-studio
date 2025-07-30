@@ -463,7 +463,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
                 auto& data = respLoadSinglePlugin;
                 String relPath = file.name;
                 if (file.path.length() > pluginPath.length()
-                    && file.path.find_first_of(pluginPath) == 0) {
+                    && file.path.find(pluginPath) == 0) {
                     relPath = file.path.substr(pluginPath.length());
                     replaceString(relPath, FILE_PATHSEP_STR, "/");
                 }
@@ -532,7 +532,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
                 auto& data = respLoadSinglePlugin;
                 String relPath = file.name;
                 if (file.path.length() > pluginPath.length()
-                    && file.path.find_first_of(pluginPath) == 0) {
+                    && file.path.find(pluginPath) == 0) {
                     relPath = file.path.substr(pluginPath.length());
                     replaceString(relPath, FILE_PATHSEP_STR, "/");
                 }
@@ -758,7 +758,24 @@ public:
                         findDirectoriesWithExt(pluginPath, ext, files);
 #ifdef _WIN32
                         // on windows, we also look for .vst3 files
-                        findFilesWithExt(pluginPath, ext, true, files);
+                        {
+                            std::vector<FileFound> filesVST3;
+                            findFilesWithExt(pluginPath, ext, true, filesVST3);
+                            // now remove all .vst3 files that are bundles and already found as directories
+                            for (auto& file : filesVST3) {
+                                bool bParentFound = false;
+                                for (auto& dir : files) {
+                                    // check if file starts with dir
+                                    if (file.path.length() > dir.path.length() && file.path.find(dir.path) == 0) {
+                                        bParentFound = true;
+                                        break;
+                                    }
+                                }
+                                if (!bParentFound) {
+                                    files.emplace_back(file);
+                                }
+                            }
+                        }
 #endif
                         break;
                     case MODULE_TYPE_CLAP:
@@ -804,7 +821,7 @@ public:
                 bool foundPluginPath = false;
                 for (String& pluginPath : options.pluginPathLists[moduleType]) {
                     // check if the path is a subdirectory of the pluginPath
-                    if (path.length() > pluginPath.length() && path.find_first_of(pluginPath) == 0) {
+                    if (path.length() > pluginPath.length() && path.find(pluginPath) == 0) {
                         foundPluginPath = true;
                         break;
                     }
@@ -845,7 +862,6 @@ public:
                     break;
                 }
                 for (PluginFileFound& file : files) {
-
                     FileTimeGetter filetime(file.path);
                     int64_t timeDisk   = filetime.getWriteTimeI64();
                     int id             = -1;
