@@ -10,7 +10,6 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/un.h>
-#include "logging.hpp"
 
 
 class ipc_server::Impl {
@@ -29,9 +28,7 @@ public:
             return IPC_SOCKET_ERROR;
         }
         m_fdSockListen = newSocket;
-        int ret        = unlink(path);
-        log_printf("unlink %s returned %d.\n", path, ret);
-
+        int ret = unlink(path);
         struct sockaddr_un local{};
         local.sun_family = AF_UNIX;
         safe_strcpy(local.sun_path, path);
@@ -40,11 +37,8 @@ public:
         socklen_t len = (offsetof(struct sockaddr_un, sun_path) + strlen(local.sun_path));
         ret = bind(m_fdSockListen, (struct sockaddr*) &local, len);
         if (0 != ret) {
-            log_printf("bind returned %d. Unlinking unix socket %s\n", ret, path);
             ret = unlink(path);
-            log_printf("second unlink %s returned %d.\n", path, ret);
             ret = bind(m_fdSockListen, (struct sockaddr*) &local, len);
-            log_printf("second bind returned %d\n", ret);
             if (0 != ret) {
                 return 1;
             }
