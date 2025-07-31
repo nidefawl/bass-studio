@@ -8,8 +8,8 @@
 #include "platform/mingw/mingw.exc.hpp"
 #include <windows.h>
 #else
-#define seh_try(label)
-#define seh_catch(label) if(0)
+#define seh_try(label) try
+#define seh_catch(label) catch(...)
 #define seh_finally(label)
 #endif
 
