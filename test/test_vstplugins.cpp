@@ -48,7 +48,14 @@ namespace {
                 return;
             }
             const TestCaseEntry& testCase = dllFilesToTest[currentFileIdx++];
-            auto loadresult = host->loadPlugin(testCase.pathToDll, 0);
+            auto loadresult = host->loadPlugin(DAW::Host::PluginLoadParameters{
+                .filepath = testCase.pathToDll,
+                .uId = 0,
+                .globalId = 0,
+                .bugfixFlags = 0,
+                .moduleType = ModuleType::MODULE_TYPE_VST2,
+                .uIdVst3 = ""
+            });
             res = *loadresult;
             if (res.library.state != testCase.expectedState || res.library.type != testCase.expectedType) {
                 printf("loadPlugin: %s %d => ERROR\n", StringAsCStr(testCase.pathToDll), static_cast<int32_t>(res.library.state));
