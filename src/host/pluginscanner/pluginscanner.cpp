@@ -48,6 +48,7 @@
 #include <unistd.h>
 #include <climits>
 #include <utility>
+#include <csignal>
 #endif
 
 /**
@@ -112,18 +113,7 @@ static int logPrefixIdx = PROC_SIDE_NONE;
 int32_t timeoutdefault = 120;
 
 
-bool userSentQuitRequest = false;
 bool inConnectNamedPipe  = false;
-#ifdef _WIN32
-BOOL WINAPI ConsoleHandler(DWORD) {
-    log_printf("CTRL_C\n");
-    userSentQuitRequest = true;
-    if (inConnectNamedPipe) {
-        exit(0);
-    }
-    return true;
-}
-#endif
 
 enum vst_metadata_flags_e : int32_t {
     VST_FLAGS_NONE            = 0,
@@ -311,7 +301,7 @@ static void getVst3PluginDataFromClassInfo(const String& path, const VST3::Hosti
     safe_strcpy(_out->szVendorName, classInfo.vendor());
 }
 
-static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
+static int waitTimeout(ipc_server& server, ProcessThread* thread, bool& userSentQuitRequest, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
     uint32_t notificationStep     = 0;
     while (true) {
         int peakRdBufSizeResult = server.peekReadBufferSize();
@@ -342,13 +332,13 @@ static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* pl
     return 0;
 }
 
-static int handleClientResponse(const pluginscanner_server_options& options, ipc_server& server, ProcessThread* thread, const request_type_load_plugin_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable, const String& pluginPath) {
+static int handleClientResponse(const pluginscanner_server_options& options, ipc_server& server, ProcessThread* thread, bool& userSentQuitRequest, const request_type_load_plugin_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable, const String& pluginPath) {
     auto timeStartScan_ms     = getTimeMillis();
     int64_t timeoutPluginScan_ms = options.unresponsiveTimeoutSeconds * int64_t(1000);
     int nPluginsScanned           = 0;
     while (!userSentQuitRequest) {
         int32_t responseType    = 0;
-        if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(responseType)), timeStartScan_ms, timeoutPluginScan_ms)) {
+        if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(responseType)), timeStartScan_ms, timeoutPluginScan_ms)) {
             return -4;
         }
         if (E_READ_OK != readFromIPC(server, responseType)) {
@@ -359,7 +349,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
         switch (responseType) {
             case CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN: {
                 response_type_clapplugin_t respLoadSinglePlugin;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
@@ -405,7 +395,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             }
             case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN: {
                 response_type_vst24_plugin_t respLoadSinglePlugin;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
@@ -451,7 +441,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             }
             case CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGIN: {
                 response_type_vst3plugin_t respLoadSinglePlugin;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
@@ -498,7 +488,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             }
             case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_SHELL: {
                 response_type_shell_plugin_begin_t respShellPlugin;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
@@ -509,7 +499,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             } break;
             case CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_SHELL: {
                 response_type_shell_plugin_begin_t respShellPlugin;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
@@ -520,7 +510,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             } break;
             case CMD_PLUGIN_LOAD_SUCCESS_VST3_PLUGINSHELL_PLUGIN: {
                 response_type_vst3plugin_t respLoadSinglePlugin;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
@@ -567,7 +557,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             }
             case CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_SHELL: {
                 response_type_shell_plugin_begin_t respShellPlugin;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
@@ -579,7 +569,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             } break;
             case CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_PLUGIN: {
                 response_type_clapplugin_t data;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(data)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(data)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, data)) {
@@ -623,7 +613,7 @@ static int handleClientResponse(const pluginscanner_server_options& options, ipc
             } break;
             case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN: {
                 response_type_vst24_t data;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(data)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, userSentQuitRequest, req.szPath, static_cast<int>(sizeof(data)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, data)) {
@@ -685,6 +675,7 @@ class PluginScannerServer::Impl {
     };
 
     pluginscanner_server_options options;
+    bool userSentQuitRequest = false;
     String pluginscannerExecPath;
     SQLite::Database db;
     std::unique_ptr<ProcessThread> thread = nullptr;
@@ -737,6 +728,7 @@ public:
         logPrefixIdx = PROC_SIDE_SERVER;
         createTables(db);
     }
+    
     void findFiles() {
         for (auto& [moduleType, pluginPaths] : options.pluginPathLists) {
             for (String pluginPath : pluginPaths) {
@@ -799,14 +791,14 @@ public:
         if (!options.updatePattern.empty()) {
             log_message("Update *%s*", StringAsCStr(options.updatePattern));
         }
+        ipc_server server;
+        int ipc_status = server.server_open(SCAN_IPC_PIPE_NAME);
+        if (ipc_status) {
+            log_message("Failed opening ipc_server: %d", ipc_status);
+            return 1;
+        }
         try {
-            ipc_server server;
-            int ipc_status = server.server_open(SCAN_IPC_PIPE_NAME);
-            if (ipc_status) {
-                log_message("Failed opening ipc_server: %d", ipc_status);
-                return 1;
-            }
-            bool pipeConnected                    = false;
+            bool pipeConnected = false;
             SQLite::Statement queryPlugin(db, "SELECT id, moddate, forcedisable, requestRescan, uid, shellplugin FROM plugins where path == ?");
             SQLite::Statement queryInsertPlugin(db, "INSERT INTO "
                                                     "plugins(isSynth, moduleFormat, uid, version, vstVersion, category, moddate, state, path, relPath, name, vendorName, productName, effectName, requestRescan, forcedisable, shellplugin) "
@@ -961,7 +953,7 @@ public:
                             queryDelete.bind(2, req.szPath);
                             queryDelete.exec();
                         }
-                        int ret = handleClientResponse(options, server, thread.get(), req, queryInsertPlugin, file, timeDisk, forcedisable, file.pluginPath);
+                        int ret = handleClientResponse(options, server, thread.get(), userSentQuitRequest, req, queryInsertPlugin, file, timeDisk, forcedisable, file.pluginPath);
 
                         if (ret < 0) {
                             resetConnection = true;
@@ -977,27 +969,12 @@ public:
                         pipeConnected = false;
                         if (thread && thread->isRunning()) {
                             thread->killProcess();
+                            thread->joinProcess();
                         }
                         thread = nullptr;
                         continue;
                     }
                 }
-            }
-            if (thread) {
-                if (thread->isRunning()) {
-                    /*if (pipeConnected) {
-                        pipe_msg_hdr hdr = {CMD_PLUGIN_THREAD_QUIT};
-                        writeToIPC(server, hdr);
-                        threadSleep(120);
-                    }*/
-                }
-                server.server_disconnect();
-                threadSleep(120);
-                if (thread->isRunning()) {
-                    thread->killProcess();
-                    thread->joinProcess();
-                }
-                thread = nullptr;
             }
         } catch (SQLite::Exception& e) {
             log_message("SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
@@ -1006,7 +983,25 @@ public:
         } catch (...) {
             log_message("Unhandled exception");
         }
+        server.server_disconnect();
+        if (thread) {
+            if (thread->isRunning()) {
+                /*if (pipeConnected) {
+                    pipe_msg_hdr hdr = {CMD_PLUGIN_THREAD_QUIT};
+                    writeToIPC(server, hdr);
+                    threadSleep(120);
+                }*/
+            }
+            if (thread->isRunning()) {
+                thread->killProcess();
+                thread->joinProcess();
+            }
+            thread = nullptr;
+        }
         return 0;
+    }
+    void requestQuit() {
+        userSentQuitRequest = true;
     }
 };
 PluginScannerServer::PluginScannerServer(const pluginscanner_server_options& options, std::optional<String> pluginscannerExecPath)
@@ -1091,7 +1086,7 @@ int runScannerClient() {
     host->setTls(tls);
 
     pipe_msg_hdr hdr{};
-    while (!userSentQuitRequest) {
+    while (true) {
         int retRead = readFromIPC(client, hdr);
         dbgassert(E_READ_ERR_BUF_SIZE != retRead);
         if (E_READ_OK != retRead) {
@@ -1209,7 +1204,6 @@ int runScannerClient() {
                     writeToIPC(client, respShellPlugin);
                     log_message("-- begin of shell plugin list --");
                     for (auto& entry : entries) {
-                        if (userSentQuitRequest) break;
                         log_message("load shell entry: %08X", entry.pluginUID);
                         DAW::Host::PluginLoadParameters params{
                             .filepath = req.szPath,
@@ -1306,6 +1300,28 @@ int runScannerClient() {
     return 0;
 }
 
+static PluginScanner::PluginScannerServer* serverInstance = nullptr;
+#ifdef _WIN32
+BOOL WINAPI ConsoleHandler(DWORD) {
+    if (serverInstance) {
+        serverInstance->requestQuit();
+    }
+    if (inConnectNamedPipe) {
+        exit(0);
+    }
+    return true;
+}
+#elif defined(__linux__) || defined(__APPLE__)
+static void signalHandler(int signum) {
+    if (serverInstance) {
+        serverInstance->requestQuit();
+    }
+    if (inConnectNamedPipe) {
+        exit(0);
+    }
+}
+#endif
+
 int mainPluginScanner(int argc, char* argv[]) {
     using namespace DAW::Host;
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
@@ -1336,6 +1352,8 @@ int mainPluginScanner(int argc, char* argv[]) {
         log_lf(Log::L_ERROR, "Unable to install handler!\n");
         return EXIT_FAILURE;
     }
+#elif defined(__linux__) || defined(__APPLE__)
+    signal(SIGINT, PluginScanner::signalHandler);
 #endif
     auto& tls = daw_tls::initNewTls();
     enum Mode {
@@ -1419,9 +1437,9 @@ int mainPluginScanner(int argc, char* argv[]) {
         options.pluginPathLists[MODULE_TYPE_VST3].push_back(vst3PluginPath);
         String pluginscannerExecPath = App::Platform::GetExecutablePath();
         PluginScanner::PluginScannerServer scanner(options, std::move(pluginscannerExecPath));
+        serverInstance = &scanner;
         scanner.findFiles();
         scanner.runScannerServer();
-        seqthreads::threadSleep(500);
     } else if (mode == TEST) {
         setExceptionHandler();
         seqthreads::threadSleep(120);
@@ -1450,4 +1468,9 @@ int mainPluginScanner(int argc, char* argv[]) {
     }
     return 0;
 }
-} // namespace DAW::Host::PluginScanner
+
+void PluginScannerServer::requestQuit() {
+    impl->requestQuit();
+}
+
+}// namespace DAW::Host::PluginScanner

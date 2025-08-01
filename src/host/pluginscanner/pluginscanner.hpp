@@ -26,6 +26,8 @@ public:
     void findFiles();
 
     int runScannerServer();
+
+    void requestQuit();
 };
 
 

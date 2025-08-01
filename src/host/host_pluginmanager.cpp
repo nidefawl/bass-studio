@@ -60,17 +60,23 @@ public:
 class PluginScannerServerTask : public WorkerThread::ThreadTask {
     const PluginScanner::pluginscanner_server_options options;
     std::atomic<bool> m_cancelled{};
+    std::shared_ptr<PluginScanner::PluginScannerServer> server;
 public:
     explicit PluginScannerServerTask(PluginScanner::pluginscanner_server_options&& options)
         : options(std::move(options)), m_cancelled(false) {
     }
     void run() override {
-        auto server = std::make_unique<PluginScanner::PluginScannerServer>(options, std::nullopt);
+        server = std::make_shared<PluginScanner::PluginScannerServer>(options, std::nullopt);
         server->findFiles();
         server->runScannerServer();
+        server.reset();
     }
     void setCancelled() {
         m_cancelled = true;
+        auto server = this->server;
+        if (server) {
+            server->requestQuit();
+        }
     }
 
     bool isCancelled() const {
