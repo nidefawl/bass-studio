@@ -1357,11 +1357,13 @@ public:
     bool onClose() override {
         if (this->windowHost != nullptr && bEditOpen) {
             if (view) {
-                if (Steinberg::kResultOk != view->removed()) {
-                    log_lf(Log::L_ERROR, "%s: Failed to remove editor view\n", StringAsCStr(sName));
+                auto ret = view->removed();
+                if (Steinberg::kResultOk != ret) {
+                    log_lf(Log::L_ERROR, "%s: Failed to remove editor view (%d)\n", StringAsCStr(sName), ret);
                 }
-                if (Steinberg::kResultOk != view->setFrame(nullptr)) {
-                    log_lf(Log::L_ERROR, "%s: Failed to set editor view frame to nullptr\n", StringAsCStr(sName));
+                ret = view->setFrame(nullptr);
+                if (Steinberg::kResultOk != ret) {
+                    log_lf(Log::L_ERROR, "%s: Failed to set editor view frame to nullptr (%d)\n", StringAsCStr(sName), ret);
                 }
             }
         }
