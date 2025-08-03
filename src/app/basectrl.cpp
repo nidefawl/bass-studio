@@ -761,9 +761,10 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int cr
         dbgassert(0);
     }
 }
-void AppCtrl::openDialog(guidialog_base* _guidialog) {
+bool AppCtrl::openDialog(guidialog_base* _guidialog) {
     if (this->dialog) {
-        return;
+        delete _guidialog;
+        return false; // already open
     }
     this->dialog = _guidialog;
     ivec2 wndPos(0);
@@ -793,6 +794,7 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
         popupCtrl->m_scale     = m_scale;
     }
     popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), true);
+    return true;
 }
 void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
     openOverlayGui(b, pos, WINDOW_POS_RELATIVE | WINDOW_IS_BORDERLESS);

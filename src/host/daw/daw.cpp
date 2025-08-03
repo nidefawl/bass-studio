@@ -928,8 +928,9 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 return true;
             case CMD_PREFERENCES:{
                 auto dialog = new DAW::DialogSettings::guidialog_settings(this);
-                mainCtrl->openDialog(dialog);
-                dialog->setActiveEntry(command.argInt);
+                if (mainCtrl->openDialog(dialog)) {
+                    dialog->setActiveEntry(command.argInt);
+                }
                 return true;
             }
             case CMD_EXPORT_AUDIO: {

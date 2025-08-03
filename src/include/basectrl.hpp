@@ -324,7 +324,7 @@ public:
     virtual void onChildOverlayWindowDestroy(window_main*);
     virtual void onChildOverlayWindowClose(window_main*);
     void openContextMenu(guictxtmenu_base* b, ivec2 pos) override;
-    void openDialog(guidialog_base* b);
+    bool openDialog(guidialog_base* b);
     void closeContextMenu() override;
     void releaseGarbageGuis();
     void closeDialogs() override;
