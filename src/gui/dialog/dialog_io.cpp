@@ -555,12 +555,14 @@ public:
             String deviceAPIName     = settings.iosettings.device_api;
             int apiCount             = Pa_GetHostApiCount();
             int deviceApiIdxSelected = -1;
+            PaHostApiTypeId type     = static_cast<PaHostApiTypeId>(0);
             for (int i = 0; i < apiCount; i++) {
                 const PaHostApiInfo* info = Pa_GetHostApiInfo(i);
                 if (info) {
                     if (deviceApiIdxSelected < 0 || !strcmp(StringAsCStr(settings.iosettings.device_api), info->name)) {
                         deviceApiIdxSelected = i;
                         deviceAPIName        = info->name;
+                        type                 = info->type;
                     }
                 }
             }
@@ -569,6 +571,14 @@ public:
             int deviceCount = Pa_GetDeviceCount();
             for (int i = 0; i < deviceCount; i++) {
                 const PaDeviceInfo* info = Pa_GetDeviceInfo(i);
+                if (info && info->hostApi == deviceApiIdxSelected && type == PaHostApiTypeId::paALSA) {
+                    String name = info->name;
+                    if (name.find("default") == String::npos
+                        && name.find("hw") == String::npos
+                        && name.find("sw") == String::npos) {
+                        continue;
+                    }
+                }
                 if (info && info->hostApi == deviceApiIdxSelected && info->maxOutputChannels > 0) {
                     _newListOut.push_back(
                             new gui_listentry_audiodevice{deviceAPIName, info->name, info->maxOutputChannels, false});
