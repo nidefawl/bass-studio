@@ -90,13 +90,15 @@ int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writ
 
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
     FileImpl fobj(filename, OpenFileMode::READ);
-    auto filesize = GetFileSizeSafe(filename);
-    
+    fseek(fobj.GetHandle(), 0, SEEK_END);
+    int64_t filesize = ftell(fobj.GetHandle());
+    ThrowLastErrorIf(filesize < 0, "ftell failed: " + filename);
+    auto ret = fseek(fobj.GetHandle(), 0, SEEK_SET);
+    ThrowLastErrorIf(ret != 0, "fseek failed: " + filename);
     out.resize(filesize);
-    
     size_t bytesRead = fread(out.data(), 1, filesize, fobj.GetHandle());
-    if (bytesRead != filesize) {
-        throw FileIOException(errno, "ReadFile failed: " + filename);
+    if (bytesRead != size_t(filesize)) {
+        throw FileIOException("ReadFile did not read the expected number of bytes: " + filename + ", expected: " + std::to_string(filesize) + ", actual: " + std::to_string(bytesRead));
     }
 }
 

@@ -199,11 +199,17 @@ int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writ
 
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
     FileImpl fobj(filename, OpenFileMode::READ);
-    size_t filesize = GetFileSizeSafe(filename);
+    LARGE_INTEGER filesize_large;
+    BOOL result = GetFileSizeEx(fobj.GetHandle(), &filesize_large);
+    ThrowLastErrorIf(result == FALSE, "GetFileSizeEx failed: " + filename);
+    int64_t filesize = filesize_large.QuadPart;
     DWORD bytesRead = 0;
     out.resize(filesize);
-    BOOL result = ReadFile(fobj.GetHandle(), out.data(), static_cast<DWORD>(filesize), &bytesRead, nullptr);
+    result = ReadFile(fobj.GetHandle(), out.data(), static_cast<DWORD>(filesize), &bytesRead, nullptr);
     ThrowLastErrorIf(result == FALSE, "ReadFile failed: " + filename);
+    if (bytesRead != filesize) {
+        throw FileIOException("ReadFile did not read the expected number of bytes: " + filename + ", expected: " + std::to_string(filesize) + ", actual: " + std::to_string(bytesRead));
+    }
 }
 bool DirectoryHasOneOrMoreFiles(const WString& dirPath) {
     WIN32_FIND_DATAW file;
