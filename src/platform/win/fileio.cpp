@@ -173,17 +173,20 @@ public:
 };
 
 size_t GetFileSizeSafe(const String& filename) {
-    FileImpl fobj(filename, OpenFileMode::READ);
-    LARGE_INTEGER filesize;
+    try {
+        FileImpl fobj(filename, OpenFileMode::READ);
+        LARGE_INTEGER filesize;
 
-    BOOL result = GetFileSizeEx(fobj.GetHandle(), &filesize);
-    ThrowLastErrorIf(result == FALSE, "GetFileSizeEx failed: " + filename);
+        BOOL result = GetFileSizeEx(fobj.GetHandle(), &filesize);
+        ThrowLastErrorIf(result == FALSE, "GetFileSizeEx failed: " + filename);
 
-    if (filesize.QuadPart < (std::numeric_limits<int64_t>::max)()) {
-        return filesize.QuadPart;
-    } else {
-        throw;
+        if (filesize.QuadPart < (std::numeric_limits<int64_t>::max)()) {
+            return filesize.QuadPart;
+        }
+    } catch (const std::exception& e) {
+        log_lf(Log::L_ERROR, "GetFileSizeSafe failed for file %s: %s\n", StringAsCStr(filename), e.what());
     }
+    return 0;
 }
 
 int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writebuffer) {
