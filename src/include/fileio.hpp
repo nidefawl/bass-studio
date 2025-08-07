@@ -235,6 +235,5 @@ public:
     bool isValid() const {
         return validHandle;
     }
-    /** may return nullptr, will not throw and not indicate reason of failure **/
     static IOFile* openFile(const String& filename, OpenFileMode mode);
 };

@@ -33,28 +33,41 @@ void ThrowLastErrorIf(bool expression, const String& msg) {
     }
 }
 
-class File {
-    int handle = -1;
+class FileImpl {
+    FILE* m_handle;
 
 public:
-    explicit File(const String& filename, int mode, int perms) {
-        handle = open(StringAsCStr(filename), mode, perms);
-        ThrowLastErrorIf(handle < 0, "open call failed on file named " + filename);
+    explicit FileImpl(const String& filename, OpenFileMode mode) {
+        String strFileOpenMode;
+        switch (mode) {
+            case OpenFileMode::READ:
+                strFileOpenMode = "rb";
+                break;
+            case OpenFileMode::WRITE:
+                strFileOpenMode = "wb";
+                break;
+            case OpenFileMode::READWRITE:
+                strFileOpenMode = "w+b"; // Open for reading and writing, truncating the file to zero length
+                break;
+        }
+#if !defined(__APPLE__)
+        m_handle = fopen64(filename.c_str(), strFileOpenMode.c_str());
+#else
+        m_handle = fopen(filename.c_str(), strFileOpenMode.c_str());
+#endif
+        ThrowLastErrorIf(m_handle == nullptr,
+                         "fopen64 call failed on file named " + filename);
     }
 
-    ~File() {
-        if (handle > -1) {
-            always_assert(0 == close(handle));
-        }
-    }
+    ~FileImpl() { (void)fclose(m_handle); }
 
     /* Disable copies */
-    File& operator=(const File&) = delete;
-    File(const File&) = delete;
-    File& operator=( File&&) = delete;
-    File(File&&) = delete;
+    FileImpl& operator=(const FileImpl&) = delete;
+    FileImpl(const FileImpl&) = delete;
+    FileImpl& operator=( FileImpl&&) = delete;
+    FileImpl(FileImpl&&) = delete;
 
-    int GetHandle() { return handle; }
+    FILE* GetHandle() { return m_handle; }
 };
 
 size_t GetFileSizeSafe(const String& filename) {
@@ -66,46 +79,24 @@ size_t GetFileSizeSafe(const String& filename) {
 }
 
 int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writebuffer) {
-    File fobj(filename, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-    const auto bufferSize = static_cast<ssize_t>(writebuffer.size());
-    ssize_t written = 0;
-    while (written < bufferSize) {
-        ssize_t len = write(fobj.GetHandle(), writebuffer.data(), bufferSize);
-        if (len < 0) {
-            int err = errno;
-            if (err == EAGAIN) {
-                continue;
-            }
-            if (err == EINTR) {
-                continue;
-            }
-            throw FileIOException(errno, "WriteFile failed: " + filename);
-        }
-        written += len;
+    FileImpl fobj(filename, OpenFileMode::WRITE);
+    const auto bufferSize = writebuffer.size();
+    size_t written = fwrite(writebuffer.data(), 1, bufferSize, fobj.GetHandle());
+    if (written != bufferSize) {
+        throw FileIOException(errno, "WriteFile failed: " + filename);
     }
     return static_cast<int32_t>(written);
 }
 
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
-    File fobj(filename, O_RDONLY, 0);
-    auto filesize   = static_cast<ssize_t>(GetFileSizeSafe(filename));
-    ssize_t bytesRead = 0;
-
+    FileImpl fobj(filename, OpenFileMode::READ);
+    auto filesize = GetFileSizeSafe(filename);
+    
     out.resize(filesize);
-
-    while (bytesRead < filesize) {
-        ssize_t len = read(fobj.GetHandle(), out.data(), filesize);
-        if (len < 0) {
-            int err = errno;
-            if (err == EAGAIN) {
-                continue;
-            }
-            if (err == EINTR) {
-                continue;
-            }
-            throw FileIOException(errno, "ReadFile failed: " + filename);
-        }
-        bytesRead += len;
+    
+    size_t bytesRead = fread(out.data(), 1, filesize, fobj.GetHandle());
+    if (bytesRead != filesize) {
+        throw FileIOException(errno, "ReadFile failed: " + filename);
     }
 }
 
@@ -267,43 +258,6 @@ FileTimeGetter::~FileTimeGetter() {
 int64_t FileTimeGetter::getWriteTimeI64() {
     return m_impl->getWriteTimeI64();
 }
-class FileImpl {
-    FILE* m_handle;
-
-public:
-    explicit FileImpl(const String& filename, OpenFileMode mode) {
-        String strFileOpenMode;
-        switch (mode) {
-            case OpenFileMode::READ:
-                strFileOpenMode = "rb";
-                break;
-            case OpenFileMode::WRITE:
-                strFileOpenMode = "wb";
-                break;
-            case OpenFileMode::READWRITE:
-                strFileOpenMode = "wb";
-                break;
-        }
-#if !defined(__APPLE__)
-        m_handle = fopen64(filename.c_str(), strFileOpenMode.c_str());
-#else
-        m_handle = fopen(filename.c_str(), strFileOpenMode.c_str());
-#endif
-        ThrowLastErrorIf(m_handle == nullptr,
-                         "fopen64 call failed on file named " + filename);
-    }
-
-    ~FileImpl() { (void)fclose(m_handle); }
-
-
-    /* Disable copies */
-    FileImpl& operator=(const FileImpl&) = delete;
-    FileImpl(const FileImpl&) = delete;
-    FileImpl& operator=( FileImpl&&) = delete;
-    FileImpl(FileImpl&&) = delete;
-
-    FILE* GetHandle() { return m_handle; }
-};
 IOFile::IOFile(FileImpl* _impl) noexcept : impl(_impl) {
     this->validHandle = true;
 }
