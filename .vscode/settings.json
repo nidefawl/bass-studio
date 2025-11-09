@@ -1,0 +1,27 @@
+{
+    "cmake.exportCompileCommandsFile": false,
+    "cmake.generator": "Ninja Multi-Config",
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureArgs": [
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=OFF", // Use vscode -> Run Task -> Update compile_commands.json
+        "-DPROJECT_DEPS_PATH:PATH=/data/dev/daw-deps",
+        "-DPROJECT_DEPS_INSTALL_PATH=/data/dev/build-deps/install",
+        // "-DPROJECT_VST2_OUTPUT_PATH:PATH=/data/vst2-dev",
+        "-DPROJECT_BUILD_PLUGINS=OFF",
+        "-DPROJECT_BUILD_TESTS_UI=ON",
+        "-DPROJECT_PRODUCT_NAME:STRING='Bass Studio'",
+        "-DPROJECT_BINARY_NAME:STRING='bass'",
+        "-DPRODUCT_HOST_NAME:STRING='bass'",
+        "-DPROJECT_VENDOR_NAME:STRING='Michael Hept'",
+        "-DPROJECT_WORKING_DIR:PATH=~/run",
+        "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF",
+        "-DCMAKE_VERBOSE_MAKEFILE=OFF",
+        "-DCMAKE_UNITY_BUILD=OFF",
+        "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF",
+        // "-DPROJECT_CFG_NO_OMIT_FRAME_POINTER=ON",
+        // "-DPROJECT_CFG_FSANITIZE=memory",
+        "-DPROJECT_ENABLE_PYTHON=ON"
+   ],
+    "clangd.arguments": ["--log=error"],
+    "cmake.options.statusBarVisibility": "visible",
+}
