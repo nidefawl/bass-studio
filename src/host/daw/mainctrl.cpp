@@ -124,7 +124,13 @@ public:
     {
 
     }
+    // this function is not threadsafe and will be called from different threads!!
+    // TODO: make threadsafe
     void log(Log::Level lvl, const char* data, size_t len) override {
+        // check if current thread is the main thread (gui)
+        if (seqthreads::CurrentThreadType() != seqthreads::ThreadType::MainThread) {
+            return;
+        }
         if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
             return;
         auto color = GuiColor::COL_LABEL_ACTIVE;
