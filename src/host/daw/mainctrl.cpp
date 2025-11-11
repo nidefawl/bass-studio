@@ -979,7 +979,7 @@ public:
         }
         int hTopControls     = 42;
         int heightViewSelect = 60;
-        int heightStatusBar = 16;
+        int heightStatusBar = 24;
         int hCenter      = winH - hTopControls - heightViewSelect - heightStatusBar;
         int hContent     = winH - hTopControls - heightStatusBar;
         int widthLeft           = leftSplitter->leftOrTop(winW - widthSidebarLeft);
