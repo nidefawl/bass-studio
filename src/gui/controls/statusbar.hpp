@@ -47,6 +47,10 @@ public:
         return false;
     }
     void setTitle(String _text, GuiColor::constant_t& _color = GuiColor::COL_TEXT) {
+        // if last char in _text is '\n', remove it
+        if (!_text.empty() && _text.back() == '\n') {
+            _text.pop_back();
+        }
         text = std::move(_text);
         color = _color;
     }
