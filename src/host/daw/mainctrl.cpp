@@ -1692,6 +1692,10 @@ void DawCtrl::onTick() {
 }
 
 void ProjectGraphMonitor::onTick(MainCtrl* ctrl) {
+    if (checkTickDelay++ < 50) {
+        return;
+    }
+    checkTickDelay = 0;
     if (processingGraph) {
         lastWorkingProcGraph = processingGraph;
     }

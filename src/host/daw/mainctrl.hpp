@@ -344,6 +344,7 @@ class ProjectGraphMonitor {
     std::shared_ptr<DAW::processing_graph_t> processingGraph;
     std::shared_ptr<DAW::processing_graph_t> lastWorkingProcGraph;
     bool bWorkingProcessingGraph = false;
+    size_t checkTickDelay = 0;
     public:
     void onTick(MainCtrl* ctrl);
     gui_notify* getNotifyError() const {
