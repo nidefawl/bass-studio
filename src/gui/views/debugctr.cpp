@@ -628,12 +628,12 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
         case ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD:
             daw->getPlayThread()->call([]() {
               daw_test::debugRaiseSegFault();
-            }, false);
+            });
             break;
         case ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD:
             daw->getPlayThread()->call([]() {
                 throw std::bad_alloc();
-            }, false);
+            });
             break;
         case ID_BTN_INJECT_SEGFAULT_MAIN_THREAD:
             daw_test::debugRaiseSegFault();
@@ -680,7 +680,7 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
         case ID_BTN_TOGGLE_THREADING:
             daw->getPlayThread()->call([host]() {
                 host->multithreadedProcessing = 1 - host->multithreadedProcessing;
-            }, true);
+            });
             static_cast<guibutton*>(button)->setText(String(host->multithreadedProcessing ? "Multithreaded processing (ON)" : "Multithreaded processing (OFF)"));
             break;
         case ID_BTN_TOGGLE_CLAP_SAMPLEACCURATE_MODULATION: {

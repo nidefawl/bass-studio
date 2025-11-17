@@ -24,9 +24,9 @@ public:
     void joinThread();
     ThreadLock lockThread();
     ThreadLock tryLockThread();
-    void addRequest(RequestType req, int32_t param, bool wait);
-    void addRequestWithCallback(RequestType req, int32_t param, std::function<void()> fn, bool wait);
-    void call(std::function<void()> fn, bool wait);
+    void call(std::function<void()> fn);
+    void addRequest(RequestType req, int32_t param);
+    void addRequestWithCallback(RequestType req, int32_t param, std::function<void()> fn);
     playback_state getState();
     int32_t getThreadId() override;
     void setTls(daw_tls::tlsinstance tls) override;

@@ -380,24 +380,24 @@ PlaybackThread::~PlaybackThread() {
 PlaybackThread::PlaybackThread() : _M_impl{ new PlaybackThread::Impl{} } {
 }
 
-void PlaybackThread::call(std::function<void()> fn, bool wait) {
+void PlaybackThread::call(std::function<void()> fn) {
     auto r = std::make_shared<PlaybackThreadReq>(PlaybackThread::REQ_INVOKE_FN, 0, std::move(fn));
     bool s = _M_impl->addRequest(r);
-    if (s && wait) {
+    if (s) {
         r->wait();
     }
 }
-void PlaybackThread::addRequest(RequestType req, int32_t param, bool wait) {
+void PlaybackThread::addRequest(RequestType req, int32_t param) {
     auto r = std::make_shared<PlaybackThreadReq>(req, param);
     bool s = _M_impl->addRequest(r);
-    if (s && wait) {
+    if (s) {
         r->wait();
     }
 }
-void PlaybackThread::addRequestWithCallback(RequestType req, int32_t param, std::function<void()> fn, bool wait) {
+void PlaybackThread::addRequestWithCallback(RequestType req, int32_t param, std::function<void()> fn) {
     auto r = std::make_shared<PlaybackThreadReq>(req, param, std::move(fn));
     bool s = _M_impl->addRequest(r);
-    if (s && wait) {
+    if (s) {
         r->wait();
     }
 }

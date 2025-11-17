@@ -142,7 +142,7 @@ void DawInstance::startPlaying(tick_t pos) {
         projectGlobals.cursor.setEmptySelection();
         projectGlobals.cursor.cursorPos = pos;
     }
-    playThread.addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int) playback_state::status_playback, true);
+    playThread.addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int) playback_state::status_playback);
 }
 
 void DawInstance::startExport() {
@@ -157,8 +157,8 @@ void DawInstance::startExport() {
     tls.host->setProcessingQuality(DAW::Host::ProcessingQuality::Q_RENDER);
     playThread.addRequestWithCallback(PlaybackThread::REQ_PLAYBACK_STATE, (int) playback_state::status_render, []() {
         auto& tls = daw_tls::getTls();
-        tls.dawInstance->bExportFinished = true;
-    }, true);
+        tls.dawInstance->bExportFinished = true; // Can we do this directly from the audio thread after rendering so we addRequestWithCallback is not needed?
+    });
 }
 
 void DawInstance::stopPlaying() {
@@ -166,7 +166,7 @@ void DawInstance::stopPlaying() {
 }
 
 void DawInstance::setAudioThreadState(playback_state state) {
-    playThread.addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int) state, true);
+    playThread.addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int) state);
 }
 
 bool DawInstance::toggleLoop() {
@@ -1523,13 +1523,12 @@ void DawInstance::preTrackDelete(track_t* track) {
 }
 
 void DawInstance::setTempo(int32_t _tempo100) {
-    playThread.call([this, _tempo100]() {
-        projectGlobals.tempo100 = CLAMP_I(_tempo100, 100, 99900);
-        auto sr = daw_tls::getTls().host->m_sampleFormatInternal.sampleRate;
-        for (track_t* t : project.trackList) {
-            t->updateAudioClipLengths(projectGlobals.tempo100, sr, sr);
-        }
-    }, true);
+    auto lock = this->playThread.lockThread();
+    projectGlobals.tempo100 = CLAMP_I(_tempo100, 100, 99900);
+    auto sr = daw_tls::getTls().host->m_sampleFormatInternal.sampleRate;
+    for (track_t* t : project.trackList) {
+        t->updateAudioClipLengths(projectGlobals.tempo100, sr, sr);
+    }
 }
 
 void DawInstance::initProcessingResources() {

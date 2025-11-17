@@ -269,7 +269,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                 playThread = std::make_unique<PlaybackThread>();
                 playThread->setTls(tls);
                 playThread->startThread(&projectController);
-                playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_no_process, true);
+                playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_no_process);
             }
             if (projectFile) {
                 project_snapshot_t& snapshot = projectFile->project;
@@ -428,7 +428,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                                                                                projectGlobals.tempo100,
                                                                                host->m_sampleFormatInternal.sampleRate);
             if (!bRenderOnly) {
-                playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_playback, true);
+                playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_playback);
             } else {
                 /**
                  * Validate audio routing by building the audio graph once
@@ -483,7 +483,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                 if (fStart >= 0.0 && fLength >= 0.0) {
                     if ((projectController.getPlaybackPos()) / (double)TICKS_BAR - fStart >= fLength) {
                         if (playThread) {
-                            playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_no_process, true);
+                            playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_no_process);
                         }
 
                         userSentQuitRequest = true;
@@ -506,7 +506,7 @@ int runCommandLineHost(const std::vector<String>& args) {
             log_printf("playback end..\n");
 
             if (playThread) {
-                playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_no_process, true);
+                playThread->addRequest(PlaybackThread::REQ_PLAYBACK_STATE, (int)playback_state::status_no_process);
             }
 
             int trackIndex      = 0;
