@@ -1249,7 +1249,8 @@ bool guictr_select_enum::getButtonStateState(const guibutton_select_enum* button
 }
 
 void guictr_select_enum::buttonClicked(guibase* button) {
-    if (assert_expr(button >= &buttons[0] && button < &buttons[N])) {
+    dbgassert(button && button >= &buttons[0] && button <= &buttons[N - 1]);
+    if (button->id >= 0 && button->id < N) {
         auto idx = button->id;
         if (paramAutomatable && paramIdx >= 0) {
             float val = static_cast<float>(idx) / (N - 1);
