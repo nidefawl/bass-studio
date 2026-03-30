@@ -599,7 +599,10 @@ void guitrack_editor::removeAllAutomationLanes(track_gui_entry_t* entry, automat
         }
         return false;
           });
-    atLanes.erase(it, atLanes.end());
+
+    if (it != atLanes.end()) {
+        atLanes.erase(it, atLanes.end());
+    }
 
     int32_t idx = 0;
     for (auto subTr : atLanes) {
@@ -612,8 +615,9 @@ void guitrack_editor::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrac
     remove(al);
     auto& atLanes = entry->subtracks;
     auto it       = std::find(atLanes.begin(), atLanes.end(), al);
-    dbgassert(it != atLanes.end());
-    atLanes.erase(it);
+    if (assert_expr(it != atLanes.end())) {
+        atLanes.erase(it);
+    }
     delete al;
     int32_t idx = 0;
     for (auto subTr : atLanes) {

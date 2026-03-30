@@ -2403,7 +2403,7 @@ void main(void) {
                 lastMousePos = evt.relMousepos;
                 vec2 local = screenToCtrl(evt.relMousepos);
                 int minPt  = getMinPt(local);
-                if (minPt > -1) {
+                if (minPt > -1 && minPt < CtrSize(ctrlPts)) {
                     ctrlPts.erase(ctrlPts.begin() + minPt);
                 }
             }

@@ -701,7 +701,10 @@ public:
             std::sort(indices.begin(), indices.end());
             // be careful, indices change when deleting.
             for (size_t i = indices.size(); i > 0; --i) {
-                curveTmp.pts.erase(curveTmp.pts.begin() + indices[i - 1]);
+                auto idx = indices[i - 1];
+                if (idx >= 0 && idx < int32_t(curveTmp.pts.size())) {
+                    curveTmp.pts.erase(curveTmp.pts.begin() + idx);
+                }
             }
         }
         selectedNodeIndices.clear();

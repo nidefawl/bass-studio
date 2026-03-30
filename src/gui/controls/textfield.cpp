@@ -328,7 +328,9 @@ bool gui_textfield::keyboardEvent(KeyboardKey key, int /* scancode */, KeyboardS
                             if (filter && filter->isReplaceInput()) {
                                 mValueTemp[mCursorPos] = '0';
                             } else if (mValueTemp.length()) {
-                                mValueTemp.erase(mValueTemp.begin() + mCursorPos);
+                                if (mCursorPos < (int) mValueTemp.length()) {
+                                    mValueTemp.erase(mValueTemp.begin() + mCursorPos);
+                                }
                             }
                         }
                     }
@@ -515,11 +517,18 @@ bool gui_textfield::deleteSelection() {
         }
         
         dbgassert(!mValueTemp.empty());
-        if (begin == end - 1)
-            mValueTemp.erase(mValueTemp.begin() + begin);
-        else
-            mValueTemp.erase(mValueTemp.begin() + begin,
-                             mValueTemp.begin() + end);
+        if (begin == end - 1) {
+            if (begin < static_cast<int>(mValueTemp.size())) {
+                mValueTemp.erase(mValueTemp.begin() + begin);
+            }
+        } else {
+            if (end > static_cast<int>(mValueTemp.size())) {
+                end = static_cast<int>(mValueTemp.size());
+            }
+            if (begin < static_cast<int>(mValueTemp.size())) {
+                mValueTemp.erase(mValueTemp.begin() + begin, mValueTemp.begin() + end);
+            }
+        }
 
         mCursorPos    = begin;
         mSelectionPos = -1;

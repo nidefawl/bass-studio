@@ -126,7 +126,10 @@ void clip_notes_t::addAll(const std::vector<note_t>& list) {
 void clip_notes_t::removeAllKeepDuplicates(const std::vector<note_t>& notes) {
     dbgassert(selection.empty());
     for (const auto& note : notes) {
-        m_list.erase(std::find(m_list.begin(), m_list.end(), note));
+        auto it = std::find(m_list.begin(), m_list.end(), note);
+        if (it != m_list.end()) {
+            m_list.erase(it);
+        }
     }
 }
 
@@ -159,7 +162,9 @@ size_t removeDuplicatesImpl(std::vector<note_t>& m_list) {
     std::sort(m_list.begin(), m_list.end());
     auto itNewEnd  = std::unique(m_list.begin(), m_list.end(), [](const note_t& a, const note_t& b) { return note_t::IsIequalMidi(a, b); });
     size_t removed = m_list.end() - itNewEnd;
-    m_list.erase(itNewEnd, m_list.end());
+    if (removed > 0) {
+        m_list .erase(itNewEnd, m_list.end());
+    }
     return removed;
 }
 

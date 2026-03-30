@@ -95,7 +95,9 @@ namespace DAW {
             auto it = std::remove_if(effect->inputChannels.begin(), effect->inputChannels.end(), [](auto& ch) {
                 return ch.type == stage_type::INPUT_EMPTY;
             });
-            effect->inputChannels.erase(it, effect->inputChannels.end());
+            if (it != effect->inputChannels.end()) {
+                effect->inputChannels.erase(it, effect->inputChannels.end());
+            }
         }
         DAW::channel_desc defaultDesc{};
         for (auto& inputChannel : stage->postEffectRouting) {
@@ -104,7 +106,9 @@ namespace DAW {
         auto it = std::remove_if(stage->postEffectRouting.begin(), stage->postEffectRouting.end(), [](auto& ch) {
             return ch.type == stage_type::INPUT_EMPTY;
         });
-        stage->postEffectRouting.erase(it, stage->postEffectRouting.end());
+        if (it != stage->postEffectRouting.end()) {
+            stage->postEffectRouting.erase(it, stage->postEffectRouting.end());
+        }
         if (numRemoved) {
             log_lf(Log::L_WARN, "Removed %zu effect stage routings\n", numRemoved);
         }

@@ -1583,7 +1583,9 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                         inSelection = true;
                         dragMode = drag_note_clicked;
                     } else {
-                        notes.selection.erase(contextNote);
+                        if (notes.selection.contains(contextNote)) {
+                            notes.selection.erase(contextNote);
+                        }
                         inSelection = true;
                         dragMode = drag_note_clicked;
                     }

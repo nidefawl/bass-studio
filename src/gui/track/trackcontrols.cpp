@@ -1455,10 +1455,11 @@ void gui_track_control::removeSubtrackMixer(gui_track_subtrack* al) {
     auto it     = std::find_if(ctrls.begin(), ctrls.end(), [al](const gui_track_subtrack_controls* ref) {
         return ref->subtrack == al;
         });
-    dbgassert(it != ctrls.end());
-    remove(*it);
-    delete (*it);
-    ctrls.erase(it);
+    if (assert_expr(it != ctrls.end())) {
+        remove(*it);
+        delete (*it);
+        ctrls.erase(it);
+    }
 }
 void gui_track_control::removeAllAutomationLanes(automatable_t* at, int32_t paramIdx) {
     auto& ctrls = automationLaneControls;
@@ -1470,7 +1471,10 @@ void gui_track_control::removeAllAutomationLanes(automatable_t* at, int32_t para
         }
         return false;
         });
-    ctrls.erase(it, ctrls.end());
+
+    if (it != ctrls.end()) {
+        ctrls.erase(it, ctrls.end());
+    }
 }
 void gui_track_control::removeAllAutomationLanes(automatable_t* at) {
     removeAllAutomationLanes(at, -1);

@@ -164,8 +164,9 @@ void waveformrender::releaseRendered(gui_waveform_texture_ref* waveformRef) {
         TextureAtlasEntry& entry = *it;
         dbgassert(isIn(entry.ptrs, waveformRef));
         auto it2 = std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef);
-        dbgassert(it2 != entry.ptrs.end());
-        entry.ptrs.erase(it2);
+        if (assert_expr(it2 != entry.ptrs.end())) {
+            entry.ptrs.erase(it2);
+        }
         dbgassert(std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef) == entry.ptrs.end());
         entry.refCount--;
         if (entry.refCount <= 0) {

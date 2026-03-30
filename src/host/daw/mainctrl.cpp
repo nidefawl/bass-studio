@@ -2914,7 +2914,9 @@ void DawInstance::updateAudioProcessingTask() {
         auto it = std::remove_if(this->processAudioTasks.begin(), this->processAudioTasks.end(), [](const std::shared_ptr<DAW::ProcessClipAudioThreadTask>& task) {
             return task->isCompleted();
         });
-        this->processAudioTasks.erase(it, this->processAudioTasks.end());
+        if (it != this->processAudioTasks.end()) {
+            this->processAudioTasks.erase(it, this->processAudioTasks.end());
+        }
     }
 }
 

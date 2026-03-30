@@ -153,16 +153,18 @@ void gui_audio_clip::onRemove() {
     dbgassert(STL_CONTAINS(m_clip->trackEntries, this->m_trackentry));
     removeEntry(this->m_clip->trackEntries, this->m_trackentry);
     auto it2 = m_trackentry->clipsGuis.find(m_clip);
-    dbgassert(it2 != m_trackentry->clipsGuis.end());
-    m_trackentry->clipsGuis.erase(it2);
+    if (assert_expr(it2 != m_trackentry->clipsGuis.end())) {
+        m_trackentry->clipsGuis.erase(it2);
+    }
 }
 
 void gui_midi_clip::onRemove() {
     dbgassert(STL_CONTAINS(m_clip->trackEntries, this->m_trackentry));
     removeEntry(this->m_clip->trackEntries, this->m_trackentry);
     auto it1 = m_trackentry->clipsGuis.find(m_clip);
-    dbgassert(it1 != m_trackentry->clipsGuis.end());
-    m_trackentry->clipsGuis.erase(it1);
+    if (assert_expr(it1 != m_trackentry->clipsGuis.end())) {
+        m_trackentry->clipsGuis.erase(it1);
+    }
 }
 
 void gui_audio_clip::renderDebugPass(NVGcontext* vg) {

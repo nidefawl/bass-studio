@@ -773,11 +773,12 @@ public:
         auto it = std::find_if(overlayWindows.begin(), overlayWindows.end(), [wnd](const auto& e) {
             return dynamic_cast<window_base*>(e.get()) == dynamic_cast<window_base*>(wnd);
         });
-        dbgassert(it != overlayWindows.end());
-        wnd->hide();
-        // extend lifetime of window to a point where click handlers have returned
-        overlayWindowsToClose.push_back(*it);
-        overlayWindows.erase(it);
+        if (assert_expr(it != overlayWindows.end())) {
+            wnd->hide();
+            // extend lifetime of window to a point where click handlers have returned
+            overlayWindowsToClose.push_back(*it);
+            overlayWindows.erase(it);
+        }
     }
 
     bool canResize() override {

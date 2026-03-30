@@ -308,8 +308,9 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
     std::vector<automation_point_t>& dataPoints = data.points;
     if (clicked.mode == dragmode::drag_node) {
         int32_t i = clicked.dataPt;
-        dbgassert(i >= 0 && i < CtrSize(dataPoints));
-        dataPoints.erase(dataPoints.begin() + i);
+        if (assert_expr(i >= 0 && i < CtrSize(dataPoints))) {
+            dataPoints.erase(dataPoints.begin() + i);
+        }
         postEdit();
         return true;
     } else {
