@@ -500,6 +500,20 @@ bool gui_textfield::deleteSelection() {
         if (begin > end)
             std::swap(begin, end);
         if (mValueTemp.empty()) return false;
+        
+        // Validate bounds before erasing
+        size_t size = mValueTemp.size();
+        if (begin < 0 || end < 0 || begin > static_cast<int>(size) || end > static_cast<int>(size)) {
+            mSelectionPos = -1;
+            return false;
+        }
+        
+        // Only erase if selection is non-empty
+        if (begin >= end) {
+            mSelectionPos = -1;
+            return false;
+        }
+        
         dbgassert(!mValueTemp.empty());
         if (begin == end - 1)
             mValueTemp.erase(mValueTemp.begin() + begin);
