@@ -64,6 +64,9 @@ public:
 class guictr_menubar final : public guictr_base {
     //std::vector<guictr_menubar_entry> list;
     ngui::MenuBar& menubar;
+    String centerLabel;
+    String rightLabel;
+
 
 public:
     guictr_menubar_entry* currentMenu = nullptr;
@@ -127,5 +130,18 @@ public:
         if (currentMenu && currentMenu != entry) {
             openMenu(entry);
         }
+    }
+
+    void setCentralLabel(const String& label) {
+        centerLabel = label;
+    }
+    void setRightLabel(const String& label) {
+        rightLabel = label;
+    }
+    const String& getCentralLabel() const {
+        return centerLabel;
+    }
+    const String& getRightLabel() const {
+        return rightLabel;
     }
 };

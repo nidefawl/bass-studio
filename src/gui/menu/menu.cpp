@@ -250,14 +250,29 @@ void guictr_menubar::render(NVGcontext* vg) {
                         theme->getColor(GuiColor::COL_LABEL_INACTIVE),
                         NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }
-    if (label.length() > 0) {
-        renderTextLabel(vg,
-                        vec2(size.x - size.y*0.25f - offsetX, size.y * 0.5f),
+    const auto posRightLabel = vec2(size.x - size.y*0.25f - offsetX, size.y * 0.5f);
+    const auto posCenterLabel = vec2(size.x * 0.5f, size.y * 0.5f);
+    float textWidth = 0.0f;
+    if (rightLabel.length() > 0) {
+        textWidth = renderTextLabel(vg,
+                        posRightLabel,
                         vec2(size),
-                        label,
+                        rightLabel,
                         theme,
                         size.y * FONT_AUTOSCALE,
                         theme->getColor(GuiColor::COL_LABEL_INACTIVE),
                         NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+
     }
+    if (centerLabel.length() && posRightLabel.x - textWidth > size.x*0.5f + 160) {
+        renderTextLabel(vg,
+                        posCenterLabel,
+                        vec2(size.x * 0.5f - offsetX, size.y),
+                        centerLabel,
+                        theme,
+                        size.y * FONT_AUTOSCALE,
+                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                        NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    }
+
 }

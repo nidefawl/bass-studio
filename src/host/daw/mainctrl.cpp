@@ -1686,7 +1686,8 @@ void DawCtrl::onTick() {
                 numPlugins,
                 numSamplesLoaded); */
             String labelInfo = StringFormat(fmt, stats.usage, memUsageMb, latency, latencyMs, sfInternal.sampleRate, sfInternal.blockSize, numPlugins, numSamplesLoaded);
-            menu->setLabel(std::move(labelInfo));
+            menu->setRightLabel(labelInfo);
+            menu->setCentralLabel(BuildInfo::PRODUCT_URL_VENDOR);
         }
     }
 }
