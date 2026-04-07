@@ -692,6 +692,7 @@ public:
                 "pluginscanner-debug",
                 "pluginscanner-release",
                 "pluginscanner-clang-debug",
+                "pluginscanner-clang-relwithdebinfo",
                 "pluginscanner-clang-release",
                 "pluginscanner-msvc-debug",
                 "pluginscanner-msvc-release",
