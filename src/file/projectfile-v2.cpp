@@ -72,7 +72,7 @@ JSON_FROM_TO(DAW::modulation_channel_ref, paramIdxDst, refSrc, scale, bIsTempora
 JSON_FROM_TO(DAW::Cursor, cursorPos, cursorTrack, cursorSubTrack, selRange, selTrackRange, selSubTrackRange)
 } // namespace DAW
 
-JSON_FROM_TO(plugin_iodesc_snapshot_t, input, input)
+JSON_FROM_TO(plugin_iodesc_snapshot_t, input, output)
 JSON_FROM_TO(track_effect_routing_snapshot_t, routingState, inputRoutingOutputStage, inputRoutingEffects)
 JSON_FROM_TO(io_configuration_snapshot_t, type, stageId, stageEndPointType, externalInputType, projectGlobalId, externalInputIdx, srcChannelOffset, dstChannelOffset)
 JSON_FROM_TO(io_midi_snapshot_t, type, stageId, stageEndPointType, srcChannel, dstChannel, inputName)
