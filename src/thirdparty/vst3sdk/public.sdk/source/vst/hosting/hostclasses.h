@@ -71,7 +71,7 @@ private:
 /** Example, ready to use implementation of IAttributeList.
 \ingroup hostingBase
 */
-class HostAttributeList final : public IAttributeList
+class HostAttributeList : public IAttributeList
 {
 public:
 	/** make a new attribute list instance */
@@ -99,7 +99,7 @@ private:
 /** Example implementation of IMessage.
 \ingroup hostingBase
 */
-class HostMessage final : public IMessage
+class HostMessage : public IMessage
 {
 public:
 	HostMessage ();
