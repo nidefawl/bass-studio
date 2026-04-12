@@ -81,7 +81,8 @@ struct appwindowsettings {
 
 struct recentfilelistentry {
     String path;
-    String date;
+    int64_t timestamp = 0;  // Unix time (seconds since epoch)
+    String isoDate;         // ISO 8601 for display (optional)
 };
 
 class recentfilelist {

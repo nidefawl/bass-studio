@@ -41,6 +41,7 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <cereal_optional_nvp/cereal_optional_nvp.hpp>
+#include "appsettings-cereal-compat.hpp"
 
 
 using namespace cereal;

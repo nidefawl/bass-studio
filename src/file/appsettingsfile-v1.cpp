@@ -100,7 +100,7 @@ void serialize(Archive& ar, app_iosettings& settings) {
 }
 template <class Archive>
 void serialize(Archive& ar, recentfilelistentry& f) {
-    ar(make_nvp("path", f.path), make_nvp("date", f.date));
+    ar(make_nvp("path", f.path), make_nvp("date", f.isoDate));
 }
 template <class Archive>
 void serialize(Archive& ar, recentfilelist& recentfiles) {

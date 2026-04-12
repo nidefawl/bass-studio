@@ -84,7 +84,7 @@ JSON_FROM_TO(groove_timing_data_t, timePoints, velocityPoints, loopLength)
 JSON_FROM_TO(groove_data_t, timingData, presetName, grooveName, lenQuantization, strengthQuantization, strengthGroove, strengthVelocity, randomTiming, randomVelocity)
 
 
-void to_json(json& j, const appwindow_size_t& m) {
+inline void to_json(json& j, const appwindow_size_t& m) {
     // convert to base64:
     auto base64string = cereal::base64::encode(reinterpret_cast<const unsigned char *>( m.data ), sizeof(m.data));
     j = json{
@@ -94,7 +94,7 @@ void to_json(json& j, const appwindow_size_t& m) {
     };
 
 }
-void from_json(const json& j, appwindow_size_t& m) {
+inline void from_json(const json& j, appwindow_size_t& m) {
     j.at("type").get_to(m.type);
     j.at("valid").get_to(m.valid);
     auto base64string = j.at("data").get<std::string>();

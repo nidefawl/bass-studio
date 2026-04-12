@@ -7,6 +7,7 @@
 #ifdef _WIN32
 #include "platform/win/windowsize.hpp"
 #endif
+#include "seq_datetime.hpp"
 
 void recentfilelist::add(const String& path) {
     while (sortedEntries.size() > 31) {
@@ -29,10 +30,9 @@ void recentfilelist::add(const String& path) {
 
     sortedEntries.insert(sortedEntries.begin(), path);
 
-    std::time_t t = std::time(nullptr);// get time now
-    std::tm* now  = std::localtime(&t);
-    auto strDate  = std::to_string(now->tm_year + 1900) +
-                   "-" + std::to_string(now->tm_mon + 1) +
-                   "-" + std::to_string(now->tm_mday);
-    recentFilesMeta[path] = recentfilelistentry{ path, strDate };
+    int64_t timestamp = GetInt64GMTDate();
+    String  isoDate   = GetInt64DateAsLocalizedTimeStr(timestamp);
+
+    recentFilesMeta[path] = recentfilelistentry{ path, timestamp, isoDate };
+
 }
