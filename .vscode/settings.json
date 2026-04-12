@@ -12,8 +12,10 @@
       "[*]": {
         "activityBar.background": "#1a092e",
         "titleBar.activeBackground": "#290a4d",
-        "editor.background": "#09030f",
-      }
+        "sideBar.background": "#222222",
+        "editor.background": "#180913",
+      },
+      
     },
     "C_Cpp.intelliSenseEngine": "disabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
@@ -36,6 +38,8 @@
         "-DPROJECT_BINARY_NAME:STRING='bass'",
         "-DPRODUCT_HOST_NAME:STRING='bass'",
         "-DPROJECT_VENDOR_NAME:STRING='Michael Hept'",
+        "-DPRODUCT_URL_DOCS:STRING='https://bass-studio.com'",
+        "-DPRODUCT_URL_VENDOR:STRING='https://bass-studio.com'",
         "-DPROJECT_WORKING_DIR:PATH=~/run",
         // "-DPROJECT_WORKING_DIR:PATH=../../run",
         // "-DCMAKE_OPTIMIZE_DEPENDENCIES=ON",
