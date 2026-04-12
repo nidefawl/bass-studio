@@ -153,6 +153,11 @@ class vst3plugin final : public effectbase {
 
         tresult PLUGIN_API restartComponent (Steinberg::int32 flags) override
         {
+            // Plugin must not call restartComponent during setState.
+            // MSoundFactory does this anyway — ignore to avoid deadlock via yabridge.
+            if (plugin->bIsLoadingProgram) {
+                return Steinberg::kResultOk;
+            }
             if ((flags & Steinberg::Vst::RestartFlags::kParamValuesChanged) ||
                 (flags & Steinberg::Vst::RestartFlags::kParamTitlesChanged)) {
                 // normally we would not allow this to be called from non-main thread,
