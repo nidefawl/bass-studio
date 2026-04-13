@@ -116,9 +116,9 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
         return;
     }
     const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-    auto col = cl->rgb;
+    auto col = cl->rgb | 0xff000000;
     if (!cl->enabled) {
-        col = 0x333333;
+        col = 0x3f333333;
     }
     auto textPos = vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0) + vec2(pos);
     auto textBounds = vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0);
@@ -448,9 +448,9 @@ void gui_midi_clip::render(NVGcontext* vg) {
         if (cl->getLen() <= 0) {
             return;
         }
-        NVGcolor color = rgbToNvg(cl->rgb);
+        NVGcolor color = rgbToNvg(cl->rgb | 0xff000000);
         if (!cl->enabled) {
-            color = rgbToNvg(0x333333);
+            color = rgbToNvg(0x3f333333);
         }
 
         const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
@@ -507,9 +507,9 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const clip_t* cl, i
     if (cl->getLen() <= 0) {
         return;
     }
-    NVGcolor color = rgbToNvg(cl->rgb);
+    NVGcolor color = rgbToNvg(cl->rgb | 0xff000000);
     if (!cl->enabled) {
-        color = rgbToNvg(0x333333);
+        color = rgbToNvg(0x3f333333);
     }
     
     const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
