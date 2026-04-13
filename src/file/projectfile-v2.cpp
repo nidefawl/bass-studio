@@ -196,6 +196,28 @@ void from_json(const json& j, layout_pianoroll_t& m) {
 }
 JSON_FROM_TO(clip_editor_layout_t, layoutGrid, layoutPianoRoll, noLayout)
 
+void to_json(json& j, const clip_control_data_channel_t& m) {
+    j = json{
+        {"shape", m.shape}
+    };
+}
+
+void from_json(const json& j, clip_control_data_channel_t& m) {
+    j.at("shape").get_to(m.shape);
+}
+
+void to_json(json& j, const clip_control_data_t& m) {
+    j = json{
+        {"pitchBend", m.pitchBend},
+        {"cc", m.ccChannels}
+    };
+}
+
+void from_json(const json& j, clip_control_data_t& m) {
+    j.at("pitchBend").get_to(m.pitchBend);
+    j.at("cc").get_to(m.ccChannels);
+}
+
 void to_json(json& j, const clip_fade_t& m) {
     j = json{
         {"duration", m.durationMs},
@@ -221,15 +243,25 @@ void to_json(json& j, const clip_audio_t& m) {
 
 void from_json(const json& j, clip_audio_t& m) {
     j.at("id").get_to(m.id);
-    j.at("fadeIn").get_to(m.fadeIn);
-    j.at("fadeOut").get_to(m.fadeOut);
+    if (j.find("fadeIn") != j.end()) {
+        j.at("fadeIn").get_to(m.fadeIn);
+    }
+    if (j.find("fadeOut") != j.end()) {
+        j.at("fadeOut").get_to(m.fadeOut);
+    }
     if (m.fadeIn.shape.pts.empty()) 
         m.setDefaultFade(true);
     if (m.fadeOut.shape.pts.empty())
         m.setDefaultFade(false);
-    j.at("pitch").get_to(m.settings.pitch);
-    j.at("stretch").get_to(m.settings.stretch);
-    j.at("flags").get_to(m.settings.flags);
+    if (j.find("pitch") != j.end()) {
+        j.at("pitch").get_to(m.settings.pitch);
+    }
+    if (j.find("stretch") != j.end()) {
+        j.at("stretch").get_to(m.settings.stretch);
+    }
+    if (j.find("flags") != j.end()) {
+        j.at("flags").get_to(m.settings.flags);
+    }
 }
 
 void to_json(json& j, const clip_notes_t& m) {
@@ -317,7 +349,9 @@ void to_json(json& j, const clip_t& m) {
         {"clip_notes", m.notes},
         {"clip_audio", m.audio},
         {"type", m.clipType},
-        {"len_samples", m.lenSamples}
+        {"len_samples", m.lenSamples},
+        {"clip_data", m.controlData},
+        {"groove", m.selectedGroove}
     };
 }
 
@@ -336,6 +370,12 @@ void from_json(const json& j, clip_t& m) {
     j.at("clip_audio").get_to(m.audio);
     j.at("type").get_to(m.clipType);
     j.at("len_samples").get_to(m.lenSamples);
+    if (j.find("clip_data") != j.end()) {
+        j.at("clip_data").get_to(m.controlData);
+    }
+    if (j.find("groove") != j.end()) {
+        j.at("groove").get_to(m.selectedGroove);
+    }
 }
 
 
