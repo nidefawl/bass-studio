@@ -1124,9 +1124,9 @@ public:
           automationSelectParam(_entry) {
         setGuiType(gui_type::CTR_TYPE_TRACK_TITLE);
         setCanMouseHit(true);
-        foldTrack.setRadius(12);
-        hideAutomation.setRadius(10);
-        addAutomationLane.setRadius(10);
+        foldTrack.setRadius(8);
+        hideAutomation.setRadius(8);
+        addAutomationLane.setRadius(8);
         foldTrack.setText("Fold Track");
         hideAutomation.setText("Fold Automation");
         addAutomationLane.setText("Add Automation Lane");
