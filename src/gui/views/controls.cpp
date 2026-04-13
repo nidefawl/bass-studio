@@ -807,7 +807,34 @@ guictr_daw_controls::~guictr_daw_controls() {
 }
 template<>
 String gui_numberinput_field_generic<GlobalZoom>::valueToStringLiteral(GlobalZoom val) {
-    return StringFormat(strFormat ? strFormat : "%.3f", val.zoom);
+    // return StringFormat(strFormat ? strFormat : "%.2f", val.zoom);
+    // show 1x, 1.25x, 0.75x etc instead of 1.00, 1.25, 0.75, do this in steps for all values from 0.5 to 2.0 with step of 0.25, for values in between show one decimal place, for values that are whole numbers show no decimal places
+    // dont show more than 2 decimals places
+    if (math::abs(val.zoom - 1.0f) < 0.01f) {
+        return "1x";
+    } else if (math::abs(val.zoom - 1.25f) < 0.01f) {
+        return "1.25x";
+    } else if (math::abs(val.zoom - 0.75f) < 0.01f) {
+        return "0.75x";
+    } else if (math::abs(val.zoom - 1.5f) < 0.01f) {
+        return "1.5x";
+    } else if (math::abs(val.zoom - 0.5f) < 0.01f) {
+        return "0.5x";
+    } else if (math::abs(val.zoom - 2.0f) < 0.01f) {
+        return "2x";
+    } else {
+        // simply show value to 2 decimal places, but remove trailing zeros and dot if not needed
+        String str = StringFormat("%.2f", val.zoom);
+        // remove trailing zeros
+        while (str.length() > 0 && str.back() == '0') {
+            str.pop_back();
+        }
+        // remove trailing decimal point if it's the last character
+        if (str.length() > 0 && str.back() == '.') {
+            str.pop_back();
+        }
+        return str;
+    }
 }
 template<>
 GlobalZoom gui_numberinput_field_generic<GlobalZoom>::parseLiteral(const char* szNumber) {
