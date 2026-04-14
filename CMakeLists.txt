@@ -598,12 +598,6 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       message(FATAL "soxr .so library not found at: ${PATH_SOXR_SO_LIBRARY}")
     endif()
   
-
-    set(PATH_SOXR_SO_LIBRARY "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
-    if(NOT EXISTS "${PATH_SOXR_SO_LIBRARY}")
-      message(FATAL "soxr .so library not found at: ${PATH_SOXR_SO_LIBRARY}")
-    endif()
-  
     add_custom_command(
       OUTPUT ${PROJECT_INSTALLER_OUTPUT} CMakeStinks.txt
       VERBATIM
