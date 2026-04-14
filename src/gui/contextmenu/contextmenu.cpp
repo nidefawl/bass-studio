@@ -1,4 +1,5 @@
 #include "contextmenu.hpp"
+#include "math/seq_math.hpp"
 #include "menu.hpp"
 #include "window.hpp"
 #include "renderresources.hpp"
@@ -195,10 +196,10 @@ String ngui::Menu::getRight() const {
 
 void ctxtmenu_entry::layout(ivec2 size, float _fontSize, determine_string_width& strw) {
     this->fontSize = _fontSize;
-    this->height   = math::roundfS32(_fontSize * 1.1f);
-    auto entryW    = leftOffset() + strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    this->height   = math::floorfS32(_fontSize + 3.0f);
+    auto entryW    = leftOffset() + strw.getStringWidth(title, this->fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     if (icon) entryW += height - 4;
-    if (!rightTitle.empty()) entryW += strw.getStringWidth(rightTitle, _fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    if (!rightTitle.empty()) entryW += strw.getStringWidth(rightTitle, this->fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     this->width = math::max(size.x, math::roundfS32(entryW));
 }
 

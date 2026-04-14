@@ -4,9 +4,6 @@
 #include "math/seq_math.hpp"
 #include "basectrl.hpp"
 #include "gui/gui.hpp"
-#include "guicolors.hpp"
-#include "exceptions.hpp"
-#include "mouse.hpp"
 #include "event.hpp"
 #include "gui/container/container.hpp"
 #include "gui/contextmenu/contextmenu_base.hpp"
@@ -99,7 +96,7 @@ public:
         }
     }
     void layout() override {
-        auto fontSize = size.y * 0.8f;
+        auto fontSize = size.y - 3.0f;
         int padding   = math::max(1, math::roundfS32(size.y * 0.5f));
         std::vector<ngui::Menu*> entryList = menubar.children;
         determine_string_width strw(parentCtrl, theme);
@@ -123,6 +120,7 @@ public:
         auto* popup = new guimenu(entry->menu, 0);
         popup->parentMenuBar = this;
         popup->size = math::maxvec2(vec2(APP_MENU_MIN_WIDTH, 0), popup->size);
+        popup->setFontSize(entry->fontSize);
         parentCtrl->openAppMenu(0, popup, entry->toScreenSpace(ivec2(0, entry->size.y)) + ivec2(1, 1), WINDOW_IS_BORDERLESS | WINDOW_POS_RELATIVE);
         currentMenu = entry;
     }

@@ -178,14 +178,14 @@ public:
     }
 
     void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-        auto h = fontSize * 1.1f;
+        auto h = fontSize + 2;
 
         renderTextLabel(vg,
                         vec2(leftOffset(), y + h * 0.5f),
                         vec2(width, h),
                         title,
                         theme,
-                        fontSize,
+                        fontSize - 1.0f,
                         theme->getColor(GuiColor::COL_TEXT),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         for (_shape_sel_entry& e : entries) {

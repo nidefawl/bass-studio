@@ -17,11 +17,11 @@ guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
 
 void guimenu_ctxtentry::layout(ivec2 size, float _fontSize, determine_string_width& strw) {
     this->fontSize = _fontSize;
-    this->height   = math::roundfS32(_fontSize * 1.1f);
-    auto entryW = leftOffset()+strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    this->height   = math::roundfS32(_fontSize + 3.0f);
+    auto entryW = leftOffset()+strw.getStringWidth(title, this->fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     if (icon) entryW += height*1.5f;
     if (!rightTitle.empty()) {
-        entryW += strw.getStringWidth(rightTitle, _fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        entryW += strw.getStringWidth(rightTitle, this->fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }
     entryW *= 1.2f;
     this->width = math::max(size.x, math::roundfS32(entryW));
@@ -142,7 +142,7 @@ void guimenu::layout() {
         entry->fixedLeftOffset = -1;
     }
     guictxtmenu::layout();
-    float leftOffset = 0;
+    float leftOffset = 0;;
     for (auto entry : guimenuEntries) {
         leftOffset = math::max(entry->leftOffset(), leftOffset);
     }
@@ -194,6 +194,7 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             auto* popup = new guimenu(entryHit->menu, getLevel() + 1, entryHit);
             popup->parentMenuBar = this->parentMenuBar;
             popup->size = math::maxvec2(vec2(APP_MENU_MIN_WIDTH, 0), popup->size);
+            popup->setFontSize(entryHit->fontSize);
             ivec2 popupPos = this->parentCtrl->toScreenSpace(toScreenSpace(ivec2(size.x, entryHit->y)) + ivec2(2, 0));
             appCtrlParent->openAppMenu(
                     popup->getLevel(),

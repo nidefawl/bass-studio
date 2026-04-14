@@ -231,7 +231,7 @@ class ctxtmenu_macro_count final : public ctxtmenu_entry {
 
 
             void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-                auto h = fontSize * 1.1f;
+                auto h = fontSize + 2;
 
                 for (_time_sel_entry& e : entries) {
                     if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
@@ -257,7 +257,7 @@ class ctxtmenu_macro_count final : public ctxtmenu_entry {
                                     vec2(width, h),
                                     e.name,
                                     theme,
-                                    fontSize * 0.9f,
+                                    fontSize - 1.0f,
                                     theme->getColor(GuiColor::COL_TEXT),
                                     NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
                 }

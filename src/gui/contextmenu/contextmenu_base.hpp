@@ -93,7 +93,7 @@ public:
 
     void layout(ivec2, float _fontSize, determine_string_width& strw) override {
         this->fontSize = _fontSize;
-        this->height   = math::roundfS32(_fontSize * 1.1f * 0.5f);
+        this->height   = math::roundfS32((_fontSize + 2.0f) * 0.5f);
     }
 
     bool contains(ivec2&, ivec2&) const override {
@@ -136,7 +136,7 @@ public:
     }
 
     void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-        auto h = fontSize * 1.1f;
+        auto h = fontSize + 2;
 
         for (auto& e : entries) {
             if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
@@ -168,7 +168,7 @@ public:
                             vec2(width, h),
                             e.name,
                             theme,
-                            fontSize * 0.9f,
+                            fontSize - 1.0f,
                             theme->getColor(GuiColor::COL_TEXT),
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }

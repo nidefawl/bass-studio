@@ -11,21 +11,32 @@
 
 class ctxtmenu_color_select final : public ctxtmenu_entry {
 public:
-    const int WH      = 16;
+    int cellSize      = 16;
+    int centerOffset  = 0;
     const int ROWS    = COLOR_PALETTE_ROWS;
     const int COLS    = COLOR_PALETTE_COLS;
     const int pad     = 5;
     const int padCell = 3;
     ctxtmenu_color_select(String _title, int _id)
         : ctxtmenu_entry(_title, _id) {
-        this->id    = _id;
-        this->width = pad * 2 + (WH + padCell) * COLS - padCell;
+        this->id = _id;
     }
 
-    void layout(ivec2, float _fontSize, determine_string_width& strw) override {
+    void layout(ivec2 menuSize, float _fontSize, determine_string_width& strw) override {
         this->fontSize = _fontSize;
-        auto tableSize = pad * 2 + (WH + padCell) * ROWS - padCell;
-        height         = math::roundfS32(_fontSize) + tableSize;
+        
+        // Calculate cell size from available menu width
+        int availableWidth = menuSize.x - pad * 2;
+        cellSize = (availableWidth - padCell * (COLS - 1)) / COLS;
+        cellSize = std::max(cellSize, 4); // Minimum size to ensure visibility
+        
+        // Calculate dimensions based on dynamic cell size
+        this->width = pad * 2 + (cellSize + padCell) * COLS - padCell;
+        int tableHeight = pad * 2 + (cellSize + padCell) * ROWS - padCell;
+        height = math::roundfS32(_fontSize) + tableHeight;
+        
+        // Center grid horizontally
+        centerOffset = (menuSize.x - this->width) / 2;
     }
 
     void render(ivec2, NVGcontext* vg, int idx, ivec2 mouse) override {
@@ -40,15 +51,15 @@ public:
         int focusIdx = -1;
         int y        = this->y + this->fontSize + pad - 4;
         for (int col = 0; col < COLS; col++) {
-            int cX = pad + (WH + padCell) * col;
+            int cX = centerOffset + pad + (cellSize + padCell) * col;
             for (int row = 0; row < ROWS; row++) {
                 int colorIdx = col * ROWS + row;
-                int cY  = pad + (WH + padCell) * row;
-                if (mouse.y >= y + cY && mouse.y < y + cY + WH && mouse.x >= cX && mouse.x < cX + WH) {
+                int cY  = pad + (cellSize + padCell) * row;
+                if (mouse.y >= y + cY && mouse.y < y + cY + cellSize && mouse.x >= cX && mouse.x < cX + cellSize) {
                     focusIdx = colorIdx;
                 }
                 nvgBeginPath(vg);
-                nvgRect(vg, cX, y + cY, WH, WH);
+                nvgRect(vg, cX, y + cY, cellSize, cellSize);
                 nvgFillColor(vg, g_colorPalette[colorIdx]);
                 nvgFill(vg);
                 nvgStrokeColor(vg, THEMECOL_WHITE);
@@ -59,11 +70,11 @@ public:
         if (focusIdx >= 0) {
             int row    = focusIdx % ROWS;
             int col    = focusIdx / ROWS;
-            int cX     = pad + (WH + padCell) * col;
-            int cY     = pad + (WH + padCell) * row;
+            int cX     = centerOffset + pad + (cellSize + padCell) * col;
+            int cY     = pad + (cellSize + padCell) * row;
             int extent = 4;
             nvgBeginPath(vg);
-            nvgRect(vg, cX - extent, y + cY - extent, WH + extent * 2, WH + extent * 2);
+            nvgRect(vg, cX - extent, y + cY - extent, cellSize + extent * 2, cellSize + extent * 2);
             nvgFillColor(vg, g_colorPalette[focusIdx]);
             nvgFill(vg);
             nvgStrokeColor(vg, THEMECOL_WHITE);
@@ -80,11 +91,11 @@ public:
         if (contains(ctxtSize, mouse)) {
             int y = this->y + this->fontSize + pad - 4;
             for (int col = 0; col < COLS; col++) {
-                int cX = pad + (WH + padCell) * col;
+                int cX = centerOffset + pad + (cellSize + padCell) * col;
                 for (int row = 0; row < ROWS; row++) {
                     int idx = col * ROWS + row;
-                    int cY  = pad + (WH + padCell) * row;
-                    if (mouse.y >= y + cY && mouse.y < y + cY + WH && mouse.x >= cX && mouse.x < cX + WH) {
+                    int cY  = pad + (cellSize + padCell) * row;
+                    if (mouse.y >= y + cY && mouse.y < y + cY + cellSize && mouse.x >= cX && mouse.x < cX + cellSize) {
                         return this->id + idx;
                     }
                 }

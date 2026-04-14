@@ -60,6 +60,7 @@
 #include "gui/views/pluginlist.hpp"
 #include "gui/views/shaderview.hpp"
 #include "guicolors.hpp"
+#include "guiconstant.hpp"
 #include "host/audiocache/audiocache.hpp"
 #include "host/audiohost/audio_host.hpp"
 #include "host/clip/clip.hpp"
@@ -943,7 +944,7 @@ public:
         int winY      = 0;
         int winBottom = winH;
 #if USE_GUI_MENU
-        int hMenu = 28;
+        auto hMenu = 28;
         winH -= hMenu;
         winY += hMenu;
         ctr_menu.pos  = vec2(0, 0);

@@ -683,8 +683,7 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-        constexpr int FONT_SIZE_TOOLTIP_TITLE = 24;
-        setFont(vg, FONT_SIZE_TOOLTIP_TITLE, THEMECOL_TEXT, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
+        setFont(vg, theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE), THEMECOL_TEXT, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
         Table::DrawTableNVG(m_table, vg, theme, ivec2(INSET_TABLE), getSizeContent()-ivec2(INSET_TABLE<<1), m_fontSize);
         for (guibase* ctrl : m_controls) {
             if (ctrl->isVisible()) {
@@ -800,7 +799,7 @@ template <>
 void guiproperties_table<guibase>::determineSize(glm::ivec2& prefSize) {
     //if (size.x == 0)
     prefSize.x = math::max(250, prefSize.x);
-    m_fontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
+    m_fontSize = theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE);
     m_table.rowHeight = m_fontSize +INSET_TABLE_CELL_PADDING*2;
     m_table.rows.clear();
     m_table.titleCols.clear();
@@ -1001,8 +1000,7 @@ template <>
 void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
     //TODO: only fully repopulate table if necessary.
     //    size.x = 250;
-    m_fontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
-    m_fontSize = math::max(8.0f, m_fontSize);
+    m_fontSize = theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE);
     m_table.rowHeight = m_fontSize +INSET_TABLE_CELL_PADDING*2;
     m_table.rows.clear();
     m_table.titleCols.clear();
@@ -1212,7 +1210,7 @@ public:
 
     void layout() override {
         ivec2 size = getSizeContent();
-        int32_t hTop = HEIGHT_DEFAULT_INPUT;
+        auto hTop = theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE) * 1.5f + padding*2;
         buttonAdd.size = { hTop, hTop };
         buttonRemove.size = { hTop, hTop };
         buttonSave.size = { hTop*3, hTop };

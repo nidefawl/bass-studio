@@ -81,7 +81,7 @@ public:
     }
 
     void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
-        auto h = fontSize * 1.1f;
+        auto h = fontSize + 2;
 
         int n = 0;
         for (_time_sel_entry& e : entries) {
@@ -118,7 +118,7 @@ public:
                             vec2(width, h),
                             e.name,
                             theme,
-                            fontSize * 0.9f,
+                            fontSize - 1.0f,
                             theme->getColor(GuiColor::COL_TEXT),
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             n++;
