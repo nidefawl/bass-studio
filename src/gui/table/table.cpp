@@ -161,10 +161,17 @@ namespace Table {
         guibase* ref = safeRefGet(obj);
         if (ref)
         {
-            String strAddr = StringFormat("0x%6zX (refId %zu)", reinterpret_cast<uint64_t>(ref), obj.refId);
-            String className = ref->getClassName();
-            nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("%s %s [%s]", StringAsCStr(ref->getLabel()), StringAsCStr(className), StringAsCStr(strAddr))), nullptr);
-
+            constexpr bool PROPERTIES_TABLE_SHOW_FULL_PTR_ADDR = false;
+            const String className = ref->getClassName();
+            if constexpr (PROPERTIES_TABLE_SHOW_FULL_PTR_ADDR)
+            {
+                const String strAddr = StringFormat("0x%6zX (refId %zu)", reinterpret_cast<uint64_t>(ref), obj.refId);
+                const String str = StringAsCStr(StringFormat("%s %s [%s]", StringAsCStr(ref->getLabel()), StringAsCStr(className), StringAsCStr(strAddr)));
+                nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(str), nullptr);
+            } else {
+                const String str = StringAsCStr(StringFormat("%s %s", StringAsCStr(ref->getLabel()), StringAsCStr(className)));
+                nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(str), nullptr);
+            }
         } else {
             nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("<null> [%zu]", obj.refId)), nullptr);
 
