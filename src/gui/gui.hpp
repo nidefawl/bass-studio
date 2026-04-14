@@ -533,7 +533,7 @@ public:
         }
         return nullptr;
     }
-    void renderWidgetBorder(NVGcontext* vg, int32_t flags) const;
+    virtual void renderWidgetBorder(NVGcontext* vg, int32_t flags) const;
     virtual void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const;
     virtual ivec2 toScreenSpace(ivec2 in) const {
         in += this->pos;

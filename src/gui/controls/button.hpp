@@ -59,6 +59,12 @@ public:
     virtual bool getState() const {
         return true;
     }
+    void renderWidgetBorder(NVGcontext* vg, int32_t flags) const override {
+        if ((flags & FLG_RENDER_BACKGROUND) || ((flags & FLG_HAS_COLOR_BG) && getState())) {
+            renderWidgetBorderPosSize(vg, flags, pos, size);
+        }
+    }
+
 };
 class guibuttonstate : public guibutton {
 protected:
