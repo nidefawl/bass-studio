@@ -40,8 +40,6 @@
         "-DPROJECT_VENDOR_NAME:STRING='Michael Hept'",
         "-DPRODUCT_URL_DOCS:STRING='https://bass-studio.com'",
         "-DPRODUCT_URL_VENDOR:STRING='https://bass-studio.com'",
-        "-DPROJECT_WORKING_DIR:PATH=~/run",
-        // "-DPROJECT_WORKING_DIR:PATH=../../run",
         // "-DCMAKE_OPTIMIZE_DEPENDENCIES=ON",
         "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF",
         "-DCMAKE_VERBOSE_MAKEFILE=OFF",
