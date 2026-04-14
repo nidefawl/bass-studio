@@ -2,13 +2,14 @@ import json
 from pprint import pprint
 
 
-themePath = '/home/michael/daw/data/theme.json'
+themePath = '/home/michael/.bass/themes/nidefawl 1/theme.json'
 
 with open(themePath, 'r') as infile:
     themeData = json.load(infile)
-    themesDefined = themeData['value0']['themes']
+    # themesDefined = themeData['value0']['themes']
 
-    themeNidefawl = [x for x in themesDefined if x['name']=='User 1'][0]
+    # themeNidefawl = [x for x in themesDefined if x['name']=='User 1'][0]
+    themeNidefawl = themeData['value0']
     themeColors = themeNidefawl['data']['colors']
     themeConstants = themeNidefawl['data']['properties']
     themeFonts = themeNidefawl['data']['fonts']

@@ -1,6 +1,6 @@
 {
     "value0": {
-        "name": "nidefawl",
+        "name": "Bassic",
         "data": {
             "colors": [
                 {
@@ -21,7 +21,7 @@
                 },
                 {
                     "key": "COL_KNOB",
-                    "value": 4281011786
+                    "value": 4282739896
                 },
                 {
                     "key": "COL_LABEL_ACTIVE",
@@ -37,15 +37,15 @@
                 },
                 {
                     "key": "COL_GUI_HANDLE",
-                    "value": 4281869430
+                    "value": 4292335575
                 },
                 {
                     "key": "COL_GRID_DRK",
-                    "value": 1879442439
+                    "value": 2065440032
                 },
                 {
                     "key": "COL_GRID_BRT",
-                    "value": 2753567012
+                    "value": 2150512188
                 },
                 {
                     "key": "COL_FOLD_BUTTON",
@@ -73,7 +73,7 @@
                 },
                 {
                     "key": "COL_CLIPEDITOR_SHARP",
-                    "value": 2432959492
+                    "value": 956301312
                 },
                 {
                     "key": "COL_BTN_SOLO_BG_PARENT",
@@ -109,7 +109,7 @@
                 },
                 {
                     "key": "COL_BASE_BG",
-                    "value": 4279043854
+                    "value": 3759149072
                 },
                 {
                     "key": "COL_AUTOMATED_INACTIVE",
@@ -117,7 +117,7 @@
                 },
                 {
                     "key": "COL_NOTE_MUTE",
-                    "value": 4286019447
+                    "value": 4284900966
                 },
                 {
                     "key": "COL_NOTE_PLAYING",
@@ -129,7 +129,7 @@
                 },
                 {
                     "key": "COL_CLEAR_COLOR",
-                    "value": 4280426532
+                    "value": 4279176975
                 },
                 {
                     "key": "COL_AUTOMATED",
@@ -137,11 +137,11 @@
                 },
                 {
                     "key": "COL_BG_SELECTEDTRACK_TITLE",
-                    "value": 4283367641
+                    "value": 4280204029
                 },
                 {
                     "key": "COL_NOTE_ARP",
-                    "value": 4285471999
+                    "value": 4285811455
                 },
                 {
                     "key": "COL_CLIP_FADES",
@@ -149,7 +149,7 @@
                 },
                 {
                     "key": "COL_BASE_BG_STROKE",
-                    "value": 1982672173
+                    "value": 771949315
                 },
                 {
                     "key": "COL_NOTE_REALTIME",
@@ -173,11 +173,11 @@
                 },
                 {
                     "key": "COL_NOTE_SELECTED",
-                    "value": 4065669631
+                    "value": 3806735941
                 },
                 {
                     "key": "COL_BG_BRT",
-                    "value": 4280294436
+                    "value": 3943961620
                 },
                 {
                     "key": "COL_OFF",
@@ -201,7 +201,7 @@
                 },
                 {
                     "key": "COL_LINE_BAR",
-                    "value": 3204908807
+                    "value": 1879048192
                 },
                 {
                     "key": "COL_PIANOROLL_STROKE",
@@ -221,7 +221,7 @@
                 },
                 {
                     "key": "COL_NOTE",
-                    "value": 4284472677
+                    "value": 4284472695
                 },
                 {
                     "key": "COL_PIANOROLL_WHITE",
@@ -233,7 +233,7 @@
                 },
                 {
                     "key": "COL_SELECTION_BACKGROUND",
-                    "value": 2132213805
+                    "value": 1610744322
                 },
                 {
                     "key": "COL_PLAYHEAD",
@@ -241,11 +241,11 @@
                 },
                 {
                     "key": "COL_BG_WIDGET",
-                    "value": 3289451541
+                    "value": 4278848784
                 },
                 {
                     "key": "COL_LINE_SEPERATOR",
-                    "value": 3422881029
+                    "value": 3422552064
                 },
                 {
                     "key": "COL_WHITE",
@@ -253,7 +253,7 @@
                 },
                 {
                     "key": "COL_PIANOROLL_BLACK",
-                    "value": 4278190080
+                    "value": 4279308561
                 },
                 {
                     "key": "COL_PLAYHEAD_OUTLINE",
@@ -285,19 +285,19 @@
                 },
                 {
                     "key": "COL_PLUG_TITLE_SELECTED",
-                    "value": 4294923175
+                    "value": 4287588351
                 },
                 {
                     "key": "COL_SHAPE_CURVE",
-                    "value": 4282712225
+                    "value": 4278242390
                 },
                 {
                     "key": "COL_PLUG_TITLE",
-                    "value": 4283766149
+                    "value": 4283261143
                 },
                 {
                     "key": "COL_PLUG_TITLE_FOCUSED",
-                    "value": 4288817407
+                    "value": 4287588351
                 },
                 {
                     "key": "COL_NODES_EDGE",
@@ -321,11 +321,11 @@
                 },
                 {
                     "key": "COL_LINE_XTH",
-                    "value": 3507030281
+                    "value": 1073741824
                 },
                 {
                     "key": "COL_LINE_QRT",
-                    "value": 4278519045
+                    "value": 1426063360
                 },
                 {
                     "key": "COL_KNOB_MODULATED",
@@ -361,7 +361,7 @@
                 },
                 {
                     "key": "COL_BASE_BG_FOCUSED",
-                    "value": 4283766149
+                    "value": 4281613906
                 },
                 {
                     "key": "COL_BTN_SHOW_HIDE",
@@ -369,7 +369,7 @@
                 },
                 {
                     "key": "COL_BTN_BG_SHOW_ACTIVE",
-                    "value": 4283766149
+                    "value": 4282428352
                 },
                 {
                     "key": "COL_LEVEL_IND_GREEN",
@@ -377,11 +377,11 @@
                 },
                 {
                     "key": "COL_BG_SELECTEDTRACK",
-                    "value": 2653891409
+                    "value": 657423607
                 },
                 {
                     "key": "COL_BTN_BG_DEFAULT_INACTIVE",
-                    "value": 4279111182
+                    "value": 4280295456
                 },
                 {
                     "key": "COL_KNOB_HIGHLIGHT",
@@ -389,7 +389,7 @@
                 },
                 {
                     "key": "COL_GUI_STROKE",
-                    "value": 3423670545
+                    "value": 4287401100
                 },
                 {
                     "key": "COL_TEXTBOX_TEXT",
@@ -401,7 +401,7 @@
                 },
                 {
                     "key": "COL_BG_DRK",
-                    "value": 4278714894
+                    "value": 2651063557
                 },
                 {
                     "key": "COL_BG_DRKER2",
@@ -427,15 +427,15 @@
                 },
                 {
                     "key": "CONST_GUI_INSET_WIDGET_BG",
-                    "value": 2
+                    "value": 1
                 },
                 {
                     "key": "CONST_PLUGIN_TITLE_HEIGHT",
-                    "value": 40
+                    "value": 18
                 },
                 {
                     "key": "CONST_PADDING_EDITOR_CONTROLS",
-                    "value": 5
+                    "value": 2
                 },
                 {
                     "key": "CONST_PADDING_TRACK_CONTROLS",
@@ -443,7 +443,7 @@
                 },
                 {
                     "key": "CONST_ROW_HEIGHT",
-                    "value": 24
+                    "value": 26
                 },
                 {
                     "key": "CONST_FONT_SIZE_CTR_LABEL",
@@ -455,11 +455,11 @@
                 },
                 {
                     "key": "CONST_FONT_SIZE_CONTEXT_MENU",
-                    "value": 220
+                    "value": 200
                 },
                 {
                     "key": "CONST_PIANOROLL_STROKE_WIDTH",
-                    "value": 12
+                    "value": 10
                 },
                 {
                     "key": "CONST_NOTE_RENDER_MODE",
@@ -467,11 +467,11 @@
                 },
                 {
                     "key": "CONST_MIXER_WIDTH",
-                    "value": 200
+                    "value": 250
                 },
                 {
                     "key": "CONST_METER_WIDTH",
-                    "value": 20
+                    "value": 26
                 },
                 {
                     "key": "CONST_MIXER_SIZE_STEP",
@@ -479,11 +479,11 @@
                 },
                 {
                     "key": "CONST_TRACK_CONTROLS_WIDTH",
-                    "value": 460
+                    "value": 550
                 },
                 {
                     "key": "CONST_TRACK_IO_WIDTH",
-                    "value": 128
+                    "value": 150
                 },
                 {
                     "key": "CONST_NODES_SCALE",
@@ -491,19 +491,19 @@
                 },
                 {
                     "key": "CONST_TRACK_HEIGHT_STEP",
-                    "value": 22
+                    "value": 26
                 },
                 {
                     "key": "CONST_GUI_FRAME_STROKE_WIDTH",
-                    "value": 20
+                    "value": 22
                 },
                 {
                     "key": "CONST_FONT_SCALE",
-                    "value": 8
+                    "value": 7
                 },
                 {
                     "key": "CONST_FONT_SIZE_TABLE",
-                    "value": 160
+                    "value": 200
                 }
             ],
             "fonts": [
@@ -513,7 +513,7 @@
                 },
                 {
                     "key": "FONT_LABEL",
-                    "value": "Roboto-Black.ttf"
+                    "value": "Roboto-Regular.ttf"
                 },
                 {
                     "key": "FONT_TEXTFIELD",
@@ -521,11 +521,11 @@
                 },
                 {
                     "key": "FONT_CONTEXT_MENU",
-                    "value": "Roboto-Medium.ttf"
+                    "value": "Roboto-Regular.ttf"
                 },
                 {
                     "key": "FONT_DECIMAL",
-                    "value": "jbmononf.ttf"
+                    "value": "Roboto-Regular.ttf"
                 },
                 {
                     "key": "FONT_TEST",
