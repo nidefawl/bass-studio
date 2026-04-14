@@ -237,7 +237,7 @@ public:
     }
     guictr_daw_sidebar() {
         using DAW::SidebarAreaType;
-        setBackgroundRendered(true);
+        setBackgroundRendered(false);
         setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         padding = 0;
         margin  = 0;
@@ -308,6 +308,7 @@ public:
                     break;
             }
             btn->setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
+            btn->setBackgroundRendered(false);
             btnViews.push_back(btn);
             add(btn);
         }
