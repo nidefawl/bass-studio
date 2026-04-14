@@ -117,8 +117,12 @@ int main(int, char*[]) {
         glGenQueries(1, &query);
 
         checkGLError("glBindBuffer");
-
-        audioHost->startAudio(settings.iosettings);
+        app_iosettings fixedSettings = settings.iosettings;
+        if (fixedSettings.blocksize > 1024 || fixedSettings.blocksize < 256) {
+            fixedSettings.blocksize = 1024;
+        }
+        fixedSettings.blocksize = 1024;
+        audioHost->startAudio(fixedSettings);
         DAW::GPU::gpu_program shader{};
         {
             auto stream =audioHost->getStreamSharedPtr(0);
@@ -197,7 +201,7 @@ int main(int, char*[]) {
                 audioblock->fillNoise(noiseRng, 0.05);
 
                 outputBuffer.resize(audioblock->samples * channels);
-                // audioblock->SubChannelsBlock(0, 1).clear();
+                audioblock->clear();
                 for (samplecount_t i = 0; i < channels; i++) {
                     memcpy(&outputBuffer[i * audioblock->samples], audioblock->buf[i], audioblock->samples * sizeof(float));
                 }
@@ -206,7 +210,7 @@ int main(int, char*[]) {
                 glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
                 glBufferData(GL_SHADER_STORAGE_BUFFER, outputBuffer.size() * sizeof(float), outputBuffer.data(), GL_STATIC_READ);
                 glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo2);
-                glBufferData(GL_SHADER_STORAGE_BUFFER, outputBuffer.size() * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+                glBufferData(GL_SHADER_STORAGE_BUFFER, outputBuffer.size() * sizeof(float), outputBuffer.data(), GL_DYNAMIC_DRAW);
                 checkGLError("glBufferData");
                 glFinish();
                 checkGLError("glFinish");
@@ -220,16 +224,18 @@ int main(int, char*[]) {
                 ctxt.time_beats = ctxt.time_samples / (ctxt.samplerate * 60 / ctxt.bpm);
 
                 checkGLError("glBufferData");
-                glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
-                glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo2);
-                checkGLError("glBindBufferBase");
-                glUseProgram(shader.programs[0]);
-                checkGLError("glUseProgram");
-                glMemoryBarrier(GL_UNIFORM_BARRIER_BIT|GL_SHADER_STORAGE_BARRIER_BIT);
-                glDispatchCompute(1, 1, 1);
-                glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-                checkGLError("glDispatchCompute");
+                if (shader.programs[0]) {
+                    glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
+                    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+                    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo2);
+                    checkGLError("glBindBufferBase");
+                    glUseProgram(shader.programs[0]);
+                    checkGLError("glUseProgram");
+                    glMemoryBarrier(GL_UNIFORM_BARRIER_BIT|GL_SHADER_STORAGE_BARRIER_BIT);
+                    glDispatchCompute(1, 1, 1);
+                    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+                    checkGLError("glDispatchCompute");
+                }
                 glFinish();
                 checkGLError("glFinish");
                 glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo2);
@@ -260,7 +266,7 @@ int main(int, char*[]) {
                     std::cout << ms << " ms (avg: " << tmComputeAvg << " ms)" << std::endl;
                 }
                 tmComputeAvg = 0.9 * tmComputeAvg + 0.1 * ms;
-                if (tmNow_ms - timeRenderStart >= 10.0) {
+                if (tmNow_ms - timeRenderStart >= 120.0) {
                     log_lf(Log::L_INFO, "END: Time: %.3f s, %.3f beats, %.3f samples\n", ctxt.time_seconds, ctxt.time_beats, ctxt.time_samples);
                     glfwSetWindowShouldClose(window, GLFW_TRUE);
                 }
