@@ -266,7 +266,7 @@ int main(int, char*[]) {
                     std::cout << ms << " ms (avg: " << tmComputeAvg << " ms)" << std::endl;
                 }
                 tmComputeAvg = 0.9 * tmComputeAvg + 0.1 * ms;
-                if (tmNow_ms - timeRenderStart >= 120.0) {
+                if (tmNow_ms - timeRenderStart >= 10.0) {
                     log_lf(Log::L_INFO, "END: Time: %.3f s, %.3f beats, %.3f samples\n", ctxt.time_seconds, ctxt.time_beats, ctxt.time_samples);
                     glfwSetWindowShouldClose(window, GLFW_TRUE);
                 }
