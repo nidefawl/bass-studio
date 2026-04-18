@@ -46,64 +46,63 @@ namespace Table {
             }
         }
     }
-
     void drawTbl(const table_ctxt_t& ctxt, const tblint& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         auto fmtString = StringFormat((obj.format ? obj.format : "%zd"), obj.i);
-        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(fmtString), nullptr);
+        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(fmtString), nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const tblstr& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
         bool right       = (obj.flags & 1);
-        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y - INSET_TABLE_CELL_PADDING, obj.str, nullptr);
+        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y * 0.5f, obj.str, nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const tblString& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
         bool right       = (obj.flags & 1);
-        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(obj.str), nullptr);
+        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y * 0.5f, StringAsCStr(obj.str), nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const String& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(obj), nullptr);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(obj), nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const char* pStr) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, pStr, nullptr);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, pStr, nullptr);
     }
 
     void drawTbl(const table_ctxt_t& ctxt, const tblfloat& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("%f", obj.f)), nullptr);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(StringFormat("%f", obj.f)), nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const int& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
         nvgFontSize(ctxt.vg, ctxt.fontSize);
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("%d", obj)), nullptr);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(StringFormat("%d", obj)), nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const float& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("%f", obj)), nullptr);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(StringFormat("%f", obj)), nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const glm::ivec2& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 
 
         String strX = StringFormat("X %d", obj.x);
@@ -114,15 +113,15 @@ namespace Table {
         //}
         nvgText(ctxt.vg,
                 pos.x + size.x - (w + INSET_TABLE_CELL_PADDING) * 1 - INSET_TABLE_CELL_PADDING,
-                pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(strX), nullptr);
+                pos.y + size.y * 0.5f, StringAsCStr(strX), nullptr);
         nvgText(ctxt.vg,
                 pos.x + size.x - (w + INSET_TABLE_CELL_PADDING) * 0 - INSET_TABLE_CELL_PADDING,
-                pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(strY), nullptr);
+                pos.y + size.y * 0.5f, StringAsCStr(strY), nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const glm::ivec4& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 
         const char* pref[4] = { "X", "Y", "Z", "W" };
         int w               = 50;
@@ -130,34 +129,34 @@ namespace Table {
             String strX = StringFormat("%s %d", pref[i], obj[i]);
             nvgText(ctxt.vg,
                     pos.x + size.x - (w + INSET_TABLE_CELL_PADDING) * (3 - i) - INSET_TABLE_CELL_PADDING,
-                    pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(strX), nullptr);
+                    pos.y + size.y * 0.5f, StringAsCStr(strX), nullptr);
         }
     }
     void drawTbl(const table_ctxt_t& ctxt, const GuiConstant::constant_t& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
         bool right       = 0;// (obj.flags&1);
-        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y - INSET_TABLE_CELL_PADDING, obj.name, nullptr);
+        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y * 0.5f, obj.name, nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const GuiColor::constant_t& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
         bool right       = 0;// (obj.flags&1);
-        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y - INSET_TABLE_CELL_PADDING, obj.name, nullptr);
+        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y * 0.5f, obj.name, nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const GuiBackgroundImage::constant_t& obj) {
         const vec2& pos  = ctxt.pos;
         const vec2& size = ctxt.size;
         bool right       = 0;// (obj.flags&1);
-        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_BOTTOM);
-        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y - INSET_TABLE_CELL_PADDING, obj.name, nullptr);
+        nvgTextAlign(ctxt.vg, (right ? NVG_ALIGN_RIGHT : NVG_ALIGN_LEFT) | NVG_ALIGN_MIDDLE);
+        nvgText(ctxt.vg, pos.x + (right ? size.x - INSET_TABLE_CELL_PADDING : INSET_TABLE_CELL_PADDING), pos.y + size.y * 0.5f, obj.name, nullptr);
     }
     void drawTbl(const table_ctxt_t& ctxt, const SafeRef<guibase>& obj) {
         const vec2& pos = ctxt.pos;
         const vec2& size = ctxt.size;
-        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_BOTTOM);
+        nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
         guibase* ref = safeRefGet(obj);
         if (ref)
         {
@@ -167,14 +166,13 @@ namespace Table {
             {
                 const String strAddr = StringFormat("0x%6zX (refId %zu)", reinterpret_cast<uint64_t>(ref), obj.refId);
                 const String str = StringAsCStr(StringFormat("%s %s [%s]", StringAsCStr(ref->getLabel()), StringAsCStr(className), StringAsCStr(strAddr)));
-                nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(str), nullptr);
+                nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(str), nullptr);
             } else {
                 const String str = StringAsCStr(StringFormat("%s %s", StringAsCStr(ref->getLabel()), StringAsCStr(className)));
-                nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(str), nullptr);
+                nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(str), nullptr);
             }
         } else {
-            nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("<null> [%zu]", obj.refId)), nullptr);
-
+            nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y * 0.5f, StringAsCStr(StringFormat("<null> [%zu]", obj.refId)), nullptr);
         }
     }
 

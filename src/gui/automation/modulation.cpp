@@ -638,7 +638,7 @@ void guitooltip<DAW::UI::Modulation::gui_dragged_modulation>::setContent() {
     if (!ptr) {
         return;
     }
-    table.tableWidth = 140;
+    table.tableWidth = 20;
     auto cell = Table::tblString{ptr->getTooltipText()};
     if (table.strW) {
         table.tableWidth = table.strW->getStringWidth(cell.str);

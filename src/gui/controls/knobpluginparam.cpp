@@ -17,8 +17,13 @@ void guitooltip<guiknob_pluginparam>::setContent() {
     if (eff)
         eff->addPropertiesParameterTooltip(table, paramIdx);
     if (table.rows.empty()) {
-        table.tableWidth = 100;
-        table.rows.push_back({ { tblfloat{ ptr->getValue() } } });
+        auto cell = Table::tblfloat{ ptr->getValue() };
+        table.tableWidth = 20;
+        if (table.strW) {
+            table.tableWidth = table.strW->getStringWidth(StringAsCStr(StringFormat("%f", cell.f)));
+        }
+        Table::tbl_row_t row{{cell}};
+        table.rows.push_back(std::move(row));
     }
 }
 

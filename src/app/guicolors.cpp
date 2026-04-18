@@ -116,7 +116,7 @@ namespace GuiColor {
     constant_t COL_GUI_HANDLE_FOCUSED("COL_GUI_HANDLE_FOCUSED", 0xff4d60d7);
     constant_t COL_GUI_STROKE("COL_GUI_STROKE", 0xcc111111);
     constant_t COL_INVALID_INPUT("COL_INVALID_INPUT", 0xffc85a5a);
-    constant_t COL_KNOB("COL_KNOB", 0xff2b0e4a);
+    constant_t COL_KNOB("COL_KNOB", 0xFF4D267F);
     constant_t COL_KNOB_BG("COL_KNOB_BG", 0xff0f1114);
     constant_t COL_KNOB_HIGHLIGHT("COL_KNOB_HIGHLIGHT", 0xff6200d0);
     constant_t COL_KNOB_HIGHLIGHT_BACKGROUND("COL_KNOB_HIGHLIGHT_BACKGROUND", 0xff6100cd);

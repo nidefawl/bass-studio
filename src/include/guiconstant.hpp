@@ -12,9 +12,10 @@ namespace GuiConstant {
         int32_t defValue;
         int rangeMin = 1;
         int rangeMax = 1000;
+        float floatScale = 10.f;
         constant_t() noexcept;
         constant_t(const char* _name, int32_t _defValue) noexcept;
-        constant_t(const char* _name, int32_t _defValue, int rangeMin, int rangeMax) noexcept;
+        constant_t(const char* _name, int32_t _defValue, float _floatScale, int _rangeMin, int _rangeMax) noexcept;
         constant_t& setMinMax(int rangeMin, int rangeMax) noexcept;
     };
 
@@ -31,6 +32,7 @@ namespace GuiConstant {
     extern constant_t CONST_NODES_SCALE;
     extern constant_t CONST_FONT_SIZE_CONTEXT_MENU;
     extern constant_t CONST_FONT_SIZE_TABLE;
+    extern constant_t CONST_FONT_SIZE_TOOLTIP;
     extern constant_t CONST_PADDING_TRACK_CONTROLS;
     extern constant_t CONST_PADDING_EDITOR_CONTROLS;
 

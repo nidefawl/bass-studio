@@ -56,8 +56,8 @@ namespace GuiConstant {
         allconstants.push_back(this);
     }
 
-    constant_t::constant_t(const char* _name, int32_t _defValue, int _rangeMin, int _rangeMax) noexcept
-        : idx(getNextId()), name(_name), defValue(_defValue), rangeMin(_rangeMin), rangeMax(_rangeMax) {
+    constant_t::constant_t(const char* _name, int32_t _defValue, float _floatScale, int _rangeMin, int _rangeMax) noexcept
+        : idx(getNextId()), name(_name), defValue(_defValue), rangeMin(_rangeMin), rangeMax(_rangeMax), floatScale(_floatScale) {
         auto& allconstants = _getConstants();
         allconstants.push_back(this);
     }
@@ -74,10 +74,11 @@ namespace GuiConstant {
     constant_t CONST_BORDER_WIDTH("CONST_BORDER_WIDTH", 2);
     constant_t CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH("CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH", 10);
     constant_t CONST_FIXED_TITLE_HEIGHT("CONST_FIXED_TITLE_HEIGHT", 25);
-    constant_t CONST_FONT_SCALE("CONST_FONT_SCALE", 8);
-    constant_t CONST_FONT_SIZE_CONTEXT_MENU("CONST_FONT_SIZE_CONTEXT_MENU", 220);
+    constant_t CONST_FONT_SCALE("CONST_FONT_SCALE", 66, 100.0f, 1, 1000);
+    constant_t CONST_FONT_SIZE_CONTEXT_MENU("CONST_FONT_SIZE_CONTEXT_MENU", 180);
     constant_t CONST_FONT_SIZE_CTR_LABEL("CONST_FONT_SIZE_CTR_LABEL", 14);
-    constant_t CONST_FONT_SIZE_TABLE("CONST_FONT_SIZE_TABLE", 160);
+    constant_t CONST_FONT_SIZE_TABLE("CONST_FONT_SIZE_TABLE", 200);
+    constant_t CONST_FONT_SIZE_TOOLTIP("CONST_FONT_SIZE_TOOLTIP", 200);
     constant_t CONST_GUI_FRAME_STROKE_WIDTH("CONST_GUI_FRAME_STROKE_WIDTH", 20);
     constant_t CONST_GUI_INSET_WIDGET_BG("CONST_GUI_INSET_WIDGET_BG", 2);
     constant_t CONST_METER_WIDTH("CONST_METER_WIDTH", 20);
@@ -94,7 +95,6 @@ namespace GuiConstant {
     constant_t CONST_TRACK_CONTROLS_WIDTH("CONST_TRACK_CONTROLS_WIDTH", 460);
     constant_t CONST_TRACK_HEIGHT_STEP("CONST_TRACK_HEIGHT_STEP", 22);
     constant_t CONST_TRACK_IO_WIDTH("CONST_TRACK_IO_WIDTH", 128);
-
 }// namespace GuiConstant
 
 

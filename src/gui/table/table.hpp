@@ -18,7 +18,7 @@ namespace GuiColor {
     struct constant_t;
 }
 
-#define INSET_TABLE_CELL_PADDING 3
+#define INSET_TABLE_CELL_PADDING 1
 #define INSET_TABLE 1
 namespace Table {
 

@@ -49,8 +49,13 @@ void guitooltip<guiknob>::setContent() {
     if (!ptr) {
         return;
     }
-    table.tableWidth = 80;
-    table.rows.push_back({ { tblfloat{ ptr->getValue() } } });
+    table.tableWidth = 20;
+    auto cell = Table::tblfloat{ ptr->getValue() };
+    if (table.strW) {
+        table.tableWidth = table.strW->getStringWidth(StringAsCStr(StringFormat("%f", cell.f)));
+    }
+    Table::tbl_row_t row{{std::move(cell)}};
+    table.rows.push_back(std::move(row));
 }
 
 guictxtmenu_base* guiknob::getTooltip(AppCtrl* appctrl) {

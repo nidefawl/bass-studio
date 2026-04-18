@@ -141,7 +141,7 @@ void guitheme_t::setColor(GuiColor::constant_t _constant, uint32_t _value) {
 }
 
 float guitheme_t::getFloat(GuiConstant::constant_t _constant) const {
-    return get(_constant) / 10.0f;
+    return get(_constant) / _constant.floatScale;
 }
 int32_t guitheme_t::get(GuiConstant::constant_t _constant) const {
     auto it = mapProperties.find(_constant.idx);
