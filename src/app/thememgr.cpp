@@ -1,5 +1,7 @@
 #include <vector>
 #include "appsettings.hpp"
+#include "guiconstant.hpp"
+#include "themefile.hpp"
 #include "fileio.hpp"
 #include "logging.hpp"
 #include "thememgr.hpp"
@@ -17,14 +19,15 @@ void guitheme_mgr::addTheme(const guitheme_t& theme) {
     if (FileExists(pathTheme)) {
         return;
     }
-    themefile themeFile;
+    DAW::ThemeFile::themefile themeFile;
     themeFile.theme = theme;
-    // saveTheme(pathTheme, themeFile);
+    DAW::ThemeFile::ThemeFormatV2::saveTheme(pathTheme, themeFile);
     themes.push_back(theme);
 }
 
 
 void guitheme_mgr::cloneCurrentTheme(const String& themeName) {
+    using namespace DAW::ThemeFile;
     String pathTheme = App::Platform::toUserdataPath("themes/" + themeName);
     if (FileExists(pathTheme)) {
         return;
@@ -34,7 +37,7 @@ void guitheme_mgr::cloneCurrentTheme(const String& themeName) {
     copy.name       = themeName;
     themefile themeFile;
     themeFile.theme = copy;
-    saveTheme(pathTheme, themeFile);
+    ThemeFormatV2::saveTheme(pathTheme, themeFile);
     themes.push_back(copy);
 }
 
@@ -78,12 +81,13 @@ void guitheme_mgr::saveCurrentTheme() {
     if (!FileExists(pathTheme)) {
         return;
     }
-    themefile themeFile;
+    DAW::ThemeFile::themefile themeFile;
     themeFile.theme = current;
-    saveTheme(pathTheme, themeFile);
+    DAW::ThemeFile::ThemeFormatV2::saveTheme(pathTheme, themeFile);
 }
 
 void guitheme_mgr::loadThemes() {
+    using namespace DAW::ThemeFile;
     guitheme_t theme;
     theme.isDefault = true;
     theme.name      = "default";
@@ -105,9 +109,17 @@ void guitheme_mgr::loadThemes() {
         try {
             String themeParentDir;
             SplitPath(file.path, &themeParentDir, nullptr, nullptr, nullptr);
-            themefile themeFile = loadTheme(themeParentDir);
+            themefile themeFile = ThemeFormatV2::loadTheme(themeParentDir);
             if (themeFile.theme.name.length()) {
                 themes.push_back(themeFile.theme);
+            } else {
+                themeFile = ThemeFormatV1::loadTheme(themeParentDir);
+                if (themeFile.theme.name.length()) {
+                    themeFile.theme.mapProperties[GuiConstant::CONST_FONT_SCALE.idx] = GuiConstant::CONST_FONT_SCALE.defValue;
+                    themes.push_back(themeFile.theme);
+                } else {
+                    log_lf(Log::L_WARN, "Failed to load theme from file %s: no name found\n", StringAsCStr(file.path));
+                }
             }
         } catch (std::exception& e) {
             log_lf(Log::L_ERROR, "Failed loading theme %s: %s\n", StringAsCStr(file.path), e.what());

@@ -14,6 +14,7 @@ NVGcolor rgbaToNvg(uint32_t color);
 struct guitheme_t {
     String name;
     bool isDefault = false;
+    int32_t version    = 2;
     std::vector<NVGcolor> vecNVGColors;
     std::unordered_map<uint32_t, uint32_t> mapColors;
     std::unordered_map<uint32_t, int32_t> mapProperties;
@@ -58,3 +59,7 @@ struct guitheme_t {
     /* experimental */
     void setThemeBaseColor(const NVGcolor& col, vec3 hueSatBrMixIntensity);
 };
+
+namespace DAW::ThemeFile {
+    
+}

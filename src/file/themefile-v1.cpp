@@ -122,6 +122,7 @@ void serialize(Archive& archive, theme_data& m) {
     archive(make_nvp("fonts", m.mapFonts));
     archive(make_nvp("images", m.mapBackgrounds));
 }
+namespace DAW::ThemeFile {
 template <class Archive>
 void save(Archive& archive, themefile const& m) {
     archive(make_nvp("name", m.theme.name));
@@ -139,8 +140,10 @@ void load(Archive& archive, themefile& m) {
     theme_data data;
     archive(make_nvp("data", data));
     loadThemeData(data, m.theme);
+    m.theme.version = 1;
 }
-
+}
+namespace DAW::ThemeFile::ThemeFormatV1 {
 themefile loadTheme(const String& path) {
     String pathFile = path + "/" + THEMEFILE_NAME;
     App::Platform::sanitizePathToFile(pathFile);
@@ -180,3 +183,4 @@ bool saveTheme(const String& path, themefile& _settings) {
     }
     return false;
 }
+} // namespace DAW::ThemeFile::ThemeFormatV1

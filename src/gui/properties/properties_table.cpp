@@ -1210,7 +1210,7 @@ public:
 
     void layout() override {
         ivec2 size = getSizeContent();
-        auto hTop = theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE) * 1.5f + padding*2;
+        auto hTop = theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE) + 4;
         buttonAdd.size = { hTop, hTop };
         buttonRemove.size = { hTop, hTop };
         buttonSave.size = { hTop*3, hTop };

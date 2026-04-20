@@ -1,4 +1,5 @@
 #include "appsettingsfile-v2.hpp"
+#include "jsonfile.hpp"
 #include "appsettings.hpp"
 #include "fileio.hpp"
 #include "platform.hpp"
@@ -124,40 +125,11 @@ inline void from_json(const json& j, recentfilelistentry& entry) {
 namespace DAW::AppSettingsV2 {
 
 // ============================================================================
-// Helper Functions (following projectfile-v2.cpp pattern)
+// Helper Functions (using DAW::JsonFileIO utilities)
 // ============================================================================
 
-static std::optional<String> writeJsonToFile(const json& j, const String& path) {
-    try {
-        Stringstream sstream;
-        sstream << j.dump(2); // pretty-print with 2-space indent
-        sstream.flush();
-        
-        std::vector<uint8_t> buffer;
-        buffer.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
-        WriteFileVector(path, buffer);
-        return std::nullopt; // success
-    } catch (const std::exception& e) {
-        return String("Failed to write JSON file: ") + e.what();
-    }
-}
-
-static std::optional<json> readJsonFromFile(const String& path) {
-    try {
-        if (!FileExists(path)) {
-            return std::nullopt; // file doesn't exist, not an error
-        }
-        
-        std::vector<uint8_t> vec;
-        ReadFileVector(path, vec);
-        String jsonStr(vec.begin(), vec.end());
-        json j = json::parse(jsonStr);
-        return j;
-    } catch (const std::exception& e) {
-        log_lf(Log::L_WARN, "Failed to parse JSON config file %s: %s\n", StringAsCStr(path), e.what());
-        return std::nullopt;
-    }
-}
+// Note: readJsonFromFile and writeJsonToFile are now provided by jsonfile.hpp
+// This namespace uses them via DAW::JsonFileIO::
 
 // ============================================================================
 // Individual File Loaders
@@ -169,7 +141,7 @@ std::optional<std::string> loadDawSettings(app_daw_settings& out, app_autosave_s
                                            app_path_remapping& paths, std::vector<appwindowsettings>& windows,
                                            std::vector<String>& userLibraries, String& theme, bool& saveOnExit) {
     String filePath = App::Platform::toUserdataPath("data/app-settings.json");
-    auto optJson = readJsonFromFile(filePath);
+    auto optJson = DAW::JsonFileIO::readJsonFromFile(filePath);
     
     if (!optJson.has_value()) {
         return std::nullopt; // File doesn't exist or couldn't be read; use defaults
@@ -208,7 +180,7 @@ std::optional<std::string> loadDawSettings(app_daw_settings& out, app_autosave_s
 
 std::optional<std::string> loadAudioSettings(app_iosettings& out) {
     String filePath = App::Platform::toUserdataPath("data/audio-settings.json");
-    auto optJson = readJsonFromFile(filePath);
+    auto optJson = DAW::JsonFileIO::readJsonFromFile(filePath);
     
     if (!optJson.has_value()) {
         return std::nullopt;
@@ -224,7 +196,7 @@ std::optional<std::string> loadAudioSettings(app_iosettings& out) {
 
 std::optional<std::string> loadPluginSettings(app_plugin_configuration& out) {
     String filePath = App::Platform::toUserdataPath("data/plugin-settings.json");
-    auto optJson = readJsonFromFile(filePath);
+    auto optJson = DAW::JsonFileIO::readJsonFromFile(filePath);
     
     if (!optJson.has_value()) {
         return std::nullopt;
@@ -240,7 +212,7 @@ std::optional<std::string> loadPluginSettings(app_plugin_configuration& out) {
 
 std::optional<std::string> loadRecentFiles(recentfilelist& out) {
     String filePath = App::Platform::toUserdataPath("data/recent-files.json");
-    auto optJson = readJsonFromFile(filePath);
+    auto optJson = DAW::JsonFileIO::readJsonFromFile(filePath);
     
     if (!optJson.has_value()) {
         return std::nullopt;
@@ -277,7 +249,7 @@ std::optional<std::string> saveDawSettings(const app_daw_settings& in, const app
         j["saveOnExit"] = saveOnExit;
         
         String filePath = App::Platform::toUserdataPath("data/app-settings.json");
-        return writeJsonToFile(j, filePath);
+        return DAW::JsonFileIO::writeJsonToFile(j, filePath, 2);
     } catch (const std::exception& e) {
         return std::string("Failed to save daw settings: ") + e.what();
     }
@@ -290,7 +262,7 @@ std::optional<std::string> saveAudioSettings(const app_iosettings& in) {
         j = in; // nlohmann auto-conversion
         
         String filePath = App::Platform::toUserdataPath("data/audio-settings.json");
-        return writeJsonToFile(j, filePath);
+        return DAW::JsonFileIO::writeJsonToFile(j, filePath, 2);
     } catch (const std::exception& e) {
         return std::string("Failed to save audio settings: ") + e.what();
     }
@@ -303,7 +275,7 @@ std::optional<std::string> savePluginSettings(const app_plugin_configuration& in
         j = in;
         
         String filePath = App::Platform::toUserdataPath("data/plugin-settings.json");
-        return writeJsonToFile(j, filePath);
+        return DAW::JsonFileIO::writeJsonToFile(j, filePath, 2);
     } catch (const std::exception& e) {
         return std::string("Failed to save plugin settings: ") + e.what();
     }
@@ -316,7 +288,7 @@ std::optional<std::string> saveRecentFiles(const recentfilelist& in) {
         j = in;
         
         String filePath = App::Platform::toUserdataPath("data/recent-files.json");
-        return writeJsonToFile(j, filePath);
+        return DAW::JsonFileIO::writeJsonToFile(j, filePath, 2);
     } catch (const std::exception& e) {
         return std::string("Failed to save recent files: ") + e.what();
     }
