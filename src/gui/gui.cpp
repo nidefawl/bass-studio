@@ -144,40 +144,60 @@ vec2 getTextLabelBounds(NVGcontext* vg,
     }
     return {bounds[2] - bounds[0], bounds[3] - bounds[1]};
 }
+// Options for text rendering. New callers can pass this to avoid changing
+// many call sites; existing call sites remain unchanged because the
+// original overload forwards to the new one with default options.
+struct RenderTextOptions {
+    NVGcolor color = NVGcolor{1,1,1,1};
+    int32_t alignment = NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE;
+    // Text rendering parameters moved here for easier extension.
+    float fontSize = 12.0f;
+    enum RenderTextLabelBackgroundMode : uint8_t {
+        RENDER_TEXT_LABEL_BACKGROUND_DEFAULT = 0,
+        RENDER_TEXT_LABEL_BACKGROUND_CONTRAST_COLOR = 1,
+        RENDER_TEXT_LABEL_BACKGROUND_FIXED_COLOR = 2
+    } backgroundMode = RENDER_TEXT_LABEL_BACKGROUND_DEFAULT;
+    NVGcolor backgroundColor = NVGcolor{0,0,0,0.3f};
+};
+
+// New overload that accepts a parameter struct. This is the canonical
+// implementation. The old function is kept as a thin wrapper to preserve
+// ABI/callsite compatibility.
 float renderTextLabel(NVGcontext* vg,
                      const vec2& pos,
                      const vec2& bounds,
                      const String& text,
                      const guitheme_t* theme,
-                     const float fontSize,
-                     const NVGcolor color,
-                     const int32_t alignment) {
+                     const RenderTextOptions& opts) {
 
-    float fontSizeScaled = fontSize;
+    float fontSizeScaled = opts.fontSize;
     if (theme) {
         theme->bindFont(vg, UIFont::FONT_DEFAULT);
-        fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+        fontSizeScaled = opts.fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
-    if (g_debugTextRenderLayout) {
-        auto col = getContrastFontColorNvg(color);
-        col.a *= 0.3f;
+    if (opts.backgroundMode != RenderTextOptions::RENDER_TEXT_LABEL_BACKGROUND_DEFAULT) {
+        NVGcolor col = opts.backgroundColor;
+        if (opts.backgroundMode == RenderTextOptions::RENDER_TEXT_LABEL_BACKGROUND_CONTRAST_COLOR) {
+            col = getContrastFontColorNvg(opts.color);
+            col.a *= 0.3f;
+        }
         vec2 offsetPos = pos;
-        if (alignment&NVG_ALIGN_CENTER) {
+        if (opts.alignment&NVG_ALIGN_CENTER) {
             offsetPos.x -= bounds.x * 0.5f;
         }
-        if (alignment&NVG_ALIGN_RIGHT) {
+        if (opts.alignment&NVG_ALIGN_RIGHT) {
             offsetPos.x -= bounds.x * 1.0f;
         }
-        if (alignment&NVG_ALIGN_MIDDLE) {
+        if (opts.alignment&NVG_ALIGN_MIDDLE) {
             offsetPos.y -= bounds.y * 0.5f;
         }
-        if (alignment&NVG_ALIGN_BOTTOM) {
+        if (opts.alignment&NVG_ALIGN_BOTTOM) {
             offsetPos.y -= bounds.y * 1.0f;
         }
-        if (alignment&NVG_ALIGN_BASELINE) {
+        if (opts.alignment&NVG_ALIGN_BASELINE) {
             offsetPos.y -= bounds.y * 0.75f;
         }
-        if (alignment&NVG_ALIGN_MIDDLE_DESCENDER) {
+        if (opts.alignment&NVG_ALIGN_MIDDLE_DESCENDER) {
             offsetPos.y -= bounds.y * 0.55f;
         }
         if (bounds.x >= 0 && bounds.y >= 0) {
@@ -189,14 +209,33 @@ float renderTextLabel(NVGcontext* vg,
     }
     nvgTranslateZ(vg, -2.0f);
     nvgFontSize(vg, fontSizeScaled);
-    nvgFillColor(vg, color);
-    nvgTextAlign(vg, alignment);
+    nvgFillColor(vg, opts.color);
+    nvgTextAlign(vg, opts.alignment);
     float f = 0.0f;
     if (!text.empty()) {
         f = nvgTextW(vg, pos.x, pos.y, bounds.x, text.c_str(), &text.back() + 1);
     }
     nvgTranslateZ(vg, 2.0f);
     return f;
+}
+
+float renderTextLabel(NVGcontext* vg,
+                     const vec2& pos,
+                     const vec2& bounds,
+                     const String& text,
+                     const guitheme_t* theme,
+                     const float fontSize,
+                     const NVGcolor color,
+                     const int32_t alignment) {
+    // Build options from the old parameter set and forward to the new overload.
+    RenderTextOptions opts;
+    opts.fontSize = fontSize;
+    opts.color = color;
+    opts.alignment = alignment;
+    if (g_debugTextRenderLayout) {
+        opts.backgroundMode = RenderTextOptions::RENDER_TEXT_LABEL_BACKGROUND_CONTRAST_COLOR;
+    }
+    return renderTextLabel(vg, pos, bounds, text, theme, opts);
 }
 float guibase::renderText(NVGcontext* vg,
                 const vec2& pos,
@@ -1001,12 +1040,13 @@ void textlabel_dynamic_t::adjustWidth() {
         }
     }
 }
+extern bool g_debugTextRenderLayout;
 
 void textlabel_dynamic_t::render(NVGcontext* vg, guitheme_t* theme, const String& label, const NVGcolor& fontColor) {
     if (size.x > 0 && size.y > 0) {
         float fontSize = getScale();
         if (fontSize >= 1.0) {
-            fontSize = math::floorf(fontSize * 4.0f) / 4.0f;
+            fontSize = math::floorf(fontSize * 1.0f) / 1.0f;
             auto offsetPos = pos;
             if (alignment & NVG_ALIGN_CENTER) {
                 offsetPos.x += size.x * 0.5f;
@@ -1020,7 +1060,9 @@ void textlabel_dynamic_t::render(NVGcontext* vg, guitheme_t* theme, const String
             if (alignment & NVG_ALIGN_BOTTOM) {
                 offsetPos.y += size.y * 1.0f;
             }
+            // g_debugTextRenderLayout = true;
             lastRenderWidthLabel = renderTextLabel(vg, offsetPos, size, label, theme, fontSize, fontColor, alignment);
+            // g_debugTextRenderLayout = false;
         }
     }
 }
