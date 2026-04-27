@@ -733,12 +733,13 @@ public:
         const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
 
         int32_t inset      = CONST_PADDING_TRACK_CONTROLS;
-        selectOutput.pos    = ivec2(inset, inset);
-        selectInput.pos   = ivec2(inset, TRACK_HEIGHT_STEP + inset);
-        selectMidiInput.pos   = ivec2(inset, (TRACK_HEIGHT_STEP + inset)*2);
-        selectMidiOutput.pos = ivec2(inset, (TRACK_HEIGHT_STEP + inset)*3);
+        int32_t insetV      = 2;
+        selectOutput.pos    = ivec2(inset, insetV);
+        selectInput.pos   = ivec2(inset, TRACK_HEIGHT_STEP + insetV);
+        selectMidiInput.pos   = ivec2(inset, (TRACK_HEIGHT_STEP + insetV)*2);
+        selectMidiOutput.pos = ivec2(inset, (TRACK_HEIGHT_STEP + insetV)*3);
         selectInput.size   = getSizeContent() - ivec2(inset * 2);
-        selectInput.size.y = TRACK_HEIGHT_STEP - inset * 2;
+        selectInput.size.y = TRACK_HEIGHT_STEP - insetV * 2;
         selectOutput.size  = selectInput.size;
         selectMidiInput.size  = selectInput.size;
         selectMidiOutput.size = selectInput.size;
@@ -773,6 +774,7 @@ public:
     guibutton btnActivate;
     std::vector<gui_slider_gain*> sendGains;
     std::vector<gui_slider_pan*> sendPans;
+    bool bShowSendPans = true;
     explicit gui_trackcontrols_mixer(track_gui_entry_t* _entry)
         : guictr_base(),
           m_track(_entry->track),
@@ -880,71 +882,80 @@ public:
     }
     void layout() override {
 
+        const project_t* project = dawCtrl->getDaw()->getProject();
+        dbgassert(project);
+        const int32_t numReturnChannels = project->trackReturnCtr.size();
         std::vector<effectbase*> effects;
         dbgassert(m_track->audio);
         m_track->audio->getDeferredEffects(effects);
-        int nDefEffects = CtrSize(effects);
-        btnActivate.setEnabled(nDefEffects > 0);
-        auto str = nDefEffects > 9 ? "9+" : (StringFormat("%d", nDefEffects));
-        // btnActivate.setText(str);
+        int32_t numDeferredEffectsOnTrack = CtrSize(effects);
+        btnActivate.setEnabled(numDeferredEffectsOnTrack > 0);
+        auto str = numDeferredEffectsOnTrack > 9 ? "9+" : (StringFormat("%d", numDeferredEffectsOnTrack));
         btnActivate.setLabel("Load "+str+" deferred plugins");
-        btnActivate.setVisible(nDefEffects > 0);
+        btnActivate.setVisible(numDeferredEffectsOnTrack > 0);
 
-        const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
-        const int32_t mW = theme->get(GuiConstant::CONST_METER_WIDTH);
-        const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+        const float CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
+        const float mW = theme->get(GuiConstant::CONST_METER_WIDTH);
+        const float TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
-        int32_t inset = CONST_PADDING_TRACK_CONTROLS;
-        int32_t i2    = inset * 2;
-        m_guiMeter.size = ivec2(mW - i2, size.y - i2);
-        m_guiMeter.pos  = ivec2(size.x - mW + inset, inset);
+        const float inset = CONST_PADDING_TRACK_CONTROLS;
+        const float insetV = 1.5f;
+        m_guiMeter.size = vec2(mW - 2.0f, size.y - 2.0f);
+        m_guiMeter.pos  = vec2(size.x - mW + 1.0f, 1.0f);
 
 
-        int32_t heightInner = TRACK_HEIGHT_STEP - i2;
-        int32_t csX      = size.x - mW;
-        int32_t rowY = 0;
-        int32_t nButtons = btnActivate.isVisible() ? 3 : 2;
-        btnBypass.size   = ivec2(csX - inset * 4 - heightInner * nButtons, heightInner);
-        btnBypass.pos    = ivec2(inset, inset + rowY);
-        btnSolo.pos      = ivec2(csX - inset - heightInner, inset + rowY);
-        btnSolo.size     = ivec2(heightInner, heightInner);
-        btnRecord.pos    = ivec2(csX - inset * 2 - heightInner * 2, inset + rowY);
-        btnRecord.size   = ivec2(heightInner, heightInner);
-        btnActivate.pos    = ivec2(csX - inset * 2 - heightInner * 3, inset + rowY);
-        btnActivate.size   = ivec2(heightInner, heightInner);
+        const float heightInner = TRACK_HEIGHT_STEP - insetV * 2.0f;
+        const float csX = size.x - mW;
+        float rowY = 0;
+        const int32_t nButtons = btnActivate.isVisible() ? 3 : 2;
+        btnBypass.size   = vec2(csX - inset * 4.0f - heightInner * nButtons, heightInner);
+        btnBypass.pos    = vec2(inset, insetV + rowY);
+        btnSolo.pos      = vec2(csX - inset - heightInner, insetV + rowY);
+        btnSolo.size     = vec2(heightInner, heightInner);
+        btnRecord.pos    = vec2(csX - inset * 2.0f - heightInner * 2.0f, insetV + rowY);
+        btnRecord.size   = vec2(heightInner, heightInner);
+        btnActivate.pos    = vec2(csX - inset * 2.0f - heightInner * 3.0f, inset + rowY);
+        btnActivate.size   = vec2(heightInner, heightInner);
         rowY += TRACK_HEIGHT_STEP;
-        
-        int32_t sendGainWidth = csX*4/5 - inset;
-        trackGain.size       = ivec2(sendGainWidth, heightInner);
-        trackGain.pos        = ivec2(inset, rowY + inset);
-        trackPanning.size        = ivec2(csX - sendGainWidth - i2 - inset, heightInner);
-        trackPanning.pos         = ivec2(i2 + sendGainWidth, rowY + inset);
 
+        const bool bShowTrackPanning = true;
+        const float trackGainWidth = bShowTrackPanning ? ((csX) * 7.0f / 10.0f) - inset : (csX - inset * 2.0f);
+        trackGain.size       = vec2(trackGainWidth, heightInner);
+        trackGain.pos        = vec2(inset, rowY + insetV);
+        if (bShowTrackPanning) {
+            trackPanning.pos  = vec2(trackGain.getRightTop()) + vec2(inset, 0.0f);
+            trackPanning.size = vec2((csX) * 3.0f / 10.0f - inset * 2.0f, heightInner); 
+        }
+        trackPanning.setVisible(bShowTrackPanning);
         rowY += TRACK_HEIGHT_STEP;
+
         if (!sendGains.empty()) {
-            const int32_t HEIGHT_SEND_GAIN = TRACK_HEIGHT_STEP;
-            const int32_t SEND_PER_ROW     = 1;
-
-            project_t* project = dawCtrl->getDaw()->getProject();
-            dbgassert(project);
-            int32_t numReturnChannels = project->trackReturnCtr.size();
-            int pos                   = 0;
-            ivec2 sendPos = { inset, inset + rowY };
+            const float HEIGHT_SEND_GAIN = TRACK_HEIGHT_STEP;
+            const int32_t SEND_PER_ROW  = numReturnChannels <= 2 ? 1 : 2;
+            const float singleSendChannelWidth = csX / SEND_PER_ROW;
+            bShowSendPans = (singleSendChannelWidth*3.0f/10.0f - inset) >= 42.0f;
+            int pos = 0;
+            vec2 sendPos = { inset, insetV + rowY };
             for (int32_t i = 0; i < numReturnChannels; ++i) {
                 if (pos >= SEND_PER_ROW) {
                     pos = 0;
                     sendPos.x = inset;
                     sendPos.y += HEIGHT_SEND_GAIN;
                 }
-                sendGains[i]->size = ivec2(sendGainWidth, heightInner);
-                sendGains[i]->pos  = sendPos;
-                sendPos.x += sendGainWidth + inset;
-                sendPans[i]->size = ivec2(csX - sendGainWidth - i2 - inset, heightInner);
-                sendPans[i]->pos  = sendPos;
-                sendPos.x += csX - sendGainWidth - i2 + inset;
+                if (bShowSendPans) {
+                    const float trackSendWidth = singleSendChannelWidth * 7.0f / 10.0f - inset;
+                    const float sendPanWidth = singleSendChannelWidth * 3.0f / 10.0f - inset;
+                    sendGains[i]->pos  = sendPos;
+                    sendGains[i]->size = vec2(trackSendWidth, heightInner);
+                    sendPans[i]->pos   = vec2(sendGains[i]->getRightTop()) + vec2(inset, 0.0f);
+                    sendPans[i]->size  = vec2(sendPanWidth - inset, heightInner);
+                    sendPos.x += singleSendChannelWidth;
+                } else {
+                    sendGains[i]->pos  = sendPos;
+                    sendGains[i]->size = vec2(singleSendChannelWidth - inset * 2.0f, heightInner);
+                    sendPos.x += singleSendChannelWidth;
+                }
                 ++pos;
-                // dbgassert(sendGains[i]->size.x > 0 && sendGains[i]->size.y > 0);
-                // dbgassert(sendPans[i]->size.x > 0 && sendPans[i]->size.y > 0);
             }
             for (auto sendGainCtrl : sendGains) {
                 auto idx = sendGainCtrl->getParamIdx() - PARAM_OFFSET_SEND_GAIN;
@@ -952,7 +963,7 @@ public:
             }
             for (auto sendPanCtrl : sendPans) {
                 auto idx = sendPanCtrl->getParamIdx() - PARAM_OFFSET_SEND_PAN;
-                sendPanCtrl->setVisible(idx < numReturnChannels);
+                sendPanCtrl->setVisible(idx < numReturnChannels && bShowSendPans);
             }
         }
         for (auto gui : guis) {
@@ -1164,15 +1175,14 @@ public:
         hideAutomation.setRadius(buttonRadius - 2);
         addAutomationLane.setRadius(buttonRadius - 2);
         int32_t inset    = CONST_PADDING_TRACK_CONTROLS;
-        int32_t i2       = inset * 2;
-        int32_t h        = TRACK_HEIGHT_STEP - i2;
+        // int32_t h        = TRACK_HEIGHT_STEP - 2 * 2;
         int32_t insetBtn = (TRACK_HEIGHT_STEP - hideAutomation.size.y) / 2;
 
         const int32_t hideTrIns = (titleHeight - foldTrack.size.y) / 2;
         foldTrack.pos           = ivec2(hideTrIns, hideTrIns);
 
-        automationSelectParam.size  = ivec2(size.x - i2, h);
-        automationSelectDevice.size = ivec2(size.x - i2, h);
+        automationSelectParam.size  = ivec2(size.x - CONST_PADDING_TRACK_CONTROLS * 2, TRACK_HEIGHT_STEP);
+        automationSelectDevice.size = ivec2(size.x - CONST_PADDING_TRACK_CONTROLS * 2, TRACK_HEIGHT_STEP);
 
 
         int32_t yCtrls = 0;
@@ -1183,8 +1193,8 @@ public:
             addUNCHECKED(&automationSelectParam);
             addUNCHECKED(&hideAutomation);
             addUNCHECKED(&addAutomationLane);
-            automationSelectDevice.pos = ivec2(inset, yCtrls + inset);
-            automationSelectParam.pos  = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + inset);
+            automationSelectDevice.pos = ivec2(inset, yCtrls + 2);
+            automationSelectParam.pos  = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + 2);
             hideAutomation.pos         = ivec2(inset, size.y - TRACK_HEIGHT_STEP + insetBtn);
             addAutomationLane.pos      = ivec2(size.x - inset - addAutomationLane.size.x, size.y - TRACK_HEIGHT_STEP + insetBtn);
         } else if (hCtrls >= TRACK_HEIGHT_STEP * 2) {
@@ -1192,13 +1202,13 @@ public:
             addUNCHECKED(&automationSelectParam);
             addUNCHECKED(&hideAutomation);
             addUNCHECKED(&addAutomationLane);
-            automationSelectParam.pos = ivec2(inset, yCtrls + inset);
-            hideAutomation.pos        = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + insetBtn);
+            automationSelectParam.pos = ivec2(inset, yCtrls + 2);
+            hideAutomation.pos        = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + 2);
             addAutomationLane.pos     = ivec2(size.x - inset - addAutomationLane.size.x, yCtrls + TRACK_HEIGHT_STEP + insetBtn);
         } else if (hCtrls >= TRACK_HEIGHT_STEP) {
             yCtrls += TRACK_HEIGHT_STEP;
             addUNCHECKED(&automationSelectParam);
-            automationSelectParam.pos = ivec2(inset, yCtrls + inset);
+            automationSelectParam.pos = ivec2(inset, yCtrls + 2);
         }
         for (auto g : guis) {
             g->layout();

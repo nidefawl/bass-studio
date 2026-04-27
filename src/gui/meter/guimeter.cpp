@@ -115,7 +115,7 @@ void renderMeterChannelVertical(NVGcontext* vg, guitheme_t* theme, ivec2 mtrPos,
 }
 
 void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, DAW::rmsmeter* meter, textlabel_dynamic_t* label) {
-    const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
+    const int32_t CONST_PADDING_TRACK_CONTROLS = 1;
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const auto NCHANNELS = meter->getNumChannels();
     theme->bindFont(vg, UIFont::FONT_DECIMAL);
