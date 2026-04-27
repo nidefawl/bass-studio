@@ -967,12 +967,13 @@ void gui_slider_textfield::onTick(AppCtrl* appctrl) {
 void gui_slider_textfield::layout() {
     gui_textfield::layout();
     setFontSize(size.y * m_fontScale);
-    m_textLabelParamValue.pos     = vec2(pos.x + 3, pos.y + 1);
-    m_textLabelParamValue.size    = vec2(size.x - 6, size.y - 2);
-    m_textLabelParamValue.fontSize = fontSize() * 1.2f;
-    m_textLabelParamName.pos      = vec2(pos.x + 3, pos.y + 2);
-    m_textLabelParamName.size     = vec2(size.x - 6, size.y - 4);
-    m_textLabelParamName.fontSize = fontSize() * FONT_AUTOSCALE;
+
+    m_textLabelParamValue.pos      = vec2(pos.x + 5, pos.y + 1);
+    m_textLabelParamValue.size     = vec2(size.x - 10, size.y - 2);
+    m_textLabelParamValue.fontSize = fontSize() * 1.5f;
+    m_textLabelParamName.pos       = vec2(pos.x + 5, pos.y + 1);
+    m_textLabelParamName.size      = vec2(size.x - 5, size.y - 2);
+    m_textLabelParamName.fontSize  = fontSize() * 0.75f;
 }
 
 bool gui_slider_textfield::handleCharInput(uint32_t codepoint) {
