@@ -392,6 +392,7 @@ void to_json(json& j, const plugin_snapshot_t& m) {
         {"vendorVersion", m.vendorVersion},
         {"uId", m.uId},
         {"clapId", m.clapId},
+        {"instanceUri", m.instanceUri},
         {"name", m.name},
         {"currentProgram", m.currentProgram},
         {"currentProgramName", m.currentProgramName},
@@ -431,6 +432,9 @@ void from_json(const json& j, plugin_snapshot_t& m) {
     j.at("vendorVersion").get_to(m.vendorVersion);
     j.at("uId").get_to(m.uId);
     j.at("clapId").get_to(m.clapId);
+    if (j.contains("instanceUri")) {
+        j.at("instanceUri").get_to(m.instanceUri);
+    }
     j.at("name").get_to(m.name);
     j.at("currentProgram").get_to(m.currentProgram);
     j.at("currentProgramName").get_to(m.currentProgramName);

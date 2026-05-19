@@ -7,6 +7,9 @@
 
 namespace DAW::Host::PluginScanner {
 
+/** Path to the pluginscanner helper executable, if installed next to the DAW binary. */
+std::optional<String> locate_pluginscanner_executable();
+
 struct pluginscanner_server_options {
     std::map<ModuleType, std::vector<String>> pluginPathLists;
     bool dryRun             = false;

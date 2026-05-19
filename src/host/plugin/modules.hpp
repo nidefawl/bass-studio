@@ -14,6 +14,7 @@ enum ModuleType : int32_t {
     MODULE_TYPE_INTERNAL_EFFECT = 4,
     MODULE_TYPE_DEFERRED = 5,
     MODULE_TYPE_AU = 6,
+    MODULE_TYPE_LV2 = 7,
 };
 inline constexpr String ModuleTypeToString(ModuleType type) {
     switch (type) {
@@ -23,6 +24,7 @@ inline constexpr String ModuleTypeToString(ModuleType type) {
         case MODULE_TYPE_INTERNAL_EFFECT: return "Internal Effect";
         case MODULE_TYPE_DEFERRED: return "Deferred Plugin";
         case MODULE_TYPE_AU: return "Audio Unit";
+        case MODULE_TYPE_LV2: return "LV2";
         default: return "Unknown";
     }
 }

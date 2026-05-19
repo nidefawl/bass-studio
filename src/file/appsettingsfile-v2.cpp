@@ -53,7 +53,7 @@ JSON_FROM_TO(app_iosettings, samplerate, blocksize, internalSamplerate, internal
 
 // Plugin configuration
 JSON_FROM_TO(app_vst2_config, uidRemapping)
-JSON_FROM_TO(app_plugin_configuration, pathClap, pathVst2, pathVst3, configVst2)
+JSON_FROM_TO(app_plugin_configuration, pathClap, pathVst2, pathVst3, pathLv2, configVst2)
 
 // DAW settings, autosave, path remapping
 JSON_FROM_TO(app_daw_settings, startupProjectPath, startupLoadDeffered, audioEnabled, vmmode,

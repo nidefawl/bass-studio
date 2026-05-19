@@ -114,6 +114,10 @@ foreach (f ${CPP_ALL_FILES})
   list(APPEND CPP_SRC_FILES ${f})
 endforeach ()
 
+if (NOT PROJECT_ENABLE_LV2)
+  list(FILTER CPP_SRC_FILES EXCLUDE REGEX ".*/host/plugin/lv2/.*")
+endif()
+
 set_source_files_properties(${MM_SRC_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 foreach (f ${CPP_ALL_FILES})
@@ -278,6 +282,18 @@ if (PROJECT_REQUIRE_LIB)
     if (WIN32 AND NOT MSVC)
       set_target_properties(${PROJECT_BINARY_NAME} PROPERTIES LINK_FLAGS "-mwindows")
     endif()
+    if (LINUX)
+      # Force the pthread_mutexattr_setprotocol shim (see pthread_protocol_shim.cpp)
+      # into the executable and export it in the dynamic symbol table with the
+      # GLIBC_2.4 version tag (see pthread_protocol_shim.ver), so dlopen'd LV2
+      # plugins resolve their versioned references to our wrapper, neutralising
+      # PTHREAD_PRIO_INHERIT.
+      target_link_options(${PROJECT_BINARY_NAME} PRIVATE
+        "-Wl,--undefined=pthread_mutexattr_setprotocol"
+        "-Wl,--export-dynamic-symbol=pthread_mutexattr_setprotocol"
+        "-Wl,--version-script=${CMAKE_SOURCE_DIR}/src/platform/linux/pthread_protocol_shim.ver"
+        "-ldl")
+    endif()
   endif()
 
   if (PROJECT_BUILD_SCANNER)
@@ -408,6 +424,18 @@ if (LINUX)
   target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
   target_link_libraries(${LINK_TARGET} PUBLIC ${X11_X11_LIB} ${CMAKE_DL_LIBS} ${GTK3_LIBRARIES} GL m)
 endif (LINUX)
+
+if (PROJECT_ENABLE_LV2)
+  target_compile_definitions(${LINK_TARGET} PUBLIC PROJECT_ENABLE_LV2=1)
+  target_compile_definitions(${LINK_TARGET} PUBLIC SUIL_MODULE_DIR_DEFAULT="${SUIL_MODULE_DIR}")
+  target_link_libraries(${LINK_TARGET} PUBLIC PkgConfig::LILV PkgConfig::LV2 PkgConfig::SUIL)
+  # PkgConfig imported targets do not always propagate include dirs on Nix; set explicitly.
+  target_include_directories(${LINK_TARGET} SYSTEM PUBLIC
+    ${LILV_INCLUDE_DIRS}
+    ${LV2_INCLUDE_DIRS}
+    ${SUIL_INCLUDE_DIRS})
+  target_link_libraries(${LINK_TARGET} PUBLIC ${CMAKE_DL_LIBS})
+endif()
 
 if (APPLE)
   target_link_libraries(${LINK_TARGET} PUBLIC

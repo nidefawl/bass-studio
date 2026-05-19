@@ -100,6 +100,7 @@ struct app_plugin_configuration {
     String pathClap = DAW_PLATFORM_CLAP_PATH_DEFAULT;
     String pathVst2 = DAW_PLATFORM_VST2_PATH_DEFAULT;
     String pathVst3 = DAW_PLATFORM_VST3_PATH_DEFAULT;
+    String pathLv2  = DAW_PLATFORM_LV2_PATH_DEFAULT;
     app_vst2_config configVst2;
 };
 

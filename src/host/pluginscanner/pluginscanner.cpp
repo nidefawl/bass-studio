@@ -23,6 +23,7 @@
 #include "threads/childprocessthread.hpp"
 #include "tls.hpp"
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -38,6 +39,10 @@
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
 #include <vstsdk-host-2.4/aeffectx.h>
+
+#ifdef PROJECT_ENABLE_LV2
+#include "host/plugin/lv2/lv2-catalog.hpp"
+#endif
 
 #ifdef _WIN32
 #include "platform/win/platform_win.hpp"
@@ -66,6 +71,55 @@
 void createTables(SQLite::Database& db);
 
 namespace DAW::Host::PluginScanner {
+
+std::optional<String> locate_pluginscanner_executable() {
+#if defined(__linux__) || defined(__APPLE__)
+    if (const char* envPath = std::getenv("BASS_PLUGINSCANNER")) {
+        if (envPath[0] != '\0' && FileExists(envPath)) {
+            return String(envPath);
+        }
+    }
+#endif
+
+    const String binaryPath = App::Platform::GetExecutablePath();
+    String dir;
+    String exeBase;
+    SplitPath(binaryPath, &dir, &exeBase, nullptr, nullptr);
+
+    if (!exeBase.empty() && exeBase.find("bass") != String::npos) {
+        String derived = exeBase;
+        replaceString(derived, "bass", "pluginscanner");
+        String candidate = dir;
+        candidate += FILE_PATHSEP_STR;
+        candidate += derived;
+        if (FileExists(candidate)) {
+            return candidate;
+        }
+    }
+
+    static const char* scannerNames[] = {
+        "pluginscanner-clang-relwithdebinfo",
+        "pluginscanner-clang-debug",
+        "pluginscanner-clang-release",
+        "pluginscanner-debug",
+        "pluginscanner-release",
+        "daw-pluginscanner",
+        "pluginscanner",
+    };
+    for (const char* name : scannerNames) {
+        String candidate = dir;
+        candidate += FILE_PATHSEP_STR;
+        candidate += name;
+#ifdef _WIN32
+        candidate += ".exe";
+#endif
+        if (FileExists(candidate)) {
+            return candidate;
+        }
+    }
+
+    return std::nullopt;
+}
 
 #define PROC_SIDE_NONE 0
 #define PROC_SIDE_SERVER 1
@@ -193,6 +247,53 @@ bool readFromBuffer(recvbuf_t& buf, T& hdr) {
     }
     return false;
 }
+
+#ifdef PROJECT_ENABLE_LV2
+static int catalog_lv2_bundle(SQLite::Statement& queryInsertPlugin, const FileFound& file, int64_t timeDisk, bool forcedisable, const String& pluginPath) {
+    std::vector<lv2_catalog_entry> entries;
+    String err;
+    if (!lv2_catalog::list_plugins_in_bundle(file.path, entries, err)) {
+        if (!err.empty()) {
+            log_message("LV2 bundle %s: %s", StringAsCStr(file.path), StringAsCStr(err));
+        }
+        return 0;
+    }
+    String relPath = file.name;
+    if (file.path.length() > pluginPath.length()) {
+        relPath = file.path.substr(pluginPath.length());
+        replaceString(relPath, FILE_PATHSEP_STR, "/");
+    }
+    int inserted = 0;
+    for (const lv2_catalog_entry& e : entries) {
+        try {
+            queryInsertPlugin.reset();
+            int bndIdx = 1;
+            queryInsertPlugin.bind(bndIdx++, e.isInstrument ? 1 : 0);
+            queryInsertPlugin.bind(bndIdx++, 6);
+            queryInsertPlugin.bind(bndIdx++, static_cast<int64_t>(e.catalogKey));
+            queryInsertPlugin.bind(bndIdx++, 1);
+            queryInsertPlugin.bind(bndIdx++, 0);
+            queryInsertPlugin.bind(bndIdx++, 0);
+            queryInsertPlugin.bind(bndIdx++, timeDisk);
+            queryInsertPlugin.bind(bndIdx++, 1);
+            queryInsertPlugin.bind(bndIdx++, file.path);
+            queryInsertPlugin.bind(bndIdx++, relPath);
+            queryInsertPlugin.bind(bndIdx++, e.title.empty() ? e.instanceUri : e.title);
+            queryInsertPlugin.bind(bndIdx++, e.maker);
+            queryInsertPlugin.bind(bndIdx++, e.instanceUri);
+            queryInsertPlugin.bind(bndIdx++, e.title);
+            queryInsertPlugin.bind(bndIdx++, 0);
+            queryInsertPlugin.bind(bndIdx++, forcedisable ? 1 : 0);
+            queryInsertPlugin.bind(bndIdx++, 0);
+            queryInsertPlugin.exec();
+            inserted++;
+        } catch (SQLite::Exception& ex) {
+            log_message("LV2 catalog insert failed: %s (%d)", ex.getErrorStr(), ex.getErrorCode());
+        }
+    }
+    return inserted;
+}
+#endif
 
 template<typename IPC>
 bool IPCrecvBuffer(IPC& conn, recvbuf_t& bufferRecv) {
@@ -686,43 +787,17 @@ public:
         db(App::Platform::toUserdataPath("data/plugins.db3"), SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE)
     {
         if (!pluginscannerExecPath.has_value()) {
-            auto scannerNames = {
-                "daw-pluginscanner", 
-                "pluginscanner", 
-                "pluginscanner-debug",
-                "pluginscanner-release",
-                "pluginscanner-clang-debug",
-                "pluginscanner-clang-relwithdebinfo",
-                "pluginscanner-clang-release",
-                "pluginscanner-msvc-debug",
-                "pluginscanner-msvc-release",
-                "daw-pluginscanner", 
-            };
-            String binaryPath = App::Platform::GetExecutablePath();
-            // look in directory of the executable first
-            String path;
-            SplitPath(binaryPath, &path, nullptr, nullptr, nullptr);
-
-            String filename = "";
-            for (auto* name : scannerNames) {
-                filename = path;
-                filename += FILE_PATHSEP_STR;
-                filename += name;
-#ifdef _WIN32 
-                filename += ".exe";
-#endif //_WIN32
-                if (FileExists(filename)) {
-                    break;
-                }
+            auto located = locate_pluginscanner_executable();
+            if (!located) {
+                log_lf(Log::L_ERROR,
+                    "pluginscanner executable not found next to '%s' (cwd: %s). "
+                    "Build it with: cmake --build build --target pluginscanner\n",
+                    StringAsCStr(App::Platform::GetExecutablePath()),
+                    StringAsCStr(App::Platform::getCurrentWorkingDirectory()));
+                throw appexception("pluginscanner executable not found");
             }
-            if (!FileExists(filename)) {
-                log_lf(Log::L_ERROR, "Failed to find pluginscanner executable in current working directory: %s\n", StringAsCStr(App::Platform::getCurrentWorkingDirectory()));
-                throw appexception("Failed to find pluginscanner executable in current working directory");
-            } else {
-                log_lf(Log::L_INFO, "Using pluginscanner executable: %s\n", StringAsCStr(filename));
-                this->pluginscannerExecPath = std::move(filename);
-            }
-            
+            log_lf(Log::L_INFO, "Using pluginscanner executable: %s\n", StringAsCStr(*located));
+            this->pluginscannerExecPath = std::move(*located);
         } else {
             this->pluginscannerExecPath = std::move(pluginscannerExecPath.value());
         }
@@ -775,6 +850,11 @@ public:
                         ext = PLATFORM_CLAP_PLUGIN_EXT;
                         findFilesWithExt(pluginPath, ext, true, files);
                         break;
+#ifdef PROJECT_ENABLE_LV2
+                    case MODULE_TYPE_LV2:
+                        findDirectoriesWithExt(pluginPath, "lv2", files);
+                        break;
+#endif
                     default:
                         log_message("Unknown module type %d", moduleType);
                         continue;
@@ -832,7 +912,7 @@ public:
                     continue;
                 }
                 try {
-                    if (moduleType == ModuleType::MODULE_TYPE_VST3) {
+                    if (moduleType == ModuleType::MODULE_TYPE_VST3 || moduleType == ModuleType::MODULE_TYPE_LV2) {
                         if (PathIsDirectory(path)) {
                             continue;
                         }
@@ -903,6 +983,18 @@ public:
                     if (options.dryRun) {
                         continue;
                     }
+#ifdef PROJECT_ENABLE_LV2
+                    if (moduleType == ModuleType::MODULE_TYPE_LV2) {
+                        if (id > 0) {
+                            queryDelete.reset();
+                            queryDelete.bind(1, id);
+                            queryDelete.bind(2, file.path);
+                            queryDelete.exec();
+                        }
+                        catalog_lv2_bundle(queryInsertPlugin, file, timeDisk, forcedisable, file.pluginPath);
+                        continue;
+                    }
+#endif
                     if (options.launchProcess && (!thread || !thread->isRunning())) {
                         if (thread)
                             thread->joinProcess();
@@ -1436,6 +1528,14 @@ int mainPluginScanner(int argc, char* argv[]) {
         options.pluginPathLists[MODULE_TYPE_VST2].push_back(vstPlugPath);
         options.pluginPathLists[MODULE_TYPE_CLAP].push_back(clapPluginPath);
         options.pluginPathLists[MODULE_TYPE_VST3].push_back(vst3PluginPath);
+#ifdef PROJECT_ENABLE_LV2
+        String lv2PluginPath = tls.settings->pluginsettings.pathLv2;
+        App::Platform::shellExpandPath(lv2PluginPath);
+        if (!lv2PluginPath.empty()) {
+            log_out("LV2 Plugins Path: '%s'\n", StringAsCStr(lv2PluginPath));
+            options.pluginPathLists[MODULE_TYPE_LV2].push_back(lv2PluginPath);
+        }
+#endif
         String pluginscannerExecPath = App::Platform::GetExecutablePath();
         PluginScanner::PluginScannerServer scanner(options, std::move(pluginscannerExecPath));
         serverInstance = &scanner;

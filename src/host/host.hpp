@@ -183,6 +183,9 @@ public:
 
     int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
     int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop);
+    /** Process up to @p maxBurst blocks while the PortAudio output queue is below target fill. */
+    int32_t pumpPlayback(project_controller_t* ctrl, samplecount_t& samplePos, double& tickPos, playback_state state, bool inLoop, int maxBurst = 12);
+    int32_t getPlaybackOutputQueueDepth() const;
     void preProcessBlockInternal(int32_t sample, double posDouble, playback_state state, bool inLoop);
     void postProcessBlockInternal(const std::shared_ptr<resampler_t>& resamplerOutput, const AudioBufferTimeInfo& bufferTimeInfo, int32_t sample, double posDouble, playback_state state);
     int32_t processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;

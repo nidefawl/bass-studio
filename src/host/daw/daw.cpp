@@ -53,6 +53,9 @@
 #include "host/midihost/midi_host.hpp"
 #include "host/plugin/base/base-plugin.hpp"
 #include "host/plugin/vst/vstplugin.hpp"
+#ifdef PROJECT_ENABLE_LV2
+#include "host/plugin/lv2/lv2-ui.hpp"
+#endif
 #include "host/project/project.hpp"
 #include "host/track/track_impl.hpp"
 #include "host/track/track.hpp"
@@ -388,6 +391,9 @@ bool DawInstance::setProjectToLoad(const std::shared_ptr<project_file>& file, in
     return true;
 }
 void DawInstance::unloadProject() {
+#ifdef PROJECT_ENABLE_LV2
+    lv2_ui::set_host_shutting_down(true);
+#endif
     AppWndProc_enableBlockReentrant();
     dbgassert(!playThread.isRunning() || playThread.isLockedOrNotProcessing());
     for (DawCtrl* ctrl : dawCtrls) {
@@ -422,6 +428,9 @@ void DawInstance::unloadProject() {
     tls.host->unload();
     tls.audioCache->unloadAll();
     projectGlobals.grooveData.clear();
+#ifdef PROJECT_ENABLE_LV2
+    lv2_ui::set_host_shutting_down(false);
+#endif
 
     /** reset maximum stage id and determine new maximum stage id */
     tls.host->updateMaximumStageId();

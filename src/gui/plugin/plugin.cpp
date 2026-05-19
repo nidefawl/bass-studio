@@ -7,6 +7,7 @@
 #include "fileio.hpp"
 #include "guiglobals.hpp"
 #include "host/plugin/modules.hpp"
+#include "host/plugin/lv2/lv2-plugin.hpp"
 #include "host/plugin/vst3/vst3plugin.hpp"
 #include "platform.hpp"
 #include "snapshot/snapshot.hpp"
@@ -627,9 +628,10 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
 }
 guipluginview::guipluginview(effectbase* _effect)
     : guiplugin(_effect), effect(_effect), dropdownProgram(_effect) {
-    params.setVisible(_effect->getModuleType() == MODULE_TYPE_VST2 
+    params.setVisible(_effect->getModuleType() == MODULE_TYPE_VST2
                       || _effect->getModuleType() == MODULE_TYPE_CLAP
-                      || _effect->getModuleType() == MODULE_TYPE_VST3);
+                      || _effect->getModuleType() == MODULE_TYPE_VST3
+                      || _effect->getModuleType() == MODULE_TYPE_LV2);
     params.setRowHeight(48);
     params.margin = 2;
     params.padding = 4;
@@ -1004,6 +1006,33 @@ guictxtmenu_base* guivst3plugin::getTooltip(AppCtrl* appctrl) {
     auto tooltip = new guitooltip<guivst3plugin>(this);
     return tooltip;
 }
+
+template<>
+void guitooltip<guilv2plugin>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
+    std::vector<String> info;
+    ptr->lv2->getInfo(info);
+    for (const String& line : info) {
+        table.rows.push_back({ { tblString{ line } } });
+    }
+}
+
+guilv2plugin::guilv2plugin(lv2plugin* _effect) : guipluginview(_effect), lv2(_effect) {
+}
+
+guilv2plugin::~guilv2plugin() {
+    if (viewCtr) {
+        viewCtr->setFree();
+    }
+}
+
+guictxtmenu_base* guilv2plugin::getTooltip(AppCtrl* appctrl) {
+    return new guitooltip<guilv2plugin>(this);
+}
+
 guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {
     //auto tooltip = new guitooltip<guiinternalpluginview>(this);
     //return tooltip;
