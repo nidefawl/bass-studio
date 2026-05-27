@@ -42,6 +42,8 @@ struct plugin_snapshot_t {
     int32_t vendorVersion   = 0;
     uint32_t uId            = 0;
     String clapId;
+    /** LV2 plugin instance URI (http://…); not used for other module types. */
+    String instanceUri;
     String name;
     int32_t currentProgram = -1;
     String currentProgramName;

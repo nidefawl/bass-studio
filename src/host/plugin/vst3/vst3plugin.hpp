@@ -1315,16 +1315,24 @@ public:
             }
         }
         ViewRect viewRect = {};
-        if (view->getSize(&viewRect) != kResultOk) {
-            view->release();
-            view = nullptr; // Clean up on failure
-            log_lf(Log::L_ERROR, "%s: Failed to get editor view size\n", StringAsCStr(sName));
-            return false;
+        ivec2 editorSize{ 960, 640 };
+        if (view->getSize(&viewRect) == kResultOk) {
+            const int32_t w = viewRect.getWidth();
+            const int32_t h = viewRect.getHeight();
+            if (w > 0 && h > 0) {
+                editorSize = { w, h };
+            }
+        } else {
+            log_lf(Log::L_DEBUG,
+                "%s: Editor size not available before attach; using default %dx%d\n",
+                StringAsCStr(sName),
+                editorSize.x,
+                editorSize.y);
         }
 
-        bSupportsWindowResize = false;// view->canResize();
+        bSupportsWindowResize = view->canResize() == kResultTrue;
 
-        this->openWindow(bResetPosition, { viewRect.getWidth(), viewRect.getHeight() });
+        this->openWindow(bResetPosition, editorSize);
         return true;
     }
 
@@ -1353,6 +1361,14 @@ public:
             if (view->attached(voidWindowHandle, platformWindowType) != Steinberg::kResultOk) {
                 log_lf(Log::L_ERROR, "%s: Failed to attach editor view to HWND\n", StringAsCStr(sName));
                 return false;
+            }
+            Steinberg::ViewRect attachedRect = {};
+            if (view->getSize(&attachedRect) == Steinberg::kResultOk) {
+                const int32_t w = attachedRect.getWidth();
+                const int32_t h = attachedRect.getHeight();
+                if (w > 0 && h > 0 && _window) {
+                    _window->show({ 0, 0, w, h }, false, true);
+                }
             }
             this->updateFromMainThread();
         }

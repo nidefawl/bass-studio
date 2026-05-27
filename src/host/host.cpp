@@ -40,6 +40,9 @@
 #include "host/plugin/base/base-plugin.hpp"
 #include "host/plugin/vst/vstplugin.hpp"
 #include "host/plugin/clap/clap-plugin.hpp"
+#ifdef PROJECT_ENABLE_LV2
+#include "host/plugin/lv2/lv2-ui.hpp"
+#endif
 #include "appsettings.hpp"
 #include "logging.hpp"
 #include "audio_config.hpp"
@@ -1524,6 +1527,33 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     return nBlocksProcessed;
 }
 
+int32_t Host::pumpPlayback(project_controller_t* ctrl, samplecount_t& samplePos, double& tickPos, playback_state state, bool inLoop, int maxBurst) {
+    int32_t totalBlocks = 0;
+    const auto& props           = updateAudioStreamProperties();
+    const blocksize_t blockSize = m_sampleFormatInternal.blockSize;
+    const int32_t targetQueue   = (RING_BUF_SIZE * 2) / 3;
+
+    for (int burst = 0; burst < maxBurst; ++burst) {
+        if (auto stream = impl->audioStream) {
+            if (totalBlocks > 0 && stream->getOutputQueueSize() >= targetQueue) {
+                break;
+            }
+        }
+        const int32_t processed = processPlayback(ctrl, samplePos, tickPos, state, inLoop);
+        if (processed <= 0) {
+            break;
+        }
+        totalBlocks += processed;
+        samplePos += static_cast<samplecount_t>(blockSize) * static_cast<samplecount_t>(processed);
+        tickPos += props.ticksPerBlock * processed;
+    }
+    return totalBlocks;
+}
+
+int32_t Host::getPlaybackOutputQueueDepth() const {
+    return impl->audioStream ? impl->audioStream->getOutputQueueSize() : 0;
+}
+
 void Host::postProcessBlockInternal(const std::shared_ptr<resampler_t>& resamplerOutput, const AudioBufferTimeInfo& bufferTimeInfo, int32_t sample, double posDouble, playback_state state) {
     // check if output provides enough channels, if only 2 channels are available, we feed them, if the seocnd 2 are available we feed them
     auto dstChannelOffset = impl->blockExtOut.channels >= 4 ? 2 : 0;
@@ -2287,6 +2317,9 @@ void Host::onTick() {
 }
 
 void Host::unload() {
+#ifdef PROJECT_ENABLE_LV2
+    lv2_ui::set_host_shutting_down(true);
+#endif
 #if DAW_DEBUG_AUDIOGRAPH
     lastProcessingList = nullptr;
     lastTrackGraph = nullptr;

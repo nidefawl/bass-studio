@@ -390,6 +390,34 @@ public:
         mapParams[identifier] = std::move(newParam);
         return &mapParams[identifier];
     }
+    /** Removes plugin-exposed parameters (e.g. before LV2 reinstantiate). */
+    void clearRegisteredParamsFrom(int32_t minIdentifier) {
+        for (auto it = mapParams.begin(); it != mapParams.end();) {
+            if (it->first >= minIdentifier) {
+                it = mapParams.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        automationLanes.erase(
+            std::remove_if(automationLanes.begin(), automationLanes.end(),
+                [minIdentifier](const automation_lane_t& lane) { return lane.paramIdx >= minIdentifier; }),
+            automationLanes.end());
+        for (auto it = mapModulations.begin(); it != mapModulations.end();) {
+            if (it->first >= minIdentifier) {
+                it = mapModulations.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        for (auto it = paramStrCache.begin(); it != paramStrCache.end();) {
+            if (it->first >= minIdentifier) {
+                it = paramStrCache.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
     void setBypassModulation(bool bBypass) {
         bool bRestore = !bIsBypassModulation && bBypass;
         bIsBypassModulation = bBypass;

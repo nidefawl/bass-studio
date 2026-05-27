@@ -48,6 +48,7 @@ class effect_deferred;
 class vstplugin;
 class vst3plugin;
 class clapplugin;
+class lv2plugin;
 struct track_impl_t;
 struct audio_stage_t;
 struct track_audio_src;
@@ -117,6 +118,8 @@ struct PluginLoadParameters {
     uint64_t bugfixFlags = 0;
     ModuleType moduleType = ModuleType::MODULE_TYPE_VST2;
     String uIdVst3 = "";
+    /** LV2 instance URI when @c moduleType is @c MODULE_TYPE_LV2. */
+    String instanceUri;
 };
 class PluginManager {
 private:
@@ -135,6 +138,7 @@ private:
     std::vector<clapplugin*> pluginInstancesClap;
     std::vector<vstplugin*> pluginInstancesVST2;
     std::vector<vst3plugin*> pluginInstancesVST3;
+    std::vector<lv2plugin*> pluginInstancesLv2;
     std::vector<effectbase*> pluginInstancesInternal;
     std::vector<effectbase*> pluginInstances;
     std::vector<effectbase*> pluginsDeferred;

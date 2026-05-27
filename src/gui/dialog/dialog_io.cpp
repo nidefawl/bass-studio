@@ -1331,9 +1331,11 @@ class guidialog_settings_plugins_path_config final : public guictr_base {
     guibutton selectVstPlugPath;
     guibutton selectClapPlugPath;
     guibutton selectVst3PlugPath;
+    guibutton selectLv2PlugPath;
     gui_textfield pathVstVal;
     gui_textfield pathClapVal;
     gui_textfield pathVst3Val;
+    gui_textfield pathLv2Val;
 public:
     void onDialogShow() { updateOptions(); }
 
@@ -1354,6 +1356,9 @@ public:
         selectVst3PlugPath.id = 0x12;
         selectVst3PlugPath.setLabel("Select VST3 Plugin Directory");
         selectVst3PlugPath.setText(selectVst3PlugPath.getLabel());
+        selectLv2PlugPath.id = 0x14;
+        selectLv2PlugPath.setLabel("Select LV2 Plugin Directory");
+        selectLv2PlugPath.setText(selectLv2PlugPath.getLabel());
         scanNow.id = 0x13;
         scanNow.setLabel("Scan Plugins");
         scanNow.setText(scanNow.getLabel());
@@ -1365,12 +1370,16 @@ public:
         pathClapVal.setValue(settings.pluginsettings.pathClap);
         pathVst3Val.setEnabled(false);
         pathVst3Val.setValue(settings.pluginsettings.pathVst3);
+        pathLv2Val.setEnabled(false);
+        pathLv2Val.setValue(settings.pluginsettings.pathLv2);
         add(&pathVstVal);
         add(&pathVst3Val);
         add(&pathClapVal);
+        add(&pathLv2Val);
         add(&selectVstPlugPath);
         add(&selectVst3PlugPath);
         add(&selectClapPlugPath);
+        add(&selectLv2PlugPath);
         add(&scanNow);
         setLabel("Plugins");
         updateOptions();
@@ -1393,9 +1402,13 @@ public:
         pathClapVal.pos    = ivec2(inset, selectVst3PlugPath.bottom() + inset);
         selectClapPlugPath.size = ivec2(cs.x - inset * 2, height);
         selectClapPlugPath.pos  = ivec2(inset, pathClapVal.bottom() + inset);
+        pathLv2Val.size   = ivec2(cs.x - inset * 2, height);
+        pathLv2Val.pos    = ivec2(inset, selectClapPlugPath.bottom() + inset);
+        selectLv2PlugPath.size = ivec2(cs.x - inset * 2, height);
+        selectLv2PlugPath.pos  = ivec2(inset, pathLv2Val.bottom() + inset);
 
         scanNow.size      = ivec2(cs.x - inset * 2, height * 1.5);
-        scanNow.pos       = ivec2(inset, selectClapPlugPath.bottom() + inset);
+        scanNow.pos       = ivec2(inset, selectLv2PlugPath.bottom() + inset);
 
         for (auto gui : guis) {
             gui->layout();
@@ -1465,6 +1478,21 @@ public:
             }
             return;
         }
+        if (button->id == 0x14) {
+            String out     = DAW_PLATFORM_LV2_PATH_DEFAULT;
+            String current = settings.pluginsettings.pathLv2;
+            App::Platform::sanitizePathToDirectory(current);
+
+            if (0 == browseForFolder(selectLv2PlugPath.getLabel(), current, out)) {
+                settings.pluginsettings.pathLv2 = out;
+                try {
+                    saveSettings(settings);
+                } catch (std::exception& e) {
+                    log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
+                }
+            }
+            return;
+        }
         if (this->parent) {
             this->parent->buttonClicked(button);
         }
@@ -1485,6 +1513,7 @@ public:
         pathVstVal.setValue(settings.pluginsettings.pathVst2);
         pathVst3Val.setValue(settings.pluginsettings.pathVst3);
         pathClapVal.setValue(settings.pluginsettings.pathClap);
+        pathLv2Val.setValue(settings.pluginsettings.pathLv2);
         updateOptions();
     }
 };

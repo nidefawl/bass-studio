@@ -72,7 +72,61 @@ if (LINUX)
   find_package(ALSA REQUIRED)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(DBUS REQUIRED dbus-1)
+  pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 endif(LINUX)
+
+if (NOT DEFINED PROJECT_ENABLE_LV2)
+  if (LINUX)
+    set(PROJECT_ENABLE_LV2 ON CACHE BOOL "Enable LV2 plugin hosting (Linux)")
+  else()
+    set(PROJECT_ENABLE_LV2 OFF CACHE BOOL "Enable LV2 plugin hosting (Linux)")
+  endif()
+endif()
+
+if (PROJECT_ENABLE_LV2)
+  if (NOT LINUX)
+    message(FATAL_ERROR "PROJECT_ENABLE_LV2 is only supported on Linux")
+  endif()
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(LILV REQUIRED IMPORTED_TARGET lilv-0)
+  pkg_check_modules(LV2 REQUIRED IMPORTED_TARGET lv2)
+  pkg_check_modules(SUIL REQUIRED IMPORTED_TARGET suil-0)
+
+  # Suil wrapper path: prefer -DSUIL_MODULE_DIR= or $SUIL_MODULE_DIR (set by nix-shell / bass-configure).
+  # Do not use suil-0's module_dir pkg-config entry — on Nix it is often literally "/suil-0".
+  set(_suil_module_dir "")
+  if(SUIL_MODULE_DIR AND EXISTS "${SUIL_MODULE_DIR}/libsuil_x11.so")
+    set(_suil_module_dir "${SUIL_MODULE_DIR}")
+  elseif(DEFINED ENV{SUIL_MODULE_DIR} AND EXISTS "$ENV{SUIL_MODULE_DIR}/libsuil_x11.so")
+    set(_suil_module_dir "$ENV{SUIL_MODULE_DIR}")
+  else()
+    pkg_get_variable(_suil_libdir suil-0 libdir)
+    if(_suil_libdir AND NOT _suil_libdir STREQUAL "/suil-0")
+      if(EXISTS "${_suil_libdir}/suil-0/libsuil_x11.so")
+        set(_suil_module_dir "${_suil_libdir}/suil-0")
+      elseif(EXISTS "${_suil_libdir}/libsuil_x11.so")
+        get_filename_component(_suil_module_dir "${_suil_libdir}" DIRECTORY)
+      endif()
+    endif()
+  endif()
+  if(NOT _suil_module_dir)
+    find_file(_suil_x11_module NAMES libsuil_x11.so
+      HINTS ${SUIL_LIBRARY_DIRS} ${SUIL_LIBDIR}
+      PATH_SUFFIXES suil-0 lib/suil-0)
+    if(_suil_x11_module)
+      get_filename_component(_suil_module_dir "${_suil_x11_module}" DIRECTORY)
+    endif()
+  endif()
+  if(NOT _suil_module_dir OR NOT EXISTS "${_suil_module_dir}/libsuil_x11.so")
+    message(FATAL_ERROR
+      "Suil LV2 wrapper modules not found.\n"
+      "  Run: nix-shell\n"
+      "  Then: bass-configure\n"
+      "  (Or pass -DSUIL_MODULE_DIR=/path/to/suil-0 with libsuil_x11.so inside)")
+  endif()
+  set(SUIL_MODULE_DIR "${_suil_module_dir}" CACHE INTERNAL "Suil wrapper module directory")
+  message(STATUS "SUIL_MODULE_DIR ${SUIL_MODULE_DIR}")
+endif()
 
 if (APPLE)
   find_library(APPLE_FOUNDATION_LIBRARY Foundation REQUIRED)
@@ -117,9 +171,10 @@ endif(APPLE)
 
 FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
   if (LINUX)
-    target_link_libraries(${TARGETNAME} PUBLIC ${DBUS_LIBRARIES})
+    target_link_libraries(${TARGETNAME} PUBLIC ${DBUS_LIBRARIES} ${GTK3_LIBRARIES})
     target_include_directories(${TARGETNAME} SYSTEM PUBLIC 
         ${DBUS_INCLUDE_DIRS}
+        ${GTK3_INCLUDE_DIRS}
         ${X11_X11_INCLUDE_PATH}
         ${ALSA_INCLUDE_DIR})
   endif(LINUX)

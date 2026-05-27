@@ -1,0 +1,4 @@
+GLIBC_2.4 {
+  global:
+    pthread_mutexattr_setprotocol;
+};

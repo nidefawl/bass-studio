@@ -88,6 +88,8 @@ public:
         uint32_t numInvocations = 0;
         DAW::AudioIO::AudioStream::stream_timings_t audioCallbackInvocationDelay;
         int64_t lastAudioCallbackInvocationTime_i64 = 0;
+        /** Previous PortAudio stream time (seconds) for callback-period measurement. */
+        double lastPaStreamTimeSeconds = -1.0;
         uint32_t bufferUnderuns      = 0;
         uint32_t inputBufferUnderuns = 0;
 

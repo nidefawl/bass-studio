@@ -12,6 +12,10 @@
 #include "host/plugin/vst/vstplugin.hpp"
 #include "host/plugin/vst/vstplugin-handles.hpp"
 #include "host/plugin/vst3/vst3plugin.hpp"
+#ifdef PROJECT_ENABLE_LV2
+#include "host/plugin/lv2/lv2-catalog.hpp"
+#include "host/plugin/lv2/lv2-plugin.hpp"
+#endif
 #include "host/host_plugin_loadresult.hpp"
 #include "host/track/track_impl.hpp"
 #include "plugin/vst3/vst3plugin.hpp"
@@ -59,14 +63,17 @@ public:
 */
 class PluginScannerServerTask : public WorkerThread::ThreadTask {
     const PluginScanner::pluginscanner_server_options options;
+    const String pluginscannerExecPath;
     std::atomic<bool> m_cancelled{};
     std::shared_ptr<PluginScanner::PluginScannerServer> server;
 public:
-    explicit PluginScannerServerTask(PluginScanner::pluginscanner_server_options&& options)
-        : options(std::move(options)), m_cancelled(false) {
+    explicit PluginScannerServerTask(PluginScanner::pluginscanner_server_options&& options, String scannerExecPath)
+        : options(std::move(options))
+        , pluginscannerExecPath(std::move(scannerExecPath))
+        , m_cancelled(false) {
     }
     void run() override {
-        server = std::make_shared<PluginScanner::PluginScannerServer>(options, std::nullopt);
+        server = std::make_shared<PluginScanner::PluginScannerServer>(options, pluginscannerExecPath);
         server->findFiles();
         server->runScannerServer();
         server.reset();
@@ -202,6 +209,12 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
         always_assert(removeEntry(pluginInstancesInternal, plugin));
         always_assert(removeEntry(pluginInstances, plugin));
         break;
+#ifdef PROJECT_ENABLE_LV2
+    case MODULE_TYPE_LV2:
+        always_assert(removeEntry(pluginInstancesLv2, static_cast<lv2plugin*>(plugin)));
+        always_assert(removeEntry(pluginInstances, plugin));
+        break;
+#endif
     default:
         dbgassert(0);
         break;
@@ -764,6 +777,56 @@ int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& fi
 
 LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     dbgassert(masterCallBackSlot);
+
+#ifdef PROJECT_ENABLE_LV2
+    if (req.moduleType == MODULE_TYPE_LV2) {
+        if (mgrImpl && mgrImpl->tls.settings) {
+            lv2_catalog::load_host_search_path(mgrImpl->tls.settings->pluginsettings.pathLv2);
+        } else {
+            lv2_catalog::ensure_host_plugin_paths_loaded();
+        }
+        String uri = !req.instanceUri.empty() ? req.instanceUri
+                     : !req.uIdVst3.empty()      ? req.uIdVst3
+                                                 : req.filepath;
+        auto try_resolve_bundle = [&](String& u) {
+            if (!lv2_catalog::is_lv2_bundle_path(u)) {
+                return;
+            }
+            const String resolved = lv2_catalog::resolve_instance_uri(u);
+            if (!resolved.empty()) {
+                u = resolved;
+            }
+        };
+        try_resolve_bundle(uri);
+        if ((uri.empty() || lv2_catalog::is_lv2_bundle_path(uri)) && !req.filepath.empty()) {
+            String fromPath = req.filepath;
+            try_resolve_bundle(fromPath);
+            if (!fromPath.empty() && !lv2_catalog::is_lv2_bundle_path(fromPath)) {
+                uri = fromPath;
+            }
+        }
+        if (uri.empty() || lv2_catalog::is_lv2_bundle_path(uri)) {
+            auto libResult = LoadResultSharedLibrary::FromError(
+                SharedLibState::FAILED,
+                lv2_catalog::is_lv2_bundle_path(uri) ? "LV2 instance URI missing (got bundle path)" : "LV2 instance URI is empty");
+            return LoadResultPluginImpl{libResult};
+        }
+        int32_t globalId = getNextGlobalModuleId(req.globalId);
+        auto* plugin = new lv2plugin(uri, globalId, getHostCallback());
+        if (!plugin->openInstance()) {
+            const String err = plugin->last_open_error().empty() ? String("LV2 instantiate failed") : plugin->last_open_error();
+            delete plugin;
+            auto libResult = LoadResultSharedLibrary::FromError(SharedLibState::FAILED, err, SharedLibPluginType::LV2);
+            return LoadResultPluginImpl{libResult};
+        }
+        pluginInstancesLv2.push_back(plugin);
+        pluginInstances.push_back(plugin);
+        plugin->load(this);
+        auto libResult = LoadResultSharedLibrary{SharedLibPluginType::LV2, SharedLibState::SUCCESS, "", nullptr, nullptr};
+        return LoadResultPluginImpl{libResult, plugin, uri, plugin->getName()};
+    }
+#endif
+
     const auto& filepath = req.filepath;
     const auto uId = req.uId;
     int32_t globalId = req.globalId;
@@ -939,6 +1002,14 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 
 void PluginManager::scanPlugins() {
     if (mgrImpl->scanningState == 0) {
+        auto scannerExe = PluginScanner::locate_pluginscanner_executable();
+        if (!scannerExe) {
+            log_lf(Log::L_ERROR,
+                "Cannot scan plugins: pluginscanner helper not found beside '%s'. "
+                "Build it with: cmake --build build --target pluginscanner\n",
+                StringAsCStr(App::Platform::GetExecutablePath()));
+            return;
+        }
         auto workerThread = std::make_unique<WorkerThread>();
         workerThread->setTls(mgrImpl->tls);
         workerThread->startThread("PluginScanner", seqthreads::ThreadType::PluginScanner);
@@ -949,13 +1020,16 @@ void PluginManager::scanPlugins() {
         options.pluginPathLists[ModuleType::MODULE_TYPE_CLAP] = {settings->pluginsettings.pathClap};
         options.pluginPathLists[ModuleType::MODULE_TYPE_VST2] = {settings->pluginsettings.pathVst2};
         options.pluginPathLists[ModuleType::MODULE_TYPE_VST3] = {settings->pluginsettings.pathVst3};
+#ifdef PROJECT_ENABLE_LV2
+        options.pluginPathLists[ModuleType::MODULE_TYPE_LV2] = {settings->pluginsettings.pathLv2};
+#endif
         options.dryRun             = false;
         options.fullRescan         = false;
         options.launchProcess      = true;
         options.checkDiskTimestamp = true;
         options.updatePattern = "";
         options.unresponsiveTimeoutSeconds = 120;
-        auto task = std::make_unique<PluginScannerServerTask>(std::move(options));
+        auto task = std::make_unique<PluginScannerServerTask>(std::move(options), std::move(*scannerExe));
         mgrImpl->threadScannerServer->pushTask(task.get());
         mgrImpl->scannerServerTask = std::move(task);
         mgrImpl->scanningState = 1;
@@ -999,6 +1073,10 @@ LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, clapplu
     : library(std::move(_lib)), plugin(_plugin), clapPlugin(_plugin), path(std::move(_path)), name(std::move(_name)){};
 LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, vst3plugin* _plugin, String _path, String _name)
     : library(std::move(_lib)), plugin(_plugin), vst3Plugin(_plugin), path(std::move(_path)), name(std::move(_name)){};
+#ifdef PROJECT_ENABLE_LV2
+LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, lv2plugin* _plugin, String _path, String _name)
+    : library(std::move(_lib)), plugin(_plugin), lv2Plugin(_plugin), path(std::move(_path)), name(std::move(_name)) {}
+#endif
 LoadResultPluginImpl::LoadResultPluginImpl(LoadResultSharedLibrary _lib, vstplugin* _plugin) : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin){};
 
 LoadResultPlugin::LoadResultPlugin(LoadResultPluginImpl _impl) : impl(new LoadResultPluginImpl{}) {

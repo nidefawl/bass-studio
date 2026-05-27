@@ -23,6 +23,9 @@
 #include "gui/container/container.hpp"
 #include "gui/contextmenu/contextmenu.hpp"
 #include "gui/views/pluginlist.hpp"
+#ifdef PROJECT_ENABLE_LV2
+#include "host/plugin/lv2/lv2-catalog.hpp"
+#endif
 #include "host/daw/edithistory.hpp"
 #include "guifonts.hpp"
 
@@ -599,14 +602,33 @@ int guictr_plugins::slotFromCoord(ivec2 _pos) {
     return slot;
 }
 effectbase* gui_pluginlibrary_entry::makeInstance() {
-    auto loadResult = dawCtrl->getDaw()->getPluginManager()->loadPlugin({entry.path, entry.uid, 0, entry.bugfixFlags, entry.moduleType, entry.clapId});
+    DAW::Host::PluginLoadParameters loadParams;
+    loadParams.filepath    = entry.path;
+    loadParams.uId         = entry.uid;
+    loadParams.bugfixFlags = entry.bugfixFlags;
+    loadParams.moduleType  = entry.moduleType;
+    if (entry.moduleType == MODULE_TYPE_LV2) {
+        loadParams.instanceUri = entry.clapId;
+        if (loadParams.instanceUri.empty() || lv2_catalog::is_lv2_bundle_path(loadParams.instanceUri)) {
+            const String resolved = lv2_catalog::resolve_instance_uri(
+                loadParams.instanceUri.empty() ? entry.path : loadParams.instanceUri, entry.name);
+            if (!resolved.empty()) {
+                loadParams.instanceUri = resolved;
+            }
+        }
+    } else {
+        loadParams.uIdVst3 = entry.clapId;
+    }
+    auto loadResult = dawCtrl->getDaw()->getPluginManager()->loadPlugin(loadParams);
     DAW::Host::LoadResultPluginImpl& res = *loadResult;
     if (res.library.isSuccess()) {
         res.plugin->setName(entry.name);
         res.plugin->localDbId = entry.localDbId;
         return res.plugin;
     } else {
-        log_lf(Log::L_ERROR, "makeInstance failed: Cannot load %s\n", StringAsCStr(entry.name));
+        log_lf(Log::L_ERROR, "makeInstance failed: Cannot load %s (%s)\n",
+               StringAsCStr(entry.name),
+               res.library.error.empty() ? "unknown error" : StringAsCStr(res.library.error));
     }
     return nullptr;
 }

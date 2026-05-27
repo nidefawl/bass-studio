@@ -154,9 +154,10 @@ class audiohost_callback {
         if (!host) {
             return paAbort;
         }
-        auto timeNow_i64 = getTimeMicros();
-        if (0 != stream->lastAudioCallbackInvocationTime_i64) {
-            auto tmDelta_i64 = timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64;
+        auto recordCallbackDelta = [&](int64_t tmDelta_i64) {
+            if (tmDelta_i64 <= 0) {
+                return;
+            }
             if (timings.tmDeltaCbAvg < 0) {
                 timings.tmDeltaCbAvg = tmDelta_i64;
                 timings.tmDeltaCbMin = tmDelta_i64;
@@ -166,8 +167,22 @@ class audiohost_callback {
                 timings.tmDeltaCbMin = math::min(timings.tmDeltaCbMin, tmDelta_i64);
                 timings.tmDeltaCbMax = math::max(timings.tmDeltaCbMax, tmDelta_i64);
             }
+        };
+        if (timeInfo && stream->lastPaStreamTimeSeconds >= 0.0) {
+            const double deltaSec = timeInfo->currentTime - stream->lastPaStreamTimeSeconds;
+            if (deltaSec > 0.0) {
+                recordCallbackDelta(static_cast<int64_t>(deltaSec * 1000000.0));
+            }
+        } else {
+            auto timeNow_i64 = getTimeMicros();
+            if (stream->lastAudioCallbackInvocationTime_i64 != 0) {
+                recordCallbackDelta(timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64);
+            }
+            stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
         }
-        stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
+        if (timeInfo) {
+            stream->lastPaStreamTimeSeconds = timeInfo->currentTime;
+        }
         AudioBuffer* block        = nullptr;
         channelnum_t numOutChannelsWritten = 0;
         if (stream->try_dequeue(block)) {

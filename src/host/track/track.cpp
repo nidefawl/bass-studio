@@ -34,6 +34,9 @@
 #include "cursor.hpp"
 #include "host/audiocache/audiocache.hpp"
 #include "host/plugin/base/base-plugin.hpp"
+#ifdef PROJECT_ENABLE_LV2
+#include "host/plugin/lv2/lv2-catalog.hpp"
+#endif
 #include "host/plugin/vst/vstplugin.hpp"
 #include "host/plugin/vst/vstplugin-handles.hpp"
 #include "str_util.hpp"
@@ -585,13 +588,31 @@ namespace DAW {
         effectbase* effect      = nullptr;
         if (pluginSnapshot.moduleType == MODULE_TYPE_VST2 
             || pluginSnapshot.moduleType == MODULE_TYPE_VST3 
-            || pluginSnapshot.moduleType == MODULE_TYPE_CLAP) {
+            || pluginSnapshot.moduleType == MODULE_TYPE_CLAP
+            || pluginSnapshot.moduleType == MODULE_TYPE_LV2) {
             log_printf("Loading Plugin '%s'\n", StringAsCStr(pluginSnapshot.name));
             plugindatabase_t* db = plugindatabase_t::getInstance();
             pluginentry_t resolvedPlugin;
             try {
                 if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-                    auto loadResult = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleType, pluginSnapshot.clapId});
+                    String lv2Uri = !pluginSnapshot.instanceUri.empty() ? pluginSnapshot.instanceUri
+                                    : !resolvedPlugin.clapId.empty()   ? resolvedPlugin.clapId
+                                                                       : String{};
+                    if (lv2Uri.empty() || lv2_catalog::is_lv2_bundle_path(lv2Uri)) {
+                        const String fromPath = lv2_catalog::resolve_instance_uri(
+                            lv2Uri.empty() ? resolvedPlugin.path : lv2Uri, pluginSnapshot.name);
+                        if (!fromPath.empty()) {
+                            lv2Uri = fromPath;
+                        }
+                    }
+                    auto loadResult = host->loadPlugin({
+                        resolvedPlugin.path,
+                        pluginSnapshot.uId,
+                        pluginSnapshot.projectGlobalId,
+                        resolvedPlugin.bugfixFlags,
+                        resolvedPlugin.moduleType,
+                        pluginSnapshot.clapId,
+                        lv2Uri});
                     Host::LoadResultPluginImpl& res = *loadResult;
                     if (res.library.isSuccess()) {
                         res.plugin->localDbId = resolvedPlugin.localDbId;

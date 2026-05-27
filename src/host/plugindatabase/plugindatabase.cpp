@@ -88,6 +88,7 @@ public:
             BY_CLAP_UUID,
             BY_VST_UUID,
             BY_VST3_UUID,
+            BY_LV2_URI,
             BY_NAME,
             NUM_QUERY_TYPES
         };
@@ -97,6 +98,7 @@ public:
         auto moduleType        = pluginSnapshot.moduleType;
         auto clapId            = pluginSnapshot.clapId;
         auto vst3uuid          = pluginSnapshot.clapId;
+        auto lv2Uri            = !pluginSnapshot.instanceUri.empty() ? pluginSnapshot.instanceUri : pluginSnapshot.clapId;
         bool loadForceDisabled = (loadFlags & 1) != 0;
 
         if (moduleType == ModuleType::MODULE_TYPE_VST2) {
@@ -111,8 +113,9 @@ public:
         static const char* queryBy_VST_UUID       = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and uid == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         static const char* queryBy_VST3_UUID      = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and productName == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         static const char* queryBy_CLAP_UUID      = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and productName == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
+        static const char* queryBy_LV2_URI        = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and productName == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         static const char* queryBy_Name           = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and name == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
-        const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_CLAP_UUID, queryBy_VST_UUID, queryBy_VST3_UUID, queryBy_Name };
+        const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_CLAP_UUID, queryBy_VST_UUID, queryBy_VST3_UUID, queryBy_LV2_URI, queryBy_Name };
         for (size_t i = 0; i < NUM_QUERY_TYPES; i++) {
             if (i == BY_LOCALID_AND_UUID && localId <= 0) {
                 continue;
@@ -124,6 +127,9 @@ public:
                 continue;
             }
             if (i == BY_VST3_UUID && moduleType != ModuleType::MODULE_TYPE_VST3) {
+                continue;
+            }
+            if (i == BY_LV2_URI && moduleType != ModuleType::MODULE_TYPE_LV2) {
                 continue;
             }
             String query = queries[i];
@@ -156,6 +162,9 @@ public:
                     //TODO: let user pick if multiple
                     queryPlugin.bind(2, vst3uuid);
                     break;
+                case BY_LV2_URI:
+                    queryPlugin.bind(2, lv2Uri);
+                    break;
                 default:
                 case BY_NAME:
                     //TODO: let user pick if multiple
@@ -178,6 +187,7 @@ public:
                 switch (entry.moduleType) {
                     case ModuleType::MODULE_TYPE_CLAP:
                     case ModuleType::MODULE_TYPE_VST3:
+                    case ModuleType::MODULE_TYPE_LV2:
                         entry.clapId = queryPlugin.getColumn("productName").getString();
                         break;
                     default:
@@ -218,6 +228,8 @@ public:
                     strSQLCond += " moduleFormat == 1 and ";
                 } else if (tag == "vst3") {
                     strSQLCond += " moduleFormat == 2 and ";
+                } else if (tag == "lv2") {
+                    strSQLCond += " moduleFormat == 6 and ";
                 } else if (tag == "synth") {
                     strSQLCond += " isSynth == 1 and ";
                 } else if (tag == "fx") {
@@ -267,6 +279,7 @@ public:
             switch (entry.moduleType) {
                 case ModuleType::MODULE_TYPE_CLAP:
                 case ModuleType::MODULE_TYPE_VST3:
+                case ModuleType::MODULE_TYPE_LV2:
                     entry.clapId = queryPlugin.getColumn("productName").getString();
                     break;
                 default:

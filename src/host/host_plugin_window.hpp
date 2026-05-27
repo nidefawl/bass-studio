@@ -59,6 +59,9 @@ public:
     void storePosition();
 
     void updateFromMainThread() const;
+#if defined(__linux__)
+    GLFWwindow* getGlfwWindow() const { return glfw; }
+#endif
     void captureWindowFrame();
     bool isRedirectingKeysToDawMainWindow() const {
         return bRedirectKeysToDawMainWindow;

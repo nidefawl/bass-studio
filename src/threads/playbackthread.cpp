@@ -17,6 +17,7 @@
 #include <readerwriterqueue/readerwriterqueue.hpp>
 #include "host/project/projectcontroller.hpp"
 #include "host/host.hpp"
+#include "host/audiobuffer/audiobuffer.hpp"
 #include "host/midihost/midi_host.hpp"
 #include "logging.hpp"
 #include "sse.hpp"
@@ -285,7 +286,11 @@ private:
                     if (m_status != playback_state::status_render) {
                         midiHost->processMidiInput(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
                         if (!host->bypassPlaybackProcessing) {
-                            numBlocksProcessed = host->processPlayback(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
+                            if (m_status == playback_state::status_playback) {
+                                numBlocksProcessed = host->pumpPlayback(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
+                            } else {
+                                numBlocksProcessed = host->processPlayback(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop);
+                            }
                             timer2.reset();
                         } else {
                             numBlocksProcessed = 0;
@@ -304,8 +309,10 @@ private:
                     }
 
                     if (numBlocksProcessed) {
-                        samplePos += samplecount_t(blockSize) * numBlocksProcessed;
-                        tickPos += props.ticksPerBlock * numBlocksProcessed;
+                        if (m_status != playback_state::status_playback) {
+                            samplePos += samplecount_t(blockSize) * numBlocksProcessed;
+                            tickPos += props.ticksPerBlock * numBlocksProcessed;
+                        }
                         /* auto tickPosFromSample = sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, sampleRate);
                         auto errorTicks = tickPos - tickPosFromSample;
                         static const double maxError = 0.0001;
@@ -352,10 +359,21 @@ private:
                 }
 
                 if (m_status != playback_state::status_render) {
-                    if (numBlocksProcessed) {
-                        seqthreads::threadSleepMicros(500);
+                    const sampleformat_t extFormat = host->getSampleFormatExternal();
+                    const int64_t blockPeriodUs =
+                        extFormat.blockSize > 0 && extFormat.sampleRate > 0
+                            ? static_cast<int64_t>(extFormat.blockSize) * 1000000LL / static_cast<int64_t>(extFormat.sampleRate)
+                            : 5000;
+                    const int32_t targetQueue = (RING_BUF_SIZE * 2) / 3;
+                    if (numBlocksProcessed > 0) {
+                        if (host->getPlaybackOutputQueueDepth() >= targetQueue) {
+                            const int64_t sleepUs = blockPeriodUs * numBlocksProcessed;
+                            if (sleepUs > 0) {
+                                seqthreads::threadSleepMicros(static_cast<unsigned>(sleepUs));
+                            }
+                        }
                     } else {
-                        seqthreads::threadSleep(1);
+                        seqthreads::threadSleepMicros(static_cast<unsigned>(math::max<int64_t>(blockPeriodUs / 8, 200)));
                     }
                 } else {
                     if (numBlocksRendered > 100) {

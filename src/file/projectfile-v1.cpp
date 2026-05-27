@@ -161,6 +161,9 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version >= 12) {
         archive(make_nvp("clapId", m.clapId));
     }
+    if (version >= 18) {
+        archive(make_nvp("instanceUri", m.instanceUri));
+    }
     archive(
         make_nvp("slot", m.slot),
         make_nvp("parameters", m.params),
@@ -210,7 +213,8 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
     archive(make_nvp("moduleType", m.moduleType),
         make_nvp("name", m.name), 
         make_nvp("uId", m.uId), 
-        make_nvp("clapId", m.clapId), 
+        make_nvp("clapId", m.clapId),
+        make_nvp("instanceUri", m.instanceUri),
         make_nvp("slot", m.slot),
         make_nvp("parameters", m.params),
         make_nvp("automatedParams", m.automatedParams),
@@ -811,7 +815,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(guictrlayout_entry_snapshot_t, 1);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 17);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 18);
 CEREAL_CLASS_VERSION(track_snapshot_t, 5);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 2);

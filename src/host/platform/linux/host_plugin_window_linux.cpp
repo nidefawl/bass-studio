@@ -148,6 +148,10 @@ void host_plugin_window::show(ivec4 posSize, bool bSetPos, bool bSetSize)
     }
 	glfwShowWindow(glfw);
 	plugin->onShow(this);
+    // Toplevel LV2 UIs (e.g. Cardinal) hide this shell; do not touch GLFW/X11 after.
+    if (plugin->usesExternalToplevelWindow()) {
+        return;
+    }
     if (bSetPos) {
 		glfwSetWindowPos(glfw, posSize.x, posSize.y);
     }
@@ -164,7 +168,6 @@ ivec2 host_plugin_window::getContentSize() const
 }
 
 void host_plugin_window::updateFromMainThread() const {
-	// sendExposeEvent(glfw);
 }
 
 void host_plugin_window::resize (ivec2 newSize) const

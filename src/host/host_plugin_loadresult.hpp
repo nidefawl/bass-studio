@@ -8,6 +8,7 @@ class effectbase;
 class vstplugin;
 class vst3plugin;
 class clapplugin;
+class lv2plugin;
 struct handles_t;
 
 namespace DAW::Host {
@@ -19,6 +20,7 @@ enum class SharedLibPluginType : int32_t {
     CLAP = 2,
     VST3 = 3,
     VST3_SHELL = 4,
+    LV2 = 5,
 };
 
 enum class SharedLibState : int32_t {
@@ -56,6 +58,7 @@ struct LoadResultPluginImpl {
     vstplugin* vstPlugin = nullptr;
     clapplugin* clapPlugin = nullptr;
     vst3plugin* vst3Plugin = nullptr;
+    lv2plugin* lv2Plugin = nullptr;
     handles_t* shellPluginHandle = nullptr;
     String path;
     String name;
@@ -65,6 +68,7 @@ struct LoadResultPluginImpl {
     LoadResultPluginImpl(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name);
     LoadResultPluginImpl(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name);
     LoadResultPluginImpl(LoadResultSharedLibrary _lib, vst3plugin* _plugin, String _path, String _name);
+    LoadResultPluginImpl(LoadResultSharedLibrary _lib, lv2plugin* _plugin, String _path, String _name);
 };
 
 } // namespace DAW::Host

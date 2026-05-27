@@ -174,6 +174,14 @@ public:
     vst3plugin* const vst3;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
+class lv2plugin;
+class guilv2plugin final : public guipluginview {
+public:
+    explicit guilv2plugin(lv2plugin* effect);
+    ~guilv2plugin() override;
+    lv2plugin* const lv2;
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+};
 class guiinternalpluginview final : public guipluginview {
     internalplugin* const plugin;
 

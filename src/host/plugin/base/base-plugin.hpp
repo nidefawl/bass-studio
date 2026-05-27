@@ -164,6 +164,8 @@ public:
     virtual void onWindowDestroy();
     virtual void onWindowResize(ivec2 size);
     virtual bool onShow(host_plugin_window* window);
+    /** LV2 showInterface UIs (e.g. Cardinal) use their own toplevel window. */
+    virtual bool usesExternalToplevelWindow() const { return false; }
     virtual bool onClose();
     virtual void updateFromMainThread(); // main thread idle 
     virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) {
