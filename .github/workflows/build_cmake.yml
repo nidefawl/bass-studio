@@ -46,7 +46,6 @@ jobs:
       with:
         path: daw-deps-history
         repository: nidefawl/daw-deps
-        token: ${{ secrets.PAT }}
         fetch-depth: 0
 
     - name: Get daw-deps-history head revision
@@ -82,14 +81,12 @@ jobs:
       with:
         path: daw-deps
         repository: nidefawl/daw-deps
-        token: ${{ secrets.PAT }}
         submodules: true
 
     - name: git clone nidefawl/daw 
       uses: actions/checkout@master
       with:
         path: daw
-        token: ${{ secrets.PAT }}
 
     - name: Parse revision
       id: get-dep-rev
@@ -198,7 +195,6 @@ jobs:
       with:
         path: daw-deps-history
         repository: nidefawl/daw-deps
-        token: ${{ secrets.PAT }}
         fetch-depth: 0
 
     - name: Get daw-deps-history head revision
@@ -249,14 +245,12 @@ jobs:
       with:
         path: daw-deps
         repository: nidefawl/daw-deps
-        token: ${{ secrets.PAT }}
         submodules: true
 
     - name: git clone nidefawl/daw 
       uses: actions/checkout@master
       with:
         path: daw
-        token: ${{ secrets.PAT }}
 
     - name: Parse revision
       id: get-dep-rev
